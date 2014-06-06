@@ -308,10 +308,7 @@ ModuleDefPtr ModuleDef::deserialize(Deserializer &deser,
     // later within construct, but we need the module to be present while
     // we're constructing it so we can resolve types by name when building
     // them.
-    deser.context->construct->moduleCache.insert(
-        existing.first,
-        make_pair(canonicalName, mod)
-    );
+    deser.context->construct->moduleCache[canonicalName] = mod;
 
     // register the module as id 0.
     deser.registerObject(0, mod.get());

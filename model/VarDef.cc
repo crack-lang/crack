@@ -142,7 +142,7 @@ void VarDef::addDependenciesTo(ModuleDef *mod, VarDef::Set &added) const {
     mod->addDependency(depMod.get());
 
     // add the dependencies of the type
-    if (type.get() != this)
+    if (type && type.get() != this)
         type->addDependenciesTo(mod, added);
 }
 
@@ -243,51 +243,6 @@ namespace {
         K_VAR
     };
 
-    VarDefPtr resolveActualPath(Context &context, ModuleDef *module,
-                                list<string>::iterator curName,
-                                list<string>::iterator endName
-                                ) {
-        list<string>::iterator next = curName;
-        ++next;
-        NamespacePtr ns = module;
-        for (; next != endName; ++curName, ++next) {
-            ns = ns->lookUp(*curName);
-            SPUG_CHECK(ns,
-                       "Path element " << *curName << " in module " <<
-                        module << " should be a namespace."
-                       );
-        }
-        return ns->lookUp(*curName);
-    }
-
-    // Resolve path for stub modules.
-    VarDefPtr resolveStubPath(Context &context, ModuleStub *module,
-                              list<string>::iterator curName,
-                              list<string>::iterator endName,
-                              SymbolKind kind
-                              ) {
-        module->dependents.insert(
-            ModuleDefPtr::arcast(context.getModuleContext()->ns)
-        );
-
-        list<string>::iterator next = curName;
-        ++next;
-        NamespaceStubPtr ns = module;
-        for (; next != endName; ++curName, ++next)
-            ns = ns->getTypeNSStub(*curName);
-
-        switch (kind) {
-            case K_TYPE:
-                return ns->getTypeStub(*curName);
-            case K_OVLD:
-                return ns->getOverloadStub(*curName);
-            case K_VAR:
-                return ns->getVarStub(*curName);
-            default:
-                SPUG_CHECK(false, "Unknoan symbol kind: " << kind);
-        }
-    }
-
     template<typename T>
     struct IterPair {
         typedef T iterator;
@@ -340,16 +295,17 @@ namespace {
                     makeIterPair(curName, endName)
                    );
 
-        if (module->finished) {
-            return resolveActualPath(context, module.get(), curName, endName);
-        } else {
-            ModuleStubPtr stub = ModuleStubPtr::rcast(module);
-            SPUG_CHECK(stub,
-                       "Referenced module " << module->getFullName() <<
-                        " is not finished, but isn't a stub."
+        list<string>::iterator next = curName;
+        ++next;
+        NamespacePtr ns = module;
+        for (; next != endName; ++curName, ++next) {
+            ns = ns->lookUp(*curName);
+            SPUG_CHECK(ns,
+                       "Path element " << *curName << " in module " <<
+                        module << " should be a namespace."
                        );
-            return resolveStubPath(context, stub.get(), curName, endName, kind);
         }
+        return ns->lookUp(*curName);
     }
 
     VarDefPtr deserializeAliasBody(Deserializer &deser, SymbolKind kind) {

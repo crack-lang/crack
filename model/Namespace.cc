@@ -357,7 +357,7 @@ void Namespace::serializeDefs(Serializer &serializer) const {
     bool serializePrivates = hasGenerics();
     
     // Count the number of definitions to serialize and separate out the 
-    // types, aliases and everything else.
+    // types, other defs, and aliases.
     int count = 0;
     set<TypeDef *> types, privateTypes;
     vector<VarDef *> others, otherPrivates;
@@ -367,7 +367,9 @@ void Namespace::serializeDefs(Serializer &serializer) const {
         if (i->second->isSerializable()) {
             
             // is it an alias?
-            if (i->second->getOwner() != this) {
+            if (i->second->getOwner() != this ||
+                 i->first != i->second->name
+                ) {
                 if (i->second->isImportable(this, i->first))
                     aliases.push_back(*i);
                 else if (serializePrivates)
@@ -404,17 +406,19 @@ void Namespace::serializeDefs(Serializer &serializer) const {
     // write the count and the definitions
     serializer.write(aliases.size() + privateStart + others.size(), "#defs");
     
-    // first the aliases
-    SPUG_FOR(VarDefVec, i, aliases)
-        i->second->serializeAlias(serializer, i->first);
-    
-    // then the types
+    // then the types.
     for (int i = 0; i < privateStart; ++i)
         orderedTypes[i]->serialize(serializer, true, this);
 
-    // ... then everything else    
+    // then the owned definitions.
     SPUG_FOR(vector<VarDef *>, i, others)
         (*i)->serialize(serializer, true, this);
+    
+    // and then the aliases.  (These have to come last because they may be 
+    // internal aliases, in which case the definitions must be defined before 
+    // we can resolve them).
+    SPUG_FOR(VarDefVec, i, aliases)
+        i->second->serializeAlias(serializer, i->first);
     
     // now do the privates
     Serializer::StackFrame<Serializer> digestState(serializer, false);

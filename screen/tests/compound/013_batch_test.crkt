@@ -1,0 +1,33 @@
+%%TEST%%
+Batch of persistence tests.
+%%ARGS%%
+%%FILE%%
+import systest test;
+test.preBootstrap = true;
+
+# Test of alias persistence.
+test.mod('mod', I"
+    class A {
+        void f() { puts('alias'); }
+        alias g = f;
+    }
+    ");
+test.main(I"
+    import mod A;
+    A().g();
+    ");
+test.run();
+
+test.main(I"
+    import mod A;
+    A().g(); # force recompile
+    ");
+test.run();
+
+
+%%REXPECT%%
+out: alias
+terminated: success
+out: alias
+terminated: success
+%%STDIN%%

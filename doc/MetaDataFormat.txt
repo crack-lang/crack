@@ -132,7 +132,7 @@ So given this, our meta-data format is:
 
     Definitions {
         # The public definitions.
-        # Definitions must be in order: aliases, types, then everything else.
+        # Definitions must be in order: types, non-alias symbols, and aliases.
         # Note that private base classes are part of the public interface
         # (even though they can't be imported).
         array[Def] defs
