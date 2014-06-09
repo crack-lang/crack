@@ -47,8 +47,10 @@ void Namespace::getTypeDefs(std::vector<TypeDef*> &typeDefs,
             // Ignore types we don't own or are not serializable.
             if (def->getModule()->getMaster() == master && 
                 def->isSerializable()
-                )
+                ) {
                 typeDefs.push_back(def);
+                def->getTypeDefs(typeDefs, master);
+            }
         } else {
             SPUG_CHECK(!NamespacePtr::rcast(iter->second), 
                        "found a non-type namespace: " << iter->first

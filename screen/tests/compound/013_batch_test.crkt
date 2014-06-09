@@ -40,6 +40,18 @@ test.main(I"
 test.run();
 test.run();
 
+# Test of nested classes in a slave module.
+test.main(I"
+    class A[T] {
+        class B {}
+        B f() { return null; }
+    }
+    class B : A[int] {}
+    puts('nested classes');
+    ");
+test.run();
+test.run();
+
 %%REXPECT%%
 out: alias
 terminated: success
@@ -48,5 +60,9 @@ terminated: success
 out: ok
 terminated: success
 out: ok
+terminated: success
+out: nested classes
+terminated: success
+out: nested classes
 terminated: success
 %%STDIN%%
