@@ -38,11 +38,14 @@ test.main(I"
     puts('ok');
     ");
 test.run();
+test.run();
 
 %%REXPECT%%
 out: alias
 terminated: success
 out: alias
+terminated: success
+out: ok
 terminated: success
 out: ok
 terminated: success
