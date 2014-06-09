@@ -1173,7 +1173,7 @@ void TypeDef::serialize(Serializer &serializer, bool writeKind,
     if (writeKind) {
         // We only write "kind" when serializing from a namespace.  This 
         // should never happen for an alias.  
-        SPUG_CHECK(VarDef::getModule() == serializer.module,
+        SPUG_CHECK(VarDef::getModule()->getMaster() == serializer.module,
                    "Attempted to serialize an alias for " << getFullName() <<
                     " from a namespace"
                    );

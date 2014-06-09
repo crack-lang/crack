@@ -332,6 +332,19 @@ void Namespace::serializeTypeDecls(Serializer &serializer) {
 }
 
 namespace {
+    
+    // Returns true if the type should be serialized in the given namespace.
+    inline bool serializeInNS(TypeDef *type, const Namespace *ns) {
+        if (type->getOwner() == ns)
+            return true;
+        
+        // If the owner is a module that is a slave of the given namespace.
+        if (ModuleDef *mod = ModuleDefPtr::cast(type->getOwner())) {
+            const ModuleDef *curMod = dynamic_cast<const ModuleDef *>(ns);
+            return curMod && mod->getMaster() == curMod;
+        }
+    }
+               
     // Adds a type to an ordered vector, ensuring that the base class types 
     // have been serialized first.
     void addTypeToOrderedVec(const Namespace *ns,
@@ -339,7 +352,7 @@ namespace {
                              TypeDef *type
                              ) {
         // ignore if we get to an unserializable type.
-        if (!type->isSerializable() || type->getOwner() != ns)
+        if (!type->isSerializable() || !serializeInNS(type, ns))
             return;
 
         // Make sure the bases have been serialized.

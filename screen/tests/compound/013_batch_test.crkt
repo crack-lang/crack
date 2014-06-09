@@ -24,10 +24,26 @@ test.main(I"
     ");
 test.run();
 
+# Test of inheritance from a slave module.
+test.main(I"
+    @abstract class A[T] : VTableBase {
+        @abstract T f();
+    }
+    class B : A[int] {
+        int f() { return 100; }
+    }
+    A[int] a = B();
+    if (a.f() != 100)
+        puts('FAILED specialization of abstract');
+    puts('ok');
+    ");
+test.run();
 
 %%REXPECT%%
 out: alias
 terminated: success
 out: alias
+terminated: success
+out: ok
 terminated: success
 %%STDIN%%
