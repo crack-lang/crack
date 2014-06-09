@@ -47,10 +47,8 @@ void Namespace::getTypeDefs(std::vector<TypeDef*> &typeDefs,
             // Ignore types we don't own or are not serializable.
             if (def->getModule()->getMaster() == master && 
                 def->isSerializable()
-                ) {
+                )
                 typeDefs.push_back(def);
-                def->getTypeDefs(typeDefs, master);
-            }
         } else {
             SPUG_CHECK(!NamespacePtr::rcast(iter->second), 
                        "found a non-type namespace: " << iter->first
@@ -319,17 +317,17 @@ void Namespace::dump() const {
     dump(cerr, "");
 }
 
-void Namespace::serializeTypeDecls(Serializer &serializer) {
+void Namespace::serializeTypeDecls(Serializer &serializer, ModuleDef *master) {
     // We build a vector so we can determine the count up front.
     vector<TypeDef *> typeDefs;
-    getTypeDefs(typeDefs, getModule().get());
+    getTypeDefs(typeDefs, master);
     
     serializer.write(typeDefs.size(), "#decls");
     for (vector<TypeDef *>::const_iterator iter = typeDefs.begin();
          iter != typeDefs.end();
          ++iter
          ) {
-        (*iter)->serializeDecl(serializer);
+        (*iter)->serializeDecl(serializer, master);
     }
 }
 

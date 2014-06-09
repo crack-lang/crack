@@ -196,7 +196,7 @@ void ModuleDef::serialize(Serializer &serializer) {
 
     // write all of the symbols
     serializer.digestEnabled = true;
-    Namespace::serializeTypeDecls(serializer);
+    Namespace::serializeTypeDecls(serializer, this);
     Namespace::serializeDefs(serializer);
 
     // write all of the exports

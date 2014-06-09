@@ -1213,7 +1213,7 @@ void TypeDef::serialize(Serializer &serializer, bool writeKind,
     }
 }
 
-void TypeDef::serializeDecl(Serializer &serializer) {
+void TypeDef::serializeDecl(Serializer &serializer, ModuleDef *master) {
     if (serializer.writeObject(this, "decl")) {
         serializer.write(name, "name");
         {
@@ -1233,7 +1233,7 @@ void TypeDef::serializeDecl(Serializer &serializer) {
             serializer.write(temp.str(), "optional");
         }
         int result = serializer.registerObject(this);
-        serializeTypeDecls(serializer);
+        serializeTypeDecls(serializer, master);
     }
 }
 

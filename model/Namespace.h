@@ -237,7 +237,7 @@ class Namespace : public virtual spug::RCBase {
          * Serialize all type declarations in the namespace (and nested 
          * namespaces.
          */
-        void serializeTypeDecls(Serializer &serializer);
+        void serializeTypeDecls(Serializer &serializer, ModuleDef *master);
         
         /**
          * Serialize all of the definitions in the namespace.
