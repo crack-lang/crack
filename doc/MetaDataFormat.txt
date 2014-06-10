@@ -230,6 +230,7 @@ So given this, our meta-data format is:
         uint objectId
         uint isGeneric
         if (generic) {
+            uint abstract
             array[ref[Import]] importedAnnotations
             array[blob] parms
             array[Token] tokens

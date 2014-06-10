@@ -52,6 +52,21 @@ test.main(I"
 test.run();
 test.run();
 
+# Test of abstract generics.
+test.mod('mod', I"
+    @abstract class A[T] : VTableBase {
+        @abstract void f();
+    }
+    ");
+test.main(I"
+    import mod A;
+    class B : A[int] { void f() {} }
+    puts('abstract generics');
+    ");
+test.run();
+test.rmCacheFiles('mod.A');
+test.run();
+
 %%REXPECT%%
 out: alias
 terminated: success
@@ -64,5 +79,9 @@ terminated: success
 out: nested classes
 terminated: success
 out: nested classes
+terminated: success
+out: abstract generics
+terminated: success
+out: abstract generics
 terminated: success
 %%STDIN%%

@@ -1120,6 +1120,7 @@ void TypeDef::serializeDef(Serializer &serializer) const {
     serializer.write(generic ? 1 : 0, "isGeneric");
     if (generic) {
         Serializer::StackFrame<Serializer> digestState(serializer, false);
+        serializer.write(abstract, "abstract");
         genericInfo->serialize(serializer);
     } else {
         int flags = (pointer ? 1 : 0) |
@@ -1263,6 +1264,7 @@ TypeDefPtr TypeDef::deserializeTypeDef(Deserializer &deser, const char *name) {
     unsigned isGeneric = deser.readUInt("isGeneric");
     if (isGeneric) {
         Serializer::StackFrame<Deserializer> digestState(deser, false);
+        type->abstract = deser.readUInt("abstract");
         type->genericInfo = Generic::deserialize(deser);
         type->genericInfo->ns = deser.context->ns.get();
         type->genericInfo->seedCompileNS(*deser.context);
