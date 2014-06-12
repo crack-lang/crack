@@ -302,7 +302,9 @@ void createClassImpl(Context &context, BTypeDef *type) {
 // Create a new meta-class.
 // context: enclosing context (this should be a class context).
 // name: the original non-canonical class name.
-BTypeDefPtr createMetaClass(Context &context, const string &name) {
+BTypeDefPtr createMetaClass(Context &context, const string &name,
+                            Namespace *owner
+                            ) {
     LLVMBuilder &llvmBuilder =
             dynamic_cast<LLVMBuilder &>(context.builder);
     LLVMContext &lctx = getGlobalContext();
@@ -339,9 +341,13 @@ BTypeDefPtr createMetaClass(Context &context, const string &name) {
     metaType->rep = metaClassPtrType;
     metaType->complete = true;
 
-    // make the owner the first definition context enclosing the class's 
-    // context.
-    context.parent->getDefContext()->addDef(metaType.get());
+    if (owner) {
+        context.addDef(metaType.get(), owner);
+    } else {
+        // make the owner the first definition context enclosing the class's 
+        // context.
+        context.parent->getDefContext()->addDef(metaType.get());
+    }
     createClassImpl(context, metaType.get());
     metaType->createBaseOffsets(context);
 

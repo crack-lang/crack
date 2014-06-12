@@ -2341,8 +2341,13 @@ TypeDefPtr LLVMBuilder::materializeType(Context &context, const string &name,
                 module->getModuleIdentifier()
                );
 
-//    cerr << "XXX can't materialize vtable base count yet" << endl;
-    BTypeDefPtr metaType = createMetaClass(context, name);
+    // This is kind of a mess.  Normally createMetaClass is passed the class
+    // context.  But this isn't the case during deserialization.  During
+    // deserialization we get the class' enclosing context (and that also
+    // requires some special handling for slave modules).  So we pass in the
+    // enclosing context's namespace to force createMetaClass() to make it the
+    // owner of the new meta-class.
+    BTypeDefPtr metaType = createMetaClass(context, name, context.ns.get());
     BTypeDefPtr result =
         createTypeDef(context, name, metaType.get(), llvmType, 0);
 

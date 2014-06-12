@@ -67,6 +67,13 @@ test.run();
 test.rmCacheFiles('mod.A');
 test.run();
 
+# Test that "cast()" is correctly reconstituted.
+test.mod('mod', 'class A : VTableBase {}');
+test.main("import mod A; A.cast(A()); puts('cast reconstituted')");
+test.run();
+test.rmCacheFiles('.main.*');
+test.run();
+
 %%REXPECT%%
 out: alias
 terminated: success
@@ -83,5 +90,9 @@ terminated: success
 out: abstract generics
 terminated: success
 out: abstract generics
+terminated: success
+out: cast reconstituted
+terminated: success
+out: cast reconstituted
 terminated: success
 %%STDIN%%

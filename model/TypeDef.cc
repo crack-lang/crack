@@ -1252,6 +1252,44 @@ TypeDefPtr TypeDef::deserializeRef(Deserializer &deser, const char *name) {
     return TypeDefPtr::arcast(readObj.object);
 }
 
+namespace {
+    
+    void materializeOneCastFunc(Context &metaClassContext, TypeDef *type,
+                                const ArgVec &args
+                                ) {
+        FuncDefPtr func = metaClassContext.builder.materializeFunc(
+            metaClassContext, 
+            FuncDef::noFlags, 
+            "cast", 
+            type, 
+            args
+        );
+        metaClassContext.addDef(func.get());
+    }
+
+    void materializeCastFuncs(Context &classContext, TypeDef *type) {
+        ContextPtr metaClassContext =
+            classContext.createSubContext(Context::instance, type->type.get());
+                                           
+        ArgVec args;
+        args.reserve(2);
+        args.push_back(
+            classContext.builder.createArgDef(
+                classContext.construct->vtableBaseType.get(),
+                "val"
+            )
+        );
+
+        materializeOneCastFunc(*metaClassContext, type, args);
+    
+        // Now materialize the two argument form.
+        args.push_back(
+            classContext.builder.createArgDef(type, "defaultValue")
+        );
+        materializeOneCastFunc(*metaClassContext, type, args);
+   }
+}
+
 TypeDefPtr TypeDef::deserializeTypeDef(Deserializer &deser, const char *name) {
     // Read the object id and retrieve the existing object.
     int objectId = deser.readUInt("id");
@@ -1297,12 +1335,16 @@ TypeDefPtr TypeDef::deserializeTypeDef(Deserializer &deser, const char *name) {
                 break;
         CRACK_PB_END
     
-        // 'defs' - fill in the body.
         ContextPtr classContext =
             deser.context->createSubContext(Context::instance,
                                             type.get(),
                                             &type->name
                                             );
+        // add the "cast" methods (This is duplicated in the parser, refactor)
+        if (type->hasVTable)
+            materializeCastFuncs(*classContext, type.get());
+
+        // 'defs' - fill in the body.
         ContextStackFrame<Deserializer> cstack(deser, classContext.get());
         type->deserializeDefs(deser);
     }
@@ -1338,12 +1380,21 @@ namespace {
                                    name, 
                                    true
                                    );
-            else
-                type = deser.context->builder.materializeType(
-                    *deser.context, 
+            else {
+                // Create a subcontext linked the class' owner so 
+                // type materialization works for slave modules.  At this time 
+                // we need to do this so that the meta-class is properly 
+                // registered.
+                ContextPtr classContext =
+                    deser.context->createSubContext(Context::instance, 
+                                                    owner.get()
+                                                    );
+                type = classContext->builder.materializeType(
+                    *classContext,
                     name,
                     owner->getNamespaceName()
                 );
+            }
             owner->addDef(type.get());
             return type;
         }
