@@ -63,6 +63,24 @@ cmake.
 
 See cmake --help for more options.
 
+Requirements
+------------
+
+Here are the packages required to build crack on different operating systems 
+(where we know them):
+
+Ubuntu\/Debian
+''''''''''''''
+
+build-essential
+
+To build from the repository (not a release tarball):
+    autoconf
+    automake
+    libtool
+    gettext
+
+
 =========================================================================
 
 Installation Instructions
