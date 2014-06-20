@@ -1027,6 +1027,7 @@ TypeDefPtr TypeDef::getSpecialization(Context &context,
         // use the source path of the owner
         module->sourcePath = owner->sourcePath;
         module->sourceDigest = owner->sourceDigest;
+        result = extractInstantiation(module.get(), types);
 
         module->cacheable = true;    
         module->close(*modContext);
@@ -1037,12 +1038,10 @@ TypeDefPtr TypeDef::getSpecialization(Context &context,
         nameInModule = name;
     } else {
         nameInModule = newTypeName;
+        result = extractInstantiation(module.get(), types);
     }
 
-    // 
-    // extract the type out of the newly created module and store it in the 
-    // specializations cache
-    result = extractInstantiation(module.get(), types);
+    // Fix up stubs (TODO: remove).
     if (result->isStub())
         ModuleStubPtr::rcast(module)->registerCallback(
             new FixStubbedInstantiation(this, result, types)
@@ -1108,13 +1107,15 @@ void TypeDef::serializeExtern(Serializer &serializer) const {
 }
 
 void TypeDef::serializeDef(Serializer &serializer) const {
+    if (Serializer::trace)
+        cerr << ">> Serializing the body of class " << getFullName() << endl;
     serializer.write(Serializer::typeId, "kind");
     int objectId = serializer.getObjectId(this);
     SPUG_CHECK(objectId != -1,
                "Type " << getFullName() << " was not registered in the "
                 "declarations for this module."
                );
-    serializer.write(objectId, "objectId");
+    serializer.write(objectId, "objectId/2");
     
     // XXX isGeneric is already in the decl.
     serializer.write(generic ? 1 : 0, "isGeneric");
@@ -1158,6 +1159,8 @@ void TypeDef::serializeDef(Serializer &serializer) const {
         
         Namespace::serializeDefs(serializer);
     }
+    if (Serializer::trace)
+        cerr << ">> Done serializing " << getFullName() << endl;
 }
 
 void TypeDef::serializeAlias(Serializer &serializer, 
@@ -1292,11 +1295,12 @@ namespace {
 
 TypeDefPtr TypeDef::deserializeTypeDef(Deserializer &deser, const char *name) {
     // Read the object id and retrieve the existing object.
-    int objectId = deser.readUInt("id");
+    int objectId = deser.readUInt("objectId/2");
     TypeDefPtr type = deser.getObject(objectId);
     SPUG_CHECK(type, "Type object " << objectId << " not registered.");
     if (Serializer::trace)
-        cerr << "deserializing body of type " << type->getFullName() << endl;
+        cerr << ">> deserializing body of type " << type->getFullName() << 
+            endl;
 
     // is this a generic?
     unsigned isGeneric = deser.readUInt("isGeneric");
@@ -1334,6 +1338,13 @@ TypeDefPtr TypeDef::deserializeTypeDef(Deserializer &deser, const char *name) {
                 );
                 break;
         CRACK_PB_END
+
+        // If it's a generic instantiation, add it to it's template's 
+        // specialization cache.
+        if (type->templateType) {
+            TypeVecObjPtr types = new TypeVecObj(type->genericParms);
+            (*type->templateType->generic)[types.get()] = type;
+        }
     
         ContextPtr classContext =
             deser.context->createSubContext(Context::instance,
@@ -1349,7 +1360,7 @@ TypeDefPtr TypeDef::deserializeTypeDef(Deserializer &deser, const char *name) {
         type->deserializeDefs(deser);
     }
     if (Serializer::trace)
-        cerr << "done deserializing type " << type->getFullName() << endl;
+        cerr << ">> done deserializing type " << type->getFullName() << endl;
     
     type->complete = true;
     return type;

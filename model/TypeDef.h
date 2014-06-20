@@ -50,6 +50,9 @@ class TypeDef : public VarDef, public Namespace {
         SPUG_RCPTR(TypeVecObj);
         class TypeVecObj : public spug::RCBase, 
                            public std::vector<TypeDefPtr> {
+            public:
+                TypeVecObj() {}
+                TypeVecObj(const TypeVec &types) : TypeVec(types) {}
         };
         
         // a vector of types that can be used as a key
