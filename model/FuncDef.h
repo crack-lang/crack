@@ -39,8 +39,11 @@ class FuncDef : public VarDef {
             variadic = 8,  // this is a variadic function
             reverse = 16,  // for a binary op, reverse receiver and first arg
             abstract = 32,  // This is an abstract (pure virtual function)
-            builtin = 64,   // Not a real function.  Defined by the executor,
-                            // calls expand to a sequence of instructions.
+            builtin = 64,   // Indicates a builtin function that should not be 
+                            // serialized.  Either the function is just an 
+                            // inlined sequence of instructions or it is a 
+                            // function provided by the executor (a member of 
+                            // the .builtin module).
             shlib = 128,    // Function loaded directly from a shared library.
             explicitFlags = 32768 // these flags were set by an annotation
         } flags;

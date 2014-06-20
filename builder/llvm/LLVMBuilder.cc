@@ -3360,7 +3360,7 @@ void LLVMBuilder::createModuleCommon(Context &context) {
 
     // create "void *calloc(uint size)"
     {
-        FuncBuilder f(context, FuncDef::noFlags, voidptrType, "calloc", 2);
+        FuncBuilder f(context, FuncDef::builtin, voidptrType, "calloc", 2);
         f.addArg("size", uintzType);
         f.addArg("size", uintzType);
         f.setSymbolName("calloc");
@@ -3376,7 +3376,7 @@ void LLVMBuilder::createModuleCommon(Context &context) {
         types->push_back(byteptrType);
         TypeDefPtr arrayOfByteptr =
             array->getSpecialization(context, types.get());
-        FuncBuilder f(context, FuncDef::noFlags,
+        FuncBuilder f(context, FuncDef::builtin,
                       BTypeDefPtr::arcast(arrayOfByteptr),
                       "__getArgv",
                       0
@@ -3387,14 +3387,14 @@ void LLVMBuilder::createModuleCommon(Context &context) {
 
     // create "int __getArgc()"
     {
-        FuncBuilder f(context, FuncDef::noFlags, intType, "__getArgc", 0);
+        FuncBuilder f(context, FuncDef::builtin, intType, "__getArgc", 0);
         f.setSymbolName("__getArgc");
         f.finish();
     }
 
     // create "__CrackThrow(VTableBase)"
     {
-        FuncBuilder f(context, FuncDef::noFlags, voidType, "__CrackThrow", 1);
+        FuncBuilder f(context, FuncDef::builtin, voidType, "__CrackThrow", 1);
         f.addArg("exception", vtableBaseType);
         f.setSymbolName("__CrackThrow");
         f.finish();
@@ -3402,7 +3402,7 @@ void LLVMBuilder::createModuleCommon(Context &context) {
 
     // create "__CrackGetException(voidptr)"
     {
-        FuncBuilder f(context, FuncDef::noFlags, voidptrType,
+        FuncBuilder f(context, FuncDef::builtin, voidptrType,
                       "__CrackGetException",
                       1
                       );
@@ -3413,7 +3413,7 @@ void LLVMBuilder::createModuleCommon(Context &context) {
 
     // create "__CrackBadCast(Class a, Class b)"
     {
-        FuncBuilder f(context, FuncDef::noFlags, voidType,
+        FuncBuilder f(context, FuncDef::builtin, voidType,
                       "__CrackBadCast",
                       2
                       );
@@ -3425,7 +3425,7 @@ void LLVMBuilder::createModuleCommon(Context &context) {
 
     // create "__CrackCleanupException(voidptr exceptionObject)"
     {
-        FuncBuilder f(context, FuncDef::noFlags, voidType,
+        FuncBuilder f(context, FuncDef::builtin, voidType,
                       "__CrackCleanupException",
                       1
                       );
@@ -3436,7 +3436,7 @@ void LLVMBuilder::createModuleCommon(Context &context) {
 
     // create "__CrackExceptionFrame()"
     {
-        FuncBuilder f(context, FuncDef::noFlags, voidType,
+        FuncBuilder f(context, FuncDef::builtin, voidType,
                       "__CrackExceptionFrame",
                       0
                       );
