@@ -227,6 +227,10 @@ So given this, our meta-data format is:
     }
 
     TypeDef {
+        # Note that this is the "true" object id - with a ref, the objectId is
+        # left-shifted 1 bit (if the low-bit is set, it's a definition,
+        # otherwise it's a reference).  But this field is always a reference,
+        # so there's no need for the bit-shifting.
         uint objectId
         uint isGeneric
         if (generic) {
