@@ -74,6 +74,19 @@ test.run();
 test.rmCacheFiles('.main.*');
 test.run();
 
+# importing a generic instantiated in a slave.
+test.mod('mod', I"
+    class A[T] { void f() { puts(T.name); } }
+    class GenericInASlave {}
+    A[GenericInASlave] ab = {};
+    ");
+test.main(I"
+    import mod ab;
+    ab.f();
+    ");
+test.run();
+test.run();
+
 %%REXPECT%%
 out: alias
 terminated: success
@@ -94,5 +107,9 @@ terminated: success
 out: cast reconstituted
 terminated: success
 out: cast reconstituted
+terminated: success
+out: GenericInASlave
+terminated: success
+out: GenericInASlave
 terminated: success
 %%STDIN%%

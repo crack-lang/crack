@@ -154,6 +154,10 @@ class Vector {
     @final Vector oper *(float factor) {
         return Vector(raw[0] * factor, raw[1] * factor, raw[2] * factor);
     }
+    
+    @final Vector oper /(float divisor) {
+        return Vector(raw[0] / divisor, raw[1] / divisor, raw[2] / divisor);
+    }
 
     float size() {
         return sqrt(raw[0] * raw[0] + raw[1] * raw[1] + raw[2] * raw[2]);

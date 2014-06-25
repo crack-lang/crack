@@ -1109,7 +1109,6 @@ void TypeDef::serializeExtern(Serializer &serializer) const {
 void TypeDef::serializeDef(Serializer &serializer) const {
     if (Serializer::trace)
         cerr << ">> Serializing the body of class " << getFullName() << endl;
-    serializer.write(Serializer::typeId, "kind");
     int objectId = serializer.getObjectId(this);
     SPUG_CHECK(objectId != -1,
                "Type " << getFullName() << " was not registered in the "
@@ -1174,21 +1173,7 @@ void TypeDef::serializeAlias(Serializer &serializer,
 void TypeDef::serialize(Serializer &serializer, bool writeKind,
                         const Namespace *ns
                         ) const {
-    if (writeKind) {
-        // We only write "kind" when serializing from a namespace.  This 
-        // should never happen for an alias.  
-        SPUG_CHECK(VarDef::getModule()->getMaster() == serializer.module,
-                   "Attempted to serialize an alias for " << getFullName() <<
-                    " from a namespace"
-                   );
-
-        // It should also never happen for a reference, and we don't want to 
-        // treat type references the same way so we just serialize the 
-        // definition.
-        serializeDef(serializer);
-        return;
-    }
-                
+    SPUG_CHECK(!writeKind, "need to write kind for type " << getFullName());
     if (serializer.writeObject(this, "type")) {
         ModuleDefPtr module = VarDef::getModule();
         if (module != serializer.module) {

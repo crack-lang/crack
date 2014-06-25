@@ -73,6 +73,11 @@ So given this, our meta-data format is:
         # their order, starting with 1 (0 is the object id for the model)
         array[ref[TypeDecl]] decls
 
+        # All of the types in the module and all slave modules.
+        # XXX fix Definitions to reflect the fact that types are not
+        # serialized there.
+        array[TypeDef] types
+
         # the module meta-data.
         Definitions defs
 
@@ -131,10 +136,10 @@ So given this, our meta-data format is:
     }
 
     Definitions {
-        # The public definitions.
-        # Definitions must be in order: types, non-alias symbols, and aliases.
-        # Note that private base classes are part of the public interface
-        # (even though they can't be imported).
+        # The public definitions, excluding types.  (Types have special
+        # ordering considerations across slave modules so all of them are
+        # serialized at the module level.
+        # Definitions are current in order of: non-alias symbols, and aliases.
         array[Def] defs
 
         # Private definitions need only be specified if the namespace contains

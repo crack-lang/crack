@@ -37,6 +37,7 @@ import crack.lang die, free, AppendBuffer;
 import crack.io cerr, cout, AppendBufferWriter, Writer;
 import crack.math PI;
 import crack.net resolve, InetAddress, Poller;
+import crack.random random;
 import crack.exp.net.facade facadeRunOnce = runOneCycle, IP4Client, IP4Server;
 import crack.runtime floor;
 import crack.serial SerialWriter, SerialReader;
@@ -60,8 +61,9 @@ import crack.exp.g3d loadPNGMaterial, openRd, App, Camera, Coord, Light,
     Tri, Vector, Vertex, RenderFrameEvent, RenderFrameHandler;
 import crack.exp.g3d.wfobj readWFObj;
 import comm firstProxy, commInst = inst, proxies, CommManager, Proxy, WurldInst;
+import model SparseVoxelSpace;
     
-import crack.ext._gl GL_LIGHT0, GL_LIGHT1;
+import crack.ext._gl glNormal3f, glVertex3f, GL_LIGHT0, GL_LIGHT1;
 
 ## A game object.  Renderable, persistable and (eventually) collidable.
 @abstract class WurldObj : Prim {
@@ -551,6 +553,77 @@ Cube makeTargetCube() {
     return Cube(orange, dir);
 }
 
+void renderCube(Vector org, byte materialId, int face) {
+    Material material;
+    if (materialId == 1)
+        material = stucco;
+    else
+        material = plasma;
+
+    @define normal(x, y, z) {
+        glNormal3f(x, y, z);
+    }
+    
+    @define Cube_vertex(x, y, z, s, t) {
+        material.pin(s, t);
+        glVertex3f(float32(org.raw[0] + x * 0.125), 
+                   float32(org.raw[1] + y * 0.125), 
+                   float32(org.raw[2] + z * 0.125)
+                   );
+    }
+        
+    material.makeCurrent();
+    Graphics.loadIdentity();
+    material.makeCurrent();
+    Graphics.loadIdentity();
+    Quad.begin();
+    
+    if (face == 0) {
+        @normal(-1, 0, 0);
+        @Cube_vertex(0, 1, 0, 0, 0);
+        @Cube_vertex(0, 1, 1, 1, 0);
+        @Cube_vertex(0, 0, 1, 1, 1);
+        @Cube_vertex(0, 0, 0, 0, 1);
+    } else if (face == 1) {
+        # bottom face, clockwise from front right
+        @normal(0, -1, 0);
+        @Cube_vertex(1, 0, 0, 0, 0);
+        @Cube_vertex(0, 0, 0, 1, 0);
+        @Cube_vertex(0, 0, 1, 1, 1);
+        @Cube_vertex(1, 0, 1, 0, 1);
+    } else if (face == 2) {
+        # front face, counter-clockwise from top right
+        @normal(0, 0, -1);
+        @Cube_vertex(1, 1, 0, 0, 0);
+        @Cube_vertex(0, 1, 0, 1, 0);
+        @Cube_vertex(0, 0, 0, 1, 1);
+        @Cube_vertex(1, 0, 0, 0, 1);
+    } else if (face == 3) {
+        # right side face, clockwise from top rear
+        @normal(1, 0, 0);
+        @Cube_vertex(1, 1, 1, 0, 0);
+        @Cube_vertex(1, 1, 0, 1, 0);
+        @Cube_vertex(1, 0, 0, 1, 1);
+        @Cube_vertex(1, 0, 1, 0, 1);
+    } else if (face == 4) {
+        # top face, clockwise from front left
+        @normal(0, 1, 0);
+        @Cube_vertex(0, 1, 0, 0, 0);
+        @Cube_vertex(1, 1, 0, 1, 0);
+        @Cube_vertex(1, 1, 1, 1, 1);
+        @Cube_vertex(0, 1, 1, 0, 1);
+    } else if (face == 5) {
+        # rear face, clockwise from top left
+        @normal(0, 0, 1);
+        @Cube_vertex(0, 1, 1, 0, 0);
+        @Cube_vertex(1, 1, 1, 1, 0);
+        @Cube_vertex(1, 0, 1, 1, 1);
+        @Cube_vertex(0, 0, 1, 0, 1);
+    }
+    
+    Quad.end();
+}
+
 class DemoApp : Renderable @implements KeyboardHandler, MouseMotionHandler, 
                                        MouseButtonHandler,
                                        RenderFrameHandler,
@@ -559,6 +632,7 @@ class DemoApp : Renderable @implements KeyboardHandler, MouseMotionHandler,
     bool viewChanged;
     bool client;
     bool server;
+    SparseVoxelSpace blockSpace = {};
 
     oper init(bool client, bool server) : client = client, server = server {}
 
@@ -683,6 +757,9 @@ class DemoApp : Renderable @implements KeyboardHandler, MouseMotionHandler,
         pitchMat.makePitch(pitch);
         camera.rotMatrix.makeProduct(pitchMat, yawMat);
         camera.render();
+        
+        # Render the block space.
+        blockSpace.render(camera.pos, renderCube);
 
         for (r :in objects)
             r.render();
@@ -743,7 +820,6 @@ class DemoApp : Renderable @implements KeyboardHandler, MouseMotionHandler,
             firstProxy.reportPosition(0, camera.pos, dir);
         }
     }
-    
 }
 
 bool networked = false;
@@ -813,6 +889,18 @@ if (gameToLoad := opts.getString('load')) {
 
 DemoApp myHandlers = {client, server};
 commInst = myHandlers;
+
+for (int x = 0; x < 10; ++x) {
+    for (int y = 0; y < 10; ++y) {
+        for (int z = 0; z < 10; ++z) {
+            cout `setting block space $x, $y, $z yo\n`;
+            myHandlers.blockSpace[Vector(x, y, z)] = byte(random() % 3);
+        }
+    }
+}
+cout `finished block setup, dude.\n`;
+
+#myHandlers.blockSpace
 
 app.keyboardHandlers.append(myHandlers);
 app.mouseMotionHandlers.append(myHandlers);

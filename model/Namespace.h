@@ -10,6 +10,7 @@
 #define _model_Namespace_h_
 
 #include <map>
+#include <set>
 #include <vector>
 #include <spug/RCBase.h>
 #include <spug/RCPtr.h>
@@ -37,6 +38,37 @@ class Namespace : public virtual spug::RCBase {
     public:
         typedef std::map<std::string, VarDefPtr> VarDefMap;
         typedef std::vector<VarDefPtr> VarDefVec;
+        
+        /**
+         * A collection of types that contains both a vector (to maintain 
+         * order of addition) and a set (to allow us to efficiently check if a 
+         * type is in the collection).
+         */
+        class OrderedTypes {
+            private:
+                std::vector<const TypeDef *> ordered;
+                std::set<const TypeDef *> indexed;
+                
+            public:
+                typedef std::vector<const TypeDef *>::const_iterator const_iterator;
+
+                /**
+                 * Adds 'type' and all of its dependencies to the collection 
+                 * (depdendencies first), excluding types that are already 
+                 * present in the collection and those that are not 
+                 * copersistent with the given master module.
+                 */
+                void add(const TypeDef *type, const ModuleDef *master);
+                
+                /** Returns true if the collection contains 'type'. */
+                bool contains(const TypeDef *type) {
+                    return indexed.find(type) != indexed.end();
+                }
+                
+                const_iterator begin() const { return ordered.begin(); }
+                const_iterator end() const { return ordered.end(); } 
+                size_t size() const { return ordered.size(); }
+        };
 
     protected:        
         VarDefMap defs;
@@ -234,15 +266,32 @@ class Namespace : public virtual spug::RCBase {
         /// @}
 
         /**
+         * Add all of the types in the namespace to 'types'.
+         */
+        void getOrderedTypes(OrderedTypes &types, const ModuleDef *master) const;
+
+        /**
          * Serialize all type declarations in the namespace (and nested 
          * namespaces.
          */
         void serializeTypeDecls(Serializer &serializer, ModuleDef *master);
         
         /**
+         * Serialize all of the definitions in all of the namespaces.
+         */
+        void serializeDefs(
+            const std::vector<const Namespace *>& namespaces,
+            Serializer &serializer
+        ) const;
+
+        /**
          * Serialize all of the definitions in the namespace.
          */
-        void serializeDefs(Serializer &serializer) const;
+        void serializeDefs(Serializer &serializer) const {
+            std::vector<const Namespace*> namespaces;
+            namespaces.push_back(this);
+            serializeDefs(namespaces, serializer);
+        }
         
         /** 
          * Deserialize an array of definitions and store them in the 

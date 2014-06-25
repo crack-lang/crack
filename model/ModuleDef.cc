@@ -197,7 +197,27 @@ void ModuleDef::serialize(Serializer &serializer) {
     // write all of the symbols
     serializer.digestEnabled = true;
     Namespace::serializeTypeDecls(serializer, this);
-    Namespace::serializeDefs(serializer);
+
+    // Build an array of all public types and their private dependencies
+    // in order of dependencies before dependents.
+    Namespace::OrderedTypes types;
+    SPUG_FOR(vector<ModuleDefPtr>, slave, slaves)
+        (*slave)->getOrderedTypes(types, this);
+    getOrderedTypes(types, this);
+
+    // Now serialize this type array.
+    serializer.write(types.size(), "#types");
+    SPUG_FOR(Namespace::OrderedTypes, iter, types)
+        (*iter)->serializeDef(serializer);
+
+    vector<const Namespace *> allNamespaces;
+    allNamespaces.push_back(this);
+    SPUG_FOR(vector<ModuleDefPtr>, slave, slaves) {
+//        Namespace::serializeNonTypeDefs(slave->get());
+        allNamespaces.push_back(slave->get());
+    }
+//    Namespace::serializeNonTypeDefs(allNamespaces, serializer);
+    Namespace::serializeDefs(allNamespaces, serializer);
 
     // write all of the exports
     serializer.write(exports.size(), "#exports");
@@ -316,6 +336,12 @@ ModuleDefPtr ModuleDef::deserialize(Deserializer &deser,
     deser.context->ns = mod.get();
     deser.digestEnabled = true;
     mod->deserializeTypeDecls(deser);
+
+    // Deserialize all of the types.
+    count = deser.readUInt("#types");
+    for (int i = 0; i < count; ++i)
+        TypeDef::deserializeTypeDef(deser, "type");
+
     mod->deserializeDefs(deser);
 
     // deserialize exports
@@ -352,6 +378,7 @@ namespace {
                 name,
                 master.get()
             );
+            deser.context->construct->moduleCache[name] = mod;
             return mod;
         }
     };
