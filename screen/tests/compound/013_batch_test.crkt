@@ -2,6 +2,7 @@
 Batch of persistence tests.
 %%ARGS%%
 %%FILE%%
+import crack.io FStr;
 import systest test;
 test.preBootstrap = true;
 
@@ -87,6 +88,25 @@ test.main(I"
 test.run();
 test.run();
 
+# Serialization of private member functions.
+test.mod('mod', I"
+    class A : VTableBase {
+        void __f() {}
+        void f() {}
+    }
+    ");
+String makeMain(int run) {
+    return FStr() I`
+        import mod A;
+        class B : A {}
+        puts('PrivateMember$run');
+        `;
+}
+test.main(makeMain(1));
+test.run();
+test.main(makeMain(2));
+test.run();
+
 %%REXPECT%%
 out: alias
 terminated: success
@@ -111,5 +131,9 @@ terminated: success
 out: GenericInASlave
 terminated: success
 out: GenericInASlave
+terminated: success
+out: PrivateMember1
+terminated: success
+out: PrivateMember2
 terminated: success
 %%STDIN%%

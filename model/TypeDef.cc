@@ -158,7 +158,8 @@ bool TypeDef::hasInstSlot() {
 bool TypeDef::isImplicitFinal(const std::string &name) {
     return name == "oper init" ||
            name == "oper bind" ||
-           name == "oper release";
+           name == "oper release" ||
+           !name.compare(0, 2, "__");
 }
 
 void TypeDef::addToAncestors(Context &context, TypeVec &ancestors) {
