@@ -370,9 +370,9 @@ void Namespace::serializeTypeDecls(Serializer &serializer, ModuleDef *master) {
     }
 }
 
-void Namespace::serializeDefs(const vector<const Namespace *>& namespaces, 
-                              Serializer &serializer
-                              ) const {
+void Namespace::serializeNonTypeDefs(const vector<const Namespace *>& namespaces, 
+                                     Serializer &serializer
+                                     ) const {
     // Count the number of definitions to serialize and separate out the 
     // types, other defs, and aliases.
     int count = 0;

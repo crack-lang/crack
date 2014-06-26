@@ -212,12 +212,9 @@ void ModuleDef::serialize(Serializer &serializer) {
 
     vector<const Namespace *> allNamespaces;
     allNamespaces.push_back(this);
-    SPUG_FOR(vector<ModuleDefPtr>, slave, slaves) {
-//        Namespace::serializeNonTypeDefs(slave->get());
+    SPUG_FOR(vector<ModuleDefPtr>, slave, slaves)
         allNamespaces.push_back(slave->get());
-    }
-//    Namespace::serializeNonTypeDefs(allNamespaces, serializer);
-    Namespace::serializeDefs(allNamespaces, serializer);
+    Namespace::serializeNonTypeDefs(allNamespaces, serializer);
 
     // write all of the exports
     serializer.write(exports.size(), "#exports");

@@ -1156,7 +1156,7 @@ void TypeDef::serializeDef(Serializer &serializer) const {
             serializer.write(0, "optional");
         }
         
-        Namespace::serializeDefs(serializer);
+        Namespace::serializeNonTypeDefs(serializer);
     }
     if (Serializer::trace)
         cerr << ">> Done serializing " << getFullName() << endl;

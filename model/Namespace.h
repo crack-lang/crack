@@ -279,7 +279,7 @@ class Namespace : public virtual spug::RCBase {
         /**
          * Serialize all of the definitions in all of the namespaces.
          */
-        void serializeDefs(
+        void serializeNonTypeDefs(
             const std::vector<const Namespace *>& namespaces,
             Serializer &serializer
         ) const;
@@ -287,10 +287,10 @@ class Namespace : public virtual spug::RCBase {
         /**
          * Serialize all of the definitions in the namespace.
          */
-        void serializeDefs(Serializer &serializer) const {
+        void serializeNonTypeDefs(Serializer &serializer) const {
             std::vector<const Namespace*> namespaces;
             namespaces.push_back(this);
-            serializeDefs(namespaces, serializer);
+            serializeNonTypeDefs(namespaces, serializer);
         }
         
         /** 
