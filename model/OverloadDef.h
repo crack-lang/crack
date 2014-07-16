@@ -146,6 +146,14 @@ class OverloadDef : public VarDef {
          * has no ancestors of its own.
          */
         OverloadDefPtr createAlias();
+
+        /**
+         * Returns information on whether the overload contains aliases and 
+         * non-aliased overloads.  The first boolean in the pair is true if 
+         * there are aliases, the second is true if there are non-aliased 
+         * overloads.
+         */
+        std::pair<bool, bool> hasAliasesAndNonAliases() const;
         
         /**
          * Iterate over the funcs local to this context - do not iterate over 
@@ -189,6 +197,10 @@ class OverloadDef : public VarDef {
          * (this is useful for determining if it needs to be serialized).
          */
         bool hasSerializableFuncs() const;
+
+        virtual void serializeAlias(Serializer &serializer, 
+                                    const std::string &alias
+                                    ) const;
 
         virtual void serialize(Serializer &serializer, bool writeKind,
                                const Namespace *ns

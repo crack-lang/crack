@@ -178,6 +178,20 @@ OverloadDefPtr OverloadDef::createAlias() {
     return alias;
 }
 
+pair<bool, bool> OverloadDef::hasAliasesAndNonAliases() const {
+    bool gotAliases = false, gotNonAliases = false;
+    SPUG_FOR(FuncList, iter, funcs) {
+        if ((*iter)->isAliasIn(*this)) {
+            gotAliases = true;
+            if (gotNonAliases) break;
+        } else {
+            gotNonAliases = true;
+            if (gotAliases) break;
+        }
+    }
+    return std::make_pair(gotAliases, gotNonAliases);
+}
+
 void OverloadDef::addFunc(FuncDef *func) {
     if (funcs.empty()) setImpl(func);
     funcs.push_back(func);
@@ -351,41 +365,76 @@ bool OverloadDef::hasSerializableFuncs() const {
     return false;
 }
 
+namespace {
+    template <void (*T)(Serializer &, const FuncDef &)>
+    void serializeFuncVec(Serializer &serializer, const vector<FuncDef *> &funcs, 
+                          bool writeKind,
+                          const string &name
+                          ) {
+        if (writeKind)
+            serializer.write(Serializer::overloadId, "kind");
+        serializer.write(name, "name");
+        serializer.write(funcs.size(), "#overloads");
+        SPUG_FOR(vector<FuncDef *>, iter, funcs)
+                T(serializer, **iter);
+    }
+    
+    void serializeFunc(Serializer &serializer, const FuncDef &funcDef) {
+        funcDef.serialize(serializer);
+    }
+    
+    void serializeFuncAlias(Serializer &serializer, const FuncDef &funcDef) {
+        funcDef.serializeAlias(serializer);
+    }
+}
+
+void OverloadDef::serializeAlias(Serializer &serializer,
+                                 const string &name
+                                 ) const {
+    // Build a list of the aliases up front
+    vector<FuncDef *> aliases;
+    SPUG_FOR(FuncList, iter, funcs) {
+        // We don't check for serializable here, aliases are assumed to always 
+        // be serializable.
+        if ((*iter)->isAliasIn(*this))
+            aliases.push_back(iter->get());
+    }
+
+    serializeFuncVec<serializeFuncAlias>(serializer, aliases, /* writeKind */ true, name);
+}
+
 void OverloadDef::serialize(Serializer &serializer, bool writeKind,
                             const Namespace *ns
                             ) const {
 
-    // calculate the number of functions to serialize (we don't serialize 
-    // builtins)
-    int size = 0;
-    for (FuncList::const_iterator iter = funcs.begin();
-         iter != funcs.end();
-         ++iter
-         )
-        if ((*iter)->isSerializable())
-            ++size;
-
-    if (writeKind)
-        serializer.write(Serializer::overloadId, "kind");
-    serializer.write(name, "name");
-    
-    serializer.write(funcs.size(), "#overloads");
+    // Build a list of the overloads up front.
+    vector<FuncDef *> overloads;
     for (FuncList::const_iterator iter = funcs.begin();
          iter != funcs.end();
          ++iter
          ) {
-        if ((*iter)->isSerializable())
-            (*iter)->serialize(serializer, false, ns);
+        if ((*iter)->isSerializable() && !(*iter)->isAliasIn(*this))
+            overloads.push_back(iter->get());
     }
+
+    serializeFuncVec<serializeFunc>(serializer, overloads, writeKind, name);
 }
 
 OverloadDefPtr OverloadDef::deserialize(Deserializer &deser,
                                         Namespace *owner
                                         ) {
     string name = deser.readString(Serializer::modNameSize, "name");
-    OverloadDefPtr ovld = new OverloadDef(name);
-    ovld->type = deser.context->construct->overloadType;
-    ovld->collectAncestors(owner);
+    OverloadDefPtr ovld;
+    
+    // In order to deal with local aliases (which need to be defined after the
+    // functions they reference) overloads can be serialized multiple times, 
+    // so if the overload is already defined in the namespace, just use the 
+    // existing one.
+    if (!(ovld = owner->lookUp(name, false))) {
+        ovld = new OverloadDef(name);
+        ovld->type = deser.context->construct->overloadType;
+        ovld->collectAncestors(owner);
+    }
     int size = deser.readUInt("#overloads");
     for (int i = 0; i < size; ++i) {
         FuncDefPtr func = FuncDef::deserialize(deser, name);

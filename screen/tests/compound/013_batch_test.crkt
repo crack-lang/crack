@@ -107,6 +107,24 @@ test.run();
 test.main(makeMain(2));
 test.run();
 
+# Serialization of aliases.
+test.mod('mod2', "void f() {}");
+test.mod('mod1', I"
+    import mod2 g = f;
+    class A[T] {}  # Forces unexported aliases to be serialized.
+    class B {
+        void f() {}
+        alias a = f;
+    }
+    ");
+test.main(I"
+    import mod1 A;
+    puts('alias serialization');
+    ");
+test.run();
+test.rmCacheFiles('.main.*');
+test.run();
+
 %%REXPECT%%
 out: alias
 terminated: success
@@ -135,5 +153,9 @@ terminated: success
 out: PrivateMember1
 terminated: success
 out: PrivateMember2
+terminated: success
+out: alias serialization
+terminated: success
+out: alias serialization
 terminated: success
 %%STDIN%%

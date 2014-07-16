@@ -148,6 +148,12 @@ class FuncDef : public VarDef {
         TypeDef *getThisType() const;
 
         virtual bool isConstant();
+
+        /**
+         * Returns true if the function is an alias when referenced from the 
+         * given overload.
+         */        
+        bool isAliasIn(const OverloadDef &overload) const;
         
         /**
          * Returns the address of the underlying compiled function, suitable 
@@ -176,6 +182,15 @@ class FuncDef : public VarDef {
         void serializeArgs(Serializer &serializer) const;
         static ArgVec deserializeArgs(Deserializer &deser);
         void serializeCommon(Serializer &serializer) const;
+
+        /** Serialize a function.  Should not be used on an alias. */
+        void serialize(Serializer &serializer) const;
+
+        /** Serialize an aliased function. */        
+        void serializeAlias(Serializer &serializer) const;
+
+        // This should never be called, functions are never directly 
+        // serialized.
         virtual void serialize(Serializer &serializer, bool writeKind,
                                const Namespace *ns
                                ) const;

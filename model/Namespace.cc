@@ -129,8 +129,19 @@ void Namespace::deserializeDefs(Deserializer &deser, const char *countName,
             case Serializer::overloadId: {
                 OverloadDefPtr ovld = 
                     OverloadDef::deserialize(deser, this).get();
-                addDef(ovld.get());
-                addDefToMeta(ovld.get());
+                
+                // Since overloads can be serialized more than once to deal 
+                // with aliases, we only want to add it if it's not already 
+                // registered.
+                if (!ovld->getOwner()) {
+                    addDef(ovld.get());
+                    addDefToMeta(ovld.get());
+                } else {
+                    SPUG_CHECK(ovld->getOwner() == this,
+                               "Reusing overload that is not owned by " <<
+                                getNamespaceName()
+                               );
+                }
                 break;
             }
             case Serializer::typeId:
@@ -265,6 +276,10 @@ OverloadDefPtr Namespace::addAlias(const string &name, VarDef *def) {
     OverloadDef *overload = OverloadDefPtr::cast(def);
     if (overload) {
         OverloadDefPtr child = overload->createAlias();
+        
+        // Since we own the overload, we can rename it.
+        child->name = name;
+        
         defs[name] = child.get();
         child->setOwner(this);
         return child;
@@ -390,13 +405,30 @@ void Namespace::serializeNonTypeDefs(const vector<const Namespace *>& namespaces
             if (i->second->isSerializable()) {
                 
                 // is it an alias?
-                if (i->second->getOwner() != *ns ||
-                    i->first != i->second->name
-                    ) {
+                if (i->second->getOwner() != *ns) {
                     if (i->second->isImportable(*ns, i->first))
                         aliases.push_back(*i);
                     else if (serializePrivates)
                         privateAliases.push_back(*i);
+                    continue;
+                }
+                
+                // Is it an overload?
+                // XXX I'm pretty sure that the way we're dealing with privates 
+                // needs to change because I don't think an alias to a private 
+                // will result in the private being serialized.
+                if (OverloadDefPtr ovld = OverloadDefPtr::rcast(i->second)) {
+                    pair<bool, bool> gotAliasGotNon = 
+                        ovld->hasAliasesAndNonAliases();
+                    if (i->second->isImportable(*ns, i->first)) {
+                        if (gotAliasGotNon.first) aliases.push_back(*i);
+                        if (gotAliasGotNon.second) 
+                            others.push_back(i->second.get());
+                    } else if (serializePrivates) {
+                        if (gotAliasGotNon.first) privateAliases.push_back(*i);
+                        if (gotAliasGotNon.second) 
+                            otherPrivates.push_back(i->second.get());
+                    }
                     continue;
                 }
     
@@ -430,13 +462,13 @@ void Namespace::serializeNonTypeDefs(const vector<const Namespace *>& namespaces
                      "#privateDefs"
                      );
     
-    // aliases
-    SPUG_FOR(VarDefVec, i, privateAliases)
-        i->second->serializeAlias(serializer, i->first);
-    
     // vars and functions
     SPUG_FOR(vector<VarDef *>, i, otherPrivates)
         (*i)->serialize(serializer, true, this);
+
+    // aliases
+    SPUG_FOR(VarDefVec, i, privateAliases)
+        i->second->serializeAlias(serializer, i->first);
 }
 
 void Namespace::deserializeTypeDecls(Deserializer &deser) {

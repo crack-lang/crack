@@ -194,6 +194,10 @@ bool FuncDef::isConstant() {
     return true;
 }
 
+bool FuncDef::isAliasIn(const OverloadDef &overload) const {
+    return overload.getOwner() != owner || overload.name != name;
+}
+
 ExprPtr FuncDef::foldConstants(const vector<ExprPtr> &args) const {
     return 0;
 }
@@ -284,18 +288,24 @@ void FuncDef::serializeCommon(Serializer &serializer) const {
     }
 }
 
+void FuncDef::serialize(Serializer &serializer) const { 
+    serializer.write(0, "isAlias");
+    serializeCommon(serializer);
+}
+
+void FuncDef::serializeAlias(Serializer &serializer) const {
+    serializer.write(1, "isAlias");
+    serializeExtern(serializer);
+    serializeArgs(serializer);
+}
+
 void FuncDef::serialize(Serializer &serializer, bool writeKind,
                         const Namespace *ns
                         ) const {
-    bool alias = owner != ns;
-    serializer.write(alias ? 1 : 0, "isAlias");
-    if (alias) {
-        serializeExtern(serializer);
-        serializeArgs(serializer);
-        return;
-    }
-
-    serializeCommon(serializer);    
+    SPUG_CHECK(false, 
+               "Directly called FuncDef::serialize() for function " <<
+                *this
+               );
 }
 
 FuncDef::ArgVec FuncDef::deserializeArgs(Deserializer &deser) {

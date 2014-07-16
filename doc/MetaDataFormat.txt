@@ -140,6 +140,9 @@ So given this, our meta-data format is:
         # ordering considerations across slave modules so all of them are
         # serialized at the module level.
         # Definitions are current in order of: non-alias symbols, and aliases.
+        # Overload definitions may be included more than once, with the
+        # aliases in a set of overloads serialized separately from the
+        # non-aliased functions.
         array[Def] defs
 
         # Private definitions need only be specified if the namespace contains
