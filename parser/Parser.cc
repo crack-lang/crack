@@ -197,6 +197,7 @@ void Parser::parseClause(bool defsAllowed) {
    ExprPtr expr;
    VarDefPtr def;
    TypeDefPtr primaryType;
+   string typeName;
 
    if (tok.isTypeof()) {
       primaryType = parseTypeof();
@@ -234,6 +235,8 @@ void Parser::parseClause(bool defsAllowed) {
             runCallbacks(exprBegin);
             expr = parseExpression();
          }
+      } else {
+         typeName = tok.getData();
       }
 
    // not an identifier
@@ -251,7 +254,8 @@ void Parser::parseClause(bool defsAllowed) {
    // if we got a type, try to parse a definition.
    if (primaryType) {
       TypeDefPtr typeDef = primaryType;
-      context->checkAccessible(typeDef.get());
+      if (typeName.size())
+         context->checkAccessible(typeDef.get(), typeName);
       identLoc = tok.getLocation();
       if (parseDef(typeDef)) {
          if (!defsAllowed)
@@ -548,7 +552,7 @@ ExprPtr Parser::createVarRef(Expr *container, const Token &ident,
             );
 
    context->setLocation(ident.getLocation());
-   context->checkAccessible(var.get());
+   context->checkAccessible(var.get(), ident.getData());
    
    // check for an overload definition - if it is one, make sure there's only 
    // a single overload.
@@ -656,6 +660,11 @@ FuncCallPtr Parser::parseFuncCall(const Token &ident, const string &funcName,
                                   ) {
 
    VarRefPtr var;
+   
+   // The "true function name" is normally just the func name, but it is 
+   // different if the function isn't really a function but is instead an 
+   // object with an "oper call" or class with an "oper new".
+   string trueFuncName = funcName;
 
    // parse the arg list
    FuncCall::ExprVec args;
@@ -674,9 +683,10 @@ FuncCallPtr Parser::parseFuncCall(const Token &ident, const string &funcName,
                                      );
    if (!func) {
       
+      // TODO: move the oper call logic to Context::lookUp.
       // first try to resolve the identifier as a non-function, then get the 
       // "oper call" from it.
-      var = createVarRef(container, ident, 
+      var = createVarRef(container, ident,
                          SPUG_FSTR("No method exists matching " << 
                                    ident.getData() << "()"
                                    ).c_str()
@@ -684,7 +694,10 @@ FuncCallPtr Parser::parseFuncCall(const Token &ident, const string &funcName,
       if (var) {
          func = context->lookUp("oper call", args, var->type.get());
          container = var.get();
+         trueFuncName = "oper call";
       }
+   } else if (func->name == "oper new") {
+      trueFuncName = "oper new";
    }
    
    // no function, not a callable variable - give an error.   
@@ -695,7 +708,7 @@ FuncCallPtr Parser::parseFuncCall(const Token &ident, const string &funcName,
       error(ident, msg.str());
    }
    
-   context->checkAccessible(func.get());
+   context->checkAccessible(func.get(), trueFuncName);
 
    // if the definition is for an instance variable, emit an implicit 
    // "this" dereference.  Otherwise just emit the variable
@@ -797,7 +810,7 @@ ExprPtr Parser::parsePostIdent(Expr *container, const Token &ident) {
                          )
                );
       
-      context->checkAccessible(var.get());
+      context->checkAccessible(var.get(), ident.getData());
 
       // make sure the variable is not a constant.
       if (var->isConstant())

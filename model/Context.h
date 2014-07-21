@@ -549,8 +549,11 @@ class Context : public spug::RCBase {
         /**
          * Verifies that the variable is accessible within the context (that 
          * it is not some other namespace's private or protected variable).
+         * 'name' is the name that the variable is referenced under.  It allows 
+         * correct behavior under aliases, which can be used to admit 
+         * accessiblity to private names.
          */
-        void checkAccessible(VarDef *var);
+        void checkAccessible(VarDef *var, const std::string &name);
         
         /**
          * Used to indicate that somthing in the current context depends on 

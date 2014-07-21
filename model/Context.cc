@@ -1129,16 +1129,16 @@ void Context::popErrorContext() {
     construct->errorContexts.pop_front();
 }
 
-void Context::checkAccessible(VarDef *var) {
-    size_t nameSize = var->name.size();
-    if (nameSize && var->name[0] == '_') {
+void Context::checkAccessible(VarDef *var, const string &name) {
+    size_t nameSize = name.size();
+    if (nameSize && name[0] == '_') {
 
         // See if the variable is aliased in the current module.  This is 
         // to accomodate generic arguments, which can alias private types.
         if (getModuleContext()->ns->hasAliasFor(var))
             return;
 
-        if (nameSize > 1 && var->name[1] == '_') {
+        if (nameSize > 1 && name[1] == '_') {
 
             // private variable: if it is owned by a class, we must be 
             // in the scope of that class.
@@ -1147,7 +1147,7 @@ void Context::checkAccessible(VarDef *var) {
                 return;
             ContextPtr myClassCtx = getClassContext();
             if (!myClassCtx || TypeDefPtr::rcast(myClassCtx->ns) != varClass)
-                error(SPUG_FSTR(var->name << " is private to class " <<
+                error(SPUG_FSTR(name << " is private to class " <<
                                  varClass->name << " and not acessible in this "
                                  "context."
                                 )
@@ -1172,7 +1172,7 @@ void Context::checkAccessible(VarDef *var) {
             
             // the symbol is from a different module and we are not in a 
             // derived class.
-            error(SPUG_FSTR(var->name << " is private to module " <<
+            error(SPUG_FSTR(name << " is private to module " <<
                              varMod->getNamespaceName() << 
                              " and not accessible in this context."
                             )

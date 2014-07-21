@@ -23,4 +23,7 @@ int func() { return 456; }
 int gvar = 789;
 alias _private = gvar;
 
+int _privateFunc() { return 1011; }
+alias privateFunc = _privateFunc;
+
 @export_symbols impVar, ImpA;

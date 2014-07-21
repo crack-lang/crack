@@ -1,0 +1,20 @@
+%%TEST%%
+constructors and "oper call" methods are accessible on private names
+%%ARGS%%
+%%FILE%%
+# This tests the fix of the interplay of badness in the parser and the
+# correct accessiblity rules (where we determine accessiblity by the name
+# something is referenced as, not by it's "real name").  Privacy rules should
+# be applied to the variable/class name, not the function that the check gets
+#  delegated to.
+class C {
+    void oper call() { puts('ok'); }
+}
+C __c;
+__c();
+
+class __A {}
+x := __A();
+%%EXPECT%%
+ok
+%%STDIN%%
