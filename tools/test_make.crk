@@ -7,6 +7,8 @@
 ##   file, You can obtain one at http://mozilla.org/MPL/2.0/.
 ## 
 
+import crack.ascii radix;
+import crack.strutil rjust;
 import crack.sys argv, exit;
 import crack.io cout, cerr, FStr;
 import crack.fs makePath;
@@ -70,7 +72,7 @@ if (!testDir)
                      'screen/tests/basic/1_post_bs';
 
 # find the highest file number
-fileRx := Regex(escape(testDir) + r'/(\d+)_.*');
+fileRx := Regex(r'(\d+)_.*');
 int maxId;
 dirObj := makePath(testDir);
 if (!dirObj.isDir()) {
@@ -79,13 +81,19 @@ if (!dirObj.isDir()) {
 }
 
 for (file :in dirObj.children()) {
+    cerr `looking at $file\n`;
+    if (m := fileRx.search(file.getName()))
+        cerr `got file $(m.group(1))\n`;
     if ( (m := fileRx.search(file.getName())) && 
          (curId := parseInt(m.group(1))) > maxId
         )
         maxId = curId;
 }
 
-templateFile := FStr() `$(testDir)/$(maxId + 1)_$testMnemonic.crkt`;
+# Pad the test number to three characters.
+testNum := rjust(radix(maxId + 1, 10), 3, b'0');
+
+templateFile := FStr() `$(testDir)/$(testNum)_$testMnemonic.crkt`;
 out := makePath(templateFile).writer();
 out.write('%%TEST%%
 %%ARGS%%
