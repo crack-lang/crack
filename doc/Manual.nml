@@ -1186,6 +1186,9 @@ are defined.
 Aliases can be useful for providing shorter names, but their main value comes
 from defining alternate names for \X(Generics).
 
+As noted in \X(Member Access Protection), aliases can also be used to make private 
+variables externally visible.
+
 Operators
 ---------
 
@@ -1884,6 +1887,19 @@ The #`_getCoord()`# method is protected: it can only be used from within the
 module or from classes derived from #Polygon#.  This allows derived classes to
 have special knowledge of the sequence of coordinates without access to the
 private #`__first`# variable.
+
+Access protection is based on the name used to access a definition, which is 
+not necessarily the name that it is defined as.  This is lets you create 
+public aliases for private defintions (see \X(Aliases) below).  For example, in 
+the following code:
+
+{{
+    int _private;  # is private to the module
+    alias public = _private;  # But 'public' is public!
+}}
+
+The #public# alias essentially leaks access to #\_private#, which may be 
+desirable in some circumstances.
 
 Destructors
 '''''''''''
