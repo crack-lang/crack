@@ -170,11 +170,17 @@ FuncDef *OverloadDef::getNoArgMatch(bool acceptAlias) {
     return 0;
 }
 
-OverloadDefPtr OverloadDef::createAlias() {
+OverloadDefPtr OverloadDef::createAlias(bool exposeAll) {
     OverloadDefPtr alias = new OverloadDef(name);
     alias->type = type;
     alias->impl = impl;
     flatten(alias->funcs);
+    if (exposeAll) {
+        SPUG_FOR(FuncList, iter, funcs) {
+            if (!(*iter)->isImportable(owner, (*iter)->name))
+                (*iter)->exposed = true;
+        }
+    }
     return alias;
 }
 
@@ -190,6 +196,14 @@ pair<bool, bool> OverloadDef::hasAliasesAndNonAliases() const {
         }
     }
     return std::make_pair(gotAliases, gotNonAliases);
+}
+
+bool OverloadDef::hasExposedFuncs() const {
+    SPUG_FOR(FuncList, iter, funcs) {
+        if ((*iter)->exposed)
+            return true;
+    }
+    return false;
 }
 
 void OverloadDef::addFunc(FuncDef *func) {

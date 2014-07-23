@@ -60,6 +60,11 @@ class VarDef : public virtual spug::RCBase {
         // this flag is true if we've run replaceAllStubs() on this object and 
         // it is guaranteed to not reference any stubs.
         bool stubFree;
+        
+        // This flag is true for private defs that are exposed via an alias.  
+        // (It should also be true for private types that are exposed as a 
+        // return value).
+        bool exposed;
 
         VarDef(TypeDef *type, const std::string &name);
         virtual ~VarDef();

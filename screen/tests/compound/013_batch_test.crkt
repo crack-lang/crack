@@ -125,6 +125,25 @@ test.run();
 test.rmCacheFiles('.main.*');
 test.run();
 
+# Aliasing privates.
+test.mod('mod', I"
+    void _f() { puts('aliased privates'); }
+    alias f = _f;
+    class _C {}
+    alias C = _C;
+    int _i;
+    alias i = _i;
+    ");
+test.main(I"
+    import mod f, C, i;
+    C c;
+    f();
+    i = 1;
+    ");
+test.run();
+test.rmCacheFiles('.main.*');
+test.run();
+
 %%REXPECT%%
 out: alias
 terminated: success
@@ -157,5 +176,9 @@ terminated: success
 out: alias serialization
 terminated: success
 out: alias serialization
+terminated: success
+out: aliased privates
+terminated: success
+out: aliased privates
 terminated: success
 %%STDIN%%

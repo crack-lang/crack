@@ -144,8 +144,10 @@ class OverloadDef : public VarDef {
          * Create an alias overload - an alias overload is comprised of all 
          * of the functions in the overload and its ancestors flattened.  It 
          * has no ancestors of its own.
+         * If 'exposeAll' is true, then this is a publicly visible alias and 
+         * we should mark all private functions in it as exposed.
          */
-        OverloadDefPtr createAlias();
+        OverloadDefPtr createAlias(bool exposeAll);
 
         /**
          * Returns information on whether the overload contains aliases and 
@@ -154,6 +156,11 @@ class OverloadDef : public VarDef {
          * overloads.
          */
         std::pair<bool, bool> hasAliasesAndNonAliases() const;
+        
+        /**
+         * Returns true if the alias contains any exposed functions.
+         */
+        bool hasExposedFuncs() const;
         
         /**
          * Iterate over the funcs local to this context - do not iterate over 

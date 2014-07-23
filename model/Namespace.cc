@@ -259,7 +259,7 @@ void Namespace::addAlias(VarDef *def) {
     // extend them.
     OverloadDef *overload = OverloadDefPtr::cast(def);
     if (overload) {
-        OverloadDefPtr child = overload->createAlias();
+        OverloadDefPtr child = overload->createAlias(false);
         storeDef(child.get());
         child->setOwner(this);
     } else {
@@ -269,13 +269,16 @@ void Namespace::addAlias(VarDef *def) {
 
 OverloadDefPtr Namespace::addAlias(const string &name, VarDef *def) {
     // make sure that the symbol is already bound to a context.
-    assert(def->getOwner());
+    Namespace *owner = def->getOwner();
+    assert(owner);
+
+    bool exposes = def->isImportable(this, name);
 
     // overloads should never be aliased - otherwise the new context could 
     // extend them.
     OverloadDef *overload = OverloadDefPtr::cast(def);
     if (overload) {
-        OverloadDefPtr child = overload->createAlias();
+        OverloadDefPtr child = overload->createAlias(exposes);
         
         // Since we own the overload, we can rename it.
         child->name = name;
@@ -285,6 +288,11 @@ OverloadDefPtr Namespace::addAlias(const string &name, VarDef *def) {
         return child;
     } else {
         defs[name] = def;
+        
+        // See if the alias exposes a private def.
+        if (exposes && !def->isImportable(owner, def->name))
+            def->exposed = true;
+
         return 0;
     }
 }
@@ -405,7 +413,7 @@ void Namespace::serializeNonTypeDefs(const vector<const Namespace *>& namespaces
             if (i->second->isSerializable()) {
                 
                 // is it an alias?
-                if (i->second->getOwner() != *ns) {
+                if (i->second->getOwner() != *ns || i->first != i->second->name) {
                     if (i->second->isImportable(*ns, i->first))
                         aliases.push_back(*i);
                     else if (serializePrivates)
@@ -420,7 +428,9 @@ void Namespace::serializeNonTypeDefs(const vector<const Namespace *>& namespaces
                 if (OverloadDefPtr ovld = OverloadDefPtr::rcast(i->second)) {
                     pair<bool, bool> gotAliasGotNon = 
                         ovld->hasAliasesAndNonAliases();
-                    if (i->second->isImportable(*ns, i->first)) {
+                    if (i->second->isImportable(*ns, i->first) || 
+                        ovld->hasExposedFuncs()
+                        ) {
                         if (gotAliasGotNon.first) aliases.push_back(*i);
                         if (gotAliasGotNon.second) 
                             others.push_back(i->second.get());
@@ -433,7 +443,9 @@ void Namespace::serializeNonTypeDefs(const vector<const Namespace *>& namespaces
                 }
     
                 if (!TypeDefPtr::rcast(i->second)) {
-                    if (i->second->isImportable(*ns, i->first)) {
+                    if (i->second->isImportable(*ns, i->first) || 
+                        i->second->exposed
+                        ) {
                         others.push_back(i->second.get());
                     } else if (serializePrivates) {
                         otherPrivates.push_back(i->second.get());

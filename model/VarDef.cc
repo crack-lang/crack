@@ -38,7 +38,8 @@ VarDef::VarDef(TypeDef *type, const std::string &name) :
     name(name),
     owner(0),
     constant(false),
-    stubFree(false) {
+    stubFree(false),
+    exposed(false) {
 }
 
 VarDef::~VarDef() {}
