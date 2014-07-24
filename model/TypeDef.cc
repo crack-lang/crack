@@ -973,6 +973,14 @@ TypeDefPtr TypeDef::getSpecialization(Context &context,
             instantiationContext->toplevel = true;
             instantiationContext->generic = true;
             instantiateGeneric(this, context, *instantiationContext, types);
+            
+            // The dummy module may have picked up some new dependencies which 
+            // we need to transfer to the current module.  These are not 
+            // compile-time dependencies, so we could possibly optimize them 
+            // into a separate category.
+            ModuleDefPtr curModule = context.ns->getModule();
+            SPUG_FOR(ModuleDefMap, iter, dummyMod->dependencies)
+                curModule->addDependency(iter->second.get());
 
             return extractInstantiation(dummyMod.get(), types);
         }

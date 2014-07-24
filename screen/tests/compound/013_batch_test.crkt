@@ -144,6 +144,26 @@ test.run();
 test.rmCacheFiles('.main.*');
 test.run();
 
+# Verifies that dependencies of hidden modules (copersistent ephemeral
+# modules defined in an inaccessible scope) are correctly propagated to the
+# outer module so that they can be loaded at runtime.
+test.mod('mod', I"
+    class G[T] {
+        void f() { puts('hidden module dependencies'); }
+    }
+    ");
+test.main(I"
+    import mod G;
+    void f() {
+        class H[T] : G[T] {}
+        H[int] h = {};
+        h.f();
+    }
+    f();
+    ");
+test.run();
+test.run();
+
 %%REXPECT%%
 out: alias
 terminated: success
@@ -180,5 +200,9 @@ terminated: success
 out: aliased privates
 terminated: success
 out: aliased privates
+terminated: success
+out: hidden module dependencies
+terminated: success
+out: hidden module dependencies
 terminated: success
 %%STDIN%%
