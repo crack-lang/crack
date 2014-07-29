@@ -315,6 +315,11 @@ namespace {
             // if there are stub ancestors, we need to defer processing until 
             // the module is materialized - otherwise we can't create vtables.
             if (TypeDefPtr stubAncestor = type->getStubAncestor()) {
+                SPUG_CHECK(false,
+                           "While building vtable, found a stub ancestor: " <<
+                            stubAncestor->getFullName() << " of class: " << type->getFullName() <<
+                            endl
+                           );
                 ModuleStubPtr moduleStub =
                     ModuleStubPtr::rcast(stubAncestor->getModule());
                 SPUG_CHECK(moduleStub->getFullName() != 
@@ -342,22 +347,19 @@ namespace {
 }        
 
 void BTypeDef::onDeserialized(Context &context) {
-    
-    // reconstruct the VTable references for the type.
+    // fix up all of our contents.    
+    onNamespaceDeserialized(context);
+}
+
+void BTypeDef::materializeVTable(Context &context) {
     if (hasVTable) {
         DeserializedCallback::buildVTableOrDefer(
             LLVMBuilderPtr::cast(&context.builder),
             BTypeDefPtr::arcast(context.construct->vtableBaseType),
             this
         );
-        LLVMBuilder *builder = LLVMBuilderPtr::cast(&context.builder);
-        BTypeDef *vtableBaseType = 
-            BTypeDefPtr::arcast(context.construct->vtableBaseType);
     }
-
-    // now fix up all of our contents.    
-    onNamespaceDeserialized(context);
-}
+}        
 
 TypeDefPtr BTypeDef::getSpecializationStubSafe(Context &context, 
                                                TypeDef::TypeVecObj *types

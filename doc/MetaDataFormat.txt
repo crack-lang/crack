@@ -123,8 +123,12 @@ So given this, our meta-data format is:
     TypeDecl {
         blob name
 
-        # True if the type is generic.
-        optional uint isGeneric = 1
+        # type flags are:
+        # 1 - pointer
+        # 2 - hasVTable
+        # 4 - abstract
+        # 8 - generic
+        uint flags
 
         # If present, this is the slave module that owns the type.
         optional ref[SlaveModule] owner = 2
@@ -240,18 +244,11 @@ So given this, our meta-data format is:
         # otherwise it's a reference).  But this field is always a reference,
         # so there's no need for the bit-shifting.
         uint objectId
-        uint isGeneric
-        if (generic) {
-            uint abstract
+        if (flags & GENERIC) {
             array[ref[Import]] importedAnnotations
             array[blob] parms
             array[Token] tokens
         } else {
-            // type flags are:
-            // 1 - pointer
-            // 2 - hasVTable
-            // 4 - abstract
-            uint flags
             array[ref[Type]] bases
             optional ref[Type] templateType = 1
             repeated ref[Type] genericParms = 2

@@ -1125,17 +1125,10 @@ void TypeDef::serializeDef(Serializer &serializer) const {
                );
     serializer.write(objectId, "objectId/2");
     
-    // XXX isGeneric is already in the decl.
-    serializer.write(generic ? 1 : 0, "isGeneric");
     if (generic) {
         Serializer::StackFrame<Serializer> digestState(serializer, false);
-        serializer.write(abstract, "abstract");
         genericInfo->serialize(serializer);
     } else {
-        int flags = (pointer ? 1 : 0) |
-                    (hasVTable ? 2 : 0) |
-                    (abstract ? 4 : 0);
-        serializer.write(flags, "flags");
         serializer.write(parents.size(), "#bases");
             
         for (TypeVec::const_iterator i = parents.begin();
@@ -1214,13 +1207,17 @@ void TypeDef::serialize(Serializer &serializer, bool writeKind,
 void TypeDef::serializeDecl(Serializer &serializer, ModuleDef *master) {
     if (serializer.writeObject(this, "decl")) {
         serializer.write(name, "name");
+
+        // Flags.
+        int flags = (pointer ? 1 : 0) |
+                    (hasVTable ? 2 : 0) |
+                    (abstract ? 4 : 0) |
+                    (generic ? 8 : 0);
+        serializer.write(flags, "flags");
+
         {
             ostringstream temp;
             Serializer sub(serializer, temp);
-            if (generic) {
-                sub.write(CRACK_PB_KEY(1, varInt), "isGeneric.header");
-                sub.write(1, "isGeneric");
-            }
             
             // If we're module-scoped to a slave module, record the owner.
             ModuleDefPtr module = ModuleDefPtr::cast(getOwner());
@@ -1296,22 +1293,13 @@ TypeDefPtr TypeDef::deserializeTypeDef(Deserializer &deser, const char *name) {
         cerr << ">> deserializing body of type " << type->getFullName() << 
             endl;
 
-    // is this a generic?
-    unsigned isGeneric = deser.readUInt("isGeneric");
-    if (isGeneric) {
+    // Read a generic or a real class.
+    if (type->generic) {
         Serializer::StackFrame<Deserializer> digestState(deser, false);
-        type->abstract = deser.readUInt("abstract");
         type->genericInfo = Generic::deserialize(deser);
         type->genericInfo->ns = deser.context->ns.get();
         type->genericInfo->seedCompileNS(*deser.context);
-        type->generic = new TypeDef::SpecializationCache();
     } else {
-        // flags
-        int flags = deser.readUInt("flags");
-        type->pointer = (flags & 1) ? true : false;
-        type->hasVTable = (flags & 2) ? true : false;
-        type->abstract = (flags & 4) ? true : false;
-    
         // bases
         int count = deser.readUInt("#bases");
         TypeDef::TypeVec bases(count);
@@ -1352,6 +1340,11 @@ TypeDefPtr TypeDef::deserializeTypeDef(Deserializer &deser, const char *name) {
         // 'defs' - fill in the body.
         ContextStackFrame<Deserializer> cstack(deser, classContext.get());
         type->deserializeDefs(deser);
+
+        // If we need to reconstruct the vtable, give the type the chance to 
+        // do that here.        
+        if (type->hasVTable)
+            type->materializeVTable(*deser.context);
     }
     if (Serializer::trace)
         cerr << ">> done deserializing type " << type->getFullName() << endl;
@@ -1364,14 +1357,14 @@ namespace {
     struct TypeDeclReader : Deserializer::ObjectReader {
         spug::RCBasePtr read(Deserializer &deser) const {
             string name = deser.readString(Serializer::varNameSize, "name");
-            int isGeneric = false;
             NamespacePtr owner = deser.context->ns;
+
+            // Read the flags.
+            int flags = deser.readUInt("flags");
+            bool isGeneric = (flags & 8) ? true : false; 
         
             // Deserialize optional fields.
             CRACK_PB_BEGIN(deser, 256, optional)
-                CRACK_PB_FIELD(1, varInt)
-                    isGeneric = optionalDeser.readUInt("isGeneric");
-                    break;
                 CRACK_PB_FIELD(2, ref) {
                     ModuleDefPtr mod = deser.context->ns;
                     owner = mod->deserializeSlaveRef( optionalDeser);
@@ -1380,12 +1373,17 @@ namespace {
             CRACK_PB_END
         
             TypeDefPtr type;
-            if (isGeneric)
+            if (isGeneric) {
                 type = new TypeDef(deser.context->construct->classType.get(), 
                                    name, 
                                    true
                                    );
-            else {
+                
+                // We mainly initialize this here as an indicator that we 
+                // expect a generic for when we deserialize the full 
+                // definition later.
+                type->generic = new TypeDef::SpecializationCache();
+            } else {
                 // Create a subcontext linked the class' owner so 
                 // type materialization works for slave modules.  At this time 
                 // we need to do this so that the meta-class is properly 
@@ -1400,6 +1398,12 @@ namespace {
                     owner->getNamespaceName()
                 );
             }
+
+            // Add the flags.
+            type->pointer = (flags & 1) ? true : false;
+            type->hasVTable = (flags & 2) ? true : false;
+            type->abstract = (flags & 4) ? true : false;
+
             owner->addDef(type.get());
             return type;
         }
