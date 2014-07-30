@@ -21,7 +21,6 @@ namespace llvm {
 namespace builder {
 namespace mvll {
 
-SPUG_RCPTR(BJitModuleDef);
 SPUG_RCPTR(BModuleDef);
 SPUG_RCPTR(LLVMJitBuilder);
 
@@ -121,11 +120,6 @@ class LLVMJitBuilder : public LLVMBuilder {
                               model::ModuleDef *module
                               );
         
-        // Merge all of the modules in the list into one and register all of 
-        // the globals in it.  This lets us deal with cyclics, which have to 
-        // be jitted as a single module.
-        void mergeAndRegister(const std::vector<BJitModuleDefPtr> &modules);
-
         virtual void closeModule(model::Context &context,
                                  model::ModuleDef *module
                                  );

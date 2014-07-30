@@ -11,7 +11,6 @@
 #include "model/OverloadDef.h"
 #include "model/StatState.h"
 #include "model/Visitor.h"
-#include "BJitModuleDef.h"
 #include "DebugInfo.h"
 #include "StructResolver.h"
 #include "BTypeDef.h"
@@ -98,7 +97,7 @@ namespace {
             }
 
             virtual void onModuleDef(ModuleDef *module) {
-                BJitModuleDefPtr::cast(module)->rep = newMod;
+                BModuleDefPtr::cast(module)->rep = newMod;
             }
 
             virtual void onTypeDef(TypeDef *type) {
@@ -235,7 +234,7 @@ BModuleDef *LLVMJitBuilder::instantiateModule(model::Context &context,
                                               const std::string &name,
                                               llvm::Module *owner
                                               ) {
-    return new BJitModuleDef(name, context.ns.get(), owner, 0);
+    return new BModuleDef(name, context.ns.get(), owner);
 }
 
 ExecutionEngine *LLVMJitBuilder::bindJitModule(Module *mod) {
@@ -378,9 +377,7 @@ ModuleDefPtr LLVMJitBuilder::innerCreateModule(Context &context,
                                                const string &name,
                                                ModuleDef *owner
                                                ) {
-    return new BJitModuleDef(name, context.ns.get(), module,
-                             BJitModuleDefPtr::cast(owner)
-                             );
+    return new BModuleDef(name, context.ns.get(), module);
 
 }
 
@@ -500,35 +497,6 @@ namespace {
     }
 }
 
-void LLVMJitBuilder::mergeAndRegister(const vector<BJitModuleDefPtr> &modules) {
-#if REMOVE
-    if (modules.size() != 1) {
-        ModuleMerger merger("cyclic-modules", execEng);
-        for (vector<BJitModuleDefPtr>::const_iterator i = modules.begin();
-             i != modules.end();
-             ++i
-             )
-            merger.merge((*i)->rep);
-
-        module = merger.getTarget();
-
-        // replace the rep of the original source modules and all of their
-        // contents with the those of the new, mega-module
-        for (vector<BJitModuleDefPtr>::const_iterator i = modules.begin();
-             i != modules.end();
-             ++i
-             ) {
-            fixNamespaceReps(i->get(), module);
-            (*i)->rep = module;
-        }
-
-        // ModuleMerge doesn't copy meta-data, so we have to add the
-        // "finished" marker back to the new module.
-        moduleDef->rep->getOrInsertNamedMetadata("crack_finished");
-    }
-#endif
-}
-
 void LLVMJitBuilder::doRunOrDump(Context &context) {
 
     // dump or run the module depending on the mode.
@@ -543,8 +511,7 @@ void LLVMJitBuilder::closeModule(Context &context, ModuleDef *moduleDef) {
 
     assert(module);
     StatState sStats(&context, ConstructStats::builder, moduleDef);
-    BJitModuleDefPtr::acast(moduleDef)->closeOrDefer(context, this);
-
+    innerCloseModule(context, moduleDef);
 }
 
 void LLVMJitBuilder::dump() {
@@ -622,17 +589,15 @@ model::ModuleDefPtr LLVMJitBuilder::materializeModule(
     ModuleDef *owner
 ) {
     if (owner) {
-        BJitModuleDefPtr bmod = new BJitModuleDef(canonicalName,
-                                                  context.ns.get(),
-                                                  module,
-                                                  0
-                                                  );
+        BModuleDefPtr bmod = new BModuleDef(canonicalName, context.ns.get(),
+                                            module
+                                            );
         owner->addSlave(bmod.get());
         return bmod;
     }
 
     Cacher c(context, options.get());
-    BJitModuleDefPtr bmod = c.maybeLoadFromCache(canonicalName);
+    BModuleDefPtr bmod = c.maybeLoadFromCache(canonicalName);
 
     moduleDef = bmod;
     if (bmod) {
