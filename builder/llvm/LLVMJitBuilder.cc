@@ -11,6 +11,7 @@
 #include "model/OverloadDef.h"
 #include "model/StatState.h"
 #include "model/Visitor.h"
+#include "BJitModuleDef.h"
 #include "DebugInfo.h"
 #include "StructResolver.h"
 #include "BTypeDef.h"
@@ -97,7 +98,7 @@ namespace {
             }
 
             virtual void onModuleDef(ModuleDef *module) {
-                BModuleDefPtr::cast(module)->rep = newMod;
+                BJitModuleDefPtr::cast(module)->rep = newMod;
             }
 
             virtual void onTypeDef(TypeDef *type) {
@@ -234,7 +235,7 @@ BModuleDef *LLVMJitBuilder::instantiateModule(model::Context &context,
                                               const std::string &name,
                                               llvm::Module *owner
                                               ) {
-    return new BModuleDef(name, context.ns.get(), owner);
+    return new BJitModuleDef(name, context.ns.get(), owner, 0);
 }
 
 ExecutionEngine *LLVMJitBuilder::bindJitModule(Module *mod) {
@@ -377,7 +378,9 @@ ModuleDefPtr LLVMJitBuilder::innerCreateModule(Context &context,
                                                const string &name,
                                                ModuleDef *owner
                                                ) {
-    return new BModuleDef(name, context.ns.get(), module);
+    return new BJitModuleDef(name, context.ns.get(), module,
+                             BJitModuleDefPtr::cast(owner)
+                             );
 
 }
 
@@ -511,7 +514,8 @@ void LLVMJitBuilder::closeModule(Context &context, ModuleDef *moduleDef) {
 
     assert(module);
     StatState sStats(&context, ConstructStats::builder, moduleDef);
-    innerCloseModule(context, moduleDef);
+    BJitModuleDefPtr::acast(moduleDef)->closeOrDefer(context, this);
+
 }
 
 void LLVMJitBuilder::dump() {
@@ -589,15 +593,17 @@ model::ModuleDefPtr LLVMJitBuilder::materializeModule(
     ModuleDef *owner
 ) {
     if (owner) {
-        BModuleDefPtr bmod = new BModuleDef(canonicalName, context.ns.get(),
-                                            module
-                                            );
+        BJitModuleDefPtr bmod = new BJitModuleDef(canonicalName,
+                                                  context.ns.get(),
+                                                  module,
+                                                  0
+                                                  );
         owner->addSlave(bmod.get());
         return bmod;
     }
 
     Cacher c(context, options.get());
-    BModuleDefPtr bmod = c.maybeLoadFromCache(canonicalName);
+    BJitModuleDefPtr bmod = c.maybeLoadFromCache(canonicalName);
 
     moduleDef = bmod;
     if (bmod) {

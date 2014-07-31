@@ -173,6 +173,7 @@ noinst_HEADERS = \
     builder/llvm/BFieldRef.h \
     builder/llvm/BFuncDef.h \
     builder/llvm/BFuncPtr.h \
+    builder/llvm/BJitModuleDef.h \
     builder/llvm/BModuleDef.h \
     builder/llvm/BResultExpr.h \
     builder/llvm/BTypeDef.h \

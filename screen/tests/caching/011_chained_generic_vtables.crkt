@@ -1,0 +1,19 @@
+%%TEST%%
+chained generics with vtables
+%%ARGS%%
+%%FILE%%
+# This test demonstrates instruction replacement issues present in chained
+# generics with vtables when classes are serialized before their dependencies.
+
+class A[T] : VTableBase {}
+class B[T] : VTableBase {
+    void g() {
+        A[T] at;
+    }
+}
+
+B[int] bi;
+puts('ok');
+%%EXPECT%%
+ok
+%%STDIN%%
