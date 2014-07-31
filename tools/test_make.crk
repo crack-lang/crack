@@ -81,9 +81,6 @@ if (!dirObj.isDir()) {
 }
 
 for (file :in dirObj.children()) {
-    cerr `looking at $file\n`;
-    if (m := fileRx.search(file.getName()))
-        cerr `got file $(m.group(1))\n`;
     if ( (m := fileRx.search(file.getName())) && 
          (curId := parseInt(m.group(1))) > maxId
         )
