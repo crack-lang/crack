@@ -132,11 +132,8 @@ class LLVMJitBuilder : public LLVMBuilder {
                                  model::VarDef *varDef
                                  );
 
-        /**
-         * Builds debug tables and registers all global symbols with the cache 
-         * map.
-         */
-        void registerGlobals();
+        /** Registers all of the cleanup functions. */
+        void registerCleanups();
 
         virtual model::ModuleDefPtr materializeModule(
             model::Context &context,

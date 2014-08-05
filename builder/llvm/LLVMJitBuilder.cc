@@ -37,6 +37,7 @@
 #include <llvm/Assembly/PrintModulePass.h>
 #include <llvm/ExecutionEngine/ExecutionEngine.h>
 #include <llvm/ExecutionEngine/JIT.h>  // link in the JIT
+#include <llvm/ExecutionEngine/JITEventListener.h>
 #include <llvm/IR/Module.h>
 #include <llvm/IR/IntrinsicInst.h>
 #include <llvm/IR/Intrinsics.h>
@@ -238,13 +239,32 @@ BModuleDef *LLVMJitBuilder::instantiateModule(model::Context &context,
     return new BJitModuleDef(name, context.ns.get(), owner, 0);
 }
 
+namespace {
+    class LLVMEventListener : public JITEventListener {
+        public:
+            void NotifyFunctionEmitted(const Function &func,
+                                       void *ptr,
+                                       size_t size,
+                                       const EmittedFunctionDetails &details
+                                       ) {
+                crack::debug::registerDebugInfo(ptr, func.getName(),
+                                                "", // filename
+                                                0 // line number
+                                                );
+            }
+    };
+
+    LLVMEventListener eventListener;
+}
+
 ExecutionEngine *LLVMJitBuilder::bindJitModule(Module *mod) {
     if (execEng) {
         execEng->addModule(mod);
     } else {
-        if (rootBuilder)
-            execEng = LLVMJitBuilderPtr::cast(rootBuilder.get())->bindJitModule(mod);
-        else {
+        if (rootBuilder) {
+            execEng =
+                LLVMJitBuilderPtr::cast(rootBuilder.get())->bindJitModule(mod);
+        } else {
 
             // we have to specify all of the arguments for this so we can turn
             // off "allocate globals with code."  In addition to being
@@ -261,7 +281,9 @@ ExecutionEngine *LLVMJitBuilder::bindJitModule(Module *mod) {
             tm->Options.JITExceptionHandling = true;
 
             execEng = eb.create(tm);
-
+            execEng->RegisterJITEventListener(&eventListener);
+            if (!spug::contains(options->optionMap, "nolazy"))
+                execEng->DisableLazyCompilation(false);
         }
     }
 
@@ -281,8 +303,7 @@ ModuleMerger *LLVMJitBuilder::getModuleMerger() {
 void LLVMJitBuilder::addGlobalFuncMapping(Function* pointer,
                                           Function* real) {
     // In the case of a finished module, we must be able to jit it and get the
-    // address.  We force jitting of all functions and globals in
-    // registerGlobals(), which is called when the module is closed, so we
+    // address.  Jitting happens when we actually run the code, so we
     // wouldn't have to do it here except for the .builtins module, which
     // cannot be jitted until after the runtime module is loaded because it
     // depends on the exception personality function in crack.runtime.
@@ -557,28 +578,7 @@ void LLVMJitBuilder::registerDef(Context &context, VarDef *varDef) {
 
 }
 
-void LLVMJitBuilder::registerGlobals() {
-    // register debug info for the module functions
-    Module *merged = getModuleMerger()->getTarget();
-    for (Module::iterator iter = merged->begin();
-         iter != merged->end();
-         ++iter
-         ) {
-        if ((!iter->isDeclaration() || iter->isMaterializable()) &&
-            !iter->isIntrinsic()
-            ) {
-            string name = iter->getName();
-            void *ptr = execEng->getPointerToGlobal(iter);
-//            cerr << "global " << name << "@" << ptr << endl;
-            crack::debug::registerDebugInfo(
-                ptr,
-                name,
-                "",   // file name
-                0     // line number
-            );
-        }
-    }
-
+void LLVMJitBuilder::registerCleanups() {
     // While we're at it, do setupCleanup() on all of the modules on our list.
     LLVMJitBuilder *b = rootBuilder ? LLVMJitBuilderPtr::rcast(rootBuilder) :
                                       this;

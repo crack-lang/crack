@@ -5,8 +5,12 @@ Private definitions used by generics.
 import systest test;
 test.preBootstrap = true;
 test.mod('mod1', I"
+    import crack.runtime write;
     void f() {
-        puts('ok');
+        # Now that crack is faster, this test suffers from a race condition
+        # that is difficult to resolve between handling of stdout versus
+        # stderr.  So we just write to stderr.
+        write(2, 'ok\n', 3);
     }
     void x() {}
     ");
@@ -52,7 +56,7 @@ test.run();
 %%REXPECT%%
 err: mod2 out-of-date or not in the cache.  Building from: ./mod2.crk
 err: mod1 out-of-date or not in the cache.  Building from: ./mod1.crk
-out: ok
+err: ok
 terminated: success
 err: digests don't match for mod2.crk got .*
 err:   current = .*
@@ -67,13 +71,13 @@ err: digests don't match for mod2.crk got .*
 err:   current = .*
 err:   module: mod2.A\[.builtin.int\]
 err: Reusing cached script .*/main.crk
-out: ok
+err: ok
 terminated: success
 err: digests don't match for .*/main.crk got .*
 err:   current = .*
 err:   module: .main..*main_2ecrk
 err: Reusing cached module mod1
 err: Reusing cached module mod2
-out: ok
+err: ok
 terminated: success
 %%STDIN%%

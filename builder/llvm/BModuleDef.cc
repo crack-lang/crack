@@ -67,7 +67,7 @@ void BModuleDef::clearRepFromConstants() {
 
 void BModuleDef::runMain(Builder &builder) {
     LLVMJitBuilder *llvmBuilder = LLVMJitBuilderPtr::cast(&builder);
-    llvmBuilder->registerGlobals();
+    llvmBuilder->registerCleanups();
     llvm::ExecutionEngine *execEng = llvmBuilder->getExecEng();
     Function *func = rep->getFunction(name + ":main");
     SPUG_CHECK(func, "Function " << name << ":main" << " not defined.");
