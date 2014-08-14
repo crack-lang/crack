@@ -890,17 +890,14 @@ if (gameToLoad := opts.getString('load')) {
 DemoApp myHandlers = {client, server};
 commInst = myHandlers;
 
+# Initialize the voxel space.
 for (int x = 0; x < 10; ++x) {
     for (int y = 0; y < 10; ++y) {
         for (int z = 0; z < 10; ++z) {
-            cout `setting block space $x, $y, $z yo\n`;
             myHandlers.blockSpace[Vector(x, y, z)] = byte(random() % 3);
         }
     }
 }
-cout `finished block setup, dude.\n`;
-
-#myHandlers.blockSpace
 
 app.keyboardHandlers.append(myHandlers);
 app.mouseMotionHandlers.append(myHandlers);

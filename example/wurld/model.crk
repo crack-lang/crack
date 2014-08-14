@@ -1,0 +1,358 @@
+## Wurld data object.
+
+import crack.cont.array Array;
+import crack.cont.hashmap HashMap;
+import crack.exp.g3d Vector;
+import crack.io cout, Formatter;
+import crack.math floor;
+import crack.runtime free;
+
+@import crack.ann assert, define;
+
+# Size of a leaf block (this is size of a voxel * 8).
+const float LEAF_UNIT = 1;
+
+## Returns the integer "corner coordinate" for any point in space, for example
+## for {1.4, 2.5, 3.7}, returns {1, 2, 3}.
+Vector corner(Vector pos) {
+    return Vector(floor(pos.raw[0]) - LEAF_UNIT / 2,
+                  floor(pos.raw[1]),
+                  floor(pos.raw[2])
+                  );
+}
+
+## Like 'corner', only instead of getting the corner of an integer cube, gets
+## the corner of a cube of dimension 'factor'.  So for example, with a factor
+## of 8 everyting in the cube {0, 0, 0} to {8, 8, 8} would have a corner of
+## {0, 0, 0}.
+Vector corner_deletexxx(Vector pos, float factor) {
+    if (factor == LEAF_UNIT)
+        return corner(pos);
+    return Vector(floor(pos.raw[0] / factor) * factor,
+                  floor(pos.raw[1] / factor) * factor,
+                  floor(pos.raw[2] / factor) * factor
+                  );
+}
+
+
+HashMap[float, float] _offsets = {};
+
+## Returns the corner offset for the specified size factor.
+float offsetForFactor(float factor) {
+    off := _offsets.get(factor, 0);
+    if (!off) {
+        if (factor == LEAF_UNIT)
+            off = -LEAF_UNIT / 2;
+        else
+            off = offsetForFactor(factor / 8) - factor / 2;
+        _offsets[factor] = off;
+    }
+    return off;
+}
+
+## Like 'corner', only instead of getting the corner of an integer cube, gets
+## the corner of a cube of dimension 'factor'.  So for example, with a factor
+## of 8 everyting in the cube {0, 0, 0} to {8, 8, 8} would have a corner of
+## {0, 0, 0}.  The corner of a cube is offset by half of 'factor'.  This is
+## to make it so that the top-level cube can span all octants of the grid
+## (without an offset, we would only get the positive octant).
+
+## Returns the corner of a cube of dimension 'factor'.
+## Cubes are defined so that we can always arrive at a top-level cube that
+## fills all octants of space around the origin.  So if we start with a leaf
+## unit of 4, xxx
+Vector corner(Vector pos, float factor) {
+    offset := offsetForFactor(factor);
+    return Vector(floor((pos.raw[0] - offset) / factor) * factor + offset,
+                  floor((pos.raw[1] - offset) / factor) * factor + offset,
+                  floor((pos.raw[2] - offset) / factor) * factor + offset
+                  );
+}
+
+@abstract class Block {
+    # The origin is the low x,y,z corner of the block.
+    # The 'outer' is origin.x + unit, origin.y + unit, origin.z + unit.
+    Vector _origin, _outer;
+
+    # The unit is the size of one dimension of the block.
+    float unit;
+
+    oper init(Vector origin, float unit) :
+        _origin = origin,
+        _outer(origin.raw[0] + unit, origin.raw[1] + unit, origin.raw[2] + unit),
+        unit = unit {
+    }
+
+    @abstract byte oper []=(Vector pos, byte val);
+
+    @final float _getIndex(Vector pos) {
+#        cout `indexing $pos from $_origin, unit = $unit\n`;
+        @define indexCoord(i) {
+            floor((pos.raw[i] - _origin.raw[i]) * (8.0 / unit))
+        }
+        Vector relPos = {@indexCoord(0), @indexCoord(1), @indexCoord(2)};
+        index := uint(@indexCoord(0) * 64 + @indexCoord(1) * 8 +
+                       @indexCoord(2)
+                      );
+#        cout `  index = $index\n`;
+        return index;
+    }
+
+    ## Returns true if the block contains the point.
+    @final bool contains(Vector pos) {
+        return (_origin.raw[0] <= pos.raw[0] && pos.raw[0] < _outer.raw[0] &&
+                _origin.raw[1] <= pos.raw[1] && pos.raw[1] < _outer.raw[1] &&
+                _origin.raw[2] <= pos.raw[2] && pos.raw[2] < _outer.raw[2]
+                );
+    }
+
+    @abstract byte oper [](Vector pos);
+
+    @final bool intersects(array[float32] low, array[float32] high) {
+        return low[0] < _origin.raw[0] &&
+               high[0] > _origin.raw[0] &&
+               low[1] < _origin.raw[1] &&
+               high[1] > _origin.raw[1] &&
+               low[2] < _origin.raw[2] &&
+               high[2] > _origin.raw[2];
+    }
+
+    ## Returns true if the box defined by low, high intersects the block.
+    ## low and high must be defined so that all coordinates of 'low' are less
+    ## than those of 'high'.
+    @final bool intersects(array[float] low, array[float] high) {
+        return low[0] < _origin.raw[0] &&
+               high[0] > _origin.raw[0] &&
+               low[1] < _origin.raw[1] &&
+               high[1] > _origin.raw[1] &&
+               low[2] < _origin.raw[2] &&
+               high[2] > _origin.raw[2];
+    }
+
+    @final bool intersects(Vector low, Vector high) {
+        return intersects(low.raw, high.raw);
+    }
+
+    void _indent(Formatter out, int indent) {
+        for (int i = 0; i < indent; ++i)
+            out.write('  ');
+    }
+
+    @abstract void formatTo(Formatter out, int indent);
+
+    void formatTo(Formatter out) {
+        formatTo(out, 0);
+    }
+
+    @abstract void render(Vector orig,
+                          function[void, Vector, byte, int] renderer
+                          );
+
+}
+
+Block _makeLeaf(Vector origin);
+
+class ContainerBlock : Block {
+    Array[Block] __children = {};
+
+    oper init(Vector origin, float unit) : Block(origin, unit) {
+        for (int i = 0; i < 512; ++i)
+            __children.append(null);
+    }
+
+    @final void _set(uint x, uint y, uint z, Block val) {
+        __children[x * 64 + y * 8 + z] = val;
+    }
+
+    ## Adds a direct child to the block.
+    @final void add(Block child) {
+        @assert(child.unit == unit / 8);
+        @define pos(i) {
+            (child._origin.raw[i] - _origin[i]) / child.unit
+        }
+        _set(@pos(0), @pos(1), @pos(2), child);
+    }
+
+    byte oper []=(Vector pos, byte val) {
+        index := _getIndex(pos);
+        child := __children[index];
+
+        # See if we need to create the child on demand.
+        if (!child) {
+            @assert(unit >= 1);
+            childUnit := unit / 8;
+            if (childUnit == LEAF_UNIT)
+                child = _makeLeaf(corner(pos, childUnit));
+            else
+                child = ContainerBlock(corner(pos, childUnit), childUnit);
+            __children[index] = child;
+        }
+
+        # Hand the method off to the correct child.
+        child[pos] = val;
+        return val;
+    }
+
+    byte oper [](Vector pos) {
+        index := _getIndex(pos);
+        if (!__children[index])
+            return 0;
+        else
+            return __children[index][pos];
+    }
+
+    void formatTo(Formatter out, int indent) {
+        _indent(out, indent);
+        out `ContainerBlock ($_origin, $unit) {\n`;
+        _indent(out, indent);
+        for (child :in __children) {
+            if (child)
+                child.formatTo(out, indent + 1);
+        }
+        out `\n}`;
+    }
+
+    void render(Vector orig, function[void, Vector, byte, int] renderer) {
+        for (child :in __children) {
+            if (child)
+                child.render(orig, renderer);
+        }
+    }
+}
+
+class LeafBlock : Block {
+
+    array[byte] __contents;
+
+    oper init(Vector origin) : Block(origin, LEAF_UNIT), __contents(512) {}
+
+    oper del() {
+        free(__contents);
+    }
+
+    ## Sets a voxel to a value relative to the origin.  No range checking is
+    ## performed.
+    @final void _set(uint x, uint y, uint z, byte val) {
+        __contents[x * 64 + y * 8 + z] = val;
+    }
+
+    @final byte _get(uint x, uint y, uint z) {
+        return __contents[x * 64 + y * 8 + z];
+    }
+
+    byte oper []=(Vector pos, byte val) {
+        __contents[_getIndex(pos)] = val;
+        return val;
+    }
+
+    byte oper [](Vector pos) {
+        return __contents[_getIndex(pos)];
+    }
+
+    void formatTo(Formatter out, int indent) {
+        _indent(out, indent);
+        out `LeafBlock ($_origin, $_outer) {\n`;
+        for (int i; i < 512; ++i)
+            out ` $(__contents[i])`;
+        out `\n`;
+        _indent(out, indent);
+        out `}`;
+    }
+
+    # renderer accepts the following arguments:
+    #   the cube origin (Vector)
+    #   the cube material value (byte)
+    #   the face index.  Faces are 0 - low x, 1 - low y, 2 - low z, 3 - high
+    #       x, 4 - high y, 5 - high z.
+    #       Where the face axes are the axes of the normals of that face,
+    #       "low" means a negative normal, "high" a positive normal
+    void render(Vector orig, function[void, Vector, byte, int] renderer) {
+        for (int i; i < 512; ++i) {
+            if (contents := __contents[i]) {
+                x := i / 64;
+                y := (i / 8) % 8;
+                z := i % 8;
+                // XXX need to check the adjacent block for voxels adjacent to
+                // the outside of the block (e.g. x == 0)
+                if (x == 0 || !_get(x - 1, y, z))
+                    renderer(_origin + Vector(x, y, z), contents, 0);
+                if (y == 0 || !_get(x, y - 1, z))
+                    renderer(_origin + Vector(x, y, z), contents, 1);
+                if (z == 0 || !_get(x, y, z - 1))
+                    renderer(_origin + Vector(x, y, z), contents, 2);
+                if (x == 7 || !_get(x + 1, y, z))
+                    renderer(_origin + Vector(x, y, z), contents, 3);
+                if (y == 7 || !_get(x, y + 1, z))
+                    renderer(_origin + Vector(x, y, z), contents, 4);
+                if (z == 7 || !_get(x, y, z + 1))
+                    renderer(_origin + Vector(x, y, z), contents, 5);
+            }
+        }
+    }
+}
+
+Block _makeLeaf(Vector origin) {
+    return LeafBlock(origin);
+}
+
+## This is the top-level entrypoint for the voxel-space.  This lets you set
+## and query the value of anything in the tree.  When setting a non-zero
+## value, it creates the structure of the tree if it does not already exist.
+class SparseVoxelSpace {
+    Block top;
+
+    byte oper []=(Vector pos, byte val) {
+        if (!top) {
+            # no top node.  Create a leaf.
+            top = LeafBlock(corner(pos, 1));
+        } else {
+            while (!top.contains(pos)) {
+                # Ascend up the tree, creating intermediate nodes until we find
+                # one that contains the position.
+                # We find the corner of the enclosing cube based on a
+                # position "just below" (-1 on all axes) the current top cube
+                # so that we don't just expand into one quadrant.  We want
+                # the current top cube to be in the middle of the new top
+                # cube, not its corner.
+                u := top.unit;
+                newUnit := 8 * u;
+                newTop := ContainerBlock(corner(top._origin - Vector(u, u, u), newUnit), newUnit);
+                newTop.add(top);
+                top = newTop;
+            }
+        }
+
+        top[pos] = val;
+        return val;
+    }
+
+    byte oper[](Vector pos) {
+        if (!top || !top.contains(pos))
+            // should probably treat a non-existent block as a space to be
+            // generated.
+            return 0;
+        return top[pos];
+    }
+
+    ## Returns true if the box delimited by 'low' and 'high' intersects a non-empty
+    ## voxel in the space.
+    bool intersects(Vector low, Vector high) {
+        return top && top.intersects(low, high);
+    }
+
+    ## renderer(Vector cubeCoord, byte type, int face)
+    void render(Vector orig, function[void, Vector, byte, int] renderer) {
+        if (top)
+            top.render(orig, renderer);
+    }
+
+    void formatTo(Formatter out) {
+        if (top) {
+            out `SparseVoxelSpace {\n  `;
+            top.formatTo(out, 2);
+            out `\n}`;
+        } else {
+            out `SparseVoxelSpace(null)`;
+        }
+    }
+}
