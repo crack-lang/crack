@@ -392,6 +392,12 @@ class Context : public spug::RCBase {
         model::ExprPtr makeThisRef(const std::string &memberName);
 
         /**
+         * Returns true if the context is in a method of /type/ and thus has 
+         * access to instance variables and methods of the type.
+         */
+        bool hasInstanceOf(TypeDef *type) const;
+
+        /**
          * Expand an iterator style for loop into initialization, condition 
          * and after-body.  The initialization will actually be emitted, 
          * condition and after-body will be filled in.

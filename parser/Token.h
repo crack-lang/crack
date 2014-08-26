@@ -29,6 +29,14 @@ class Token {
       // persisted.  You must not remove or change the order of any of the 
       // existing ones except when the meta-data format is being changed 
       // anyway.
+      // When adding a token, you should also change:
+      // -   The "isXXX" methods below (including group checks like isBinOp() 
+      //     and isAugAssign(), if appropriate)
+      // -   The extension wrappers in compiler/Token.h and 
+      //     compiler/Token2.cc, and the set of definitions in 
+      //     compiler/init.cc.
+      // -   model::Generic::deserializeToken() and, if the token has 
+      //     significant data, model::Generic::serializeToken().
       typedef enum { ann, bitAnd, bitLSh, bitOr, bitRSh, bitXor, aliasKw, 
                      breakKw, caseKw, catchKw, classKw, constKw, continueKw, 
                      dollar, enumKw, forKw, elseKw, ifKw, importKw, inKw, 
@@ -41,7 +49,7 @@ class Token {
                      integer, lbracket, lcurly, le, lparen, lt, minus, ne, 
                      percent, plus, quest, rbracket, rcurly, rparen, semi, 
                      slash, string, tilde, istrBegin, istrEnd, logicAnd, 
-                     logicOr, floatLit, octalLit, hexLit, binLit,
+                     logicOr, floatLit, octalLit, hexLit, binLit, scoping,
                      
                      // these tokens are special - they are used to 
                      // communicate actions that need to be performed in the 
@@ -150,6 +158,7 @@ class Token {
       bool isLogicAnd() const { return type == logicAnd; }
       bool isLogicOr() const { return type == logicOr; }
       bool isTypeof() const { return type == typeofKw; }
+      bool isScoping() const { return type == scoping; }
 
       bool isBinOp() const {
          switch (type) {

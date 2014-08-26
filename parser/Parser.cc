@@ -191,6 +191,38 @@ FuncDefPtr Parser::lookUpBinOp(const string &op, FuncCall::ExprVec &args) {
    return func;
 }   
 
+// primary :: ident ...
+//        ^             ^
+bool Parser::parseScoping(Namespace *ns, VarDefPtr &var, std::string &lastName) {
+   Token tok = getToken();
+   bool gotScoping = false;
+   while (tok.isScoping()) {
+      gotScoping = true;
+      tok = getToken();
+      if (!tok.isIdent())
+         error(tok, "identifier expected following scoping operator.");
+      lastName = tok.getData();
+      var = ns->lookUp(lastName);
+      if (!var)
+         error(tok, 
+               SPUG_FSTR("Identifier " << lastName << " is not a member of " << 
+                          ns->getNamespaceName()
+                         )
+               );
+
+      // Make sure we can access this.
+      context->checkAccessible(var.get(), lastName);
+      
+      // Stop when we get something that isn't a namespace.
+      if (!(ns = NamespacePtr::rcast(var)))
+         return true;
+      tok = getToken();
+   }
+
+   toker.putBack(tok);
+   return gotScoping;
+}
+
 void Parser::parseClause(bool defsAllowed) {
    Token tok = getToken();
    state = st_notBase;
@@ -251,8 +283,22 @@ void Parser::parseClause(bool defsAllowed) {
       expr = parseExpression();
    }
 
+   // If this is a type, see if it's the beginning of a scoped name.
+   if (primaryType) {
+      VarDefPtr var;
+      string finalName;
+      if (parseScoping(primaryType.get(), var, finalName)) {
+         primaryType = TypeDefPtr::rcast(var);
+         if (!primaryType)
+            expr = parseSecondary(context->createVarRef(var.get()).get());
+         else
+            typeName = finalName;
+      }
+   }
+
    // if we got a type, try to parse a definition.
    if (primaryType) {
+      
       TypeDefPtr typeDef = primaryType;
       if (typeName.size())
          context->checkAccessible(typeDef.get(), typeName);
@@ -654,6 +700,17 @@ string Parser::parseOperSpec() {
    }
 }
 
+namespace {
+   void reportFuncLookupError(Context *context, Namespace *ns, string funcName, 
+                              FuncCall::ExprVec args
+                              ) {
+      ostringstream msg;
+      msg << "No method exists matching " << funcName <<  "(" << args << ")";
+      context->maybeExplainOverload(msg, funcName, ns);
+      context->error(msg.str());
+   }
+}
+
 FuncCallPtr Parser::parseFuncCall(const Token &ident, const string &funcName,
                                   Namespace *ns, 
                                   Expr *container
@@ -701,12 +758,8 @@ FuncCallPtr Parser::parseFuncCall(const Token &ident, const string &funcName,
    }
    
    // no function, not a callable variable - give an error.   
-   if (!func) {
-      ostringstream msg;
-      msg << "No method exists matching " << funcName <<  "(" << args << ")";
-      context->maybeExplainOverload(msg, funcName, ns);
-      error(ident, msg.str());
-   }
+   if (!func)
+      reportFuncLookupError(context.get(), ns, funcName, args);
    
    context->checkAccessible(func.get(), trueFuncName);
 
@@ -1044,6 +1097,15 @@ TypeDef *Parser::convertTypeRef(Expr *expr) {
    return TypeDefPtr::rcast(ref->def);
 }
 
+namespace {
+   OverloadDef *convertOverloadRef(Expr *expr) {
+      VarRef *ref = VarRefPtr::cast(expr);
+      if (!ref)
+         return 0;
+      return OverloadDefPtr::rcast(ref->def);
+   }
+}
+
 // cond ? trueVal : falseVal
 //       ^                  ^
 ExprPtr Parser::parseTernary(Expr *cond) {
@@ -1087,6 +1149,22 @@ ExprPtr Parser::parseSecondary(Expr *expr0, unsigned precedence) {
 	 }
 
          expr = parsePostIdent(expr.get(), tok);
+      } else if (tok.isScoping()) {
+         VarRefPtr varRef = VarRefPtr::rcast(expr);
+         NamespacePtr ns = NamespacePtr::rcast(varRef->def);
+         if (!ns)
+            error(tok, "The scoping operator can only follow a namespace.");
+         VarDefPtr var;
+         toker.putBack(tok);
+         string lastName;
+         parseScoping(ns.get(), var, lastName);
+         if (!var->isUsableFrom(*context))
+            error(tok, 
+                  SPUG_FSTR("Instance member " << lastName << 
+                             " is not usable from this context."
+                            )
+                  );
+         expr = context->createVarRef(var.get());
       } else if (tok.isLBracket()) {
          // the array indexing operators
          
@@ -1159,28 +1237,60 @@ ExprPtr Parser::parseSecondary(Expr *expr0, unsigned precedence) {
          TypeDef *type = convertTypeRef(expr.get());
          if (type) {
             expr = parseConstructor(tok, type, Token::rparen);
-         } else {            
-            // assume it's a functor
+         } else {
             FuncCall::ExprVec args;
             parseMethodArgs(args);
+            FuncDefPtr funcDef;
+            bool squashVirtual = false;
             
-            FuncDefPtr funcDef =
-               context->lookUp("oper call", args, expr->type.get());
-            if (!funcDef)
-               error(tok, SPUG_FSTR("'oper call' not defined for " <<
-                                    expr->type->name <<
-                                    " with these arguments: (" << args << ")"
-                                    )
-                     );
+            if (OverloadDef *overload = convertOverloadRef(expr.get())) {
+               funcDef = overload->getMatch(*context, args, false);
+               if (!funcDef)
+                  reportFuncLookupError(context.get(), overload->getOwner(), overload->name, args);
+               
+               if (!funcDef->isUsableFrom(*context))
+                  error(tok, 
+                        SPUG_FSTR("Method " << overload->name << 
+                                  " is not usable from this context."
+                                  )
+                        );
+
+               // If this is a method, use the local "this" variable as the 
+               // receiver.  This should always work, because we've verified 
+               // that the function "is usable from" this context, meaning 
+               // that the receiver is implicit.
+               if (funcDef->flags & FuncDef::method) {
+                  expr = context->makeThisRef(overload->name);
+                  
+                  // We also don't want to do dynamic dispatch on it, since 
+                  // that fact that we're here means we're already explicitly 
+                  // scoped.
+                  squashVirtual = true;
+               } else {
+                  // If not, we don't want to use any receiver, and we have to 
+                  // explicitly clear the expression because it's currently 
+                  // the function itself.
+                  expr = 0;
+               }
+            } else {            
+               // assume it's a functor
+               funcDef = context->lookUp("oper call", args, expr->type.get());
+               if (!funcDef)
+                  error(tok, SPUG_FSTR("'oper call' not defined for " <<
+                                       expr->type->name <<
+                                       " with these arguments: (" << args << ")"
+                                       )
+                        );
+            }
+
             BSTATS_GO(s1)
             FuncCallPtr funcCall = 
-               context->builder.createFuncCall(funcDef.get());
+               context->builder.createFuncCall(funcDef.get(), squashVirtual);
             BSTATS_END
             funcCall->receiver = expr;
             funcCall->args = args;
             expr = funcCall;
          }
-      
       } else if (tok.isIncr() || tok.isDecr()) {
          
          FuncCall::ExprVec args;

@@ -253,6 +253,14 @@ void FuncDef::addDependenciesTo(ModuleDef *mod, VarDef::Set &added) const {
         (*iter)->type->addDependenciesTo(mod, added);
 }
 
+bool FuncDef::isUsableFrom(const Context &context) const {
+    // Always true for non-methods.
+    if (!flags & method)
+        return true;
+    
+    return context.hasInstanceOf(TypeDefPtr::cast(owner));
+}
+
 bool FuncDef::isSerializable() const {
     return VarDef::isSerializable() && !(flags & FuncDef::builtin);
 }

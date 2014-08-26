@@ -340,6 +340,7 @@ Token Toker::readToken() {
                 } else if (ch == ':') {
                     symchars[sci++] = ch; t1 = Token::colon; 
                     t2 = Token::define;
+                    t3 = Token::scoping;
                     state = st_digram;
                 } else if (ch == '.') {
                     state = st_period;
@@ -438,6 +439,8 @@ Token Toker::readToken() {
                     symchars[sci++] = ch;
                     symchars[sci++] = 0;
                     return Token(t2, symchars, getLocation());
+                } else if (ch == ':' && t3 == Token::scoping) {
+                    return Token(t3, "::", getLocation());
                 } else {
                     symchars[1] = 0;
                     ungetChar(ch);

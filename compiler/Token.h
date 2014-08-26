@@ -100,6 +100,7 @@ class Token : public crack::ext::RCObj {
         static bool _isEnd(Token *inst);
         static bool _isLogicAnd(Token *inst);
         static bool _isLogicOr(Token *inst);
+        static bool _isScoping(Token *inst);
         static bool _isBinOp(Token *inst);
         static bool _isAugAssign(Token *inst);
         
@@ -203,6 +204,7 @@ class Token : public crack::ext::RCObj {
         bool isEnd();
         bool isLogicAnd();
         bool isLogicOr();
+        bool isScoping();
         bool isBinOp();
         bool isAugAssign();
 };

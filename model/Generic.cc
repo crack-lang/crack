@@ -171,6 +171,7 @@ Token Generic::deserializeToken(Deserializer &src) {
         TOKTXT(tilde, "~");
         TOKTXT(logicAnd, "&&");
         TOKTXT(logicOr, "||");
+        TOKTXT(scoping, "::");
         TOKTXT(isKw, "is");
     }
     Location loc =

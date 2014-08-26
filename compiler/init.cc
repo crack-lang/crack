@@ -364,6 +364,7 @@ void init(Module *mod) {
     tokenType->addMethod(mod->getBoolType(), "isEnd", (void *)Token::_isEnd);
     tokenType->addMethod(mod->getBoolType(), "isLogicAnd", (void *)Token::_isLogicAnd);
     tokenType->addMethod(mod->getBoolType(), "isLogicOr", (void *)Token::_isLogicOr);
+    tokenType->addMethod(mod->getBoolType(), "isScoping", (void *)Token::_isDefine);
     tokenType->addMethod(mod->getBoolType(), "isBinOp", (void *)Token::_isBinOp);
     tokenType->addMethod(mod->getBoolType(), "isAugAssign", (void *)Token::_isAugAssign);
 

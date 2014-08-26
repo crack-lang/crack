@@ -785,6 +785,11 @@ ExprPtr Context::makeThisRef(const string &memberName) {
    return createVarRef(thisVar.get());
 }
 
+bool Context::hasInstanceOf(TypeDef *type) const {
+    VarDefPtr thisVar = ns->lookUp("this");
+    return thisVar && thisVar->type->isDerivedFrom(type);
+}
+
 void Context::expandIteration(const std::string &name, bool defineVar,
                               bool isIter,
                               Expr *seqExpr,

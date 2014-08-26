@@ -1,0 +1,11 @@
+%%TEST%%
+Scoping operator, error on private static method access.
+%%ARGS%%
+%%FILE%%
+class A {
+    @static void __privateMethod() {}
+}
+A::__privateMethod();
+%%REXPECT%%
+ParseError: .*/205_scoping_op_private_methods.crk:4:4: __privateMethod is private to class A and not acessible in this context.
+%%STDIN%%

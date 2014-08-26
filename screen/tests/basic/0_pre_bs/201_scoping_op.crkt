@@ -1,0 +1,53 @@
+%%TEST%%
+Scoping operator.
+%%ARGS%%
+%%FILE%%
+class A {
+    class B {
+        @static void f() {
+            puts('works for nested types');
+        }
+    }
+
+    @static void f() {
+        puts('works for static functions');
+    }
+
+    @static byteptr g() { return 'works for expression contexts'; }
+
+    int i;
+
+    void method() {}
+    @static void __privateMethod() {}
+
+    class __C {}
+}
+
+A::B::f();
+A::f();
+
+A.f();
+
+puts(A::g());
+
+# what we gonna do about this?  Shold only be accessible in a method.
+# DerivedFromA().A::method()
+
+class Base : VTableBase {
+    void f() { puts('called Base::f()'); }
+}
+
+class Derived : Base {
+    void f() { puts('called Derived::f()'); Base::f(); }
+}
+
+Derived().f();
+
+%%EXPECT%%
+works for nested types
+works for static functions
+works for static functions
+works for expression contexts
+called Derived::f()
+called Base::f()
+%%STDIN%%

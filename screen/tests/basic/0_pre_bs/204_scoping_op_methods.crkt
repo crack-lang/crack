@@ -1,0 +1,11 @@
+%%TEST%%
+Scoping operator, error on method access.
+%%ARGS%%
+%%FILE%%
+class A {
+    void method() {}
+}
+A::method();
+%%REXPECT%%
+ParseError: .*/204_scoping_op_methods.crk:4:10: Method method is not usable from this context.
+%%STDIN%%

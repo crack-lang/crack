@@ -157,6 +157,13 @@ class VarDef : public virtual spug::RCBase {
         virtual bool isImportable(const Namespace *ns, 
                                   const std::string &name
                                   ) const;
+
+        /**
+         * Returns true if the definition can be used in the context.
+         * A definition is always "usable" in a context unless it is an 
+         * instance variable or method in a non-member scope.
+         */        
+        bool isUsableFrom(const Context &context) const;
         
         /**
          * Returns true if the definition should be serialized (some kinds 

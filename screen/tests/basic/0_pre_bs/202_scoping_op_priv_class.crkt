@@ -1,0 +1,12 @@
+%%TEST%%
+Scoping operator error accessing private class.
+%%ARGS%%
+%%FILE%%
+class A {
+    class __C {}
+}
+c := A::__C();
+
+%%REXPECT%%
+ParseError: .*/202_scoping_op_priv_class.crk:4:9: __C is private to class A and not acessible in this context.
+%%STDIN%%

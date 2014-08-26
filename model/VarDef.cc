@@ -133,6 +133,14 @@ bool VarDef::isImportable(const Namespace *ns, const string &name) const {
             );
 }
 
+bool VarDef::isUsableFrom(const Context &context) const {
+    // This is always true if it's not an instance variable.
+    if (getInstSlot() == -1)
+        return true;
+
+    return context.hasInstanceOf(TypeDefPtr::cast(owner));
+}
+
 bool VarDef::isSerializable() const {
     return name[0] != ':';
 }

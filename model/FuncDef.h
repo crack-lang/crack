@@ -117,7 +117,7 @@ class FuncDef : public VarDef {
          * Returns true if the function can be overriden.
          */
         bool isOverridable() const;
-
+        
         /**
          * Returns the method's offset in the VTable.
          */
@@ -126,6 +126,7 @@ class FuncDef : public VarDef {
         virtual bool hasInstSlot();
         virtual bool isStatic() const;        
         virtual std::string getDisplayName() const;
+        virtual bool isUsableFrom(const Context &context) const;
         virtual bool isSerializable() const;
         
         /**

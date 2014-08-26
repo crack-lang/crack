@@ -349,6 +349,17 @@ class Parser {
       /** Parse a constant definition. */
       void parseConstDef();
 
+      /**
+       * Parse the scoping operator, e.g. foo::bar::baz
+       * @param ns the primary namespace object (currently always a type).
+       * @param var set to the final scoped def (the def associated with
+       *    foo::bar::baz)
+       * @param lastName set to the last name segment ("baz").
+       */
+      bool parseScoping(model::Namespace *ns, model::VarDefPtr &var,
+                        std::string &lastName
+                        );
+
       // statements
 
       /**
