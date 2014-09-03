@@ -106,7 +106,7 @@ class ModuleDef : public VarDef, public Namespace {
          */
         virtual void callDestructor() = 0;
         
-        virtual bool hasInstSlot();
+        virtual bool hasInstSlot() const;
 
         /**
          * Set namespace owner, and set our namespace name

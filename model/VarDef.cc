@@ -49,7 +49,7 @@ ResultExprPtr VarDef::emitAssignment(Context &context, Expr *expr) {
     return impl->emitAssignment(context, assign.get());
 }
 
-bool VarDef::hasInstSlot() {
+bool VarDef::hasInstSlot() const {
     return impl->hasInstSlot();
 }
 
@@ -139,6 +139,10 @@ bool VarDef::isUsableFrom(const Context &context) const {
         return true;
 
     return context.hasInstanceOf(TypeDefPtr::cast(owner));
+}
+
+bool VarDef::needsReceiver() const {
+    return hasInstSlot();
 }
 
 bool VarDef::isSerializable() const {

@@ -202,7 +202,7 @@ class TypeDef : public VarDef, public Namespace {
          * Overrides VarDef::hasInstSlot() to return false (nested classes 
          * don't need an instance slot).
          */
-        virtual bool hasInstSlot();
+        virtual bool hasInstSlot() const;
         
         /**
          * Returns true if the function name is the name of a method that is 
@@ -373,6 +373,8 @@ class TypeDef : public VarDef, public Namespace {
 
         virtual
         void dump(std::ostream &out, const std::string &prefix = "") const;
+        
+        virtual bool needsReceiver() const;
 
         virtual bool isSerializable() const;
         virtual void addDependenciesTo(ModuleDef *mod, Set &added) const;

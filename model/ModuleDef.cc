@@ -53,7 +53,7 @@ ModuleDef::~ModuleDef() {
                    );
 }
 
-bool ModuleDef::hasInstSlot() {
+bool ModuleDef::hasInstSlot() const {
     return false;
 }
 

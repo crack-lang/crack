@@ -151,7 +151,7 @@ void TypeDef::addDefToMeta(OverloadDef *def) {
         type->addAlias(def);
 }
 
-bool TypeDef::hasInstSlot() {
+bool TypeDef::hasInstSlot() const {
     return false;
 }
 
@@ -1086,6 +1086,11 @@ void TypeDef::dump(ostream &out, const string &prefix) const {
          )
         iter->second->dump(out, childPrefix);
     out << prefix << "}" << endl;
+}
+
+bool TypeDef::needsReceiver() const {
+    // Types never need a receiver.
+    return false;
 }
 
 bool TypeDef::isSerializable() const {

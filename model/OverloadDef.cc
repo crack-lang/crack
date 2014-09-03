@@ -246,7 +246,7 @@ bool OverloadDef::hasParent(OverloadDef *parent) {
     return false;
 }
 
-bool OverloadDef::hasInstSlot() {
+bool OverloadDef::hasInstSlot() const {
     return false;
 }
 

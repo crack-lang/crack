@@ -78,20 +78,22 @@ void Parser::addDef(VarDef *varDef) {
                                   );
 
 // Remove this when the dot operator deals with it.
-//#ifdef UNDEFINED   
-   // if the definition context is a class context and the definition is a 
-   // function and this isn't the "Class" class (which is its own meta-class), 
-   // add it to the meta-class.
-   // TODO: This code is essentially duplicated in Namespace::addDefToMeta().  
-   // Ideally, addDefToMeta() should be called from Namespace::addDef() or 
-   // somwehere equally common and removed from here and the deserialization 
-   // code.  Or at least, this should be replaced with a call to 
-   // addDefToMeta().  But the original attempt to do that didn't work.
-   TypeDef *type;
-   if (defContext->scope == Context::instance && func) {
-      type = TypeDefPtr::arcast(defContext->ns);
-      if (type != type->type.get())
-         type->type->addAlias(storedDef.get());
+//#ifdef UNDEFINED
+   if (!useNewExpressionParser) {
+      // if the definition context is a class context and the definition is a 
+      // function and this isn't the "Class" class (which is its own meta-class), 
+      // add it to the meta-class.
+      // TODO: This code is essentially duplicated in Namespace::addDefToMeta().  
+      // Ideally, addDefToMeta() should be called from Namespace::addDef() or 
+      // somwehere equally common and removed from here and the deserialization 
+      // code.  Or at least, this should be replaced with a call to 
+      // addDefToMeta().  But the original attempt to do that didn't work.
+      TypeDef *type;
+      if (defContext->scope == Context::instance && func) {
+         type = TypeDefPtr::arcast(defContext->ns);
+         if (type != type->type.get())
+            type->type->addAlias(storedDef.get());
+      }
    }
 //#endif
 }
@@ -630,9 +632,7 @@ ContextPtr Parser::parseBlock(bool nested, Parser::Event closeEvent) {
 ExprPtr Parser::createVarRef(Expr *container, VarDef *var, const Token &tok) {
    // if the definition is for an instance variable, emit an implicit 
    // "this" dereference.  Otherwise just emit the variable
-   if (TypeDefPtr::cast(var->getOwner()) &&
-       !var->isStatic()
-       ) {
+   if (var->needsReceiver()) {
          
       // make sure this is not a method - can't deal with that yet.
       if (OverloadDefPtr::cast(var))
@@ -3826,6 +3826,10 @@ Parser::Primary Parser::parsePrimary(Expr *implicitReceiver) {
       VarDefPtr def = context->lookUp(tok.getData());
       if (!def)
          return Primary(0, 0, tok);
+      // XXX we need to do special stuff for OverloadDefs that may contain 
+      // methods.  if they do, and there is a "this" we want to pass back a 
+      // Deref binding the this to the OverloadDef.  May want to do this in 
+      // createVarRef instead.
       type = TypeDefPtr::rcast(def);
       expr = createVarRef(/* container */ 0, def.get(), tok);
    }
@@ -3866,8 +3870,12 @@ Parser::Primary Parser::parsePrimary(Expr *implicitReceiver) {
          
          // If we didn't get a def and the current target is a type, see if we 
          // can resolve the name by treating the dot as the scoping operator.
-         if (!def && type)
+         if (!def && type) {
             def = type->lookUp(tok.getData());
+            expr = context->createVarRef(def.get());
+         } else {
+            expr = new Deref(expr.get(), def.get());
+         }
          
          // XXX in order to handle value.Base::method(), we need to try 
          // looking up the symbol in the current context and seeing if it is a 
@@ -3890,7 +3898,6 @@ Parser::Primary Parser::parsePrimary(Expr *implicitReceiver) {
          }
          
          type = TypeDefPtr::rcast(def);
-         expr = new Deref(expr.get(), def.get());
       } else if (tok.isLBracket()) {
                                         
          // the array indexing operators

@@ -171,7 +171,7 @@ class OverloadDef : public VarDef {
         FuncList::iterator endTopFuncs() { return funcs.end(); }
         /** @} */
         
-        bool hasInstSlot();
+        bool hasInstSlot() const;
         bool isStatic() const;
         virtual bool isImportableFrom(ModuleDef *module,
                                       const std::string &impName

@@ -75,7 +75,7 @@ class VarDef : public virtual spug::RCBase {
          * Returns true if the definition type requires a slot in the instance 
          * variable.
          */
-        virtual bool hasInstSlot();
+        virtual bool hasInstSlot() const;
         
         /**
          * Returns the instance variable slot of the variable (if any).  -1 if 
@@ -164,6 +164,11 @@ class VarDef : public virtual spug::RCBase {
          * instance variable or method in a non-member scope.
          */        
         bool isUsableFrom(const Context &context) const;
+        
+        /**
+         * Returns true if the definition needs a receiver to be used.
+         */
+        virtual bool needsReceiver() const;
         
         /**
          * Returns true if the definition should be serialized (some kinds 

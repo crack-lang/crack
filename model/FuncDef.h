@@ -123,7 +123,7 @@ class FuncDef : public VarDef {
          */
         unsigned int getVTableOffset() const;
 
-        virtual bool hasInstSlot();
+        virtual bool hasInstSlot() const;
         virtual bool isStatic() const;        
         virtual std::string getDisplayName() const;
         virtual bool isUsableFrom(const Context &context) const;

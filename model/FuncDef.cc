@@ -146,7 +146,7 @@ unsigned int FuncDef::getVTableOffset() const {
     return vtableSlot;
 }
 
-bool FuncDef::hasInstSlot() {
+bool FuncDef::hasInstSlot() const {
     return false;
 }
 
