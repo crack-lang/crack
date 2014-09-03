@@ -24,6 +24,7 @@
 #include "model/Generic.h"
 #include "model/VarDefImpl.h"
 #include "model/Context.h"
+#include "model/Deref.h"
 #include "model/FuncDef.h"
 #include "model/FuncCall.h"
 #include "model/GetRegisterExpr.h"
@@ -62,6 +63,8 @@ using namespace std;
 using namespace parser;
 using namespace model;
 
+bool Parser::useNewExpressionParser = false;
+
 void Parser::addDef(VarDef *varDef) {
    FuncDef *func = FuncDefPtr::cast(varDef);
    ContextPtr defContext = context->getDefContext();
@@ -73,7 +76,9 @@ void Parser::addDef(VarDef *varDef) {
       context->insureOverloadPath(defContext.get(), 
                                   OverloadDefPtr::arcast(storedDef)
                                   );
-   
+
+// Remove this when the dot operator deals with it.
+//#ifdef UNDEFINED   
    // if the definition context is a class context and the definition is a 
    // function and this isn't the "Class" class (which is its own meta-class), 
    // add it to the meta-class.
@@ -88,6 +93,7 @@ void Parser::addDef(VarDef *varDef) {
       if (type != type->type.get())
          type->type->addAlias(storedDef.get());
    }
+//#endif
 }
 
 void Parser::addFuncDef(FuncDef *funcDef) {
@@ -224,13 +230,18 @@ bool Parser::parseScoping(Namespace *ns, VarDefPtr &var, std::string &lastName) 
 }
 
 void Parser::parseClause(bool defsAllowed) {
-   Token tok = getToken();
    state = st_notBase;
    ExprPtr expr;
    VarDefPtr def;
    TypeDefPtr primaryType;
    string typeName;
 
+   if (useNewExpressionParser) {
+      parseClauseNew(defsAllowed);
+      return;
+   }
+
+   Token tok = getToken();
    if (tok.isTypeof()) {
       primaryType = parseTypeof();
    } else if (tok.isAlias()) {
@@ -290,7 +301,8 @@ void Parser::parseClause(bool defsAllowed) {
       if (parseScoping(primaryType.get(), var, finalName)) {
          primaryType = TypeDefPtr::rcast(var);
          if (!primaryType)
-            expr = parseSecondary(context->createVarRef(var.get()).get());
+            expr = 
+               parseSecondary(Primary(context->createVarRef(var.get()).get()));
          else
             typeName = finalName;
       }
@@ -303,11 +315,11 @@ void Parser::parseClause(bool defsAllowed) {
       if (typeName.size())
          context->checkAccessible(typeDef.get(), typeName);
       identLoc = tok.getLocation();
-      if (parseDef(typeDef)) {
+      if (parseTypeSpecializationAndDef(typeDef)) {
          if (!defsAllowed)
             error(tok, "definition is not allowed in this context");
-         // bypass expression emission and semicolon parsing (parseDef() 
-         // consumes it's own semicolon)
+         // bypass expression emission and semicolon parsing 
+         // (parseTypeSpecializationAndDef() consumes it's own semicolon)
          return;
       } else {
          // we didn't parse a definition
@@ -331,9 +343,68 @@ void Parser::parseClause(bool defsAllowed) {
             // try treating the class as a primary.
             toker.putBack(tok2);
             expr = context->createVarRef(typeDef.get());
-            expr = parseSecondary(expr.get());
+            expr = parseSecondary(Primary(expr.get()));
          }
       }
+   }
+
+   // if we got an expression, emit it.
+   if (expr) {
+      context->createCleanupFrame();
+      expr->emit(*context)->handleTransient(*context);
+      context->closeCleanupFrame();
+   }
+
+   // consume a semicolon, put back a block terminator
+   tok = getToken();
+   if (tok.isEnd() || tok.isRCurly())
+      toker.putBack(tok);
+   else if (!tok.isSemi())
+      unexpected(tok, "expected semicolon or a block terminator");
+}
+
+void Parser::parseClauseNew(bool defsAllowed) {
+   Token tok = getToken();
+   state = st_notBase;
+   ExprPtr expr;
+   VarDefPtr def;
+   TypeDefPtr primaryType;
+   string typeName;
+
+   if (tok.isTypeof() || tok.isIdent()) {
+      toker.putBack(tok);
+      Primary p = parsePrimary(0);
+      
+      // Is this a definition?
+      if (p.type) {
+         tok = getToken();
+         if (tok.isIdent()) {
+            if (!defsAllowed)
+               error(tok, "Definitions are not allowed in this context.");
+            toker.putBack(tok);
+            if (parseDef(p.type.get()))
+                return;
+            else
+               // XXX this should never happen.
+               SPUG_CHECK(false, "parsing a def that wasn't a def.");
+         }
+      } else {
+         expr = parseSecondary(Primary(p.expr.get(), 0, p.ident));
+      }
+   } else if (tok.isAlias()) {
+      if (!defsAllowed)
+         error(tok, "Aliasing is not allowed in this context.");
+      parseAlias();
+      return; // XXX the old code didn't return here, think this was a bug.
+   } else if (tok.isConst()) {
+      if (!defsAllowed)
+         error(tok, "definition is not allowed in this context");
+      parseConstDef();
+      return;
+   } else {
+      toker.putBack(tok);
+      runCallbacks(exprBegin);
+      expr = parseExpression();
    }
 
    // if we got an expression, emit it.
@@ -1117,9 +1188,30 @@ ExprPtr Parser::parseTernary(Expr *cond) {
    return context->createTernary(cond, trueVal.get(), falseVal.get());
 }
 
-ExprPtr Parser::parseSecondary(Expr *expr0, unsigned precedence) {
-   ExprPtr expr = expr0;
+// ident := expr
+//      ^       ^
+ExprPtr Parser::parseDefine(const Token &ident) {
+      ExprPtr val = parseExpression();
+
+      // emit the variable with a null initializer and then create a separate 
+      // assignment expression.
+      VarDefPtr var = context->emitVarDef(val->type.get(), ident, 0);
+      return createAssign(0, ident, var.get(), val.get());
+}
+
+
+ExprPtr Parser::parseSecondary(const Primary &primary, unsigned precedence) {
+   ExprPtr expr = primary.expr;
    Token tok = getToken();
+   
+   // If we didn't get an expression, this has to be a define.
+   if (!expr) {
+      if (!tok.isDefine())
+         error(tok, SPUG_FSTR("Unknown identifier " << primary.ident));
+      
+      return parseDefine(primary.ident);
+   }
+   
    while (true) {
       if (tok.isDot()) {
 	 tok = getToken();
@@ -1237,6 +1329,11 @@ ExprPtr Parser::parseSecondary(Expr *expr0, unsigned precedence) {
          TypeDef *type = convertTypeRef(expr.get());
          if (type) {
             expr = parseConstructor(tok, type, Token::rparen);
+         } else if (Deref *deref = DerefPtr::rcast(expr)) {
+            FuncCall::ExprVec args;
+            parseMethodArgs(args);
+
+            expr = deref->makeCall(*context, args);
          } else {
             FuncCall::ExprVec args;
             parseMethodArgs(args);
@@ -1365,6 +1462,39 @@ ExprPtr Parser::parseSecondary(Expr *expr0, unsigned precedence) {
                    "'type!'"
                   );
          expr = parseConstSequence(type);
+      } else if (tok.isAssign()) {
+         // XXX need to deal with isAugAssign(), too.
+         ExprPtr val = parseExpression();
+         if (Deref *deref = DerefPtr::rcast(expr))
+            // XXX test when the field is a method
+            expr = deref->makeAssignment(*context, val.get());
+         else if (VarRef *ref = VarRefPtr::rcast(expr))
+            // XXX test all cases when the variable is not definable
+            // XXX 'tok' is wrong.  We need to pass through the full name of a 
+            // primary so we get the correct name in an error report.
+            expr = createAssign(0, tok, ref->def.get(), 
+                                val.get()
+                                );
+         else
+            SPUG_CHECK(false,
+                       "Discovered an assignment secondary not being "
+                        "applied to a VarRef or Deref."
+                       );
+      } else if (tok.isDefine()) {
+         // We have to make sure that this is the original expression (to 
+         // ensure that we haven't done anything since the original 
+         // identifier) and that we're not overriding a name from this 
+         // context.
+         if (expr != primary.expr || primary.ident.isEnd())
+            error(tok, "The define operator can not be used here.");
+         
+         VarDefPtr existing;
+         if ((existing = context->lookUp(primary.ident.getData())) && 
+             existing->getOwner() == context->ns
+             )
+            redefineError(primary.ident, existing.get());
+         
+         return parseDefine(primary.ident);
       } else {
 	 // next token is not part of the expression
 	 break;
@@ -1459,7 +1589,13 @@ ExprPtr Parser::parseExpression(unsigned precedence) {
    // check for a method
    } else if (tok.isIdent()) {
       identLoc = tok.getLocation();
-      expr = parsePostIdent(0, tok);
+      if (useNewExpressionParser) {
+         toker.putBack(tok);
+         Primary p = parsePrimary(0);
+         expr = p.expr;
+      } else {
+         expr = parsePostIdent(0, tok);
+      }
    
    // for a string constant
    } else if (tok.isString()) {
@@ -1553,7 +1689,7 @@ ExprPtr Parser::parseExpression(unsigned precedence) {
       unexpected(tok, "expected an expression");
    }
 
-   return parseSecondary(expr.get(), precedence);
+   return parseSecondary(Primary(expr.get()), precedence);
 }
 
 // func( arg, arg)
@@ -2297,36 +2433,44 @@ void Parser::parseAlias() {
    }
 }
 
-// type var = initializer, var2 ;
-//     ^                         ^
-// type function() { }
-//     ^              ^
-bool Parser::parseDef(TypeDefPtr &type) {
-   Token tok2 = getToken();
+bool Parser::parseTypeSpecializationAndDef(TypeDefPtr &type) {
+   Token tok = getToken();
    
    // if we get a '[', parse the specializer and get a generic type.
-   if (tok2.isLBracket()) {
-      type = parseSpecializer(tok2, type.get());
-      tok2 = getToken();
-   } else if(type->generic) {
+   if (tok.isLBracket()) {
+      type = parseSpecializer(tok, type.get());
+   } else if (type->generic) {
       error(identLoc, SPUG_FSTR("Generic type " << type->name <<
                                  " must be specialized to be used."
                                 )
             );
+   } else {
+      toker.putBack(tok);
    }
    
+   return parseDef(type.get());
+}
+   
+
+// type var = initializer, var2 ;
+//     ^                         ^
+// type function() { }
+//     ^              ^
+bool Parser::parseDef(TypeDef *type) {
+   Token tok = getToken();
+   
    while (true) {
-      if (tok2.isIdent()) {
-         string varName = tok2.getData();
+      if (tok.isIdent()) {
+         string varName = tok.getData();
    
          // this could be a variable or a function
-         Token tok3 = getToken();
-         if (tok3.isSemi() || tok3.isComma()) {
+         Token tok2 = getToken();
+         if (tok2.isSemi() || tok2.isComma()) {
             // it's a variable.
             runCallbacks(variableDef);
 
             // make sure we're not hiding anything else
-            checkForExistingDef(tok2, tok2.getData());
+            checkForExistingDef(tok, tok.getData());
             
             // we should now _always_ have a default constructor (unless the 
             // type is void).
@@ -2335,29 +2479,29 @@ bool Parser::parseDef(TypeDefPtr &type) {
             
             // Emit a variable definition and store it in the context (in a 
             // cleanup frame so transient initializers get destroyed here)
-            context->emitVarDef(type.get(), tok2, 0);
+            context->emitVarDef(type, tok, 0);
             
-            if (tok3.isSemi())
+            if (tok2.isSemi())
                return true;
             else {
-               tok2 = getToken();
+               tok = getToken();
                continue;
             }
-         } else if (tok3.isAssign()) {
+         } else if (tok2.isAssign()) {
             runCallbacks(variableDef);
             ExprPtr initializer;
    
             // make sure we're not hiding anything else
-            checkForExistingDef(tok2, tok2.getData());
+            checkForExistingDef(tok, tok.getData());
             
-            initializer = parseInitializer(type.get(), varName);
-            context->emitVarDef(type.get(), tok2, initializer.get());
+            initializer = parseInitializer(type, varName);
+            context->emitVarDef(type, tok, initializer.get());
    
             // if this is a comma, we need to go back and parse 
             // another definition for the type.
             Token tok4 = getToken();
             if (tok4.isComma()) {
-               tok2 = getToken();
+               tok = getToken();
                continue;
             } else if (tok4.isSemi()) {
                return true;
@@ -2367,24 +2511,24 @@ bool Parser::parseDef(TypeDefPtr &type) {
                            "definition."
                           );
             }
-         } else if (tok3.isLParen()) {
+         } else if (tok2.isLParen()) {
             // function definition
-            parseFuncDef(type.get(), tok2, tok2.getData(), normal, -1);
+            parseFuncDef(type, tok, tok.getData(), normal, -1);
             return true;
          } else {
-            unexpected(tok3,
+            unexpected(tok2,
                      "expected variable initializer or function "
                      "definition."
                      );
          }
-      } else if (tok2.isOper()) {
+      } else if (tok.isOper()) {
          // deal with an operator
-         parsePostOper(type.get());
+         parsePostOper(type);
          return true;
       }
 
       // if we haven't "continued", were done.
-      toker.putBack(tok2);
+      toker.putBack(tok);
       return false;
    }
 }
@@ -3517,7 +3661,7 @@ void Parser::parseClassBody() {
       state = st_notBase;
       TypeDefPtr type = parseTypeSpec();
       TypeDefPtr tempType = type;
-      parseDef(tempType);
+      parseTypeSpecializationAndDef(tempType);
    }
    
    // make sure all forward declarations have been defined.
@@ -3663,4 +3807,152 @@ bool Parser::runCallbacks(Event event) {
       cbs[i]->run(this, &toker, context.get());
 
    return gotCallbacks;
+}
+
+Parser::Primary Parser::parsePrimary(Expr *implicitReceiver) {
+   
+   // We keep track of an expression and a type.  
+   TypeDefPtr type;
+   ExprPtr expr;
+   string repr;
+
+   // Parse the initial token, which should be either "typeof" or an 
+   // identifier.
+   Token tok = getToken();
+   if (tok.isTypeof()) {
+      type = parseTypeof();
+      expr = context->createVarRef(type.get());
+   } else if (tok.isIdent()) {
+      VarDefPtr def = context->lookUp(tok.getData());
+      if (!def)
+         return Primary(0, 0, tok);
+      type = TypeDefPtr::rcast(def);
+      expr = createVarRef(/* container */ 0, def.get(), tok);
+   }
+   
+   while (true) {
+      tok = getToken();
+      if (tok.isScoping()) {
+         toker.putBack(tok);
+         VarDefPtr def;
+         string lastName;
+         Namespace *ns = type ? type.get() : context->ns.get();
+         parseScoping(ns, def, lastName);
+         // XXX how do we deal with a "this" derference?
+         type = TypeDefPtr::rcast(def);
+         expr = context->createVarRef(def.get());
+#ifdef UNDEFINED
+         if (!type)
+            error(tok, 
+                  "The scoping operator can only be used on a namespace."
+                  );
+         VarDefPtr def = type->lookUp(tok.getData());
+         if (!def)
+            error(tok,
+                  SPUG_FSTR("Identifier " << tok.getData() << 
+                             " is not defined in " << 
+                             type->getNamespaceName()
+                            )
+                  );
+         type = TypeDefPtr::rcast(def);
+         expr = context->createVarRef(def);
+#endif
+      } else if (tok.isDot()) {
+         tok = getToken();
+         if (!tok.isIdent())
+            error(tok, "Identifier expected after '.'");
+         VarDefPtr def = expr->type->lookUp(tok.getData());
+         // XXX check accessible, etc.
+         
+         // If we didn't get a def and the current target is a type, see if we 
+         // can resolve the name by treating the dot as the scoping operator.
+         if (!def && type)
+            def = type->lookUp(tok.getData());
+         
+         // XXX in order to handle value.Base::method(), we need to try 
+         // looking up the symbol in the current context and seeing if it is a 
+         // definition that can be applied to the object.  Might want to do
+         // parseScoping() on it to exclude value.Base.method()
+         if (!def) {
+            if (type)
+               error(tok, SPUG_FSTR("Type object " << type->getDisplayName()
+                                     << " has no member named "
+                                     << tok.getData()
+                                     << ", nor does the type itself."
+                                     )
+                     );
+            else
+               error(tok,
+                     SPUG_FSTR("Instance of " << expr->type->getDisplayName() 
+                                << " has no member " << tok.getData()
+                               )
+                     );
+         }
+         
+         type = TypeDefPtr::rcast(def);
+         expr = new Deref(expr.get(), def.get());
+      } else if (tok.isLBracket()) {
+                                        
+         // the array indexing operators
+         
+         // ... unless this is a type, in which case it is a specializer.
+         TypeDef *generic = convertTypeRef(expr.get());
+         // XXX try setting expr to generic
+         if (generic) {
+            type = parseSpecializer(tok, generic);
+            expr = context->createVarRef(type.get());
+            continue;
+         }
+         
+         FuncCall::ExprVec args;
+         parseMethodArgs(args, Token::rbracket);
+
+         // check for an assignment operator
+         Token tok2 = getToken();
+         FuncCallPtr funcCall;
+         if (tok2.isAssign()) {
+            // this is "a[i] = v"  XXX ... and it doesn't belong in this 
+            // function.
+            args.push_back(parseExpression());
+            FuncDefPtr funcDef =
+               context->lookUp("oper []=", args, expr->type.get());
+            if (!funcDef)
+               error(tok, 
+                     SPUG_FSTR("'oper []=' not defined for " <<
+                               expr->type->name << " with these arguments."
+                               )
+                     );
+            BSTATS_GO(s1)
+            funcCall = context->builder.createFuncCall(funcDef.get());
+            BSTATS_END
+            funcCall->receiver = expr;
+            funcCall->args = args;
+         } else {
+            // this is "a[i]"
+            toker.putBack(tok2);
+
+            FuncDefPtr funcDef =
+               context->lookUp("oper []", args, expr->type.get());
+            if (!funcDef)
+               error(tok, SPUG_FSTR("'oper []' not defined for " <<
+                                     expr->type->name << 
+                                     " with these arguments: (" << args << ")"
+                                    )
+                     );
+            
+            BSTATS_GO(s1)
+            funcCall = context->builder.createFuncCall(funcDef.get());
+            BSTATS_END
+            funcCall->receiver = expr;
+            funcCall->args = args;
+         }
+         expr = funcCall;
+      } else {
+         // Not a continuation token: end of the primary.
+         toker.putBack(tok);
+         break;
+      }
+   }
+   
+   return Primary(expr.get(), type.get(), Token());
 }

@@ -7,6 +7,7 @@
 
 #include "Expr.h"
 
+#include "spug/StringFmt.h"
 #include "builder/Builder.h"
 #include "Context.h"
 #include "TypeDef.h"
@@ -50,5 +51,12 @@ bool Expr::isAdaptive() const {
 }
 
 ExprPtr Expr::foldConstants() { return this; }
+
+ExprPtr Expr::makeCall(Context &context, FuncCall::ExprVec &args) const {
+    context.error(SPUG_FSTR("Instance of " << type->getDisplayName() <<
+                             " is not callable."
+                            )
+                  );
+}
 
 void Expr::dump() const { writeTo(std::cerr); }

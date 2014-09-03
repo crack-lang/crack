@@ -251,16 +251,28 @@ class Parser {
        */
       model::ExprPtr parseTernary(model::Expr *cond);
 
+      struct Primary {
+         model::ExprPtr expr;
+         model::TypeDefPtr type;
+         Token ident;
+         Primary(model::Expr *expr) : expr(expr) {}
+         Primary(model::Expr *expr, model::TypeDef *type, const Token &ident) :
+            expr(expr),
+            type(type),
+            ident(ident) {
+         }
+      };
+
       /**
        * Parse a secondary expression.  Secondary expressions include a the
        * dot operator, binary operators and the bracket operators and their
        * associated expressions.
        *
-       * @param expr the primary expression that this secondary expression
+       * @param primary the primary bundle that this secondary expression
        *        modifies.
        * @param precedence the current level of operator precedence.
        */
-      model::ExprPtr parseSecondary(model::Expr *expr,
+      model::ExprPtr parseSecondary(const Primary &primary,
                                     unsigned precedence = 0
                                     );
 
@@ -344,7 +356,13 @@ class Parser {
        * update "type" to point to its specialization.
        * @param type the parsed type.
        */
-      bool parseDef(model::TypeDefPtr &type);
+      bool parseTypeSpecializationAndDef(model::TypeDefPtr &type);
+
+      /**
+       * Parse a definition, returns false if there was no definition.
+       * @param type the definition type.
+       */
+      bool parseDef(model::TypeDef *type);
 
       /** Parse a constant definition. */
       void parseConstDef();
@@ -411,6 +429,8 @@ class Parser {
       model::TypeDefPtr parseClassDef();
 
    public:
+      static bool useNewExpressionParser;
+
       // XXX should be protected, once required functionality is migrated out.
       // error checking functions
       model::VarDefPtr checkForExistingDef(const Token &tok,
@@ -489,6 +509,17 @@ class Parser {
        * Returns true if any callbacks were called.
        */
       bool runCallbacks(Event event);
+
+      /** Parse a "primary" */
+      Primary parsePrimary(model::Expr *implicitReceiver);
+
+      /**
+       * Parse a clause, which can either be a an expression statement or a
+       * definition.
+       */
+      void parseClauseNew(bool defsAllowed);
+
+      model::ExprPtr parseDefine(const Token &ident);
 };
 
 } // namespace parser

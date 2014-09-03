@@ -8,6 +8,8 @@
 #ifndef _model_Expr_h_
 #define _model_Expr_h_
 
+#include <vector>
+
 #include <spug/RCBase.h>
 #include <spug/RCPtr.h>
 
@@ -71,6 +73,17 @@ class Expr : public spug::RCBase {
          * classes may implement it for operations that support const folding.
          */
         virtual ExprPtr foldConstants();
+
+        /**
+         * Returns a new expression representing a function call to this 
+         * expression with the given arguments.  Raises an error if the object 
+         * can not be called with these arguments.
+         * @param args The arg list.  May be modified in the course of the 
+         *             call.
+         */
+        virtual ExprPtr makeCall(Context &context, 
+                                 std::vector<ExprPtr> &args
+                                 ) const;
         
         void dump() const;
 };
