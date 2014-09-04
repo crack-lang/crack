@@ -3873,7 +3873,7 @@ Parser::Primary Parser::parsePrimary(Expr *implicitReceiver) {
          if (!def && type) {
             def = type->lookUp(tok.getData());
             expr = context->createVarRef(def.get());
-         } else {
+         } else if (def) {
             expr = new Deref(expr.get(), def.get());
          }
          
