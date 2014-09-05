@@ -127,6 +127,7 @@ class FuncDef : public VarDef {
         virtual bool isStatic() const;        
         virtual std::string getDisplayName() const;
         virtual bool isUsableFrom(const Context &context) const;
+        virtual bool needsReceiver() const;
         virtual bool isSerializable() const;
         
         /**

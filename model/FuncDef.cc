@@ -261,6 +261,10 @@ bool FuncDef::isUsableFrom(const Context &context) const {
     return context.hasInstanceOf(TypeDefPtr::cast(owner));
 }
 
+bool FuncDef::needsReceiver() const {
+    return !isStatic();
+}
+
 bool FuncDef::isSerializable() const {
     return VarDef::isSerializable() && !(flags & FuncDef::builtin);
 }
