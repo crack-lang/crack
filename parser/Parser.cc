@@ -632,7 +632,9 @@ ContextPtr Parser::parseBlock(bool nested, Parser::Event closeEvent) {
 ExprPtr Parser::createVarRef(Expr *container, VarDef *var, const Token &tok) {
    // if the definition is for an instance variable, emit an implicit 
    // "this" dereference.  Otherwise just emit the variable
-   if (var->needsReceiver()) {
+   if (TypeDefPtr::cast(var->getOwner()) &&
+       !var->isStatic()
+       ) {
          
       // make sure this is not a method - can't deal with that yet.
       if (OverloadDefPtr::cast(var))
