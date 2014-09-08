@@ -50,7 +50,7 @@ ResultExprPtr VarDef::emitAssignment(Context &context, Expr *expr) {
 }
 
 bool VarDef::hasInstSlot() const {
-    return impl->hasInstSlot();
+    return impl && impl->hasInstSlot();
 }
 
 int VarDef::getInstSlot() const {
