@@ -42,6 +42,14 @@ class VarDefImpl : public spug::RCBase {
         virtual bool hasInstSlot() const = 0;
         
         virtual int getInstSlot() const = 0;
+
+        /**
+         * True if the variable is an instance variable (and thus needs a 
+         * receiver).
+         * Unlike hasInstSlot(), this is also true for offset-based instance 
+         * variables in extensions.
+         */
+        virtual bool isInstVar() const = 0;
 };
 
 } // namespace model

@@ -142,7 +142,7 @@ bool VarDef::isUsableFrom(const Context &context) const {
 }
 
 bool VarDef::needsReceiver() const {
-    return hasInstSlot();
+    return impl && impl->isInstVar();
 }
 
 bool VarDef::isSerializable() const {

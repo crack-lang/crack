@@ -65,6 +65,7 @@ void BArgVarDefImpl::emitAddr(Context &context, VarRef *var) {
 
 bool BArgVarDefImpl::hasInstSlot() const { return false; }
 int BArgVarDefImpl::getInstSlot() const { return -1; }
+bool BArgVarDefImpl::isInstVar() const { return false; }
 
 // BMemVarDefImpl
 ResultExprPtr BMemVarDefImpl::emitRef(Context &context, VarRef *var) {
@@ -95,6 +96,7 @@ void BMemVarDefImpl::emitAddr(Context &context, VarRef *var) {
 
 bool BMemVarDefImpl::hasInstSlot() const { return false; }
 int BMemVarDefImpl::getInstSlot() const { return -1; }
+bool BMemVarDefImpl::isInstVar() const { return false; }
 
 // BGlobalVarDefImpl
 Value *BGlobalVarDefImpl::getRep(LLVMBuilder &builder) {
@@ -128,6 +130,7 @@ void BConstDefImpl::emitAddr(Context &context, VarRef *var) {
 
 bool BConstDefImpl::hasInstSlot() const { return false; }
 int BConstDefImpl::getInstSlot() const { return -1; }
+bool BConstDefImpl::isInstVar() const { return false; }
 
 void BConstDefImpl::fixModule(Module *oldMod, Module *newMod) {
     if (rep->getParent() == oldMod) {
@@ -169,6 +172,7 @@ Value *BInstVarDefImpl::emitFieldAddr(IRBuilder<> &builder, Type *fieldType,
 
 bool BInstVarDefImpl::hasInstSlot() const { return true; }
 int BInstVarDefImpl::getInstSlot() const { return index; }
+bool BInstVarDefImpl::isInstVar() const { return true; }
 
 // BOffsetFieldDefImpl
 void BOffsetFieldDefImpl::emitFieldAssign(IRBuilder<> &builder,
@@ -214,3 +218,5 @@ bool BOffsetFieldDefImpl::hasInstSlot() const { return false; }
 int BOffsetFieldDefImpl::getInstSlot() const {
     SPUG_CHECK(false, "Can't serialize offset variables yet.");
 }
+
+bool BOffsetFieldDefImpl::isInstVar() const { return true; }

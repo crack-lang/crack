@@ -51,6 +51,7 @@ public:
     
     virtual bool hasInstSlot() const;
     virtual int getInstSlot() const;
+    virtual bool isInstVar() const;
 };
 
 
@@ -72,6 +73,7 @@ public:
 
     virtual bool hasInstSlot() const;
     virtual int getInstSlot() const;
+    virtual bool isInstVar() const;
 };
 
 SPUG_RCPTR(BHeapVarDefImpl)
@@ -132,6 +134,7 @@ public:
 
     virtual bool hasInstSlot() const;
     virtual int getInstSlot() const;
+    virtual bool isInstVar() const;
     
     void fixModule(llvm::Module *oldMod, llvm::Module *newMod);
 };
@@ -206,6 +209,7 @@ class BInstVarDefImpl : public BFieldDefImpl {
 
         virtual bool hasInstSlot() const;
         virtual int getInstSlot() const;
+        virtual bool isInstVar() const;
 };
 
 // Implementation for "offset fields."  These are used to access structure 
@@ -233,6 +237,7 @@ class BOffsetFieldDefImpl : public BFieldDefImpl {
 
         virtual bool hasInstSlot() const;
         virtual int getInstSlot() const;
+        virtual bool isInstVar() const;
 };
 
 
