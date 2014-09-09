@@ -290,6 +290,15 @@ bool OverloadDef::isImportable(const Namespace *ns,
     return false;
 }
 
+bool OverloadDef::needsReceiver() const {
+    // The overload doesn't need a receiver unless all of the methods do.
+    // (Not sure if this is actually useful).
+    SPUG_FOR(FuncList, iter, funcs)
+        if (!(*iter)->needsReceiver())
+            return false;
+    return true;
+}
+
 bool OverloadDef::isSerializable() const {
     if (!VarDef::isSerializable())
         return false;
