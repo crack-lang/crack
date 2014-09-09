@@ -777,8 +777,8 @@ BranchpointPtr Context::getCatchBranchpoint() {
 ExprPtr Context::makeThisRef(const string &memberName) {
    VarDefPtr thisVar = ns->lookUp("this");
    if (!thisVar)
-      error(SPUG_FSTR("instance member " << memberName <<
-                       " may not be used in a static context."
+      error(SPUG_FSTR("Instance member \"" << memberName <<
+                       "\" may not be used in a static context."
                       )
             );
           

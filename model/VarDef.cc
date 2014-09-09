@@ -10,6 +10,8 @@
 
 #include <sstream>
 
+#include "spug/StringFmt.h"
+
 #include "builder/Builder.h"
 #include "spug/check.h"
 #include "AssignExpr.h"
@@ -48,6 +50,20 @@ ResultExprPtr VarDef::emitAssignment(Context &context, Expr *expr) {
     AssignExprPtr assign = new AssignExpr(0, this, expr);
     return impl->emitAssignment(context, assign.get());
 }
+
+FuncDefPtr VarDef::getFuncDef(Context &context,
+                              std::vector<ExprPtr> &args
+                              ) const {
+    FuncDefPtr func = context.lookUp("oper call", args, type.get());
+    if (!func)
+        context.error(SPUG_FSTR("Instance of " << type->getDisplayName() <<
+                                 " does not have an 'oper call' method "
+                                 " and can not be called."
+                                )
+                      );
+    return func;
+}
+
 
 bool VarDef::hasInstSlot() const {
     return impl && impl->hasInstSlot();

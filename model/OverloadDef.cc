@@ -9,10 +9,12 @@
 #include "OverloadDef.h"
 
 #include "spug/stlutil.h"
+#include "spug/StringFmt.h"
 
 #include "Context.h"
 #include "Deserializer.h"
 #include "Expr.h"
+#include "FuncCall.h"  // just so we can "out << args"
 #include "Serializer.h"
 #include "TypeDef.h"
 #include "VarDefImpl.h"
@@ -59,9 +61,9 @@ void OverloadDef::flatten(OverloadDef::FuncList &flatFuncs) const {
 FuncDef *OverloadDef::getMatch(Context &context, vector<ExprPtr> &args,
                                FuncDef::Convert convertFlag,
                                bool allowOverrides
-                               ) {
+                               ) const {
     vector<ExprPtr> newArgs(args.size());
-    for (FuncList::iterator iter = funcs.begin();
+    for (FuncList::const_iterator iter = funcs.begin();
          iter != funcs.end();
          ++iter) {
         
@@ -78,7 +80,7 @@ FuncDef *OverloadDef::getMatch(Context &context, vector<ExprPtr> &args,
         }
     }
     
-    for (ParentVec::iterator parent = parents.begin();
+    for (ParentVec::const_iterator parent = parents.begin();
          parent != parents.end();
          ++parent
          ) {
@@ -94,7 +96,7 @@ FuncDef *OverloadDef::getMatch(Context &context, vector<ExprPtr> &args,
 
 FuncDef *OverloadDef::getMatch(Context &context, std::vector<ExprPtr> &args,
                                bool allowOverrides
-                               ) {
+                               ) const {
     
     // see if we have any adaptive arguments and if all of them are adaptive.
     bool someAdaptive = false, allAdaptive = true;
@@ -244,6 +246,19 @@ bool OverloadDef::hasParent(OverloadDef *parent) {
         if (iter->get() == parent)
             return true;
     return false;
+}
+
+FuncDefPtr OverloadDef::getFuncDef(Context &context, 
+                                   std::vector<ExprPtr> &args
+                                   ) const {
+    FuncDefPtr result = getMatch(context, args, false);
+    if (!result)
+        context.error(
+            SPUG_FSTR("No method exists matching " << name << "(" <<
+                       args << ")"
+                      )
+        );
+    return result;
 }
 
 bool OverloadDef::hasInstSlot() const {

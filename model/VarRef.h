@@ -27,7 +27,11 @@ class VarRef : public Expr {
         
         // variable references are non-productive, so we override.
         virtual bool isProductive() const;
+
         virtual void writeTo(std::ostream &out) const;
+        virtual ExprPtr makeCall(Context &context, 
+                                 std::vector<ExprPtr> &args
+                                 ) const;
 };
 
 } // namespace model

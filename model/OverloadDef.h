@@ -80,7 +80,7 @@ class OverloadDef : public VarDef {
         FuncDef *getMatch(Context &context, std::vector<ExprPtr> &args,
                           FuncDef::Convert convertFlag,
                           bool allowOverrides
-                          );
+                          ) const;
  
         /**
          * Returns the overload matching the given args. This does the full 
@@ -90,7 +90,7 @@ class OverloadDef : public VarDef {
          */
         FuncDef *getMatch(Context &context, std::vector<ExprPtr> &args,
                           bool allowOverrides
-                          );
+                          ) const;
         
         /**
          * Returns the overload with the matching signature if there is one, 
@@ -170,9 +170,12 @@ class OverloadDef : public VarDef {
         FuncList::iterator beginTopFuncs() { return funcs.begin(); }
         FuncList::iterator endTopFuncs() { return funcs.end(); }
         /** @} */
-        
-        bool hasInstSlot() const;
-        bool isStatic() const;
+
+        virtual FuncDefPtr getFuncDef(Context &context, 
+                                      std::vector<ExprPtr> &args
+                                      ) const;
+        virtual bool hasInstSlot() const;
+        virtual bool isStatic() const;
         virtual bool isImportableFrom(ModuleDef *module,
                                       const std::string &impName
                                       ) const;

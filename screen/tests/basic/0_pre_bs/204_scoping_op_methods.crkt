@@ -7,5 +7,5 @@ class A {
 }
 A::method();
 %%REXPECT%%
-ParseError: .*/204_scoping_op_methods.crk:4:10: Method method is not usable from this context.
+ParseError: .*/204_scoping_op_methods.crk:4:11: Instance member "method" may not be used in a static context.
 %%STDIN%%

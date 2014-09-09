@@ -20,6 +20,7 @@ namespace model {
 class Context;
 class Deserializer;
 SPUG_RCPTR(Expr);
+SPUG_RCPTR(FuncDef);
 class Namespace;
 class ModuleDef;
 class ModuleDefMap;
@@ -70,6 +71,14 @@ class VarDef : public virtual spug::RCBase {
         virtual ~VarDef();
         
         ResultExprPtr emitAssignment(Context &context, Expr *expr);
+
+        /**
+         * Returns a FuncDef that can be used when an instance of the 
+         * definition is called with the given arguments.
+         */
+        virtual FuncDefPtr getFuncDef(Context &context, 
+                                      std::vector<ExprPtr> &args
+                                      ) const;
         
         /**
          * Returns true if the definition type requires a slot in the instance 
@@ -87,6 +96,14 @@ class VarDef : public virtual spug::RCBase {
          * Returns true if the definition is class static.
          */
         virtual bool isStatic() const;
+
+        /**
+         * Returns true if the definition is explicitly scoped.  This is to 
+         * allow "virtual squashing" - disabling dynamic dispatch in cases 
+         * where a specific implementation of a virtual is explicitly 
+         * selected, as in "class B : A { void f() { A::f(); } }"
+         */        
+        virtual bool isExplicitlyScoped() const { return true; }
 
         /**
          * Returns the fully qualified name of the definition.
@@ -163,7 +180,7 @@ class VarDef : public virtual spug::RCBase {
          * A definition is always "usable" in a context unless it is an 
          * instance variable or method in a non-member scope.
          */        
-        bool isUsableFrom(const Context &context) const;
+        virtual bool isUsableFrom(const Context &context) const;
         
         /**
          * Returns true if the definition needs a receiver to be used.
