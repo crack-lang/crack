@@ -1359,16 +1359,9 @@ ExprPtr Parser::parseSecondary(const Primary &primary, unsigned precedence) {
          expr = funcCall;
 
       } else if (tok.isLParen()) {
-         // XXX need to unify this to expr->call(args);
-         // is the expression a type
-         TypeDef *type = convertTypeRef(expr.get());
-         if (type) {
-            expr = parseConstructor(tok, type, Token::rparen);
-         } else {
-            FuncCall::ExprVec args;
-            parseMethodArgs(args);
-            expr = expr->makeCall(*context, args);
-         }
+         FuncCall::ExprVec args;
+         parseMethodArgs(args);
+         expr = expr->makeCall(*context, args);
       } else if (tok.isIncr() || tok.isDecr()) {
          
          FuncCall::ExprVec args;
@@ -1741,32 +1734,7 @@ ExprPtr Parser::parseConstructor(const Token &tok, TypeDef *type,
    // parse an arg list
    FuncCall::ExprVec args;
    parseMethodArgs(args, terminator);
-   
-   // look up the new operator for the class
-   FuncDefPtr func = context->lookUp("oper new", args, type);
-   if (!func) {
-      if (type->abstract)
-         error(tok, SPUG_FSTR("You can not create an instance of abstract "
-                               "class " << type->name << " without an "
-                               "explicit 'oper new'."
-                              )
-               );
-      else
-         error(tok, SPUG_FSTR("No constructor for " << type->name <<
-                              " with these argument types: (" << args << ")"));
-   } else if (func->returnType != type) {
-      if (type->abstract)
-         error(tok, SPUG_FSTR("You can not create an instance of abstract "
-                               "class " << type->name << " without an "
-                               "explicit 'oper new'."
-                              )
-               );
-      else
-         error(tok, SPUG_FSTR("'oper new' method " << *func <<
-                               " does not return " << type->name
-                              )
-               );
-   }
+   FuncDefPtr func = type->getFuncDef(*context, args);
    
    BSTATS_GO(s1)
    FuncCallPtr funcCall = context->builder.createFuncCall(func.get());

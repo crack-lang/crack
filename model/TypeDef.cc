@@ -151,6 +151,48 @@ void TypeDef::addDefToMeta(OverloadDef *def) {
         type->addAlias(def);
 }
 
+FuncDefPtr TypeDef::getFuncDef(Context &context, 
+                               std::vector<ExprPtr> &args
+                               ) const {
+    // Fixing "const" in lookup is a can of worms, so we just cast away const 
+    // for now.  Lookups don't mutate.
+    FuncDefPtr func = context.lookUp("oper new", args, 
+                                     const_cast<TypeDef *>(this));
+
+    if (!func) {
+        if (abstract)
+            context.error(
+                SPUG_FSTR("You can not create an instance of abstract "
+                           "class " << getDisplayName() << " without an "
+                           "explicit 'oper new'."
+                          )
+            );
+        else
+            context.error(
+                SPUG_FSTR("No constructor for " << name <<
+                           " with these argument types: (" << args << 
+                           ")"
+                          )
+            );
+    } else if (func->returnType.get() != this) {
+        if (abstract)
+            context.error(
+                SPUG_FSTR("You can not create an instance of abstract "
+                           "class " << name << " without an "
+                           "explicit 'oper new'."
+                          )
+            );
+        else
+            context.error(
+                SPUG_FSTR("'oper new' method " << *func <<
+                           " does not return " << name
+                          )
+            );
+    }
+
+    return func;
+}
+
 bool TypeDef::hasInstSlot() const {
     return false;
 }

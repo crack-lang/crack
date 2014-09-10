@@ -5,5 +5,5 @@ error when constructing an abstract type through a secondary expression
 @abstract class A { @abstract void f(); }
 A();
 %%EXPECT%%
-ParseError: %OUTDIR%166_construct_abstract_as_secondary.crk:2:2: You can not create an instance of abstract class A without an explicit 'oper new'.
+ParseError: %OUTDIR%166_construct_abstract_as_secondary.crk:2:3: You can not create an instance of abstract class A without an explicit 'oper new'.
 %%STDIN%%
