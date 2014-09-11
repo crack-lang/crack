@@ -45,10 +45,6 @@ ExprPtr VarRef::makeCall(Context &context,
         func.get(),
         def->isExplicitlyScoped()
     );
-    // xxx squash virtual
-    //      this is tricky.  I think in order to do this we need some kind of
-    //      "wrapper def" that gets created when a name is explicitly scoped.
-
     funcCall->args = args;
     if (func->needsReceiver()) {
         funcCall->receiver = context.makeThisRef(def->name);
