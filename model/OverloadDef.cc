@@ -311,6 +311,12 @@ bool OverloadDef::needsReceiver() const {
     SPUG_FOR(FuncList, iter, funcs)
         if (!(*iter)->needsReceiver())
             return false;
+
+    // Check the parents.    
+    SPUG_FOR(ParentVec, iter, parents)
+        if (!(*iter)->needsReceiver())
+            return false;
+    
     return true;
 }
 
