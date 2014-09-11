@@ -671,11 +671,20 @@ ExprPtr Parser::createVarRef(Expr *container, VarDef *var, const Token &tok) {
    if (var->needsReceiver()) {
          
       // make sure this is not a method - can't deal with that yet.
-      if (OverloadDefPtr::cast(var))
-         error(tok, SPUG_FSTR("Trying to get the value of " << tok.getData() <<
-                              ", first class methods are not supported yet."
-                              )
-               );
+      if (OverloadDef *ovld = OverloadDefPtr::cast(var)) {
+         if (useNewExpressionParser) {
+            SPUG_CHECK(!container, 
+                       "Non-null container creating reference for variable '" <<
+                        var->getDisplayName() << "'."
+                       );
+            return new Deref(context->makeThisRef(tok.getData()).get(), ovld);
+         } else {
+            error(tok, SPUG_FSTR("Trying to get the value of " << tok.getData() <<
+                                 ", first class methods are not supported yet."
+                                 )
+                  );
+         }
+      }
 
       // if we error in makeThisRef or createFieldRef, we want location to
       // point to the variable referenced
