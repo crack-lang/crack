@@ -22,7 +22,8 @@ using namespace std;
 Deref::Deref(Expr *receiver, VarDef *def) :
     Expr(def->type.get()),
     receiver(receiver),
-    def(def) {
+    def(def),
+    squashVirtual(false) {
 }
 
 ResultExprPtr Deref::emit(Context &context) {
