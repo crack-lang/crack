@@ -3,9 +3,8 @@ eol putbacks do not affect line numbers
 %%ARGS%%
 
 %%FILE%%
-int i
-     ; error;
+int i; error;
 %%EXPECT%%
-ParseError: %OUTDIR%069_linenum_eol_putbacks.crk:2:8: Unknown identifier error
+ParseError: %OUTDIR%069_linenum_eol_putbacks.crk:1:8: Unknown identifier error
 %%STDIN%%
 
