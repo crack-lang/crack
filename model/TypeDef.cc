@@ -184,8 +184,11 @@ FuncDefPtr TypeDef::getFuncDef(Context &context,
             );
         else
             context.error(
-                SPUG_FSTR("'oper new' method " << *func <<
-                           " does not return " << name
+                SPUG_FSTR("No constructor for " << name <<
+                           " with these argument types: (" << args << 
+                           ").  (Ancestor class " << 
+                           TypeDefPtr::cast(func->getOwner())->getDisplayName()
+                           << " has a matching constructor)"
                           )
             );
     }
