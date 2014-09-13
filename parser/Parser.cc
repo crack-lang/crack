@@ -426,9 +426,9 @@ void Parser::parseClauseNew(bool defsAllowed) {
                // XXX this should never happen.
                SPUG_CHECK(false, "parsing a def that wasn't a def.");
          }
-      } else {
-         expr = parseSecondary(Primary(p.expr.get(), 0, p.ident));
+         toker.putBack(tok);
       }
+      expr = parseSecondary(Primary(p.expr.get(), 0, p.ident));
    } else if (tok.isAlias()) {
       if (!defsAllowed)
          error(tok, "Aliasing is not allowed in this context.");
@@ -666,6 +666,11 @@ ContextPtr Parser::parseBlock(bool nested, Parser::Event closeEvent) {
 }
 
 ExprPtr Parser::createVarRef(Expr *container, VarDef *var, const Token &tok) {
+   // TODO: when the new parser is finally in place, I think we can dispense 
+   // with needsReceiver() (at least for OverloadDefs).  When we resolve a
+   // specific function in an overload, we have to be able to associate with 
+   // the "this" anyway, so it might make sense to defer all implicit "this" 
+   // association until the point where the ref is used.
    // if the definition is for an instance variable, emit an implicit 
    // "this" dereference.  Otherwise just emit the variable
    if (var->needsReceiver()) {
