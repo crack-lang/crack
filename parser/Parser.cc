@@ -1257,7 +1257,8 @@ ExprPtr Parser::parseSecondary(const Primary &primary, unsigned precedence) {
    // If we didn't get an expression, this has to be a define.
    if (!expr) {
       if (!tok.isDefine())
-         error(tok, SPUG_FSTR("Unknown identifier " << primary.ident));
+         error(primary.ident, 
+               SPUG_FSTR("Unknown identifier " << primary.ident.getData()));
       
       return parseDefine(primary.ident);
    }
