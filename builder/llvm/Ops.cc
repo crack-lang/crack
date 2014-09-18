@@ -19,6 +19,7 @@
 #include "model/AllocExpr.h"
 #include "model/AssignExpr.h"
 #include "model/CleanupFrame.h"
+#include "model/Deref.h"
 #include "model/IntConst.h"
 #include "model/FloatConst.h"
 #include "model/VarRef.h"
@@ -692,7 +693,7 @@ UnsafeCastDef::UnsafeCastDef(TypeDef *resultType) :
 
 namespace {
     LLVMBuilder &beginIncrDecr(Expr *receiver, Context &context,
-                               VarRef *&ref,
+                               VarRefPtr &ref,
                                TypeDef *type,
                                BTypeDef *&t,
                                ResultExprPtr &receiverResult,
@@ -700,8 +701,16 @@ namespace {
                                ) {
         // the receiver needs to be a variable
         ref = VarRefPtr::cast(receiver);
-        if (!ref)
-            context.error("Integer ++ operators can only be used on variables.");
+        if (!ref) {
+            if (DerefPtr deref = DerefPtr::cast(receiver)) {
+                ref = context.builder.createFieldRef(deref->receiver.get(),
+                                                     deref->def.get()
+                                                     );
+            } else {
+                context.error("Integer ++ operators can only be used on "
+                              "variables.");
+            }
+        }
 
         receiverResult = receiver->emit(context);
         LLVMBuilder &builder = dynamic_cast<LLVMBuilder &>(context.builder);
@@ -742,7 +751,7 @@ namespace {
 
 // PreIncrIntOpCall
 ResultExprPtr PreIncrIntOpCall::emit(Context &context) {
-    VarRef *ref;
+    VarRefPtr ref;
     BTypeDef *t;
     ResultExprPtr receiverResult;
     Value *receiverVal;
@@ -756,12 +765,12 @@ ResultExprPtr PreIncrIntOpCall::emit(Context &context) {
     builder.lastValue = builder.builder.CreateAdd(builder.lastValue,
                                                   ConstantInt::get(t->rep, 1)
                                                   );
-    return endPreIncrDecr(context, builder, ref, this, builder.lastValue);
+    return endPreIncrDecr(context, builder, ref.get(), this, builder.lastValue);
 }
 
 // PreDecrIntOpCall
 ResultExprPtr PreDecrIntOpCall::emit(Context &context) {
-    VarRef *ref;
+    VarRefPtr ref;
     BTypeDef *t;
     ResultExprPtr receiverResult;
     Value *receiverVal;
@@ -775,12 +784,12 @@ ResultExprPtr PreDecrIntOpCall::emit(Context &context) {
     builder.lastValue = builder.builder.CreateSub(builder.lastValue,
                                                   ConstantInt::get(t->rep, 1)
                                                   );
-    return endPreIncrDecr(context, builder, ref, this, builder.lastValue);
+    return endPreIncrDecr(context, builder, ref.get(), this, builder.lastValue);
 }
 
 // PostIncrIntOpCall
 ResultExprPtr PostIncrIntOpCall::emit(Context &context) {
-    VarRef *ref;
+    VarRefPtr ref;
     BTypeDef *t;
     ResultExprPtr receiverResult;
     Value *receiverVal;
@@ -793,7 +802,7 @@ ResultExprPtr PostIncrIntOpCall::emit(Context &context) {
     Value *mutatedVal = builder.builder.CreateAdd(builder.lastValue,
                                                   ConstantInt::get(t->rep, 1)
                                                   );
-    ResultExprPtr assign = endPreIncrDecr(context, builder, ref, this,
+    ResultExprPtr assign = endPreIncrDecr(context, builder, ref.get(), this,
                                           mutatedVal
                                           );
     assign->handleTransient(context);
@@ -803,7 +812,7 @@ ResultExprPtr PostIncrIntOpCall::emit(Context &context) {
 
 // PostDecrIntOpCall
 ResultExprPtr PostDecrIntOpCall::emit(Context &context) {
-    VarRef *ref;
+    VarRefPtr ref;
     BTypeDef *t;
     ResultExprPtr receiverResult;
     Value *receiverVal;
@@ -816,7 +825,7 @@ ResultExprPtr PostDecrIntOpCall::emit(Context &context) {
     Value *mutatedVal = builder.builder.CreateSub(builder.lastValue,
                                                  ConstantInt::get(t->rep, 1)
                                                  );
-    ResultExprPtr assign = endPreIncrDecr(context, builder, ref, this,
+    ResultExprPtr assign = endPreIncrDecr(context, builder, ref.get(), this,
                                           mutatedVal
                                           );
     assign->handleTransient(context);
@@ -826,7 +835,7 @@ ResultExprPtr PostDecrIntOpCall::emit(Context &context) {
 
 // PreIncrPtrOpCall
 ResultExprPtr PreIncrPtrOpCall::emit(Context &context) {
-    VarRef *ref;
+    VarRefPtr ref;
     BTypeDef *t;
     ResultExprPtr receiverResult;
     Value *receiverVal;
@@ -841,12 +850,12 @@ ResultExprPtr PreIncrPtrOpCall::emit(Context &context) {
     builder.lastValue = builder.builder.CreateGEP(builder.lastValue,
                                                   ConstantInt::get(intzType->rep, 1)
                                                   );
-    return endPreIncrDecr(context, builder, ref, this, builder.lastValue);
+    return endPreIncrDecr(context, builder, ref.get(), this, builder.lastValue);
 }
 
 // PreDecrPtrOpCall
 ResultExprPtr PreDecrPtrOpCall::emit(Context &context) {
-    VarRef *ref;
+    VarRefPtr ref;
     BTypeDef *t;
     ResultExprPtr receiverResult;
     Value *receiverVal;
@@ -863,12 +872,12 @@ ResultExprPtr PreDecrPtrOpCall::emit(Context &context) {
                                                                    -1
                                                                    )
                                                   );
-    return endPreIncrDecr(context, builder, ref, this, builder.lastValue);
+    return endPreIncrDecr(context, builder, ref.get(), this, builder.lastValue);
 }
 
 // PostIncrPtrOpCall
 ResultExprPtr PostIncrPtrOpCall::emit(Context &context) {
-    VarRef *ref;
+    VarRefPtr ref;
     BTypeDef *t;
     ResultExprPtr receiverResult;
     Value *receiverVal;
@@ -884,7 +893,7 @@ ResultExprPtr PostIncrPtrOpCall::emit(Context &context) {
                                                                    1
                                                                    )
                                                   );
-    ResultExprPtr assign = endPreIncrDecr(context, builder, ref, this,
+    ResultExprPtr assign = endPreIncrDecr(context, builder, ref.get(), this,
                                           mutatedVal
                                           );
     assign->handleTransient(context);
@@ -894,7 +903,7 @@ ResultExprPtr PostIncrPtrOpCall::emit(Context &context) {
 
 // PostDecrPtrOpCall
 ResultExprPtr PostDecrPtrOpCall::emit(Context &context) {
-    VarRef *ref;
+    VarRefPtr ref;
     BTypeDef *t;
     ResultExprPtr receiverResult;
     Value *receiverVal;
@@ -910,7 +919,7 @@ ResultExprPtr PostDecrPtrOpCall::emit(Context &context) {
                                                                    -1
                                                                    )
                                                   );
-    ResultExprPtr assign = endPreIncrDecr(context, builder, ref, this,
+    ResultExprPtr assign = endPreIncrDecr(context, builder, ref.get(), this,
                                           mutatedVal
                                           );
     assign->handleTransient(context);
