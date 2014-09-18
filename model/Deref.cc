@@ -49,7 +49,12 @@ ExprPtr Deref::makeCall(Context &context, FuncCall::ExprVec &args) const {
                                                           squashVirtual
                                                           );
     funcCall->args = args;
-    funcCall->receiver = receiver;
+
+    // Even though we're in a deref, certain kinds of functions (i.e. "cast")
+    // aren't methods.
+    if (funcDef->flags & FuncDef::method)
+        funcCall->receiver = receiver;
+
     return funcCall;
 }
 
