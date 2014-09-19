@@ -3827,9 +3827,15 @@ Parser::Primary Parser::parsePrimary(Expr *implicitReceiver) {
 #endif
       } else if (tok.isDot()) {
          tok = getToken();
-         if (!tok.isIdent())
-            error(tok, "Identifier expected after '.'");
-         VarDefPtr def = expr->type->lookUp(tok.getData());
+         string name;
+         if (tok.isIdent()) {
+            name = tok.getData();
+         } else if (tok.isOper()) {
+            name = parseOperSpec();
+         } else {
+            error(tok, "Identifier or 'oper' expected after '.'");
+         }
+         VarDefPtr def = expr->type->lookUp(name);
          // XXX check accessible, etc.
          
          // If we didn't get a def and the current target is a type, see if we 
