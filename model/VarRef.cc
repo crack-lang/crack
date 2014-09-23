@@ -7,6 +7,7 @@
 
 #include "VarRef.h"
 
+#include "spug/check.h"
 #include "spug/StringFmt.h"
 
 #include "builder/Builder.h"
@@ -47,14 +48,26 @@ ExprPtr VarRef::makeCall(Context &context,
     );
     funcCall->args = args;
     if (func->needsReceiver()) {
-        funcCall->receiver = context.makeThisRef(def->name);
 
-        TypeDefPtr owner = TypeDefPtr::cast(func->getOwner());
-        if (!funcCall->receiver->type->isDerivedFrom(owner.get()))
-            context.error(SPUG_FSTR("'this' is not an instance of " <<
-                                     owner->name
-                                    )
-                          );
+        // If this is an "oper call" method use the var as the receiver.
+        if (func->name == "oper call") {
+            SPUG_CHECK(type->isDerivedFrom(func->receiverType.get()),
+                       "Receiver in an 'oper call' is not the type that it "
+                        "was obtained from.  receiver type = " <<
+                        func->receiverType->getDisplayName() <<
+                        " var type = " << type->getDisplayName()
+                       );
+            funcCall->receiver = const_cast<VarRef *>(this);
+        } else {
+            funcCall->receiver = context.makeThisRef(def->name);
+
+            TypeDefPtr owner = TypeDefPtr::cast(func->getOwner());
+            if (!funcCall->receiver->type->isDerivedFrom(owner.get()))
+                context.error(SPUG_FSTR("'this' is not an instance of " <<
+                                        owner->name
+                                        )
+                            );
+        }
     }
     return funcCall;
 }
