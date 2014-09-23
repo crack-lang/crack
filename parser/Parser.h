@@ -142,6 +142,14 @@ class Parser {
                                     );
 
       /**
+       * Make an assignment expression from the lvalue, operation token and
+       * rvalue.
+       */
+      model::ExprPtr makeAssign(model::Expr *lvalue, const Token &tok,
+                                model::Expr *rvalue
+                                );
+
+      /**
        * Parse an annotation and execute it.
        */
       void parseAnnotation();

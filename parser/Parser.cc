@@ -1249,6 +1249,70 @@ ExprPtr Parser::parseDefine(const Token &ident) {
       return createAssign(0, ident, var.get(), val.get());
 }
 
+ExprPtr Parser::makeAssign(Expr *lvalue, const Token &tok, Expr *rvalue) {
+   // create a reference for the lvalue
+   const string &op = tok.getData();
+   ExprPtr lval = lvalue, rval = rvalue;
+
+   if (tok.isAugAssign()) {
+      // see if the variable's type has an augmented assignment operator
+      FuncCall::ExprVec args(2);
+      args[0] = lval;
+      args[1] = rval;
+      FuncDefPtr funcDef;
+      if (funcDef = lookUpBinOp(op, args)) {
+         BSTATS_GO(s1)
+         FuncCallPtr funcCall =
+            context->builder.createFuncCall(funcDef.get());
+         BSTATS_END
+         funcCall->args = args;
+         if (funcDef->flags & FuncDef::method)
+            funcCall->receiver = 
+               (funcDef->flags & FuncDef::reverse) ? rval : lval;
+         return funcCall;
+      }
+      
+      // it doesn't.  verify that it has the plain version of the operator 
+      // and convert the lvalue and rvalue to the things that we will use 
+      // for our assignment.
+      args[0] = lval;
+      args[1] = rval;
+      const string &baseOp = op.substr(0, tok.getData().size() - 1);
+      if (funcDef = lookUpBinOp(baseOp, args)) {
+         BSTATS_GO(s1)
+         FuncCallPtr funcCall =
+            context->builder.createFuncCall(funcDef.get());
+         BSTATS_END
+         funcCall->args = args;
+         if (funcDef->flags & FuncDef::method)
+            funcCall->receiver = 
+               (funcDef->flags & FuncDef::reverse) ? rval : lval;
+         rval = funcCall;
+      } else {
+         error(tok, SPUG_FSTR("Neither " << baseOp << "=  nor " << baseOp << 
+                               " is defined for types " << 
+                               lval->type->name << " and " <<
+                               rval->type->name
+                              )
+               );
+      }
+   }
+   
+   // At this point we should be able to do a straightforward assignment.
+   if (Deref *deref = DerefPtr::rcast(lval))
+      // XXX test when the field is a method
+      return deref->makeAssignment(*context, rval.get());
+   else if (VarRef *ref = VarRefPtr::rcast(lval))
+      // XXX test all cases when the variable is not definable
+      // XXX 'tok' is wrong.  We need to pass through the full name of a 
+      // primary so we get the correct name in an error report.
+      return createAssign(0, tok, ref->def.get(), rval.get());
+   else
+      SPUG_CHECK(false,
+                 "Discovered an assignment secondary not being "
+                  "applied to a VarRef or Deref."
+                 );
+}
 
 ExprPtr Parser::parseSecondary(const Primary &primary, unsigned precedence) {
    ExprPtr expr = primary.expr;
@@ -1451,24 +1515,9 @@ ExprPtr Parser::parseSecondary(const Primary &primary, unsigned precedence) {
                    "'type!'"
                   );
          expr = parseConstSequence(type);
-      } else if (tok.isAssign()) {
-         // XXX need to deal with isAugAssign(), too.
+      } else if (tok.isAssign() || tok.isAugAssign()) {
          ExprPtr val = parseExpression();
-         if (Deref *deref = DerefPtr::rcast(expr))
-            // XXX test when the field is a method
-            expr = deref->makeAssignment(*context, val.get());
-         else if (VarRef *ref = VarRefPtr::rcast(expr))
-            // XXX test all cases when the variable is not definable
-            // XXX 'tok' is wrong.  We need to pass through the full name of a 
-            // primary so we get the correct name in an error report.
-            expr = createAssign(0, tok, ref->def.get(), 
-                                val.get()
-                                );
-         else
-            SPUG_CHECK(false,
-                       "Discovered an assignment secondary not being "
-                        "applied to a VarRef or Deref."
-                       );
+         expr = makeAssign(expr.get(), tok, val.get());
       } else if (tok.isDefine()) {
          // We have to make sure that this is the original expression (to 
          // ensure that we haven't done anything since the original 
