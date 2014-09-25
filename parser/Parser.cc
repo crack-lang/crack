@@ -1298,19 +1298,22 @@ ExprPtr Parser::makeAssign(Expr *lvalue, const Token &tok, Expr *rvalue) {
    }
    
    // At this point we should be able to do a straightforward assignment.
-   if (Deref *deref = DerefPtr::rcast(lval))
-      // XXX test when the field is a method
+   if (Deref *deref = DerefPtr::rcast(lval)) {
+      if (deref->def->isConstant())
+         error(tok, "You cannot assign to a constant, class or function.");
       return deref->makeAssignment(*context, rval.get());
-   else if (VarRef *ref = VarRefPtr::rcast(lval))
-      // XXX test all cases when the variable is not definable
+   } else if (VarRef *ref = VarRefPtr::rcast(lval)) {
+      if (ref->def->isConstant())
+         error(tok, "You cannot assign to a constant, class or function.");
       // XXX 'tok' is wrong.  We need to pass through the full name of a 
       // primary so we get the correct name in an error report.
       return createAssign(0, tok, ref->def.get(), rval.get());
-   else
+   } else {
       SPUG_CHECK(false,
                  "Discovered an assignment secondary not being "
                   "applied to a VarRef or Deref."
                  );
+   }
 }
 
 ExprPtr Parser::parseSecondary(const Primary &primary, unsigned precedence) {
