@@ -1243,10 +1243,9 @@ ExprPtr Parser::parseTernary(Expr *cond) {
 ExprPtr Parser::parseDefine(const Token &ident) {
       ExprPtr val = parseExpression();
 
-      // emit the variable with a null initializer and then create a separate 
-      // assignment expression.
-      VarDefPtr var = context->emitVarDef(val->type.get(), ident, 0);
-      return createAssign(0, ident, var.get(), val.get());
+      // Create the variable and return a reference to it.
+      VarDefPtr var = context->emitVarDef(val->type.get(), ident, val.get());
+      return context->createVarRef(var.get());
 }
 
 ExprPtr Parser::makeAssign(Expr *lvalue, const Token &tok, Expr *rvalue) {
