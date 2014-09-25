@@ -1,0 +1,42 @@
+## Copyright 2014 Google Inc.
+##
+##   This Source Code Form is subject to the terms of the Mozilla Public
+##   License, v. 2.0. If a copy of the MPL was not distributed with this
+##   file, You can obtain one at http://mozilla.org/MPL/2.0/.
+##
+## Field set tests.
+
+import crack.fieldset FieldSet, HashMapFieldSet;
+import crack.io cerr;
+@import crack.fieldset_ann fieldset_accessors;
+
+class Foo {
+    @fieldset_accessors(Foo);
+    int i;
+}
+
+class Bar {
+    @fieldset_accessors(Bar);
+    String s;
+}
+
+fields := HashMapFieldSet();
+
+foo := Foo();
+foo.i = 100;
+foo.putIn(fields);
+
+bar := Bar();
+bar.s = 'test value';
+bar.putIn(fields);
+
+if (Foo.get(fields).i != 100)
+    cerr `FAILED Foo.get(fields).i != 100\n`;
+if (Bar.get(fields).s != 'test value')
+    cerr `FAILED Bar.get(fields).s != 'test value'\n`;
+
+Bar.deleteField(fields);
+if (!(Bar.get(fields) is null))
+    cerr `FAILED Bar.get(field) is null\n`;
+
+cerr `ok\n`;

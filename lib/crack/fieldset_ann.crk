@@ -1,0 +1,24 @@
+## FieldSet annotations.  See fieldset.crk for details.
+
+@import crack.ann define, export, exporter;
+@exporter;
+
+@define fieldset_accessors(classname) {
+    @static classname get(FieldSet set) {
+        Object val = set.getFieldVal(uintz(classname));
+        if (val is null)
+            return null;
+        else
+            return classname.cast(val, null);
+    }
+
+    void putIn(FieldSet set) {
+        set.setFieldVal(uintz(classname), this);
+    }
+
+    @static void deleteField(FieldSet set) {
+        set.setFieldVal(uintz(classname), null);
+    }
+}
+
+@export fieldset_accessors;

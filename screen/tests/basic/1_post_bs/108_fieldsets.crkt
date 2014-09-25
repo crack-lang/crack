@@ -1,0 +1,8 @@
+%%TEST%%
+field sets
+%%ARGS%%
+%%FILE%%
+import test.test_fieldset;
+%%EXPECT%%
+ok
+%%STDIN%%

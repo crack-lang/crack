@@ -1,0 +1,97 @@
+## Copyright 2014 Google Inc.
+##
+##   This Source Code Form is subject to the terms of the Mozilla Public
+##   License, v. 2.0. If a copy of the MPL was not distributed with this
+##   file, You can obtain one at http://mozilla.org/MPL/2.0/.
+##
+## Field sets allow you to define a crack object that can store arbitrary
+## data.  The FieldSet class allows you to store any kind of Object associated
+## with a uintz key, but it is intended to be used with the
+## @fieldset_accessors annotation to allow storage of strongly typed data.
+##
+## Every class with @field_accessors(classname) defined in it has three
+## methods for dealing with FieldSets:
+##
+##  ## Gets the field from the field set (returns null if undefined).
+##  @static classname get(FieldSet set);
+##
+##  ## Puts the object into the field set.
+##  void putIn(FieldSet set);
+##
+##  ## Deletes the field from the field set.
+##  @static void deleteField(FieldSet set);
+##
+##
+## Example use:
+##
+##
+##  import crack.fieldset FieldSet, HashMapFieldSet;
+##  @import crack.fieldset_ann fieldset_accessors;
+##
+##  class Context : HashMapFieldSet {
+##      ...
+##  }
+##
+##  class Foo {
+##      @fieldset_accessors(Foo);
+##      String name;
+##  }
+##
+##  void func(Context context) {
+##      # Try to get the Foo instance for the context.
+##      foo := Foo.get(context);
+##      if (!foo) {
+##          # If the instance wasn't defined, create it and add it to the
+##          # field set.
+##          foo = getFooFromSomewhere();
+##          foo.putIn(context);
+##      }
+##  }
+##
+##  void otherFunc(Context context) {
+##      # Remove the Foo field.
+##      Foo.deleteField(context);
+##  }
+
+import crack.cont.hashmap HashMap;
+
+@import crack.ann interface, implements;
+
+## Interface for objects that allow you to store and retrieve arbitrary fields.
+@interface FieldSet {
+    ## Returns the object associated with the specified key, null if the key
+    ## is undefined.
+    @abstract Object getFieldVal(uintz key);
+
+    ## Set the object associated with the specified key.  Setting a key to
+    ## null is equivalent to making a field undefined, and so null may be
+    ## special-cased to implement "delete."
+    @abstract void setFieldVal(uintz key, Object val);
+}
+
+## Implements FieldSet as a HashMap.
+class HashMapFieldSet : Object @implements FieldSet {
+    alias __FieldMap = HashMap[uintz, Object];
+    __FieldMap __map;
+
+    Object getFieldVal(uintz key) {
+        if (!__map)
+            return null;
+        else
+            return __map.get(key);
+    }
+
+    void setFieldVal(uintz key, Object val) {
+        if (!__map) {
+            if (val is null)
+                return;
+            __map = __FieldMap();
+        }
+
+        if (val is null && __map.hasKey(key)) {
+            __map.delete(key);
+        } else if (!(val is null)) {
+            __map[key] = val;
+        }
+    }
+}
