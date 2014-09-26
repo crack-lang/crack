@@ -1316,6 +1316,23 @@ ExprPtr Parser::makeAssign(Expr *lvalue, const Token &tok, Expr *rvalue) {
    }
 }
 
+ExprPtr Parser::emitOperClass(Expr *expr, const Token &tok) {
+   FuncDefPtr funcDef = 
+      context->lookUpNoArgs("oper class", true, expr->type.get());
+   if (!funcDef)
+      error(tok, SPUG_FSTR("class operator not defined for " <<
+                           expr->type->name
+                           )
+            );
+   
+   BSTATS_GO(s1)
+   FuncCallPtr funcCall =
+      context->builder.createFuncCall(funcDef.get());
+   BSTATS_END
+   funcCall->receiver = expr;
+   return funcCall;
+}
+
 ExprPtr Parser::parseSecondary(const Primary &primary, unsigned precedence) {
    ExprPtr expr = primary.expr;
    Token tok = getToken();
@@ -1335,20 +1352,7 @@ ExprPtr Parser::parseSecondary(const Primary &primary, unsigned precedence) {
 	 
 	 // if the next token is "class", this is the class operator.
 	 if (tok.isClass()) {
-            FuncDefPtr funcDef = 
-               context->lookUpNoArgs("oper class", true, expr->type.get());
-            if (!funcDef)
-               error(tok, SPUG_FSTR("class operator not defined for " <<
-                                    expr->type->name
-                                    )
-                     );
-            
-            BSTATS_GO(s1)
-            FuncCallPtr funcCall =
-               context->builder.createFuncCall(funcDef.get());
-            BSTATS_END
-            funcCall->receiver = expr;
-            expr = funcCall;
+	    expr = emitOperClass(expr.get(), tok);
             tok = getToken();
             continue;
          
@@ -3883,6 +3887,11 @@ Parser::Primary Parser::parsePrimary(Expr *implicitReceiver) {
             name = tok.getData();
          } else if (tok.isOper()) {
             name = parseOperSpec();
+         } else if (tok.isClass()) {
+            // "expr.class" is a special case because it is implicitly a 
+            // function call.  Emit it and continue.
+            expr = emitOperClass(expr.get(), tok);
+            continue;
          } else {
             error(tok, "Identifier or 'oper' expected after '.'");
          }

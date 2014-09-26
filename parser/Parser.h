@@ -272,6 +272,12 @@ class Parser {
       };
 
       /**
+       * Emit (and return) an "oper class" call for the given expression.
+       * 'tok' is the "class" token.
+       */
+      model::ExprPtr emitOperClass(model::Expr *expr, const Token &tok);
+
+      /**
        * Parse a secondary expression.  Secondary expressions include a the
        * dot operator, binary operators and the bracket operators and their
        * associated expressions.
