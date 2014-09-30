@@ -389,7 +389,7 @@ class Parser {
        * @param lastName set to the last name segment ("baz").
        */
       bool parseScoping(model::Namespace *ns, model::VarDefPtr &var,
-                        std::string &lastName
+                        Token &lastName
                         );
 
       // statements

@@ -233,7 +233,7 @@ namespace {
 
 // primary :: ident ...
 //        ^             ^
-bool Parser::parseScoping(Namespace *ns, VarDefPtr &var, std::string &lastName) {
+bool Parser::parseScoping(Namespace *ns, VarDefPtr &var, Token &lastName) {
    Token tok = getToken();
    bool gotScoping = false;
    while (tok.isScoping()) {
@@ -241,17 +241,17 @@ bool Parser::parseScoping(Namespace *ns, VarDefPtr &var, std::string &lastName) 
       tok = getToken();
       if (!tok.isIdent())
          error(tok, "identifier expected following scoping operator.");
-      lastName = tok.getData();
-      var = ns->lookUp(lastName);
+      lastName = tok;
+      var = ns->lookUp(lastName.getData());
       if (!var)
          error(tok, 
-               SPUG_FSTR("Identifier " << lastName << " is not a member of " << 
-                          ns->getNamespaceName()
+               SPUG_FSTR("Identifier " << lastName.getData() << 
+                          " is not a member of " << ns->getNamespaceName()
                          )
                );
 
       // Make sure we can access this.
-      context->checkAccessible(var.get(), lastName);
+      context->checkAccessible(var.get(), lastName.getData());
       
       // If we got an overload, convert it into an ExplicitlyScopedDef
       if (OverloadDefPtr::rcast(var))
@@ -335,14 +335,14 @@ void Parser::parseClause(bool defsAllowed) {
    // If this is a type, see if it's the beginning of a scoped name.
    if (primaryType) {
       VarDefPtr var;
-      string finalName;
+      Token finalName;
       if (parseScoping(primaryType.get(), var, finalName)) {
          primaryType = TypeDefPtr::rcast(var);
          if (!primaryType)
             expr = 
                parseSecondary(Primary(context->createVarRef(var.get()).get()));
          else
-            typeName = finalName;
+            typeName = finalName.getData();
       }
    }
 
@@ -1369,11 +1369,11 @@ ExprPtr Parser::parseSecondary(const Primary &primary, unsigned precedence) {
             error(tok, "The scoping operator can only follow a namespace.");
          VarDefPtr var;
          toker.putBack(tok);
-         string lastName;
+         Token lastName;
          parseScoping(ns.get(), var, lastName);
          if (!var->isUsableFrom(*context))
             error(tok, 
-                  SPUG_FSTR("Instance member " << lastName << 
+                  SPUG_FSTR("Instance member " << lastName.getData() << 
                              " is not usable from this context."
                             )
                   );
@@ -3858,12 +3858,11 @@ Parser::Primary Parser::parsePrimary(Expr *implicitReceiver) {
       if (tok.isScoping()) {
          toker.putBack(tok);
          VarDefPtr def;
-         string lastName;
+         Token lastName;
          Namespace *ns = type ? type.get() : context->ns.get();
          parseScoping(ns, def, lastName);
-         // XXX how do we deal with a "this" derference?
          type = TypeDefPtr::rcast(def);
-         expr = context->createVarRef(def.get());
+         expr = createVarRef(/* container */ 0, def.get(), lastName);
 #ifdef UNDEFINED
          if (!type)
             error(tok, 
