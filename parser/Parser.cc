@@ -242,6 +242,7 @@ bool Parser::parseScoping(Namespace *ns, VarDefPtr &var, Token &lastName) {
       if (!tok.isIdent())
          error(tok, "identifier expected following scoping operator.");
       lastName = tok;
+      identLoc = tok.getLocation();
       var = ns->lookUp(lastName.getData());
       if (!var)
          error(tok, 
@@ -2458,11 +2459,6 @@ bool Parser::parseTypeSpecializationAndDef(TypeDefPtr &type) {
    // if we get a '[', parse the specializer and get a generic type.
    if (tok.isLBracket()) {
       type = parseSpecializer(tok, type.get());
-   } else if (type->generic) {
-      error(identLoc, SPUG_FSTR("Generic type " << type->name <<
-                                 " must be specialized to be used."
-                                )
-            );
    } else {
       toker.putBack(tok);
    }
@@ -2477,7 +2473,14 @@ bool Parser::parseTypeSpecializationAndDef(TypeDefPtr &type) {
 //     ^              ^
 bool Parser::parseDef(TypeDef *type) {
    Token tok = getToken();
-   
+
+   // Check for an unspecialized generic.   
+   if (type->generic)
+      error(identLoc, SPUG_FSTR("Generic type " << type->name <<
+                                 " must be specialized to be used."
+                                )
+            );
+
    while (true) {
       if (tok.isIdent()) {
          string varName = tok.getData();
@@ -3845,6 +3848,7 @@ Parser::Primary Parser::parsePrimary(Expr *implicitReceiver) {
       VarDefPtr def = context->lookUp(tok.getData());
       if (!def)
          return Primary(0, 0, tok);
+      identLoc = tok.getLocation();
       // XXX we need to do special stuff for OverloadDefs that may contain 
       // methods.  if they do, and there is a "this" we want to pass back a 
       // Deref binding the this to the OverloadDef.  May want to do this in 
