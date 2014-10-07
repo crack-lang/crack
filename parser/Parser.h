@@ -263,6 +263,7 @@ class Parser {
          model::ExprPtr expr;
          model::TypeDefPtr type;
          Token ident;
+         Primary() {}
          Primary(model::Expr *expr) : expr(expr) {}
          Primary(model::Expr *expr, model::TypeDef *type, const Token &ident) :
             expr(expr),

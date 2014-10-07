@@ -1246,9 +1246,14 @@ ExprPtr Parser::parseTernary(Expr *cond) {
 ExprPtr Parser::parseDefine(const Token &ident) {
       ExprPtr val = parseExpression();
 
-      // Create the variable and return a reference to it.
-      VarDefPtr var = context->emitVarDef(val->type.get(), ident, val.get());
-      return context->createVarRef(var.get());
+      // XXX We have to do this weird, inefficient two-step process of 
+      // defining the variable and then assigning it.  For some reason, if we 
+      // don't we end up breaking definitions in a 'while' condition: the 
+      // variable seems to get initialized with the value the expression had 
+      // upon entry into the loop and the rvalue doesn't seem to get
+      // re-evaluated.
+      VarDefPtr var = context->emitVarDef(val->type.get(), ident, 0);
+      return createAssign(0, ident, var.get(), val.get());
 }
 
 ExprPtr Parser::makeAssign(Expr *lvalue, const Token &tok, Expr *rvalue) {
@@ -1617,6 +1622,7 @@ namespace {
 ExprPtr Parser::parseExpression(unsigned precedence) {
 
    ExprPtr expr;
+   Primary primary;
 
    // check for null
    Token tok = getToken();
@@ -1639,8 +1645,8 @@ ExprPtr Parser::parseExpression(unsigned precedence) {
       identLoc = tok.getLocation();
       if (useNewExpressionParser) {
          toker.putBack(tok);
-         Primary p = parsePrimary(0);
-         expr = p.expr;
+         primary = parsePrimary(0);
+         expr = primary.expr;
       } else {
          expr = parsePostIdent(0, tok);
       }
@@ -1737,7 +1743,8 @@ ExprPtr Parser::parseExpression(unsigned precedence) {
       unexpected(tok, "expected an expression");
    }
 
-   return parseSecondary(Primary(expr.get()), precedence);
+   primary.expr = expr;
+   return parseSecondary(primary, precedence);
 }
 
 // func( arg, arg)
