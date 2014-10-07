@@ -84,7 +84,9 @@ bool FuncDef::matches(Context &context, const vector<ExprPtr> &vals,
                     return false;
                 break;
             case noConvert:
-                if (!(*arg)->type->matches(*(*val)->type))
+                // We have to check for a null value type because we could 
+                // have a VarRef to an OverloadDef, whose type is null.
+                if (!(*val)->type || !(*arg)->type->matches(*(*val)->type))
                     return false;
                 break;
         }

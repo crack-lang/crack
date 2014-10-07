@@ -13,10 +13,18 @@
 #include "TypeDef.h"
 
 using namespace model;
+using namespace std;
 
 Expr::Expr(TypeDef *type) : type(type) {}
 
 Expr::~Expr() {}
+
+string Expr::getTypeDisplayName() const {
+    if (type)
+        return type->getDisplayName();
+    else
+        return "<Overload>";
+}
 
 void Expr::emitCond(Context &context) {
     context.builder.emitTest(context, this);

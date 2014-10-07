@@ -13,6 +13,7 @@
 #include "builder/Builder.h"
 #include "VarDefImpl.h"
 #include "Context.h"
+#include "OverloadDef.h"
 #include "ResultExpr.h"
 #include "TypeDef.h"
 #include "VarDef.h"
@@ -25,9 +26,39 @@ VarRef::VarRef(VarDef *def) :
     def(def) {
 }
 
+TypeDefPtr VarRef::getType(Context &context) const {
+    if (OverloadDef *ovld = OverloadDefPtr::rcast(def)) {
+        FuncDefPtr func = ovld->getSingleFunction();
+        if (!func)
+            context.error(
+                SPUG_FSTR("Invalid use of ambiguous overload " <<
+                           ovld->getDisplayName() <<
+                           "."
+                          )
+            );
+        return func->type;
+    } else {
+        return type;
+    }
+}
+
 ResultExprPtr VarRef::emit(Context &context) {
     assert(def->impl);
     return def->impl->emitRef(context, this);
+}
+
+ExprPtr VarRef::convert(Context &context, TypeDef *type) {
+    if (OverloadDef *ovld = OverloadDefPtr::rcast(def)) {
+        FuncDef *func = ovld->getMatch(type);
+        if (func) {
+            return context.createVarRef(func);
+        } else if (FuncDefPtr funcDef = ovld->getSingleFunction()) {
+            VarRefPtr varRef = context.createVarRef(funcDef.get());
+            return varRef->convert(context, type);
+        }
+    } else {
+        return Expr::convert(context, type);
+    }
 }
 
 bool VarRef::isProductive() const {

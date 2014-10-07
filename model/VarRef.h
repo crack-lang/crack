@@ -22,8 +22,14 @@ class VarRef : public Expr {
         // the definition of the variable we're referencing
         VarDefPtr def;
         VarRef(VarDef *def);
+
+        virtual TypeDefPtr getType(Context &context) const;
         
         virtual ResultExprPtr emit(Context &context);
+        
+        // Overriden so we can introduce special behavior for references to 
+        // OverloadDef.
+        virtual ExprPtr convert(Context &context, TypeDef *type);
         
         // variable references are non-productive, so we override.
         virtual bool isProductive() const;

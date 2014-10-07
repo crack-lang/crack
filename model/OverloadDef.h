@@ -91,6 +91,12 @@ class OverloadDef : public VarDef {
         FuncDef *getMatch(Context &context, std::vector<ExprPtr> &args,
                           bool allowOverrides
                           ) const;
+
+        /**
+         * Return the overload matching the requested function type, null if 
+         * none exists.
+         */
+        FuncDef *getMatch(TypeDef *funcType) const;
         
         /**
          * Returns the overload with the matching signature if there is one, 
@@ -189,6 +195,12 @@ class OverloadDef : public VarDef {
          * Returns true if the overload consists of only one function.
          */
         bool isSingleFunction() const;
+        
+        /**
+         * If the overload consists of only one function, returns the 
+         * function.  Otherwise returns null.
+         */
+        FuncDefPtr getSingleFunction() const;
         
         /**
          * Make sure we have an implementation object, create one if we don't.

@@ -8,6 +8,7 @@
 #include "PrimFuncAnnotation.h"
 
 #include "compiler/CrackContext.h"
+#include "model/TypeDef.h"
 
 using namespace model;
 

@@ -180,12 +180,14 @@ FuncDefPtr Parser::lookUpBinOp(const string &op, FuncCall::ExprVec &args) {
    // see if it is a method of the left-hand type
    FuncDefPtr func;
    if (checkLeftMethods)
-      func = context->lookUp(fullName, exprs, args[0]->type.get());
+      func = context->lookUp(fullName, exprs, args[0]->getType(*context).get());
    
    // not there, try the right-hand type
    if (!func && checkRightMethods) {
       exprs[0] = args[0];
-      func = context->lookUp("oper r" + op, exprs, args[1]->type.get());
+      func = context->lookUp("oper r" + op, exprs, 
+                             args[1]->getType(*context).get()
+                             );
    }
    
    // not there either, check for a non-method operator.
@@ -1410,7 +1412,7 @@ ExprPtr Parser::parseSecondary(const Primary &primary, unsigned precedence) {
             // this is "a[i] = v"
             args.push_back(parseExpression());
             FuncDefPtr funcDef =
-               context->lookUp("oper []=", args, expr->type.get());
+               context->lookUp("oper []=", args, expr->getType(*context).get());
             if (!funcDef)
                error(tok, 
                      SPUG_FSTR("'oper []=' not defined for " <<
@@ -1427,7 +1429,7 @@ ExprPtr Parser::parseSecondary(const Primary &primary, unsigned precedence) {
             toker.putBack(tok2);
 
             FuncDefPtr funcDef =
-               context->lookUp("oper []", args, expr->type.get());
+               context->lookUp("oper []", args, expr->getType(*context).get());
             if (!funcDef)
                error(tok, SPUG_FSTR("'oper []' not defined for " <<
                                      expr->type->name << 
@@ -1452,7 +1454,8 @@ ExprPtr Parser::parseSecondary(const Primary &primary, unsigned precedence) {
          
          FuncCall::ExprVec args;
          string symbol = "oper x" + tok.getData();
-         FuncDefPtr funcDef = context->lookUp(symbol, args, expr->type.get());
+         FuncDefPtr funcDef = context->lookUp(symbol, args, 
+                                              expr->getType(*context).get());
          if (!funcDef) {
             args.push_back(expr);
             funcDef = context->lookUp(symbol, args);
@@ -1486,8 +1489,8 @@ ExprPtr Parser::parseSecondary(const Primary &primary, unsigned precedence) {
          FuncDefPtr func = lookUpBinOp(tok.getData(), exprs);
          if (!func)
             error(tok,
-                  SPUG_FSTR("Operator " << expr->type->name << " " <<
-                            tok.getData() << " " << rhs->type->name <<
+                  SPUG_FSTR("Operator " << expr->getTypeDisplayName() << " " <<
+                            tok.getData() << " " << rhs->getTypeDisplayName() <<
                             " undefined."
                             )
                   );
@@ -1710,7 +1713,7 @@ ExprPtr Parser::parseExpression(unsigned precedence) {
       if (tok.isIncr() || tok.isDecr())
          symbol += "x";
       FuncDefPtr funcDef = context->lookUp(symbol, args, 
-                                           operand->type.get()
+                                           operand->getType(*context).get()
                                            );
       if (!funcDef) {
          args.push_back(operand);
@@ -2019,7 +2022,9 @@ void Parser::parseInitializers(Initializers *inits, Expr *receiver) {
             
             // look up the appropriate constructor
             FuncDefPtr operNew = 
-               context->lookUp("oper new", args, varDef->type.get());
+               context->lookUp("oper new", args, 
+                               varDef->type.get()
+                               );
             if (!operNew)
                error(tok2,
                      SPUG_FSTR("No matching constructor found for instance "
@@ -3955,7 +3960,7 @@ Parser::Primary Parser::parsePrimary(Expr *implicitReceiver) {
             // function.
             args.push_back(parseExpression());
             FuncDefPtr funcDef =
-               context->lookUp("oper []=", args, expr->type.get());
+               context->lookUp("oper []=", args, expr->getType(*context).get());
             if (!funcDef)
                error(tok, 
                      SPUG_FSTR("'oper []=' not defined for " <<
@@ -3972,7 +3977,7 @@ Parser::Primary Parser::parsePrimary(Expr *implicitReceiver) {
             toker.putBack(tok2);
 
             FuncDefPtr funcDef =
-               context->lookUp("oper []", args, expr->type.get());
+               context->lookUp("oper []", args, expr->getType(*context).get());
             if (!funcDef)
                error(tok, SPUG_FSTR("'oper []' not defined for " <<
                                      expr->type->name << 

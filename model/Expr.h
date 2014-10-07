@@ -31,6 +31,23 @@ class Expr : public spug::RCBase {
         ~Expr();
 
         /**
+         * Returns the display name of the type.  This has the advantage of 
+         * working for OverloadDefs, whose type is null.
+         */
+        std::string getTypeDisplayName() const;
+
+        /**
+         * Returns the expression type in a way that allows us to override it 
+         * for OverloadDefs. Produces an error if the expression type is 
+         * undefined.
+         */        
+        virtual TypeDefPtr getType(Context &context) const {
+            // We can just return 'type' in the base case, as this is 
+            // generally guaranteed to be defined.
+            return type;
+        }
+
+        /**
          * Emit the expression in the given context.
          * 
          * Returns a result expression to be used for object lifecycle

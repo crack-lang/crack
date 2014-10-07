@@ -124,6 +124,21 @@ FuncDef *OverloadDef::getMatch(Context &context, std::vector<ExprPtr> &args,
     return result;
 }
 
+FuncDef *OverloadDef::getMatch(TypeDef *funcType) const {
+    SPUG_FOR(FuncList, iter, funcs) {
+        if ((*iter)->type->isDerivedFrom(funcType))
+            return iter->get();
+    }
+    
+    SPUG_FOR(ParentVec, iter, parents) {
+        FuncDef *result = (*iter)->getMatch(funcType);
+        if (result)
+            return result;
+    }
+    
+    return 0;
+}
+
 FuncDef *OverloadDef::getSigMatch(const FuncDef::ArgVec &args,
                                   bool matchNames
                                   ) {
@@ -334,6 +349,16 @@ bool OverloadDef::isSingleFunction() const {
     
     return flatFuncs.size() == 1;
 }
+
+FuncDefPtr OverloadDef::getSingleFunction() const {
+    FuncList flatFuncs;
+    flatten(flatFuncs);
+
+    if (flatFuncs.size() == 1)
+        return flatFuncs.front();
+    else
+        return 0;
+}    
 
 void OverloadDef::createImpl() {
     if (!impl) {
