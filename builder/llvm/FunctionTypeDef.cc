@@ -112,10 +112,11 @@ TypeDefPtr FunctionTypeDef::getSpecialization(Context &context,
     std::ostringstream argName;
     argName << "arg";
     for (int i = 0; i < arity; ++i) {
-        argName << i+1;
-        fptrCall->args[i] = new ArgDef((*types)[i+1].get(), argName.str());
+        argName << i + 1;
+        fptrCall->args[i] = new ArgDef((*types)[i + 1].get(), argName.str());
         argName.rdbuf()->pubseekpos(3);
     }
+    fptrCall->receiverType = tempSpec;
     context.addDef(fptrCall.get(), tempSpec.get());
 
     // cache and return
