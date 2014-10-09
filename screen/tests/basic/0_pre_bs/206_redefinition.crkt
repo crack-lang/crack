@@ -1,0 +1,10 @@
+%%TEST%%
+redefinition of a name in the same context through the define operator.
+%%ARGS%%
+%%FILE%%
+void f() {}
+void g() {}
+g := f;
+%%EXPECT%%
+ParseError: %SCRIPTNAME%:3:3: Symbol g is already defined in this context.
+%%STDIN%%

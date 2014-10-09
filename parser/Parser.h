@@ -262,7 +262,11 @@ class Parser {
       struct Primary {
          model::ExprPtr expr;
          model::TypeDefPtr type;
+
+         // 'ident' is defined if the primary consists only of a single
+         // identifier.
          Token ident;
+
          Primary() {}
          Primary(model::Expr *expr) : expr(expr) {}
          Primary(model::Expr *expr, model::TypeDef *type, const Token &ident) :

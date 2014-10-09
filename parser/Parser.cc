@@ -1536,11 +1536,11 @@ ExprPtr Parser::parseSecondary(const Primary &primary, unsigned precedence) {
       } else if (tok.isDefine()) {
          // We have to make sure that this is the original expression (to 
          // ensure that we haven't done anything since the original 
-         // identifier) and that we're not overriding a name from this 
-         // context.
+         // identifier).
          if (expr != primary.expr || primary.ident.isEnd())
             error(tok, "The define operator can not be used here.");
          
+         // Make sure we're not redefining a name from this context.
          VarDefPtr existing;
          if ((existing = context->lookUp(primary.ident.getData())) && 
              existing->getOwner() == context->ns
@@ -3850,6 +3850,10 @@ Parser::Primary Parser::parsePrimary(Expr *implicitReceiver) {
    ExprPtr expr;
    string repr;
 
+   // If the primary consists only of a single identifier, we set this to it.  
+   // Otherwise it should be set to the END token.
+   Token soleIdent;
+
    // Parse the initial token, which should be either "typeof" or an 
    // identifier.
    Token tok = getToken();
@@ -3867,11 +3871,13 @@ Parser::Primary Parser::parsePrimary(Expr *implicitReceiver) {
       // createVarRef instead.
       type = TypeDefPtr::rcast(def);
       expr = createVarRef(/* container */ 0, def.get(), tok);
+      soleIdent = tok;
    }
    
    while (true) {
       tok = getToken();
       if (tok.isScoping()) {
+         soleIdent = Token();
          toker.putBack(tok);
          VarDefPtr def;
          Token lastName;
@@ -3896,6 +3902,7 @@ Parser::Primary Parser::parsePrimary(Expr *implicitReceiver) {
          expr = context->createVarRef(def);
 #endif
       } else if (tok.isDot()) {
+         soleIdent = Token();
          tok = getToken();
          string name;
          if (tok.isIdent()) {
@@ -3944,6 +3951,7 @@ Parser::Primary Parser::parsePrimary(Expr *implicitReceiver) {
          
          type = TypeDefPtr::rcast(def);
       } else if (tok.isLBracket()) {
+         soleIdent = Token();
                                         
          // the array indexing operators
          
@@ -4006,5 +4014,5 @@ Parser::Primary Parser::parsePrimary(Expr *implicitReceiver) {
       }
    }
    
-   return Primary(expr.get(), type.get(), Token());
+   return Primary(expr.get(), type.get(), soleIdent);
 }
