@@ -90,14 +90,14 @@ srandom(10);
 int r;
 for(i=0; i<10; i++) r=random();
 
-array[byte] rstate=[95, 8, 121];
-state := initstate(10, byteptr(rstate), 3);
+array[byte] rstate=[95, 8, 121, 45, 89, 20, 53, 189];
+array[byte] nstate=[53, 0, 0, 0, 24, 245, 11, 30];
+state := initstate(10, byteptr(rstate), 8); // return value is undefined
+state2 := setstate(byteptr(rstate));
 
-state2 := setstate(state);
-for (i=0;i<3;i++)
-    if (state[i] != state2[i])
-        cout `Random state mismatch\n`;
-
+for (i=0;i<8;i++)
+  if (state[i] != nstate[i])
+    cout `Random state mismatch, $(state[i]) != $(nstate[i])\n`;
 
 // Test single argument functions for segfaults only
 sin(1.0);

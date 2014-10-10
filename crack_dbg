@@ -24,7 +24,7 @@ done
 
 type
 
-LIBS=$(dirname $0)/.libs
+LIBS="." #$(dirname $0)/lib
 if [ -n "${prog_args[*]}" ]; then
     echo "set args ${prog_args[*]}" >.crack_dbg.args
     LD_LIBRARY_PATH=$LIBS gdb $LIBS/crack "${gdb_args[@]}" -x .crack_dbg.args
