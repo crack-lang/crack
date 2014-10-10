@@ -669,11 +669,6 @@ ContextPtr Parser::parseBlock(bool nested, Parser::Event closeEvent) {
 }
 
 ExprPtr Parser::createVarRef(Expr *container, VarDef *var, const Token &tok) {
-   // TODO: when the new parser is finally in place, I think we can dispense 
-   // with needsReceiver() (at least for OverloadDefs).  When we resolve a
-   // specific function in an overload, we have to be able to associate with 
-   // the "this" anyway, so it might make sense to defer all implicit "this" 
-   // association until the point where the ref is used.
    // if the definition is for an instance variable, emit an implicit 
    // "this" dereference.  Otherwise just emit the variable
    if (var->needsReceiver()) {
@@ -685,7 +680,11 @@ ExprPtr Parser::createVarRef(Expr *container, VarDef *var, const Token &tok) {
                        "Non-null container creating reference for variable '" <<
                         var->getDisplayName() << "'."
                        );
-            return new Deref(context->makeThisRef(tok.getData()).get(), ovld);
+            
+            // For overloads, we deal with associating them with an implicit 
+            // 'this' later, when we actually establish which overload 
+            // we're calling.
+            return context->createVarRef(var);
          } else {
             error(tok, SPUG_FSTR("Trying to get the value of " << tok.getData() <<
                                  ", first class methods are not supported yet."
