@@ -19,6 +19,7 @@
 #include <llvm/IR/GlobalVariable.h>
 #include <spug/StringFmt.h>
 #include <spug/check.h>
+#include <model/NullConst.h>
 
 using namespace llvm;
 using namespace model;
@@ -326,6 +327,7 @@ BTypeDefPtr createMetaClass(Context &context, const string &name,
     PointerType *classPtrType = cast<PointerType>(classType->rep);
     StructType *classStructType =
         cast<StructType>(classPtrType->getElementType());
+    metaType->defaultInitializer = new NullConst(metaType.get());
 
     // Create a struct representation of the meta class.  This just has the
     // Class class as its only field.
