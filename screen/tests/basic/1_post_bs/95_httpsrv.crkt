@@ -3,8 +3,124 @@ HTTP Server
 %%ARGS%%
 
 %%FILE%%
-import crack.net.httpsrv;
-import crack.io cout;
+import crack.fieldset FieldSet;
+import crack.net.httpsrv Chain, HandlerFunc, HTTPRequest, PathDispatcher,
+    RequestHandler, NOT_FOUND;
+import crack.io cout, FStr, StringWriter;
+@import crack.ann assert;
+@import crack.fieldset_ann fieldset_accessors;
+
+# Test chains.
+if (true) {
+    output := StringWriter();
+    req := HTTPRequest(output, null);
+
+    class Marker {
+        @fieldset_accessors(Marker);
+    }
+
+    bool first(HTTPRequest req) {
+        Marker().putIn(req);
+        return false;
+    }
+
+    bool second(HTTPRequest req) {
+        req.sendReply(200, 'text/plain', 'second data');
+        return true;
+    }
+
+    bool third(HTTPRequest req) {
+        req.sendReply(400, 'text/plain', 'bad data');
+        return true;
+    }
+
+    # Empty chain gives back false.
+    chain := Chain();
+    @assert(!chain(req));
+
+    # So does a chain consisting only of a handler that abdicates.
+    chain.append(HandlerFunc(first));
+    @assert(!chain(req));
+
+    chain.append(HandlerFunc(second));
+    chain.append(HandlerFunc(third));
+    @assert(chain(req))
+    @assert(Marker.get(req));  # Make sure 'first' got called.
+    @assert(output.string() ==
+             'HTTP/1.1 200 Stat\n'
+             'Content-type: text/plain\n'
+             'Content-length: 11\n\n'
+             'second data'
+            );
+}
+
+# Test dispatchers.
+if (true) {
+    output := StringWriter();
+    req := HTTPRequest(output, null);
+    req.path = '/a/x';
+
+    class Marker {
+        String result;
+
+        oper init() {}
+
+        @fieldset_accessors(Marker);
+
+        @static Marker getOrMake(FieldSet set) {
+            marker := Marker.get(set);
+            if (!marker) {
+                marker = Marker();
+                marker.putIn(set);
+            }
+            return marker;
+        }
+    }
+
+    bool a(HTTPRequest req) {
+        Marker.getOrMake(req).result = FStr() `a: $(req.parsedPath)`;
+        return true;
+    }
+
+    bool b(HTTPRequest req) {
+        Marker.getOrMake(req).result = FStr() `b: $(req.parsedPath)`;
+        return false;
+    }
+
+    disp := PathDispatcher();
+    disp['a'] = HandlerFunc(a);
+    disp['b'] = HandlerFunc(b);
+
+    @assert(disp(req));
+    @assert(Marker.get(req).result == "a: ['x']");
+
+    req.path = '/b';
+    req.parsedPath = null;
+    @assert(!disp(req));
+    @assert(Marker.get(req).result == 'b: []');
+
+    req.path = '/c';
+    req.parsedPath = null;
+    Marker.deleteField(req);
+    @assert(!disp(req));
+    @assert(Marker.get(req) is null);
+}
+
+# Test NOT_FOUND
+if (true) {
+    output := StringWriter();
+    req := HTTPRequest(output, null);
+    @assert(NOT_FOUND(req));
+    @assert(output.string() ==
+             'HTTP/1.1 404 Stat\n'
+             'Content-type: text/html\n'
+             'Content-length: 126\n\n'
+             '<http>\n  <head>\n    <title>404 - Page not found</title>\n'
+             '  </head>\n  <body>\n    <h1>404 - Page not found</h1>\n'
+             '  </body>\n</http>'
+            );
+}
+
 cout `ok`;
 %%EXPECT%%
 ok

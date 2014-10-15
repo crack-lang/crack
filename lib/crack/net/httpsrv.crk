@@ -11,8 +11,9 @@
 ## 
 
 import crack.ascii strip;
+import crack.fieldset HashMapFieldSet;
 import crack.lang AppendBuffer, Buffer, Exception, ManagedBuffer, WriteBuffer, Formatter;
-import crack.strutil StringArray;
+import crack.strutil split, StringArray;
 import crack.cont.array Array;
 import crack.cont.hashmap HashMap;
 import crack.io cerr, StandardFormatter, StringFormatter, Writer, FileHandle;
@@ -22,7 +23,7 @@ import crack.time TimeDelta;
 import crack.sys strerror;
 import crack.lang SystemError;
 import crack.runtime errno;
-import crack.functor Functor1;
+import crack.functor Functor1, Function1;
 import crack.logger debug, info;
 
 @import crack.ann define, interface, implements;
@@ -31,11 +32,20 @@ StandardFormatter NULL_FORMATTER = null;
 
 ## Contains the full contents of an HTTP request and provides the means for 
 ## communicating back to the client.
-class HTTPRequest {
+## Note that this is a FieldSet, arbitrary user data can be attached to it.
+class HTTPRequest : HashMapFieldSet {
     String method, path, version;
     HashMap[String, String] headers = {};
     InetAddress clientAddr;
     StandardFormatter __clt;
+    
+    ## If present, this is the path parsed into components, e.g. 
+    ## with a path of "/foo/bar/baz" this would normally contain ["foo", 
+    ## "bar", "baz"].  Use getParsedPath() if you want to create it from 
+    ## 'path' when it's null.  Handlers may mutate this field for other 
+    ## handlers on the path.  For example, Dispatchers typically remove the 
+    ## first element (which they have already matched).
+    StringArray parsedPath;
 
     oper init(Writer client, ## the channel to write back to the client.
               InetAddress clientAddr ## the client address.
@@ -62,6 +72,14 @@ $contents`;
 Location: $location
 
 `;
+    }
+
+    ## Returns the parsed path (see 'parsedPath' above), creating it from 
+    ## 'path' if the field is currently null.
+    @final StringArray getParsedPath() {
+        if (parsedPath is null)
+            parsedPath = split(path.substr(1), '/');
+        return parsedPath;
     }
 }
 
@@ -155,6 +173,7 @@ class Error : StringFormatter {
 }
 
 alias RequestHandler = Functor1[bool, HTTPRequest];
+alias HandlerFunc = Function1[bool, HTTPRequest];
 alias HandlerArray = Array[RequestHandler];
 
 class OutQueue : Array[String] @implements Writer {
@@ -471,5 +490,56 @@ $(evt.events), revents = $(evt.revents)\n`;
     int getPort() { return __port; }
 }
 
+## A Chain is a sequence of handlers. It replicates the logic of the 
+## HTTPServer itself, calling all of its handlers until one of them returns 
+## 'true' at which point it returns true, also.  If no handler returns true, 
+## this functor returns false.
+class Chain : Array[RequestHandler] @implements Functor1[bool, HTTPRequest] {
+    bool oper call(HTTPRequest req) {
+        for (handler :in this) {
+            if (handler(req))
+                return true;
+        }
+        return false;
+    }
+}
+
+## A PathDispatcher is a map of handlers that calls and returns the return 
+## value of the handler mapped to the first segment of the URL path, if there 
+## is one.  Returns 'false' if there is no match.
+class PathDispatcher : HashMap[String, RequestHandler] 
+                       @implements Functor1[bool, HTTPRequest] {
+    bool oper call(HTTPRequest req) {
+        handler := get(req.getParsedPath()[0], null);
+        if (!(handler is null)) {
+            req.parsedPath.delete(0);
+            return handler(req);
+        } else {
+            return false;
+        }
+    }
+}
+
+bool __notFound(HTTPRequest req) {
+    req.sendReply(
+        404, 
+        'text/html',
+        I'<http>
+            <head>
+              <title>404 - Page not found</title>
+            </head>
+            <body>
+              <h1>404 - Page not found</h1>
+            </body>
+          </http>'
+    );
+    return true;             
+}
+
+## The NOT_FOUND handler can be appended to the end of a chain (including the 
+## HTTPServer itself, of course) to handle all requests that are not resolved 
+## by any of the other handlers by returning a 404 response to the client.
+const NOT_FOUND := HandlerFunc(__notFound);
 
 
+@export_symbols HandlerFunc, RequestHandler;
