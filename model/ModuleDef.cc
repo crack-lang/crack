@@ -247,6 +247,9 @@ ModuleDefPtr ModuleDef::deserialize(Deserializer &deser,
         // slave any more.
         Construct::ModuleMap::iterator iter =
             construct.moduleCache.find(canonicalName);
+        if (Serializer::trace)
+            cerr << ">>>> Finished deserializing slave " << canonicalName <<
+                endl;
         if (iter != construct.moduleCache.end())
             return iter->second;
         else
@@ -272,6 +275,9 @@ ModuleDefPtr ModuleDef::deserialize(Deserializer &deser,
                     " got " << recordedSourceDigest.asHex() <<
                     "\n  current = " <<
                     fileDigest.asHex() << "\n  module: " <<
+                    canonicalName << endl;
+            if (Serializer::trace)
+                cerr << ">>>> Finished deserializing SOURCE MISMATCH " <<
                     canonicalName << endl;
             return 0;
         }
@@ -309,6 +315,9 @@ ModuleDefPtr ModuleDef::deserialize(Deserializer &deser,
                     moduleDigest.asHex() <<
                     " current = " << mod->metaDigest.asHex() << ")" << endl;
             deser.context->construct->moduleCache.erase(existing.first);
+            if (Serializer::trace)
+                cerr << ">>>> Finished deserializing DEP MISMATCH " <<
+                    canonicalName << endl;
             return 0;
         }
     }
