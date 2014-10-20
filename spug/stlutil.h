@@ -10,9 +10,9 @@
 
 // Macro to simplify iteration over a collection.  This uses a const iterator,
 // for mutating iteration use SPUG_MFOR.
-#define SPUG_MFOR(iter, collection) \
-    for (typename collection::iterator iter = collection.begin(); \
-         iter != collection.end(); \
+#define SPUG_MFOR(collection_type, iter, collection) \
+    for (typename collection_type::iterator iter = (collection).begin(); \
+         iter != (collection).end(); \
          ++iter \
          )
 
@@ -31,8 +31,8 @@ inline bool contains(Coll coll, Elem elem) {
 // is too complicated and has too many boost dependencies to just import into
 // the tree.
 #define SPUG_FOR(collection_type, iter, collection) \
-    for (collection_type::const_iterator iter = collection.begin(); \
-         iter != collection.end(); \
+    for (collection_type::const_iterator iter = (collection).begin(); \
+         iter != (collection).end(); \
          ++iter)
 
 } // namespace spug
