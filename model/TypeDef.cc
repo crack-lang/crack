@@ -965,11 +965,22 @@ TypeDefPtr TypeDef::getSpecialization(Context &context,
     // building the specialization or loading from the precompiled module cache.
     string nameInModule;
 
-    // check the precompiled module cache
-    ModuleDefPtr module = context.construct->getCachedModule(moduleName);
-
-    // track whether we create a copersistent module.
+    // see if the new type needs to be in a copersistent module.
     bool copersistent = false;
+    ModuleDefPtr currentModule = context.ns->getModule();
+    ModuleDefPtr currentMaster = currentModule->getMaster();
+    SPUG_FOR(TypeVec, typeIter, *types) {
+        if ((*typeIter)->getModule()->getMaster() == currentMaster)
+            copersistent = true;
+    }
+    copersistent = copersistent || getModule()->getMaster() == currentMaster;
+
+    // check the precompiled module cache.  We don't do this for copersistent 
+    // modules: if there is an existing copy in the cache, we can't depend on 
+    // it because it's from a non-copersistent version.
+    ModuleDefPtr module;
+    if (!copersistent)
+        module = context.construct->getCachedModule(moduleName);
 
     if (!module) {
 
@@ -986,8 +997,6 @@ TypeDefPtr TypeDef::getSpecialization(Context &context,
         // if any of the parameters of the generic or the generic itself are 
         // in a hidden scope, we don't want to create an ephemeral module for 
         // it.
-        ModuleDefPtr currentModule = context.ns->getModule();
-        ModuleDefPtr currentMaster = currentModule->getMaster();
         bool hidden = false;
         if (isHidden()) {
             hidden = copersistent = true;
@@ -996,15 +1005,9 @@ TypeDefPtr TypeDef::getSpecialization(Context &context,
                 if ((*types)[i]->isHidden()) {
                     hidden = copersistent = true;
                     break;
-                } else if ((*types)[i]->getModule()->getMaster() == 
-                            currentMaster
-                           ) {
-                    copersistent = true;
                 }
             }
         }
-        copersistent = copersistent || 
-                       getModule()->getMaster() == currentMaster;
         if (hidden) {
             ModuleDefPtr dummyMod = new DummyModuleDef(moduleName, 
                                                        context.ns.get()
@@ -1057,6 +1060,10 @@ TypeDefPtr TypeDef::getSpecialization(Context &context,
                                           copersistent ? currentModule.get() : 
                                                          0
                                           );
+        
+        // Add the modules of the parameter types as dependents.
+        SPUG_FOR(TypeVecObj, typeIter, *types)
+            module->addDependency((*typeIter)->getModule().get());
         
         // XXX this is confusing: there's a "owner" that's part of some kinds of 
         // ModuleDef that's different from VarDef::owner - we set VarDef::owner 

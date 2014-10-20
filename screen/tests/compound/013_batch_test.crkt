@@ -164,6 +164,63 @@ test.main(I"
 test.run();
 test.run();
 
+# Verify that we can move a generic instantiation into a module in which it
+# would become a slave.
+test.rmCacheFiles('.*');
+test.mod('mod1', "
+    import mod2 B;
+    class A {}
+    ");
+test.mod('mod2', "class B[T] {}");
+test.main(I"
+    import mod1 A;
+    import mod2 B;
+    B[A] a;
+    puts('enslaving generics');
+    ");
+test.run();
+
+test.mod('mod1', "
+    import mod2 B;
+    class A {}
+    B[A] a;
+    ");
+test.main(I"
+    import mod1 A;
+    import mod2 B;
+    puts('enslaving generics');
+    ");
+test.run();
+test.run();
+
+# Verify that cached generics have dependencies on the modules containing
+# their parameter types.
+test.rmCacheFiles('.*');
+test.mod('mod1', "
+    import mod2 B;
+    class A {
+        void f() {}
+    }
+    ");
+test.mod('mod2', I"
+         class B[T] {
+            void g() { T().f() }
+         }
+         ");
+test.main(I"
+    import mod1 A;
+    import mod2 B;
+    B[A] a;
+    puts('generic dependencies');
+    ");
+test.run();
+
+test.mod('mod1', "
+    import mod2 B;
+    class A {}
+    ");
+test.run();
+
 %%REXPECT%%
 out: alias
 terminated: success
@@ -205,4 +262,16 @@ out: hidden module dependencies
 terminated: success
 out: hidden module dependencies
 terminated: success
+out: enslaving generics
+terminated: success
+out: enslaving generics
+terminated: success
+out: enslaving generics
+terminated: success
+out: generic dependencies
+terminated: success
+err: ParseError: ./mod2.crk:3:1: No method exists matching f\(\)
+err:   in generic instantiation at .*/main.crk:4:4
+err:\s*
+terminated, rc = 2049
 %%STDIN%%

@@ -427,10 +427,13 @@ namespace {
                              kind);
         if (paramTypes) {
             TypeDefPtr typeDef = varDef;
-            return typeDef->getSpecialization(*deser.context, paramTypes.get());
-        } else {
-            return varDef;
+            varDef = typeDef->getSpecialization(*deser.context, paramTypes.get());
         }
+        SPUG_CHECK(varDef,
+                    "alias not resolved: " << moduleName << ":" <<
+                    makeIterPair(moduleRelativePath)
+                   );
+        return varDef;
     }
 
 
