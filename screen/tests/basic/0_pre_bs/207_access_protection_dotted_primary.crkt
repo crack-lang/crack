@@ -1,0 +1,9 @@
+%%TEST%%
+access protection from dotted primaries
+%%ARGS%%
+%%FILE%%
+class A { int __var; }
+A().__var;
+%%EXPECT%%
+ParseError: %SCRIPTNAME%:2:5: __var is private to class A and not acessible in this context.
+%%STDIN%%

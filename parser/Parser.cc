@@ -3863,6 +3863,7 @@ Parser::Primary Parser::parsePrimary(Expr *implicitReceiver) {
       VarDefPtr def = context->lookUp(tok.getData());
       if (!def)
          return Primary(0, 0, tok);
+      context->checkAccessible(def.get(), tok.getData());
       identLoc = tok.getLocation();
       // XXX we need to do special stuff for OverloadDefs that may contain 
       // methods.  if they do, and there is a "this" we want to pass back a 
@@ -3917,12 +3918,17 @@ Parser::Primary Parser::parsePrimary(Expr *implicitReceiver) {
             error(tok, "Identifier or 'oper' expected after '.'");
          }
          VarDefPtr def = expr->type->lookUp(name);
-         // XXX check accessible, etc.
          
          // If we didn't get a def and the current target is a type, see if we 
          // can resolve the name by treating the dot as the scoping operator.
          if (!def && type) {
             def = type->lookUp(tok.getData());
+            if (!def->isUsableFrom(*context))
+               error(tok, 
+                     SPUG_FSTR("Instance member " << name << 
+                                " is not usable from this context."
+                               )
+                     );
             expr = context->createVarRef(def.get());
          } else if (def) {
             expr = new Deref(expr.get(), def.get());
@@ -3948,6 +3954,7 @@ Parser::Primary Parser::parsePrimary(Expr *implicitReceiver) {
                      );
          }
          
+         context->checkAccessible(def.get(), name);
          type = TypeDefPtr::rcast(def);
       } else if (tok.isLBracket()) {
          soleIdent = Token();
@@ -4012,6 +4019,6 @@ Parser::Primary Parser::parsePrimary(Expr *implicitReceiver) {
          break;
       }
    }
-   
+
    return Primary(expr.get(), type.get(), soleIdent);
 }
