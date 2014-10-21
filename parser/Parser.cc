@@ -1315,11 +1315,15 @@ ExprPtr Parser::makeAssign(Expr *lvalue, const Token &tok, Expr *rvalue) {
       // XXX 'tok' is wrong.  We need to pass through the full name of a 
       // primary so we get the correct name in an error report.
       return createAssign(0, tok, ref->def.get(), rval.get());
+   } else if (IntConstPtr::rcast(lval) ||
+              FloatConstPtr::rcast(lval) ||
+              NullConstPtr::rcast(lval) ||
+              StrConstPtr::rcast(lval)
+              ) {
+      error(tok, "You cannot assign to a constant, class or function.");
    } else {
-      SPUG_CHECK(false,
-                 "Discovered an assignment secondary not being "
-                  "applied to a VarRef or Deref."
-                 );
+      // Must be an arbitrary expression.
+      error(tok, "You cannot assign to an expression.");
    }
 }
 
