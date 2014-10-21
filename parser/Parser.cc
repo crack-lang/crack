@@ -1540,11 +1540,17 @@ ExprPtr Parser::parseSecondary(const Primary &primary, unsigned precedence) {
             error(tok, "The define operator can not be used here.");
          
          // Make sure we're not redefining a name from this context.
-         VarDefPtr existing;
-         if ((existing = context->lookUp(primary.ident.getData())) && 
-             existing->getOwner() == context->ns
-             )
-            redefineError(primary.ident, existing.get());
+         if (VarDefPtr existing = context->lookUp(primary.ident.getData())) {
+         
+            // If this is an overload, make sure we have at least one function 
+            // that is defined in this scope.
+            OverloadDef *ovld = OverloadDefPtr::rcast(existing);
+            if (ovld && ovld->beginTopFuncs() == ovld->endTopFuncs())
+               existing = 0;
+            
+            if (existing && existing->getOwner() == context->ns)
+               redefineError(primary.ident, existing.get());
+         }
          
          return parseDefine(primary.ident);
       } else {
@@ -3710,14 +3716,20 @@ VarDefPtr Parser::checkForExistingDef(const Token &tok, const string &name,
       Namespace *existingNS = existing->getOwner();
       TypeDef *existingClass = 0;
 
+      OverloadDef *ovld = OverloadDefPtr::rcast(existing);
+      
       // if it's ok to overload, make sure that the existing definition is a 
       // function or an overload def or a stub.
-      if (overloadOk && (FuncDefPtr::rcast(existing) || 
-                         OverloadDefPtr::rcast(existing) ||
+      if (overloadOk && (ovld || FuncDefPtr::rcast(existing) || 
                          StubDefPtr::rcast(existing)
                          )
           )
          return existing;
+      
+      // If the existing function is an overload with nothing defined in the 
+      // current context, we can ignore it.
+      if (ovld && ovld->beginTopFuncs() == ovld->endTopFuncs())
+         return 0;
 
       // check for forward declarations
       if (existingNS == context->getDefContext()->ns.get()) {

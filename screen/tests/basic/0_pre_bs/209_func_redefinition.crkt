@@ -1,0 +1,8 @@
+%%TEST%%
+redefining a function in a nested context with classic definition syntax
+%%ARGS%%
+%%FILE%%
+class A { void f() { int f = 100; } }; puts("ok");
+%%EXPECT%%
+ok
+%%STDIN%%
