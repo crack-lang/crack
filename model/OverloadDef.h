@@ -188,6 +188,7 @@ class OverloadDef : public VarDef {
         virtual bool isImportable(const Namespace *ns, 
                                   const std::string &name
                                   ) const;
+        virtual bool isUsableFrom(const Context &context) const;
         virtual bool needsReceiver() const;
         virtual bool isSerializable() const;
         

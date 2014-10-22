@@ -101,5 +101,14 @@ ExprPtr VarRef::makeCall(Context &context,
                 );
         }
     }
+
+    // Make sure it's not abstract.
+    if (func->flags & FuncDef::abstract)
+        context.error(
+            SPUG_FSTR("Abstract function " << func->name << "(" <<
+                       args << ") can not be called."
+                      )
+        );
+
     return funcCall;
 }

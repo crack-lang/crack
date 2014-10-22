@@ -256,11 +256,10 @@ void FuncDef::addDependenciesTo(ModuleDef *mod, VarDef::Set &added) const {
 }
 
 bool FuncDef::isUsableFrom(const Context &context) const {
-    // Always true for non-methods.
-    if (!flags & method)
-        return true;
-    
-    return context.hasInstanceOf(TypeDefPtr::cast(owner));
+    // Functions are always usable because even if there are methods we can 
+    // reference the address (they may not be callable as methods, but we can 
+    // deal with that later).
+    return true;
 }
 
 bool FuncDef::needsReceiver() const {

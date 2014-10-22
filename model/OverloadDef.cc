@@ -320,6 +320,12 @@ bool OverloadDef::isImportable(const Namespace *ns,
     return false;
 }
 
+bool OverloadDef::isUsableFrom(const Context &context) const {
+    // Overloads are always usable because they have an address (we can say 
+    // x := A.f).  We decide at call time if they need (and have) a receiver.
+    return true;
+}
+
 bool OverloadDef::needsReceiver() const {
     // The overload doesn't need a receiver unless all of the methods do.
     // (Not sure if this is actually useful).
