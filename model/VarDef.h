@@ -103,7 +103,7 @@ class VarDef : public virtual spug::RCBase {
          * where a specific implementation of a virtual is explicitly 
          * selected, as in "class B : A { void f() { A::f(); } }"
          */        
-        virtual bool isExplicitlyScoped() const { return true; }
+        virtual bool isExplicitlyScoped() const { return false; }
 
         /**
          * Returns the fully qualified name of the definition.

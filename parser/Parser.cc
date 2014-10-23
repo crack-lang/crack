@@ -215,6 +215,9 @@ namespace {
             // access protection rules even though we're not really owned by 
             // the owner's namespace.
             owner = def->getOwner();
+            
+            // And the same idea for the impl.
+            impl = def->impl;
          }
 
          virtual bool isExplicitlyScoped() const {
@@ -3945,6 +3948,11 @@ Parser::Primary Parser::parsePrimary(Expr *implicitReceiver) {
                                 " is not usable from this context."
                                )
                      );
+                     
+            // If we got an overload, convert it into an ExplicitlyScopedDef
+            if (OverloadDefPtr::rcast(def))
+               def = new ExplicitlyScopedDef(def.get());
+      
             expr = context->createVarRef(def.get());
          } else if (def) {
             expr = new Deref(expr.get(), def.get());

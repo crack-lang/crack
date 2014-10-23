@@ -141,19 +141,15 @@ FuncDef *OverloadDef::getMatch(TypeDef *funcType) const {
 
 FuncDef *OverloadDef::getSigMatch(const FuncDef::ArgVec &args,
                                   bool matchNames
-                                  ) {
-    for (FuncList::iterator iter = funcs.begin();
-         iter != funcs.end();
-         ++iter)
+                                  ) const {
+    SPUG_FOR(FuncList, iter, funcs) {
         if (!matchNames && (*iter)->matches(args) ||
             matchNames && (*iter)->matchesWithNames(args)
             )
             return iter->get();
+    }
 
-    for (ParentVec::iterator parent = parents.begin();
-         parent != parents.end();
-         ++parent
-         ) {
+    SPUG_FOR(ParentVec, parent, parents) {
         FuncDef *result = (*parent)->getSigMatch(args, matchNames);
         if (result)
             return result;
@@ -273,6 +269,16 @@ FuncDefPtr OverloadDef::getFuncDef(Context &context,
                        args << ")"
                       )
         );
+    
+    // For functions initially defined as abstract, the normal method 
+    // resolution (which we want) gives us the abstract function.  But we 
+    // don't want that here because we need to give an error on explicitly 
+    // scoped abstract functions.  So we have to go through and look the 
+    // function up again now that we've nailed down the signature to get the 
+    // implementation if there is one.
+    if (result->flags & FuncDef::abstract)
+        result = getSigMatch(result->args, /* matchNames */ true);
+    
     return result;
 }
 

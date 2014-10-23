@@ -1,0 +1,26 @@
+%%TEST%%
+explicitly scoped virtuals
+%%ARGS%%
+%%FILE%%
+@abstract class A : VTableBase {
+    @abstract void f();
+}
+
+class B : A {
+    void f() {
+        puts('B.f()');
+    }
+}
+
+class C : B {
+    void f() {
+        B.f();
+        puts('C.f()');
+    }
+}
+
+C().f();
+%%EXPECT%%
+B.f()
+C.f()
+%%STDIN%%

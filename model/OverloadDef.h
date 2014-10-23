@@ -107,7 +107,7 @@ class OverloadDef : public VarDef {
          */
         virtual FuncDef *getSigMatch(const ArgVec &args, 
                                      bool matchNames = false
-                                     );
+                                     ) const;
         
         /**
          * Returns the overload with no arguments.  If 'acceptAlias' is false, 
