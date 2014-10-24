@@ -1,0 +1,16 @@
+%%TEST%%
+overload context usability discrimination
+%%ARGS%%
+%%FILE%%
+# Verify that static overloads are usable from a context without an instance
+# and that methods of the same overload are not.
+class X {
+    @static void f() {}
+    void f(int i) {}
+}
+
+X.f();  // should work
+X.f(100);  // should not.
+%%EXPECT%%
+ParseError: %SCRIPTNAME%:9:8: Instance member "f" may not be used in a static context.
+%%STDIN%%
