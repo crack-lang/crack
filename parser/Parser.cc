@@ -1347,6 +1347,17 @@ ExprPtr Parser::emitOperClass(Expr *expr, const Token &tok) {
    return funcCall;
 }
 
+void Parser::checkForRedefine(const Token &tok, VarDef *def) const {
+   // If this is an overload, make sure we have at least one function 
+   // that is defined in this scope.
+   OverloadDef *ovld = OverloadDefPtr::cast(def);
+   if (ovld && ovld->beginTopFuncs() == ovld->endTopFuncs())
+      return;
+   
+   if (def->getOwner() == context->ns)
+      redefineError(tok, def);
+}
+
 ExprPtr Parser::parseSecondary(const Primary &primary, unsigned precedence) {
    ExprPtr expr = primary.expr;
    Token tok = getToken();
@@ -1547,17 +1558,8 @@ ExprPtr Parser::parseSecondary(const Primary &primary, unsigned precedence) {
             error(tok, "The define operator can not be used here.");
          
          // Make sure we're not redefining a name from this context.
-         if (VarDefPtr existing = context->lookUp(primary.ident.getData())) {
-         
-            // If this is an overload, make sure we have at least one function 
-            // that is defined in this scope.
-            OverloadDef *ovld = OverloadDefPtr::rcast(existing);
-            if (ovld && ovld->beginTopFuncs() == ovld->endTopFuncs())
-               existing = 0;
-            
-            if (existing && existing->getOwner() == context->ns)
-               redefineError(primary.ident, existing.get());
-         }
+         if (VarDefPtr existing = context->lookUp(primary.ident.getData()))
+            checkForRedefine(primary.ident, existing.get());
          
          return parseDefine(primary.ident);
       } else {
@@ -3804,7 +3806,7 @@ FuncDefPtr Parser::checkForOverride(VarDef *existingDef,
          );
 }
 
-void Parser::redefineError(const Token &tok, const VarDef *existing) {
+void Parser::redefineError(const Token &tok, const VarDef *existing) const {
    error(tok, 
          SPUG_FSTR("Symbol " << existing->name <<
                     " is already defined in this context."
@@ -3812,19 +3814,19 @@ void Parser::redefineError(const Token &tok, const VarDef *existing) {
          );
 }
 
-void Parser::error(const Token &tok, const std::string &msg) {
+void Parser::error(const Token &tok, const std::string &msg) const {
    context->error(tok.getLocation(), msg);
 }
 
-void Parser::error(const Location &loc, const std::string &msg) {
+void Parser::error(const Location &loc, const std::string &msg) const {
    context->error(loc, msg);
 }
 
-void Parser::warn(const Location &loc, const std::string &msg) {
+void Parser::warn(const Location &loc, const std::string &msg) const {
    context->warn(loc, msg);
 }
 
-void Parser::warn(const Token &tok, const std::string &msg) {
+void Parser::warn(const Token &tok, const std::string &msg) const {
    warn(tok.getLocation(), msg);
 }
 
@@ -3880,8 +3882,25 @@ Parser::Primary Parser::parsePrimary(Expr *implicitReceiver) {
       expr = context->createVarRef(type.get());
    } else if (tok.isIdent()) {
       VarDefPtr def = context->lookUp(tok.getData());
+
+      // Before we go any further, see if the next token is := so we can bail 
+      // early if it is.
+      Token tok2 = getToken();
+      toker.putBack(tok2);
+      context->setLocation(tok.getLocation());
+      if (tok2.isDefine()) {
+         // Check for a redefine here (we're not going to create a VarRef for 
+         // it, so it won't be checked later).
+         if (def)
+            checkForRedefine(tok, def.get());
+            
+         // Clear 'def' to force the check for 'def' to return.
+         def = 0;
+      }
+      
       if (!def)
          return Primary(0, 0, tok);
+
       context->checkAccessible(def.get(), tok.getData());
       identLoc = tok.getLocation();
       // XXX we need to do special stuff for OverloadDefs that may contain 

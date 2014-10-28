@@ -283,6 +283,12 @@ class Parser {
       model::ExprPtr emitOperClass(model::Expr *expr, const Token &tok);
 
       /**
+       * Raise a redefine error if we can't define a variable of the same name
+       * as 'def'.
+       */
+      void checkForRedefine(const Token &tok, model::VarDef *def) const;
+
+      /**
        * Parse a secondary expression.  Secondary expressions include a the
        * dot operator, binary operators and the bracket operators and their
        * associated expressions.
@@ -492,20 +498,20 @@ class Parser {
        */
       void redefineError(const Token &tok,
                          const model::VarDef *existing
-                         );
+                         ) const;
 
       /**
        * throws a ParseError, properly formatted with the location and
        * message text.
        */
-      void error(const Token &tok, const std::string &msg);
-      void error(const Location &loc, const std::string &msg);
+      void error(const Token &tok, const std::string &msg) const;
+      void error(const Location &loc, const std::string &msg) const;
 
       /** Writes a warning message to standard error. */
-      void warn(const Location &loc, const std::string &msg);
+      void warn(const Location &loc, const std::string &msg) const;
 
       /** Writes a warning message to standard error. */
-      void warn(const Token &tok, const std::string & msg);
+      void warn(const Token &tok, const std::string & msg) const;
 
       /**
        * Add a new callback to the parser.  It is the responsibility of the
