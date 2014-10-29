@@ -7,7 +7,9 @@
 //
 
 #include "Ops.h"
+
 #include "LLVMBuilder.h"
+#include "spug/StringFmt.h"
 
 #include "BBranchPoint.h"
 #include "BFieldRef.h"
@@ -930,18 +932,30 @@ ResultExprPtr PostDecrPtrOpCall::emit(Context &context) {
 namespace {
     // Returns the expression to get the address of a variable (for either
     // fields, locals, or globals)
-    Value *getVarAddr(Context &context, LLVMBuilder &builder, Expr *var) {
+    Value *getVarAddr(Context &context, LLVMBuilder &builder, Expr *var,
+                      const string &error
+                      ) {
         // the receiver needs to be a variable
-        VarRef *ref = VarRefPtr::cast(var);
-        if (!ref)
-            context.error("Atomic += operators can only be used on variables.");
+        VarRefPtr ref = VarRefPtr::cast(var);
+        if (!ref) {
+            if (DerefPtr deref = DerefPtr::cast(var)) {
+                ref = context.builder.createFieldRef(deref->receiver.get(),
+                                                     deref->def.get()
+                                                     );
+            } else {
+                context.error(SPUG_FSTR("Atomic " << error <<
+                                        " can only be used on variables."
+                                        )
+                            );
+            }
+        }
 
         Value *varAddr;
         BFieldRef *fieldRef;
-        if (fieldRef = BFieldRefPtr::cast(ref)) {
+        if (fieldRef = BFieldRefPtr::rcast(ref)) {
             varAddr = fieldRef->emitAddr(context);
         } else {
-            ref->def->impl->emitAddr(context, ref);
+            ref->def->impl->emitAddr(context, ref.get());
             varAddr = builder.lastValue;
         }
 
@@ -956,7 +970,9 @@ namespace {
 
 ResultExprPtr AtomicAddOpCall::emit(Context &context) {
     LLVMBuilder &builder = dynamic_cast<LLVMBuilder &>(context.builder);
-    Value *varAddr = getVarAddr(context, builder, receiver.get());
+    Value *varAddr = getVarAddr(context, builder, receiver.get(),
+                                "+= operators"
+                                );
 
     // XXX don't we need to store lastValue before handleTransient()?  (we
     // don't above)
@@ -976,7 +992,9 @@ ResultExprPtr AtomicAddOpCall::emit(Context &context) {
 
 ResultExprPtr AtomicSubOpCall::emit(Context &context) {
     LLVMBuilder &builder = dynamic_cast<LLVMBuilder &>(context.builder);
-    Value *varAddr = getVarAddr(context, builder, receiver.get());
+    Value *varAddr = getVarAddr(context, builder, receiver.get(),
+                                "-= operators"
+                                );
 
     // XXX don't we need to store lastValue before handleTransient()?  (we
     // don't above)
@@ -996,7 +1014,9 @@ ResultExprPtr AtomicSubOpCall::emit(Context &context) {
 
 ResultExprPtr AtomicLoadOpCall::emit(Context &context) {
     LLVMBuilder &builder = dynamic_cast<LLVMBuilder &>(context.builder);
-    Value *varAddr = getVarAddr(context, builder, receiver.get());
+    Value *varAddr = getVarAddr(context, builder, receiver.get(),
+                                "conversion"
+                                );
 
     LoadInst *loadInst;
     builder.lastValue = loadInst = builder.builder.CreateLoad(varAddr);
@@ -1007,7 +1027,9 @@ ResultExprPtr AtomicLoadOpCall::emit(Context &context) {
 
 ResultExprPtr AtomicLoadTruncOpCall::emit(Context &context) {
     LLVMBuilder &builder = dynamic_cast<LLVMBuilder &>(context.builder);
-    Value *varAddr = getVarAddr(context, builder, receiver.get());
+    Value *varAddr = getVarAddr(context, builder, receiver.get(),
+                                "conversion"
+                                );
 
     LoadInst *loadInst;
     builder.lastValue = loadInst = builder.builder.CreateLoad(varAddr);
