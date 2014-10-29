@@ -422,7 +422,7 @@ void Parser::parseClauseNew(bool defsAllowed) {
       // Is this a definition?
       if (p.type) {
          tok = getToken();
-         if (tok.isIdent()) {
+         if (tok.isIdent() || tok.isOper()) {
             if (!defsAllowed)
                error(tok, "Definitions are not allowed in this context.");
             toker.putBack(tok);
