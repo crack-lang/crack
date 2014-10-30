@@ -72,7 +72,9 @@ bool FuncDef::matches(Context &context, const vector<ExprPtr> &vals,
                     newVals[i] = (*val)->convert(context, (*arg)->type.get());
                     if (!newVals[i])
                         return false;
-                } else if ((*arg)->type->matches(*(*val)->type)) {
+                } else if ((*val)->type && 
+                            (*arg)->type->matches(*(*val)->type)
+                           ) {
                     newVals[i] = *val;
                 } else {
                     return false;
