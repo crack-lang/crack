@@ -263,12 +263,12 @@ FuncDefPtr OverloadDef::getFuncDef(Context &context,
                                    std::vector<ExprPtr> &args
                                    ) const {
     FuncDefPtr result = getMatch(context, args, false);
-    if (!result)
-        context.error(
-            SPUG_FSTR("No method exists matching " << name << "(" <<
-                       args << ")"
-                      )
-        );
+    if (!result) {
+        ostringstream msg;
+        msg << "No method exists matching " << name <<  "(" << args << ")";
+        context.maybeExplainOverload(msg, name, getOwner());
+        context.error(msg.str());
+    }
     
     // For functions initially defined as abstract, the normal method 
     // resolution (which we want) gives us the abstract function.  But we 
