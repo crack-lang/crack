@@ -1,0 +1,29 @@
+
+import crack.exp.termui TermApp, TestTermUI;
+import crack.io cout, StringFormatter;
+
+void test() {
+    cout `testing terminal interface...`;
+    out := StringFormatter();
+    app := TermApp(TestTermUI(out));
+    app.start();
+    app.write(10, 10, 0x43, 'this is a test');
+    # write one line at the end of the buffer.
+    app.write(69, 39, 0x21, 'a little bi');
+    if (out.makeString() != 'setting raw: true\nclear\n') {
+        cout `FAILED (bad initial output)\n`;
+        return;
+    }
+    app.flush();
+    if (out.makeString() !=
+         'setting raw: true\nclear\nset pos 10, 10\nset attr 67\n'
+         'write: [this is a test]\nset pos 69, 39\nset attr 33\n'
+         'write: [a little bi]\n'
+        ) {
+        cout `FAILED (bad post-flush output)\n`;
+        return;
+    }
+    cout `ok\n`;
+}
+
+test();

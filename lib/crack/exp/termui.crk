@@ -1,0 +1,356 @@
+
+import crack.ascii parseInt, wsplit;
+import crack.cont.array Array;
+import crack.io cin, cout, FDReader, FDWriter, Formatter, FStr, Writer;
+import crack.lang AppendBuffer, Buffer;
+import crack.process Process, ProcessHandlerImpl, CRK_PIPE_STDOUT,
+    CRK_PIPE_STDERR;
+import crack.strutil StringArray;
+
+class Event {
+}
+
+class KeyEvent : Event {
+}
+
+class Coord {
+    int x, y;
+    oper init(int x, int y) : x = x, y = y {}
+}
+
+@abstract class SimpleTermUI {
+    @abstract void clear(uint backgroundColor);
+    @abstract void scrollUp(uint lines);
+    @abstract void write(Coord pos, String text);
+    @abstract void setPos(int x, int y);
+    @abstract void setAttr(int i);
+    @abstract void write(Buffer text);
+    @abstract Coord getSize();
+    @abstract Event getEvent();
+    @abstract void setRawMode(bool rawMode);
+}
+
+
+class ANSITermUI : SimpleTermUI {
+    FDReader __src;
+    FDWriter __dst;
+
+    oper init(FDWriter dst, FDReader src) :
+        __src = src,
+        __dst = dst {
+    }
+
+    void clear(uint backgroundColor) {
+        __dst.write('\033c');
+    }
+
+    void scrollUp(uint lines) {
+        __dst.write(FStr() `\033[$(lines)S`);
+    }
+
+    void write(Coord pos, String text) {
+        __dst.write(FStr() `\033[$(pos.y + 1);$(pos.x + 1)f`);
+    }
+
+    void setPos(int x, int y) {
+        __dst.write(FStr() `\033[$(y + 1);$(x + 1)f`);
+    }
+
+    void setAttr(int i) {
+        __dst.write(FStr() `\033[4$(i >> 4);3$(i & 0x7)m`);
+    }
+
+    void write(Buffer text) {
+        __dst.write(text);
+    }
+
+    Coord getSize() {
+        p := Process(StringArray!['/bin/stty', 'size'], CRK_PIPE_STDOUT | CRK_PIPE_STDERR);
+        data := p.getStdOut();
+        fields := wsplit(data);
+        return Coord(parseInt(fields[1]), parseInt(fields[0]));
+    }
+
+    Event getEvent() { return null; }
+
+    void setRawMode(bool rawMode) {
+        p := Process(StringArray!['/bin/stty', rawMode ? 'raw' : 'sane']);
+        p.run();
+    }
+}
+
+class TestTermUI : SimpleTermUI {
+    Formatter __out;
+
+    oper init(Formatter out) : __out = out {}
+
+    void clear(uint backgroundColor) {
+        __out `clear\n`;
+    }
+
+    void scrollUp(uint lines) {
+        __out `scroll up $lines\n`;
+    }
+
+    void write(Coord pos, String text) {
+        __out `write $pos, [$text]\n`;
+    }
+
+    void setPos(int x, int y) {
+        __out `set pos $x, $y\n`;
+    }
+
+    void setAttr(int i) {
+        __out `set attr $i\n`;
+    }
+
+    void write(Buffer text) {
+        __out `write: [$text]\n`;
+    }
+
+    Coord getSize() {
+        return Coord(80, 40);
+    }
+
+    Event getEvent() { return null; }
+
+    void setRawMode(bool rawMode) {
+        __out `setting raw: $rawMode\n`;
+    }
+}
+
+@abstract class WriterCaster : Writer {
+  @static Object toObject(Writer val) { return val._iface_getWriterObject(); }
+}
+
+# The number of unchanged characters in the buffer before we decide that a
+# given delta is complete and that it's better to just start a new delta at
+# the next location if difference.  The current value of this is based on the
+# usual upper-bound of the "change location" sequence (8 chars, assuming 2
+# chars of location).
+const END_DELTA := 8;
+
+class TermApp {
+
+    SimpleTermUI __term;
+    bool inRawMode;
+
+    # We maintain two buffers of size width*height: __cur contains the current
+    # conents of the screen, __new is the place where we write stuff.  When we
+    # flush, we construct output to write to the terminal to get it to reflect
+    # the contents of __new and then copy __new to __cur.
+    Array[uint16] __cur, __new;
+
+    int __width, __height;
+
+    oper init() :
+        __term = ANSITermUI(FDWriter.cast(WriterCaster.toObject(cout.rep)),
+                            cin
+                            ) {
+    }
+
+    ## Construct from your own term instance.
+    oper init(SimpleTermUI term) : __term = term {}
+
+    ## Start running the app.
+    void start() {
+        size := __term.getSize();
+        __width = size.x;
+        __height = size.y;
+        __cur = Array[uint16](size.x * size.y, 0);
+        __new = Array[uint16](size.x * size.y, 0);
+        __term.setRawMode(true);
+        inRawMode = true;
+        __term.clear(0);
+    }
+
+    void stop() {
+        if (inRawMode) {
+            inRawMode = false;
+            __term.setRawMode(false);
+        }
+    }
+
+    int __findDiffEnd(int pos) {
+        int i;
+        for (i = pos; i < __cur.count(); ++i) {
+
+            # When we find a common character, see if it's part of a span long
+            # enough to end the diff.
+            if (__cur[i] == __new[i]) {
+                int j;
+                for (j = i; j < __cur.count(); ++j)  {
+                    if (j - i >= END_DELTA)
+                        return i;
+                }
+
+                # The common span wasn't long enough for us to end the diff.
+                # Continue from here.
+                i = j;
+            }
+        }
+
+        # The diffs continue to the end of the buffer.
+        return i;
+    }
+
+    ## Write the delta starting at 'pos', return the location after the write.
+    int __writeDelta(int pos) {
+
+        void dump(SimpleTermUI term, AppendBuffer buf, byte attr) {
+            term.setAttr(attr);
+            term.write(buf);
+            buf.size = 0;
+        }
+
+        # First, write the location.
+        __term.setPos(pos % __width, pos / __width);
+
+        # Find the end of the diff and the initial
+        end := __findDiffEnd(pos);
+        attr := byte(__new[pos] >> 8);
+
+        AppendBuffer buf = {end - pos};
+        int i;
+        for (i = pos; i < end; ++i) {
+
+            # If we got a different attribute, dump the buffer.
+            curAttr := byte(__new[i] >> 8);
+            if (curAttr != attr) {
+                dump(__term, buf, attr);
+                attr = curAttr;
+            }
+            buf.append(byte(__new[i]));
+        }
+
+        # Dump what's left of the buffer
+        if (buf.size)
+            dump(__term, buf, attr);
+
+        return i;
+    }
+
+    void flush() {
+        for (int i = 0; i < __cur.count(); ++i) {
+            if (__cur[i] != __new[i])
+                i = __writeDelta(i);
+        }
+
+        for (int i = 0; i < __cur.count(); ++i) {
+            __cur[i] = __new[i];
+        }
+    }
+
+    ## Write the text at the coordinate.  This will throw an IndexError if the
+    ## write is out of range.
+    void write(int x, int y, int attr, Buffer text) {
+        for (int i = 0; i < text.size; ++i)
+            __new[y * __width + x + i] = uint16((attr << 8) | text[i]);
+    }
+
+    oper del() {
+        stop();
+    }
+
+    ## Returns the size of the screen.
+    Coord getSize() {
+        return Coord(__width, __height);
+    }
+}
+
+class GraphicsContext {
+
+    uint __xoff, __yoff, __width, __height;
+    TermApp __app;
+
+    oper init(TermApp term, uint xoff, uint yoff, uint width, uint height) :
+        __app = term,
+        __xoff = xoff,
+        __yoff = yoff,
+        __width = width,
+        __height = height {
+
+        size := term.getSize();
+
+        # If the start position is out of range, nerf all operations by
+        # clearing width and height.
+        if (xoff >= size.x || yoff >= size.y) {
+            __width = __height = 0;
+            return;
+        }
+
+        # Clip width and height to the terminal size.
+        if (xoff + width > size.x)
+            width = size.x - xoff;
+        if (yoff + height > size.y)
+            height = size.y - yoff;
+    }
+
+    ## Write text to the graphics context with relative positioning and
+    ## clipping.
+    void write(uint x, uint y, byte attr, String text) {
+        if (x >= __width || y >= __height)
+            return;
+        int count = text.size;
+        if (count + x > __width)
+            count = __width - x;
+        x += __xoff;
+        y += __yoff;
+        __app.write(x, y, attr, text.substr(0, count));
+    }
+
+    void fillRect(uint x, uint y, uint width, uint height, byte attr,
+                  byte char
+                  ) {
+    }
+}
+
+
+class Window {
+    Window __parent;
+    TermApp __app;
+
+    # Coordinates relative to parent and size.
+    uint __x, __y, __width, __height;
+
+    oper init(Window parent, uint x, uint y, uint width, uint height) {
+    }
+
+    ## Called when the window is resized.  This will be followed by a call to
+    ## paint(), so it's not necessary for the handler to do this itself.
+    void onResize(uint width, uint height) {}
+
+    bool onEvent(Event event) { return false; }
+
+    Window getParent() { return __parent; }
+
+    GraphicsContext getGraphicsContext() {
+        return null; # GraphicsContext(getApp(),
+    }
+
+    ## Repaint the entire window.
+    void paint() {
+    }
+}
+
+if (0) {
+    term := TermApp();
+    term.start();
+    term.write(10, 10, 3, 'in yo face!!!');
+    import crack.net Poller;
+    import crack.time TimeDelta;
+    poller := Poller();
+    poller.wait(TimeDelta(1, 0));
+    term.flush();
+    poller.wait(TimeDelta(1, 0));
+}
+
+#ui := ANSITermUI(FDWriter.cast(WriterCaster.toObject(cout.rep)), cin);
+#cout `clearing\n`;
+#ui.clear(0);
+#cout `done clearing\n`;
+#message := 'Word to yo momma!';
+#size := ui.getSize();
+#y := size.y / 2;
+#x := (size.x - message.size) / 2;
+#ui.write(Coord(x, y), message);
