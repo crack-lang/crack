@@ -38,11 +38,11 @@ void Deref::writeTo(ostream &out) const {
 }
 
 ExprPtr Deref::makeCall(Context &context, FuncCall::ExprVec &args) const {
-    OverloadDefPtr ovldDef = def;
-    if (!ovldDef)
-        // XXX also need to handle fields with callable objects and classes
-        // with constructors.  Also need a better damned error message.
-        context.error("Can not call this field.");
+    OverloadDefPtr ovldDef = OverloadDefPtr::rcast(def);
+    if (!ovldDef) {
+        VarRefPtr ref = context.createFieldRef(receiver.get(), def.get());
+        return ref->makeCall(context, args);
+    }
 
     FuncDefPtr funcDef = ovldDef->getMatch(context, args, false);
     FuncCallPtr funcCall = context.builder.createFuncCall(funcDef.get(),
