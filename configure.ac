@@ -8,7 +8,7 @@
 # 
 
 AC_INIT(crack, 0.9)
-AM_INIT_AUTOMAKE(crack, 0.9)
+AM_INIT_AUTOMAKE
 AC_CONFIG_SRCDIR([parser/Token.h])
 AC_CONFIG_MACRO_DIR([m4])
 

@@ -11,6 +11,8 @@
 # include macros from the m4 dir.
 ACLOCAL_AMFLAGS = -I m4 --install
 
+AUTOMAKE_OPTIONS = subdir-objects
+
 lib_LTLIBRARIES = libCrackDebugTools.la libCrackLang.la \
     libCrackNativeRuntime.la
 libCrackLang_la_SOURCES = %libCrackSources%
