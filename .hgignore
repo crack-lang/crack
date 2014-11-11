@@ -1,6 +1,7 @@
 .*\.o$
 .*\.(lo|la)$
 ^\.deps/.*$
+^.*/\.deps/.*$
 ^crack$
 ^depcomp$
 ^tester.*\.crk$
