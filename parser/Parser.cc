@@ -63,8 +63,6 @@ using namespace std;
 using namespace parser;
 using namespace model;
 
-bool Parser::useNewExpressionParser = false;
-
 void Parser::addDef(VarDef *varDef) {
    FuncDef *func = FuncDefPtr::cast(varDef);
    ContextPtr defContext = context->getDefContext();
@@ -76,26 +74,6 @@ void Parser::addDef(VarDef *varDef) {
       context->insureOverloadPath(defContext.get(), 
                                   OverloadDefPtr::arcast(storedDef)
                                   );
-
-// Remove this when the dot operator deals with it.
-//#ifdef UNDEFINED
-   if (!useNewExpressionParser) {
-      // if the definition context is a class context and the definition is a 
-      // function and this isn't the "Class" class (which is its own meta-class), 
-      // add it to the meta-class.
-      // TODO: This code is essentially duplicated in Namespace::addDefToMeta().  
-      // Ideally, addDefToMeta() should be called from Namespace::addDef() or 
-      // somwehere equally common and removed from here and the deserialization 
-      // code.  Or at least, this should be replaced with a call to 
-      // addDefToMeta().  But the original attempt to do that didn't work.
-      TypeDef *type;
-      if (defContext->scope == Context::instance && func) {
-         type = TypeDefPtr::arcast(defContext->ns);
-         if (type != type->type.get())
-            type->type->addAlias(storedDef.get());
-      }
-   }
-//#endif
 }
 
 void Parser::addFuncDef(FuncDef *funcDef) {
@@ -274,140 +252,6 @@ bool Parser::parseScoping(Namespace *ns, VarDefPtr &var, Token &lastName) {
 }
 
 void Parser::parseClause(bool defsAllowed) {
-   state = st_notBase;
-   ExprPtr expr;
-   VarDefPtr def;
-   TypeDefPtr primaryType;
-   string typeName;
-
-   if (useNewExpressionParser) {
-      parseClauseNew(defsAllowed);
-      return;
-   }
-
-   Token tok = getToken();
-   if (tok.isTypeof()) {
-      primaryType = parseTypeof();
-   } else if (tok.isAlias()) {
-      if (!defsAllowed)
-         error(tok, "Aliasing is not allowed in this context.");
-      parseAlias();
-   } else if (tok.isIdent()) {
-      
-      // if the identifier is a type, deal with it later.  Otherwise deal with 
-      // it as a variable
-      def = context->ns->lookUp(tok.getData());
-      primaryType = TypeDefPtr::rcast(def);
-      if (!primaryType) {
-         if (!def) {
-            // XXX think I want to move this into expression, it's just as valid 
-            // for an existing identifier (in a parent context) as for a 
-            // non-existing one.
-            // unknown identifier. if the next token(s) is ':=' (the "define" 
-            // operator) then this is an assignment
-            Token tok2 = getToken();
-            if (tok2.isDefine()) {
-               if (!defsAllowed)
-                  error(tok, "definition is not allowed in this context.");
-               expr = parseExpression();
-               context->emitVarDef(expr->type.get(), tok, expr.get());
-               
-               // trick the expression processing into not happening
-               expr = 0;
-            } else {
-               error(tok, SPUG_FSTR("Unknown identifier " << tok.getData()));
-            }
-         } else {
-            toker.putBack(tok);
-            runCallbacks(exprBegin);
-            expr = parseExpression();
-         }
-      } else {
-         typeName = tok.getData();
-      }
-
-   // not an identifier
-   } else if (tok.isConst()) {
-      if (!defsAllowed)
-         error(tok, "definition is not allowed in this context");
-      parseConstDef();
-      return;
-   } else {
-      toker.putBack(tok);
-      runCallbacks(exprBegin);
-      expr = parseExpression();
-   }
-
-   // If this is a type, see if it's the beginning of a scoped name.
-   if (primaryType) {
-      VarDefPtr var;
-      Token finalName;
-      if (parseScoping(primaryType.get(), var, finalName)) {
-         primaryType = TypeDefPtr::rcast(var);
-         if (!primaryType)
-            expr = 
-               parseSecondary(Primary(context->createVarRef(var.get()).get()));
-         else
-            typeName = finalName.getData();
-      }
-   }
-
-   // if we got a type, try to parse a definition.
-   if (primaryType) {
-      
-      TypeDefPtr typeDef = primaryType;
-      if (typeName.size())
-         context->checkAccessible(typeDef.get(), typeName);
-      identLoc = tok.getLocation();
-      if (parseTypeSpecializationAndDef(typeDef)) {
-         if (!defsAllowed)
-            error(tok, "definition is not allowed in this context");
-         // bypass expression emission and semicolon parsing 
-         // (parseTypeSpecializationAndDef() consumes it's own semicolon)
-         return;
-      } else {
-         // we didn't parse a definition
-         
-         // see if this is a define of a variable that happens to bear the 
-         // same name as a class.
-         Token tok2 = getToken();
-         if (def && tok2.isDefine()) {
-            if (def->getOwner() == context->ns.get())
-               redefineError(tok2, def.get());
-            
-            expr = parseExpression();
-            context->emitVarDef(expr->type.get(), tok, expr.get());
-            
-            // don't do expression processing
-            expr = 0;
-         } else if (tok2.isAssign()) {
-            error(tok2, "You cannot assign to a constant, class or function.");
-         } else {
-
-            // try treating the class as a primary.
-            toker.putBack(tok2);
-            expr = context->createVarRef(typeDef.get());
-            expr = parseSecondary(Primary(expr.get()));
-         }
-      }
-   }
-
-   // if we got an expression, emit it.
-   if (expr) {
-      context->createCleanupFrame();
-      expr->emit(*context)->handleTransient(*context);
-      context->closeCleanupFrame();
-   }
-
-   // consume a semicolon, put back a block terminator
-   tok = getToken();
-   if (tok.isEnd() || tok.isRCurly())
-      toker.putBack(tok);
-   else if (!tok.isSemi())
-      unexpected(tok, "expected semicolon or a block terminator");
-}
-
-void Parser::parseClauseNew(bool defsAllowed) {
    Token tok = getToken();
    state = st_notBase;
    ExprPtr expr;
@@ -678,22 +522,15 @@ ExprPtr Parser::createVarRef(Expr *container, VarDef *var, const Token &tok) {
          
       // make sure this is not a method - can't deal with that yet.
       if (OverloadDef *ovld = OverloadDefPtr::cast(var)) {
-         if (useNewExpressionParser) {
-            SPUG_CHECK(!container, 
-                       "Non-null container creating reference for variable '" <<
-                        var->getDisplayName() << "'."
-                       );
-            
-            // For overloads, we deal with associating them with an implicit 
-            // 'this' later, when we actually establish which overload 
-            // we're calling.
-            return context->createVarRef(var);
-         } else {
-            error(tok, SPUG_FSTR("Trying to get the value of " << tok.getData() <<
-                                 ", first class methods are not supported yet."
-                                 )
-                  );
-         }
+         SPUG_CHECK(!container, 
+                    "Non-null container creating reference for variable '" <<
+                     var->getDisplayName() << "'."
+                    );
+         
+         // For overloads, we deal with associating them with an implicit 
+         // 'this' later, when we actually establish which overload 
+         // we're calling.
+         return context->createVarRef(var);
       }
 
       // if we error in makeThisRef or createFieldRef, we want location to
@@ -1657,13 +1494,9 @@ ExprPtr Parser::parseExpression(unsigned precedence) {
    // check for a method
    } else if (tok.isIdent()) {
       identLoc = tok.getLocation();
-      if (useNewExpressionParser) {
-         toker.putBack(tok);
-         primary = parsePrimary(0);
-         expr = primary.expr;
-      } else {
-         expr = parsePostIdent(0, tok);
-      }
+      toker.putBack(tok);
+      primary = parsePrimary(0);
+      expr = primary.expr;
    
    // for a string constant
    } else if (tok.isString()) {

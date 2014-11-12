@@ -7,5 +7,5 @@ class A {
 }
 i := A::i;
 %%REXPECT%%
-ParseError: .*/203_scoping_op_inst_var.crk:4:7: Instance member i is not usable from this context.
+ParseError: .*/203_scoping_op_inst_var.crk:4:9: Instance member "i" may not be used in a static context.
 %%STDIN%%

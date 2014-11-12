@@ -144,13 +144,6 @@ bool TypeDef::hasGenerics() const {
     return genericInfo || Namespace::hasGenerics();
 }
 
-void TypeDef::addDefToMeta(OverloadDef *def) {
-    // As long as this not not the "Class" class, add the overload to it.
-    // We have to verify 'type' is non-null for generics.
-    if (type && type.get() != this)
-        type->addAlias(def);
-}
-
 FuncDefPtr TypeDef::getFuncDef(Context &context, 
                                std::vector<ExprPtr> &args
                                ) const {

@@ -196,8 +196,6 @@ class TypeDef : public VarDef, public Namespace {
 
         virtual bool hasGenerics() const;
         
-        virtual void addDefToMeta(OverloadDef *def);
-
         virtual FuncDefPtr getFuncDef(Context &context,
                                       std::vector<ExprPtr> &args
                                       ) const;

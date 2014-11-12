@@ -7,6 +7,6 @@ class A : VTableBase { void f() { puts("ok"); } }
      class B { void f() { (A.f()); } }
      B b; b.f()
 %%EXPECT%%
-ParseError: %OUTDIR%084_nonbase_call_error.crk:2:30: 'this' is not an instance of A
+ParseError: %OUTDIR%084_nonbase_call_error.crk:2:32: 'this' variable is not an instance of A
 %%STDIN%%
 

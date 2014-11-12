@@ -1,0 +1,9 @@
+%%TEST%%
+usability protection from a class in a dotted primary
+%%ARGS%%
+%%FILE%%
+class A { int x; }
+A.x;
+%%EXPECT%%
+ParseError: %SCRIPTNAME%:2:3: Instance member x is not usable from this context.
+%%STDIN%%

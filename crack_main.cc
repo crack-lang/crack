@@ -39,7 +39,6 @@ typedef enum {
     nativeBuilder,
     doubleBuilder = 1001,
     dumpFuncTable = 1002,
-    useNewParser = 1003
 } builderType;
 
 struct option longopts[] = {
@@ -61,7 +60,6 @@ struct option longopts[] = {
     {"stats", false, 0, 0},
     {"dump-func-table", false, 0, dumpFuncTable},
     {"trace", true, 0, 't'},
-    {"new-parser", false, 0, useNewParser},
     {0, 0, 0, 0}
 };
 
@@ -259,9 +257,6 @@ int main(int argc, char **argv) {
                 break;
             case dumpFuncTable:
                 doDumpFuncTable = true;
-                break;
-            case useNewParser:
-                parser::Parser::useNewExpressionParser = true;
                 break;
             case 't':
                 if (!Tracer::parse(optarg))

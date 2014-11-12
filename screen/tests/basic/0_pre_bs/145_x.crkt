@@ -1,10 +1,12 @@
 %%TEST%%
-error on first class methods
+first class methods
 %%ARGS%%
 
 %%FILE%%
-class B { void bar() {} } y := B.bar;
+class B { void bar() { puts('ok') } }
+y := B.bar;
+y(B());
 %%EXPECT%%
-ParseError: %OUTDIR%145_x.crk:1:34: Trying to get the value of bar, first class methods are not supported yet.
+ok
 %%STDIN%%
 

@@ -133,15 +133,13 @@ void Namespace::deserializeDefs(Deserializer &deser, const char *countName,
                 // Since overloads can be serialized more than once to deal 
                 // with aliases, we only want to add it if it's not already 
                 // registered.
-                if (!ovld->getOwner()) {
+                if (!ovld->getOwner())
                     addDef(ovld.get());
-                    addDefToMeta(ovld.get());
-                } else {
+                else
                     SPUG_CHECK(ovld->getOwner() == this,
                                "Reusing overload that is not owned by " <<
                                 getNamespaceName()
                                );
-                }
                 break;
             }
             case Serializer::typeId:
@@ -223,8 +221,6 @@ void Namespace::addDef(VarDef *def) {
     storeDef(def);
     def->setOwner(this);
 }
-
-void Namespace::addDefToMeta(OverloadDef *def) {}
 
 void Namespace::removeDef(VarDef *def) {
     assert(!OverloadDefPtr::cast(def));

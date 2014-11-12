@@ -1,5 +1,5 @@
 %%TEST%%
-methods also added to meta-class
+class-scoped method calls work
 %%ARGS%%
 %%FILE%%
 import systest test;

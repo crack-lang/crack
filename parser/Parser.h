@@ -454,7 +454,6 @@ class Parser {
       model::TypeDefPtr parseClassDef();
 
    public:
-      static bool useNewExpressionParser;
 
       // XXX should be protected, once required functionality is migrated out.
       // error checking functions
@@ -537,12 +536,6 @@ class Parser {
 
       /** Parse a "primary" */
       Primary parsePrimary(model::Expr *implicitReceiver);
-
-      /**
-       * Parse a clause, which can either be a an expression statement or a
-       * definition.
-       */
-      void parseClauseNew(bool defsAllowed);
 
       model::ExprPtr parseDefine(const Token &ident);
 };

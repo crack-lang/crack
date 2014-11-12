@@ -189,12 +189,6 @@ class Namespace : public virtual spug::RCBase {
          */        
         virtual void addDef(VarDef *def);
         
-        /**
-         * This is a hook to allow types to add the overload definition to the 
-         * meta class.  Base class version does nothing.
-         */
-        virtual void addDefToMeta(OverloadDef *def);
-        
         /** 
          * Remove a definition.  Intended for use with stubs - "def" must not 
          * be an OverloadDef. 
