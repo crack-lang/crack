@@ -1,0 +1,30 @@
+%%TEST%%
+Dereferences report productivity correctly.
+%%ARGS%%
+%%FILE%%
+class Marker {
+    oper bind() {
+        puts('binding');
+    }
+
+    oper release() {
+        puts('releasing');
+    }
+
+    oper to bool() { return !(this is null); }
+}
+
+class Holder {
+    Marker m;
+}
+
+h := Holder();
+
+# The ternary operator forces an "isProductive" check on a Deref ("h.m" in
+# this case) where such a check would normally only be performed on the
+# result of emitting the Deref.  So we get incorrect behavior if the Deref
+# doesn't implement isProductive().
+if (1 ? h.m : null) ;
+%%EXPECT%%
+binding
+%%STDIN%%
