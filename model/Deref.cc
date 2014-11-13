@@ -45,6 +45,13 @@ ExprPtr Deref::makeCall(Context &context, FuncCall::ExprVec &args) const {
     }
 
     FuncDefPtr funcDef = ovldDef->getMatch(context, args, false);
+    if (!funcDef) {
+        ostringstream msg;
+        msg << "No method exists matching " << ovldDef->name << "(" <<
+            args << ")";
+        context.maybeExplainOverload(msg, ovldDef->name, ovldDef->getOwner());
+        context.error(msg.str());
+    }
     FuncCallPtr funcCall = context.builder.createFuncCall(funcDef.get(),
                                                           squashVirtual
                                                           );

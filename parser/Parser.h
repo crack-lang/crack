@@ -207,27 +207,6 @@ class Parser {
       std::string parseOperSpec();
 
       /**
-       * Parse and emit a function call.
-       */
-      model::FuncCallPtr parseFuncCall(const Token &ident,
-                                       const std::string &funcName,
-                                       model::Namespace *ns,
-                                       model::Expr *container
-                                       );
-
-      /**
-       * Parse the kinds of things that can come after an identifier.
-       *
-       * @param container the aggregate that the identifier is scoped to, as
-       *   in "container.ident"  This can be null, in which case the
-       *   identifier is scoped to the local context.
-       * @param ident The identifier's token.
-       */
-      model::ExprPtr parsePostIdent(model::Expr *container,
-                                    const Token &ident
-                                    );
-
-      /**
        * Parse an interpolated string.
        *
        * @param expr the receiver of the interpolated string operation.
@@ -533,6 +512,17 @@ class Parser {
        * Returns true if any callbacks were called.
        */
       bool runCallbacks(Event event);
+
+      /**
+       * Parse the selector after a dot operator.
+       * @param expr the receiver expression to the left of the dot.  This is
+       *             updated with the new value of the expression after the
+       *             .selector is parsed.
+       * @param type If the receiver is a type, this is it.  This is updated
+       *             to the new type if .selector is a type, to null if it is
+       *             not.
+       */
+      void parsePostDot(model::ExprPtr &expr, model::TypeDefPtr &type);
 
       /** Parse a "primary" */
       Primary parsePrimary(model::Expr *implicitReceiver);

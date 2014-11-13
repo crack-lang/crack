@@ -674,253 +674,6 @@ namespace {
    }
 }
 
-FuncCallPtr Parser::parseFuncCall(const Token &ident, const string &funcName,
-                                  Namespace *ns, 
-                                  Expr *container
-                                  ) {
-
-   VarRefPtr var;
-   
-   // The "true function name" is normally just the func name, but it is 
-   // different if the function isn't really a function but is instead an 
-   // object with an "oper call" or class with an "oper new".
-   string trueFuncName = funcName;
-
-   // parse the arg list
-   FuncCall::ExprVec args;
-   parseMethodArgs(args);
-   
-   // look up the variable
-   
-   // lookup the method from the variable context's type context
-   // if the container is a class, assume that this is a lookup in a specific 
-   // base class and allow looking up overrides for it (this won't work if we 
-   // ever give class objects a vtable because it will break meta-class 
-   // methods, but we need to replace the specific lookup syntax anyway)
-   // XXX needs to handle callable objects.
-   FuncDefPtr func = context->lookUp(funcName, args, ns, 
-                                     container && container->type->meta
-                                     );
-   if (!func) {
-      
-      // TODO: move the oper call logic to Context::lookUp.
-      // first try to resolve the identifier as a non-function, then get the 
-      // "oper call" from it.
-      var = createVarRef(container, ident,
-                         SPUG_FSTR("No method exists matching " << 
-                                   ident.getData() << "()"
-                                   ).c_str()
-                         );
-      if (var) {
-         func = context->lookUp("oper call", args, var->type.get());
-         container = var.get();
-         trueFuncName = "oper call";
-      }
-   } else if (func->name == "oper new") {
-      trueFuncName = "oper new";
-   }
-   
-   // no function, not a callable variable - give an error.   
-   if (!func)
-      reportFuncLookupError(context.get(), ns, funcName, args);
-   
-   context->checkAccessible(func.get(), trueFuncName);
-
-   // if the definition is for an instance variable, emit an implicit 
-   // "this" dereference.  Otherwise just emit the variable
-   ExprPtr receiver;
-   bool squashVirtual = false;
-   if (func->flags & FuncDef::method) {
-      // keep track of whether we need to verify that "this" is an instance 
-      // of the container (assumes the container is a TypeDef)
-      bool verifyThisIsContainer = false;
-
-      // if we've got a container and the container is not a class, or the 
-      // container _is_ a class but the function is a method of its 
-      // meta-class, use the container as the receiver.
-      if (container)
-         if (container->type->meta && !TypeDefPtr::acast(func->getOwner())->meta) {
-            // the container is a class and the function is an explicit 
-            // call of a (presumably base class) method.
-            
-            // make sure that the function is not abstract
-            if (func->flags & FuncDef::abstract)
-               error(ident, SPUG_FSTR("Abstract function " << funcName << "(" << 
-                                       args << ") can not be called."
-                                      )
-                     );
-
-            
-            squashVirtual = true;
-            verifyThisIsContainer = true;
-         } else {
-            receiver = container;
-         }
-
-      // if we didn't get the receiver from the container, lookup the 
-      // "this" variable.
-      if (!receiver) {
-         receiver = context->makeThisRef(funcName);
-         if (verifyThisIsContainer && 
-              !receiver->type->isDerivedFrom(container->type->meta))
-            error(ident, SPUG_FSTR("'this' is not an instance of " <<
-                                    container->type->meta->name
-                                   )
-                  );
-         
-         // if we got an implicit this and no container, verify that the 
-         // this is derived from the method's receiver type.
-         else if (!container &&
-                   !receiver->type->isDerivedFrom(func->receiverType.get())
-                  )
-            error(ident, SPUG_FSTR("'this' variable is not an instance of " <<
-                                    func->receiverType->getDisplayName()
-                                   )
-                  );
-      }
-   }
-
-   BSTATS_GO(s1)
-   FuncCallPtr funcCall = context->builder.createFuncCall(func.get(),
-                                                          squashVirtual
-                                                          );
-   BSTATS_END
-
-   funcCall->args = args;
-   funcCall->receiver = receiver;
-   return funcCall;
-}
-
-ExprPtr Parser::parsePostIdent(Expr *container, const Token &ident) {
-   Namespace *ns = container ? container->type.get() : context->ns.get();
-
-   Token tok1 = getToken();
-   if (ident.isOper() && tok1.isAssign())
-      error(tok1, "Expected operator identifier after 'oper' keyword");
-
-   // is it ident := expr?
-   if (tok1.isDefine()) {
-      // make sure that the variable is not defined in this context.
-      VarDefPtr def = ns->lookUp(ident.getData());
-      if (def && def->getOwner() == context->ns.get())
-         redefineError(tok1, def.get());
-      
-      ExprPtr val = parseExpression();
-      if (!val) {
-         tok1 = getToken();
-         error(tok1, "expression expected");
-      }
-      
-      // emit the variable with a null initializer and then create a separate 
-      // assignment expression.
-      VarDefPtr var = context->emitVarDef(val->type.get(), ident, 0);
-      return createAssign(container, ident, var.get(), val.get());
-   // is it an assignment?
-   } else if ((tok1.isAssign() || tok1.isAugAssign()) && !ident.isOper()) {
-      
-      VarDefPtr var = ns->lookUp(ident.getData());
-      if (!var)
-         error(tok1,
-               SPUG_FSTR("attempted to assign undefined variable " <<
-                          ident.getData()
-                         )
-               );
-      
-      context->checkAccessible(var.get(), ident.getData());
-
-      // make sure the variable is not a constant.
-      if (var->isConstant())
-         error(tok1, "You cannot assign to a constant, class or function.");
-
-      // parse an expression
-      ExprPtr val = parseExpression();
-      if (!val) {
-         tok1 = getToken();
-         error(tok1, "expression expected");
-      }
-      
-      // check for augmented assignment
-      if (tok1.isAugAssign()) {
-         
-         // create a reference for the lvalue
-         ExprPtr varRef = createVarRef(container, var.get(), ident);
-
-         // see if the variable's type has an augmented assignment operator
-         FuncCall::ExprVec args(2);
-         args[0] = varRef;
-         args[1] = val;
-         FuncDefPtr funcDef;
-         if (funcDef = lookUpBinOp(tok1.getData(), args)) {
-            BSTATS_GO(s1)
-            FuncCallPtr funcCall =
-               context->builder.createFuncCall(funcDef.get());
-            BSTATS_END
-            funcCall->args = args;
-            if (funcDef->flags & FuncDef::method)
-               funcCall->receiver = 
-                  (funcDef->flags & FuncDef::reverse) ? val : varRef;
-            return funcCall;
-         }
-         
-         // it doesn't.  verify that it has the plain version of the operator 
-         // and construct an assignment from it.
-         args[0] = varRef;
-         args[1] = val;
-         const string &tok1Data = tok1.getData();
-         const string &oper = tok1Data.substr(0, tok1Data.size() - 1);
-         if (funcDef = lookUpBinOp(oper, args)) {
-            BSTATS_GO(s1)
-            FuncCallPtr funcCall =
-               context->builder.createFuncCall(funcDef.get());
-            BSTATS_END
-            funcCall->args = args;
-            if (funcDef->flags & FuncDef::method)
-               funcCall->receiver = 
-                  (funcDef->flags & FuncDef::reverse) ? val : varRef;
-            return createAssign(container, ident, var.get(), funcCall.get());
-         } else {
-            error(tok1, SPUG_FSTR("Neither " << oper << "=  nor " << oper << 
-                                  " is defined for types " << 
-                                  varRef->type->name << " and " <<
-                                  val->type->name
-                                  )
-                  );
-         }
-      }
-
-      // if this is an instance variable, emit a field assignment.  
-      // Otherwise emit a normal variable assignment.
-      return createAssign(container, ident, var.get(), val.get());
-   } // should not fall through - always returns or throws.
-
-   // if this is an explicit operator call, give it special treatment.
-   string funcName;
-   if (ident.isOper()) {
-      toker.putBack(tok1);
-      funcName = parseOperSpec();
-      tok1 = getToken();
-   } else {
-      funcName = ident.getData();
-   }
-   
-   if (tok1.isLParen()) {
-      // function/method invocation
-      return parseFuncCall(ident, funcName, ns, container);
-   } else {
-      if (ident.isOper())
-         unexpected(tok1,
-                    SPUG_FSTR("expected parameter list after " << 
-                              funcName
-                              ).c_str()
-                    );
-
-      // for anything else, it's a variable reference
-      toker.putBack(tok1);
-      return createVarRef(container, ident);
-   }
-
-}
-
 // ` ... `
 //  ^     ^
 ExprPtr Parser::parseIString(Expr *expr) {
@@ -1210,20 +963,8 @@ ExprPtr Parser::parseSecondary(const Primary &primary, unsigned precedence) {
    
    while (true) {
       if (tok.isDot()) {
-	 tok = getToken();
-	 
-	 // if the next token is "class", this is the class operator.
-	 if (tok.isClass()) {
-	    expr = emitOperClass(expr.get(), tok);
-            tok = getToken();
-            continue;
-         
-	 } else if (!tok.isIdent() && !tok.isOper()) {
-            // make sure it's an identifier
-            error(tok, "identifier expected");
-	 }
-
-         expr = parsePostIdent(expr.get(), tok);
+         TypeDefPtr type;
+         parsePostDot(expr, type);
       } else if (tok.isScoping()) {
          VarRefPtr varRef = VarRefPtr::rcast(expr);
          NamespacePtr ns = NamespacePtr::rcast(varRef->def);
@@ -3696,6 +3437,69 @@ bool Parser::runCallbacks(Event event) {
    return gotCallbacks;
 }
 
+// <expr> . <ident|oper|class>
+//         ^
+void Parser::parsePostDot(ExprPtr &expr, TypeDefPtr &type) {
+   Token tok = getToken();
+   string name;
+   if (tok.isIdent()) {
+      name = tok.getData();
+   } else if (tok.isOper()) {
+      name = parseOperSpec();
+   } else if (tok.isClass()) {
+      // "expr.class" is a special case because it is implicitly a 
+      // function call.  Emit and quit.
+      expr = emitOperClass(expr.get(), tok);
+      return;
+   } else {
+      error(tok, "Identifier or 'oper' expected after '.'");
+   }
+   VarDefPtr def = expr->type->lookUp(name);
+   
+   // If we didn't get a def and the current target is a type, see if we 
+   // can resolve the name by treating the dot as the scoping operator.
+   if (!def && type) {
+      def = type->lookUp(tok.getData());
+      if (!def->isUsableFrom(*context))
+         error(tok, 
+               SPUG_FSTR("Instance member " << name << 
+                          " is not usable from this context."
+                         )
+               );
+               
+      // If we got an overload, convert it into an ExplicitlyScopedDef
+      if (OverloadDefPtr::rcast(def))
+         def = new ExplicitlyScopedDef(def.get());
+
+      expr = context->createVarRef(def.get());
+   } else if (def) {
+      expr = new Deref(expr.get(), def.get());
+   }
+   
+   // XXX in order to handle value.Base::method(), we need to try 
+   // looking up the symbol in the current context and seeing if it is a 
+   // definition that can be applied to the object.  Might want to do
+   // parseScoping() on it to exclude value.Base.method()
+   if (!def) {
+      if (type)
+         error(tok, SPUG_FSTR("Type object " << type->getDisplayName()
+                               << " has no member named "
+                               << tok.getData()
+                               << ", nor does the type itself."
+                               )
+               );
+      else
+         error(tok,
+               SPUG_FSTR("Instance of " << expr->type->getDisplayName() 
+                          << " has no member " << tok.getData()
+                         )
+               );
+   }
+   
+   context->checkAccessible(def.get(), name);
+   type = TypeDefPtr::rcast(def);
+}
+
 Parser::Primary Parser::parsePrimary(Expr *implicitReceiver) {
    
    // We keep track of an expression and a type.  
@@ -3756,82 +3560,9 @@ Parser::Primary Parser::parsePrimary(Expr *implicitReceiver) {
          parseScoping(ns, def, lastName);
          type = TypeDefPtr::rcast(def);
          expr = createVarRef(/* container */ 0, def.get(), lastName);
-#ifdef UNDEFINED
-         if (!type)
-            error(tok, 
-                  "The scoping operator can only be used on a namespace."
-                  );
-         VarDefPtr def = type->lookUp(tok.getData());
-         if (!def)
-            error(tok,
-                  SPUG_FSTR("Identifier " << tok.getData() << 
-                             " is not defined in " << 
-                             type->getNamespaceName()
-                            )
-                  );
-         type = TypeDefPtr::rcast(def);
-         expr = context->createVarRef(def);
-#endif
       } else if (tok.isDot()) {
          soleIdent = Token();
-         tok = getToken();
-         string name;
-         if (tok.isIdent()) {
-            name = tok.getData();
-         } else if (tok.isOper()) {
-            name = parseOperSpec();
-         } else if (tok.isClass()) {
-            // "expr.class" is a special case because it is implicitly a 
-            // function call.  Emit it and continue.
-            expr = emitOperClass(expr.get(), tok);
-            continue;
-         } else {
-            error(tok, "Identifier or 'oper' expected after '.'");
-         }
-         VarDefPtr def = expr->type->lookUp(name);
-         
-         // If we didn't get a def and the current target is a type, see if we 
-         // can resolve the name by treating the dot as the scoping operator.
-         if (!def && type) {
-            def = type->lookUp(tok.getData());
-            if (!def->isUsableFrom(*context))
-               error(tok, 
-                     SPUG_FSTR("Instance member " << name << 
-                                " is not usable from this context."
-                               )
-                     );
-                     
-            // If we got an overload, convert it into an ExplicitlyScopedDef
-            if (OverloadDefPtr::rcast(def))
-               def = new ExplicitlyScopedDef(def.get());
-      
-            expr = context->createVarRef(def.get());
-         } else if (def) {
-            expr = new Deref(expr.get(), def.get());
-         }
-         
-         // XXX in order to handle value.Base::method(), we need to try 
-         // looking up the symbol in the current context and seeing if it is a 
-         // definition that can be applied to the object.  Might want to do
-         // parseScoping() on it to exclude value.Base.method()
-         if (!def) {
-            if (type)
-               error(tok, SPUG_FSTR("Type object " << type->getDisplayName()
-                                     << " has no member named "
-                                     << tok.getData()
-                                     << ", nor does the type itself."
-                                     )
-                     );
-            else
-               error(tok,
-                     SPUG_FSTR("Instance of " << expr->type->getDisplayName() 
-                                << " has no member " << tok.getData()
-                               )
-                     );
-         }
-         
-         context->checkAccessible(def.get(), name);
-         type = TypeDefPtr::rcast(def);
+         parsePostDot(expr, type);
       } else if (tok.isLBracket()) {
          soleIdent = Token();
                                         
