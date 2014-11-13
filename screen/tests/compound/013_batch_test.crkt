@@ -11,10 +11,13 @@ test.mod('mod', I"
     class A {
         void f() { puts('alias'); }
         alias g = f;
+        @static int h() { return 100; }
+        alias i = h;
     }
     ");
 test.main(I"
     import mod A;
+    if (A.i() != 100) puts('FAILED static method alias serialization');
     A().g();
     ");
 test.run();
