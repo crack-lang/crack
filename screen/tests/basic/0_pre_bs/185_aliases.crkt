@@ -31,11 +31,15 @@ class A {
 
     int xmeth() { return 1001; }
     alias meth = xmeth;
+
+    @static int ymeth() { return 1002; }
+    alias staticMeth = ymeth;
 }
 A a = {};
 a.i = 789;
 if (a.i != 789) puts('FAILED alias within a class');
 if (a.meth() != 1001) puts('FAILED alias of a method');
+if (A.staticMeth() != 1002) puts('FAILED alias of a static method');
 
 puts('ok');
 %%EXPECT%%
