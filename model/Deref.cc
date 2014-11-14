@@ -7,6 +7,8 @@
 
 #include "Deref.h"
 
+#include <sstream>
+
 #include "spug/check.h"
 #include "builder/Builder.h"
 #include "AssignExpr.h"
