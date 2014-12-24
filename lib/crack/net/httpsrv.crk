@@ -10,25 +10,37 @@
 ##   file, You can obtain one at http://mozilla.org/MPL/2.0/.
 ## 
 
-import crack.ascii strip;
+import crack.ascii parseInt, strip, toLower;
 import crack.fieldset HashMapFieldSet;
 import crack.lang AppendBuffer, Buffer, Exception, ManagedBuffer, WriteBuffer, Formatter;
 import crack.strutil split, StringArray;
 import crack.cont.array Array;
 import crack.cont.hashmap HashMap;
-import crack.io cerr, StandardFormatter, StringFormatter, Writer, FileHandle;
+import crack.io cerr, FStr, StandardFormatter, StringFormatter, StringWriter, 
+    Writer, FileHandle;
 import crack.net InetAddress, Poller, Socket, AF_INET, POLLIN,
     POLLOUT, POLLERR, SOCK_STREAM;
 import crack.time TimeDelta;
 import crack.sys strerror;
 import crack.lang SystemError;
 import crack.runtime errno;
-import crack.functor Functor1, Function1;
-import crack.logger debug, info;
+import crack.functor Functor1, Functor2, Function1;
+import crack.logger debug, info, error;
 
 @import crack.ann define, interface, implements;
 
 StandardFormatter NULL_FORMATTER = null;
+
+## Post data handlers are used to allow request handlers to defer reading of 
+## contents from a PUT/POST request.  The request handler must set this in the 
+## HTTPRequest object otherwise this data will be discarded.
+#alias PostDataHandler = Functor2[void, HTTPRequest, Buffer];
+
+## The primary request handler should attach a ResponseHandler to the request 
+## if it either needs to block or is returning something to large to 
+## comfortably fit into memory.  The response handler should return true when 
+## it is done sending data back to the client.
+#alias ResponseHandler = Functor2[bool, HTTPRequest];
 
 ## Contains the full contents of an HTTP request and provides the means for 
 ## communicating back to the client.
@@ -47,6 +59,18 @@ class HTTPRequest : HashMapFieldSet {
     ## first element (which they have already matched).
     StringArray parsedPath;
 
+    ## If non-null, this is the contents of the request sent with a POST/PUT 
+    ## request.  It is the responsibility of the handler to populate this.
+    Buffer contents;
+
+    Functor2[void, HTTPRequest, Buffer] postDataHandler;
+    Functor1[bool, HTTPRequest] responseHandler;
+
+    ## The number of bytes of POST/PUT data that hasn't been processed yet.
+    ## This is updated after postDataHandler is called, so it includes the 
+    ## data in the buffer passed to postDataHandler.
+    uint remainingPostData;
+
     oper init(Writer client, ## the channel to write back to the client.
               InetAddress clientAddr ## the client address.
               ) :
@@ -59,7 +83,7 @@ class HTTPRequest : HashMapFieldSet {
     
     ## Sends a reply to the client with the specified code, content type and 
     ## contents.
-    void sendReply(int code, String contentType, String contents) {
+    void sendReply(int code, String contentType, Buffer contents) {
         __clt `HTTP/1.1 $code Stat
 Content-type: $contentType
 Content-length: $(contents.size)
@@ -80,6 +104,27 @@ Location: $location
         if (parsedPath is null)
             parsedPath = split(path.substr(1), '/');
         return parsedPath;
+    }
+
+    ## Writes the response status and some of the headers.  It is the 
+    ## responsibility of the caller to write the "content-length" header and a 
+    ## blank line prior to writing the message contents.
+    void writePartialHeaders(int code, String contentType) {
+        __clt I`HTTP/1.1 $code Stat
+               Content-type: $contentType
+               `;
+    }
+    
+    ## Write all headers.  Caller is responsible for writing contents.
+    void writeHeaders(int code, String contentType, int contentLength) {
+        writePartialHeaders(code, contentType);
+        __clt I`Content-length: $contentLength
+
+                `;
+    }
+    
+    void write(Buffer data) {
+        __clt.write(data);
     }
 }
 
@@ -297,9 +342,10 @@ class HTTPServer {
                     break;
             }
             
-            if (request.method != 'POST' && request.method != 'PUT')
+            if (request.method != 'POST' && request.method != 'PUT') {
                 state = _ST_REQUEST;
-            request = HTTPRequest(outQueue, addr);
+                request = HTTPRequest(outQueue, addr);
+            }
         }
         
         @final void processHeaderLine(uintz start, uintz end) {
@@ -307,13 +353,28 @@ class HTTPServer {
             info `processing header line: $(line.getRepr())\n`;
             if (!line) {
                 state = _ST_BODY;
+                if (request.method == 'POST' || request.method == 'PUT') {
+                    # For requests with a body, get the content-length.
+                    contentLength := request.headers.get('content-length', 
+                                                         null
+                                                         );
+                    if (contentLength)
+                        request.remainingPostData = parseInt(contentLength);
+                    else
+                        request.remainingPostData = 0xFFFFFFFF;
+
+                    # Discard the request line and headers.  'inbuf' now 
+                    # contains only the body.
+                    compressBuffer(end + (inbuf.buffer[end] == b'\r' ? 2 : 1));
+                }
                 processRequest();
                 return;
             }
             # find the first colon
             sep := line.lfind(b':');
             info `adding $(line.slice(0, sep)) $(line.slice(sep + 1))\n`;
-            request.headers[line.slice(0, sep)] = strip(line.slice(sep + 1));
+            request.headers[toLower(line.slice(0, sep))] =
+                strip(line.slice(sep + 1));
         }
                     
         @final void parseNext(uint amtRead) {
@@ -348,8 +409,33 @@ class HTTPServer {
                         break;
                     }
                 } else {
-                    # XXX post/put data, send to client handler
-                    compressBuffer(end);
+                    # State is _ST_BODY.  Deal with the "end of parcel" 
+                    # condition correctly and if the handler has defined a post 
+                    # data handler, call it.
+                    if (request.remainingPostData >= inbuf.size) {
+                        if (request.postDataHandler) {
+                            debug `calling post data handler with inbuf [$inbuf]\n`;
+                            request.postDataHandler(request, inbuf);
+                        }
+                        request.remainingPostData -= inbuf.size;
+                        compressBuffer(inbuf.size);
+                    } else {
+                        # The inbuf contains more than the contents (it 
+                        # overlaps the beginning of the next request)
+                        if (request.postDataHandler)
+                            request.postDataHandler(
+                                request, 
+                                Buffer(inbuf.buffer, request.remainingPostData)
+                            );
+                        compressBuffer(request.remainingPostData);
+                        request.remainingPostData = 0;
+                    }
+                    
+                    # Begin the new request if we're done with post data.
+                    if (!request.remainingPostData) {
+                        state = _ST_REQUEST;
+                        request = HTTPRequest(outQueue, addr);
+                    }
                     return;
                 }
             }
@@ -516,6 +602,57 @@ class PathDispatcher : HashMap[String, RequestHandler]
             return handler(req);
         } else {
             return false;
+        }
+    }
+}
+
+## Collects the contents in a post/put request prior to calling the user's 
+## handler and storing all of the data in the "contents" attribute.
+class PostDataCollector : 
+    Object 
+    @implements Functor1[bool, HTTPRequest] {
+
+    Functor1[bool, HTTPRequest] handler;
+
+    oper init(Functor1[bool, HTTPRequest] handler) : handler = handler {}
+    
+    oper init(function[bool, HTTPRequest] handler) : 
+        handler = Function1[bool, HTTPRequest](handler) {
+    }
+    
+    class __Collector : Object @implements Functor2[void, HTTPRequest, Buffer] {
+        StringWriter __writer = {};
+        Functor1[bool, HTTPRequest] __handler;
+        
+        oper init(Functor1[bool, HTTPRequest] handler) :
+            __handler = handler {
+        }
+        
+        void oper call(HTTPRequest req, Buffer buf) {
+            __writer.write(buf);
+            if (buf.size == req.remainingPostData) {
+                req.contents = __writer.string();
+                debug `calling handler with contents: $(req.contents)\n`;
+                __handler(req);
+            } else if (buf.size > req.remainingPostData) {
+                error I`PostDataCollector received buffer [$buf] which is \
+                        greater than remaining post data \
+                        ($(req.remainingPostData))`;
+            }
+        }
+    }
+    
+    bool oper call(HTTPRequest req) {
+        if (req.method == 'POST' || req.method == 'PUT') {
+            debug `starting collector`;
+            req.postDataHandler = __Collector(handler);
+            return true;
+        } else {
+            req.sendReply(500, 'text/plain',
+                          FStr() I`Invalid method type $(req.method) for \
+                                   handler requiring POST or PUT.`
+                          );
+            return true;
         }
     }
 }

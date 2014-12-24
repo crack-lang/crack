@@ -5,7 +5,7 @@ HTTP Server
 %%FILE%%
 import crack.fieldset FieldSet;
 import crack.net.httpsrv Chain, HandlerFunc, HTTPRequest, PathDispatcher,
-    RequestHandler, NOT_FOUND;
+    PostDataCollector, RequestHandler, NOT_FOUND;
 import crack.io cout, FStr, StringWriter;
 @import crack.ann assert;
 @import crack.fieldset_ann fieldset_accessors;
@@ -119,6 +119,26 @@ if (true) {
              '  </head>\n  <body>\n    <h1>404 - Page not found</h1>\n'
              '  </body>\n</http>'
             );
+}
+
+# Test PostDataCollector.
+if (true) {
+    String contents;
+    bool handler(HTTPRequest req) {
+        contents = String(req.contents);
+        return true;
+    }
+
+    collector := PostDataCollector(handler);
+    HTTPRequest req = {StringWriter(), null};
+    req.method = 'POST';
+    collector(req);
+    @assert(!(req.postDataHandler is null));
+    req.remainingPostData = 6;
+    req.postDataHandler(req, 'foo');
+    req.remainingPostData = 3;
+    req.postDataHandler(req, 'bar');
+    @assert(contents == 'foobar');
 }
 
 cout `ok`;
