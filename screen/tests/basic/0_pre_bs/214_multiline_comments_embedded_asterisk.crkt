@@ -1,0 +1,9 @@
+%%TEST%%
+multiline comments with embedded asterisks
+%%ARGS%%
+%%FILE%%
+/***/
+puts('ok');
+%%EXPECT%%
+ok
+%%STDIN%%
