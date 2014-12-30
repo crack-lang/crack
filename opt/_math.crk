@@ -40,6 +40,10 @@ FUNC1(asinh)
 FUNC1(acosh)
 FUNC1(atanh)
 
+FUNC1(sinf)
+FUNC1(cosf)
+FUNC1(tanf)
+
 FUNC1(exp)
 FUNC1(exp2)
 FUNC1(fabs)
@@ -179,11 +183,11 @@ int64_t crk_usecs(void) {
         UNDERFLOW = 'FE_UNDERFLOW';
     
     @cname crk_sin float64 sin(float64 angle);
-    @cname sinf float32 sin(float32 angle);
+    @cname crk_sinf float32 sin(float32 angle);
     @cname crk_cos float64 cos(float64 angle);
-    @cname cosf float32 cos(float32 angle);
+    @cname crk_cosf float32 cos(float32 angle);
     @cname crk_tan float64 tan(float64 angle);
-    @cname tanf float32 tan(float32 angle);
+    @cname crk_tanf float32 tan(float32 angle);
     @cname crk_sinh float64 sinh(float64 angle);
     @cname sinhf float32 sinh(float32 angle);
     @cname crk_cosh float64 cosh(float64 angle);

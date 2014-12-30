@@ -25,6 +25,10 @@ FUNC1(asinh)
 FUNC1(acosh)
 FUNC1(atanh)
 
+FUNC1(sinf)
+FUNC1(cosf)
+FUNC1(tanf)
+
 FUNC1(exp)
 FUNC1(exp2)
 FUNC1(fabs)
@@ -178,7 +182,7 @@ void crack_runtime__math_cinit(crack::ext::Module *mod) {
        f->addArg(type_float64, "angle");
 
     f = mod->addFunc(type_float32, "sin",
-                     (void *)sinf
+                     (void *)crk_sinf
                      );
        f->addArg(type_float32, "angle");
 
@@ -188,7 +192,7 @@ void crack_runtime__math_cinit(crack::ext::Module *mod) {
        f->addArg(type_float64, "angle");
 
     f = mod->addFunc(type_float32, "cos",
-                     (void *)cosf
+                     (void *)crk_cosf
                      );
        f->addArg(type_float32, "angle");
 
@@ -198,7 +202,7 @@ void crack_runtime__math_cinit(crack::ext::Module *mod) {
        f->addArg(type_float64, "angle");
 
     f = mod->addFunc(type_float32, "tan",
-                     (void *)tanf
+                     (void *)crk_tanf
                      );
        f->addArg(type_float32, "angle");
 
