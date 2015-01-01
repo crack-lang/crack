@@ -10,9 +10,6 @@ you'll need to build it from source.
 Autoconf Install Instructions
 -----------------------------
 
-Unpack Crack so you can apply the JITEmitter patch:
-$ tar -xvzf crack-0.9.tar.gz
-
 Build LLVM 3.3:
 
 $ tar -xvzf llvm-3.3.tgz
@@ -27,6 +24,7 @@ cost).
 
 Build Crack:
 
+$ tar -xvzf crack-0.9.tar.gz
 $ cd crack-0.9
 $ ./configure
 $ make
