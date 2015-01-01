@@ -1,0 +1,17 @@
+%%TEST%%
+Forward declaration of a nested class.
+%%ARGS%%
+%%FILE%%
+class A {
+    class B;
+    B f();
+    class B {
+        void g() { puts('ok');  }
+    }
+    B f() { return B(); }
+}
+
+A().f().g();
+%%EXPECT%%
+ok
+%%STDIN%%

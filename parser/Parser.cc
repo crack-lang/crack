@@ -3101,7 +3101,7 @@ TypeDefPtr Parser::parseClassDef() {
       }
    else if (tok.isSemi())
       // forward declaration
-      return context->createForwardClass(className);
+      return context->getDefContext()->createForwardClass(className);
    else if (!tok.isLCurly())
       unexpected(tok, "expected colon or opening brace.");
 
