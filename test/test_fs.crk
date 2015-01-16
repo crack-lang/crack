@@ -81,8 +81,26 @@ children.sort();
 if (children != StringArray!['bar', 'foo'])
     cout `FAILED creating children, wanted foo, bar, got: $children\n`;
 
-foo.delete();
-bar.delete();
+# test move methods.
+foo1 := tempDir/'foo1';
+foo.moveTo(foo1);
+if (!foo1.exists() || foo.exists() ||
+    foo1.makeFullReader().readAll() != 'this is foo'
+    )
+    cout `FAILED moving a file.`;
+
+barDir := tempDir/'bardir';
+barDir.makeDir();
+bar1 := bar.moveToDir(barDir);
+if (!bar1.exists() || bar.exists() ||
+    bar1.makeFullReader().readAll() != 'this is bar'
+    )
+    cout `FAILED moving a file into a directory.`;
+
+foo1.delete();
+bar1.delete();
+if (barDir.exists())
+    barDir.delete();
 
 if (tempDir.exists())
     tempDir.delete();

@@ -9,8 +9,8 @@
 
 import crack.runtime basename, chdir, closedir, dirname, errno, fileExists,
     free, fileRemove, getcwd, getDirEntry, malloc, mkdir, open, opendir,
-    readdir, stat, strcpy, strlen, Dir, DirEntry, Stat, O_CREAT, O_TRUNC,
-    O_RDONLY, O_WRONLY, O_APPEND, PATH_MAX, S_IFDIR, S_IFLNK;
+    readdir, rename, stat, strcpy, strlen, Dir, DirEntry, Stat, O_CREAT,
+    O_TRUNC, O_RDONLY, O_WRONLY, O_APPEND, PATH_MAX, S_IFDIR, S_IFLNK;
 import crack.sys strerror;
 import crack.io cout, FStr, OwningFDReader, OwningFDWriter, Reader, Writer;
 import crack.lang AssertionError, Buffer, CString, Exception,
@@ -102,6 +102,18 @@ class Path;
 
     ## returns the parent path.  For a root directory, returns null.
     @abstract Path parent();
+
+    ## Move the object at the path to 'other'.
+    @abstract void moveTo(Path other);
+
+    ## Move the object at the path into the specified directory and returns
+    ## the new path.
+    Path moveToDir(Path dir) {
+        # Same caveats as in moveTo().
+        newPath := dir/getName();
+        moveTo(newPath);
+        return newPath;
+    }
 
     ## Make the directory if it doesn't exist, and also make all parent
     ## directories if they don't exist.
@@ -288,6 +300,14 @@ class RealPath : Path {
             return result;
         }
     }
+
+    void moveTo(Path other) {
+        # This won't work for moving across different types of Path object or
+        # even across different filesystems.
+        otherName := other.getFullName();
+        if (rename(__path.buffer, otherName.buffer))
+            throw SystemError(FStr() `Moving $__path to $otherName`);
+    }
 }
 
 ## This is a wrapper class that allows us to define the current directory
@@ -342,6 +362,7 @@ class _CWD : Path {
     uint64 getSize() { return __path.getSize(); }
     PathIter children() { return __path.children(); }
     Path parent() { return __path.parent(); }
+    void moveTo(Path other) { return __path.moveTo(other); }
 }
 
 ## Contains a path object for the root of the real filesystem.

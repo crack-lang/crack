@@ -55,12 +55,19 @@ void crack_runtime_rinit(void) {
     return;
 }
 
+// We have to wrap all variations of these because the C library takes 
+// liberties doing name translation.
+
 extern "C" int crk_creat(const char *pathname, mode_t mode) {
     return creat(pathname, mode);
 }
 
 extern "C" int crk_open(const char *pathname, mode_t mode) {
     return creat(pathname, mode);
+}
+
+extern "C" int crk_open2(const char *pathname, int flags, mode_t mode) {
+    return open(pathname, flags, mode);
 }
 
 extern "C" void crack_runtime_cinit(Module *mod) {
@@ -202,6 +209,10 @@ extern "C" void crack_runtime_cinit(Module *mod) {
     f = mod->addFunc(intType, "fileRemove", (void *)remove);
     f->addArg(byteptrType, "path");
 
+    f = mod->addFunc(intType, "rename", (void *)rename);
+    f->addArg(byteptrType, "oldPath");
+    f->addArg(byteptrType, "newPath");
+
     f = mod->addFunc(intType, "mkdir", (void *)mkdir);
     f->addArg(byteptrType, "path");
     f->addArg(intType, "mode");
@@ -216,6 +227,7 @@ extern "C" void crack_runtime_cinit(Module *mod) {
     mod->addConstant(intType, "ENOMEM", ENOMEM);
     mod->addConstant(intType, "ENOTDIR", ENOTDIR);
     mod->addConstant(intType, "EOVERFLOW", EOVERFLOW);
+    mod->addConstant(intType, "EXDEV", EXDEV);
 
 
     f = mod->addFunc(byteptrType, "c_strerror",
@@ -288,7 +300,7 @@ extern "C" void crack_runtime_cinit(Module *mod) {
     f->addArg(byteptrType, "pathname");
     f->addArg(intType, "mode");
 
-    f = mod->addFunc(intType, "open", (void *)open);
+    f = mod->addFunc(intType, "open", (void *)crk_open2);
     f->addArg(byteptrType, "pathname");
     f->addArg(intType, "flags");
     f->addArg(intType, "mode");
