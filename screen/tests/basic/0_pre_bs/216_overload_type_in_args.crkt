@@ -1,0 +1,17 @@
+%%TEST%%
+Errors displaying overload types in an arg list.
+%%ARGS%%
+%%FILE%%
+class A {
+    void f() {}
+    void g() {
+        f(g);
+    }
+}
+%%EXPECT%%
+ParseError: %SCRIPTNAME%:4:12: No method exists matching f(<Overload>)
+Possible overloads for f:
+  void A.f()
+
+
+%%STDIN%%
