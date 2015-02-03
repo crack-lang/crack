@@ -84,11 +84,6 @@ public:
      */
     void setRep(llvm::Constant *newRep, int moduleId);
 
-    void setLLVMFuncType(llvm::FunctionType *funcType) {
-        SPUG_CHECK(!llvmFuncType, "Resetting type for function " << getFullName());
-        llvmFuncType = funcType;
-    }
-
     llvm::FunctionType *getLLVMFuncType() const {
         SPUG_CHECK(llvmFuncType,
                    "Type not defined for function " << getFullName()

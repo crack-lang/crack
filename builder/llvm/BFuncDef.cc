@@ -47,8 +47,19 @@ Function *BFuncDef::getFuncRep(LLVMBuilder &builder) {
 }
 
 void BFuncDef::setRep(llvm::Constant *newRep, int newRepModuleId) {
+    SPUG_CHECK(!llvmFuncType, 
+               "setRep called on function " << getFullName() <<
+                " which already has a type defined."
+               );
     rep = newRep;
     repModuleId = newRepModuleId;
+    llvmFuncType = dyn_cast<FunctionType>(
+        dyn_cast<PointerType>(rep->getType())->getElementType()
+    );
+    SPUG_CHECK(llvmFuncType, 
+               "BFuncDef::setRep() called with a non-function for " << 
+                getFullName()
+               );
 }
     
 void BFuncDef::fixModule(Module *oldMod, Module *newMod) {

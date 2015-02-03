@@ -2404,9 +2404,6 @@ FuncDefPtr LLVMBuilder::materializeFunc(Context &context, FuncDef::Flags flags,
                     module->getModuleIdentifier()
                 );
         result->setRep(func, moduleDef->repId);
-        result->setLLVMFuncType(
-            dyn_cast<FunctionType>(func->getType()->getElementType())
-        );
     } else {
         // Create a null constant.  First we have to construct a type.
         vector<Type *> argTypes;
@@ -2426,7 +2423,6 @@ FuncDefPtr LLVMBuilder::materializeFunc(Context &context, FuncDef::Flags flags,
         result->setRep(Constant::getNullValue(funcType->getPointerTo()),
                        moduleDef->repId
                        );
-        result->setLLVMFuncType(funcType);
     }
     return result;
 }

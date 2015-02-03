@@ -66,7 +66,6 @@ void FuncBuilder::finish(bool storeDef) {
     LLVMBuilder &builder =
             dynamic_cast<LLVMBuilder &>(context.builder);
 
-    funcDef->setLLVMFuncType(llvmFuncType);
     if (!(funcDef->flags & FuncDef::abstract)) {
         ContextPtr defCtx = context.getParent()->getDefContext();
         Function *func = Function::Create(llvmFuncType,
