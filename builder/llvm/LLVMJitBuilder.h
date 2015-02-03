@@ -43,10 +43,10 @@ class LLVMJitBuilder : public LLVMBuilder {
         // List of modules that need to have their cleanups setup before we 
         // run main.
         std::vector<BModuleDefPtr> needsCleanup;
-        
+
         ModuleMerger *moduleMerger;
         ModuleMerger *getModuleMerger();
-                
+        
         virtual void run();
 
         virtual void dump();
@@ -94,7 +94,8 @@ class LLVMJitBuilder : public LLVMBuilder {
                                          llvm::GlobalValue *externalDef
                                          );
 
-        LLVMJitBuilder(void) : 
+        LLVMJitBuilder(LLVMBuilder *root = 0) :
+            LLVMBuilder(root),
             execEng(0), 
             moduleMerger(0) {
         }
@@ -141,6 +142,7 @@ class LLVMJitBuilder : public LLVMBuilder {
             model::ModuleDef *owner
         );
         virtual model::ModuleDefPtr registerPrimFuncs(model::Context &context);
+        virtual void initialize(model::Context &context);
         virtual llvm::ExecutionEngine *getExecEng();
 };
 

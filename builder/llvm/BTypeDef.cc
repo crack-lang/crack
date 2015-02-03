@@ -153,34 +153,48 @@ BTypeDef *BTypeDef::findFirstVTable(BTypeDef *vtableBaseType) {
     SPUG_CHECK(false, "Failed to find first vtable for " << getFullName());
 }
 
-GlobalVariable *BTypeDef::getClassInstRep(Module *module,
-                                          ExecutionEngine *execEng
-                                          ) {
-    if (classInst->getParent() == module) {
+GlobalVariable *BTypeDef::getClassInstRep(BModuleDef *module) {
+    if (classInstModuleId == module->repId) {
         return classInst;
     } else {
         GlobalVariable *gvar = 
             cast_or_null<GlobalVariable>(
-                module->getGlobalVariable(classInst->getName())
+                module->rep->getGlobalVariable(getFullName() + ":body")
             );
         if (!gvar) {
-            gvar = new GlobalVariable(*module, 
-                                      classInst->getType()->getElementType(), 
+            SPUG_CHECK(getModule() != module,
+                       "Module " << module->getFullName() <<
+                        " is missing the definiton for " << getFullName()
+                       );
+            gvar = new GlobalVariable(*module->rep, 
+                                      classInstType, 
                                       true, // is constant
                                       GlobalValue::ExternalLinkage,
                                       0, // initializer: null for externs
-                                      classInst->getName()
+                                      getFullName() + ":body"
                                       );
-
-            // if there's an execution engine, do the pointer hookup
-            if (execEng) {
-                void *p = execEng->getPointerToGlobal(classInst);
-                execEng->addGlobalMapping(gvar, p);
-            }
         }
         
+        classInst = gvar;
+        classInstModuleId = module->repId;
         return gvar;
     }
+}
+
+GlobalVariable *BTypeDef::createClassInst(BModuleDef *module,
+                               StructType *metaClassStructType,
+                               Constant *classObjVal,
+                               const string &canonicalName
+                               ) {
+    classInst = new GlobalVariable(*module->rep, metaClassStructType,
+                                   true, // is constant
+                                   GlobalValue::ExternalLinkage,
+                                   classObjVal,
+                                   canonicalName + ":body"
+                                   );
+    classInstType = metaClassStructType;
+    classInstModuleId = module->repId;
+    return classInst;
 }
 
 void BTypeDef::addDependent(BTypeDef *type, Context *context) {
@@ -360,6 +374,15 @@ void BTypeDef::materializeVTable(Context &context) {
         );
     }
 }        
+
+void BTypeDef::setClassInst(llvm::GlobalVariable *classInst) {
+    SPUG_CHECK(!this->classInst && !classInstType,
+               "Resetting class instance for " << getDisplayName()
+               );
+    this->classInst = classInst;
+    this->classInstType = classInst->getType()->getElementType();
+}
+    
 
 TypeDefPtr BTypeDef::getSpecializationStubSafe(Context &context, 
                                                TypeDef::TypeVecObj *types

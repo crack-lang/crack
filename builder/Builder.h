@@ -512,6 +512,12 @@ class Builder : public spug::RCBase {
                                                       ) = 0;
 
         /**
+         * Initialize a root builder with the root context.  This will 
+         * be called after the root context is created.
+         */
+        virtual void initialize(model::Context &context) = 0;
+
+        /**
          * Load the named shared library, returning a handle suitable for
          * retrieving symbols from the library using the local mechanism
          */

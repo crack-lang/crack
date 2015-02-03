@@ -44,6 +44,9 @@ class ModuleMerger {
         // optional execution engine
         llvm::ExecutionEngine *execEng;
 
+        // The rep id of the merged module.
+        int mergedModuleRepId;
+
         // Tracing support.
         static spug::Tracer tracer;
 
@@ -64,7 +67,7 @@ class ModuleMerger {
         static bool trace;
 
         // name: the target module name.
-        ModuleMerger(const std::string &name,
+        ModuleMerger(const std::string &name, int mergedModuleRepId,
                      llvm::ExecutionEngine *execEng = 0
                      );
 
@@ -74,6 +77,9 @@ class ModuleMerger {
         // Returns the target module (that we've merged all of the other
         // modules into).
         llvm::Module *getTarget() const { return target; }
+
+        // Returns the rep id of the merged module.
+        int getRepId() const { return mergedModuleRepId; }
 };
 
 }} // namespace builder::mvll

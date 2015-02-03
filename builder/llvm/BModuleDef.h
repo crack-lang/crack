@@ -40,6 +40,7 @@ public:
     // primitive cleanup function
     void (*cleanup)();
     llvm::Module *rep;
+    int repId;
     std::vector<BStrConstPtr> stringConstants;
 
     // list of modules imported by this one, along with its imported symbols
@@ -51,7 +52,8 @@ public:
 
     BModuleDef(const std::string &canonicalName,
                model::Namespace *parent,
-               llvm::Module *rep0
+               llvm::Module *rep0,
+               int repId
                );
 
     ~BModuleDef();

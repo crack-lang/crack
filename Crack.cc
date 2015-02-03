@@ -13,6 +13,7 @@
 #include "builder/Builder.h"
 #include "model/Construct.h"
 #include "model/Context.h"
+#include "model/GlobalNamespace.h"
 #include "model/OverloadDef.h"
 
 using namespace std;
@@ -41,6 +42,14 @@ void Crack::setArgv(int argc, char **argv) {
 void Crack::setBuilder(Builder *builder) {
     builder->options = options;
     construct = new Construct(*this, builder);
+
+    // We should be able to get away with defining an empty context for this.                
+    Context context(*builder, Context::module, 
+                    construct->compileTimeConstruct.get(),
+                    new GlobalNamespace(0, ""),
+                    new GlobalNamespace(0, "")
+                    );
+    builder->initialize(context);
 }
 
 void Crack::setCompileTimeBuilder(Builder *builder) {
@@ -54,6 +63,13 @@ void Crack::setCompileTimeBuilder(Builder *builder) {
     construct->compileTimeConstruct = new Construct(*this, builder, 
                                                     construct.get()
                                                     );
+    // We should be able to get away with defining an empty context for this.                
+    Context context(*builder, Context::module, 
+                    construct->compileTimeConstruct.get(),
+                    new GlobalNamespace(0, ""),
+                    new GlobalNamespace(0, "")
+                    );
+    builder->initialize(context);
 }
 
 bool Crack::init() {

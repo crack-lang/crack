@@ -59,9 +59,10 @@ class BJitModuleDef : public BModuleDef {
         BJitModuleDef(const std::string &canonicalName,
                       model::Namespace *parent,
                       llvm::Module *rep0,
+                      int repId,
                       BJitModuleDef *owner
                       ) :
-            BModuleDef(canonicalName, parent, rep0),
+            BModuleDef(canonicalName, parent, rep0, repId),
             owner(owner) {
         }
 

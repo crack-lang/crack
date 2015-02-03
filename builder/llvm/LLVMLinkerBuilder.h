@@ -45,7 +45,12 @@ class LLVMLinkerBuilder : public LLVMBuilder {
         virtual void fixClassInstRep(BTypeDef *type);
 
     public:
-        LLVMLinkerBuilder(void) : linker(0), moduleList(0), sharedLibs() {}
+        LLVMLinkerBuilder(LLVMBuilder *root = 0) :
+            LLVMBuilder(root),
+            linker(0),
+            moduleList(0),
+            sharedLibs() {
+        }
 
         virtual void *getFuncAddr(llvm::Function *func);
 

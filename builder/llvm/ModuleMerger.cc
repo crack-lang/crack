@@ -151,8 +151,11 @@ void ModuleMerger::addFunctionBody(Function *func) {
     CloneFunctionInto(dest, func, valueMap, false, returns, "");
 }
 
-ModuleMerger::ModuleMerger(const string &name, ExecutionEngine *execEng) :
-    execEng(execEng) {
+ModuleMerger::ModuleMerger(const string &name, int mergedModuleRepId,
+                           ExecutionEngine *execEng
+                           ) :
+    execEng(execEng),
+    mergedModuleRepId(mergedModuleRepId) {
 
     LLVMContext &lctx = getGlobalContext();
     target = new llvm::Module(name, lctx);

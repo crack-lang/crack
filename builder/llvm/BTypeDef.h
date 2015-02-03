@@ -12,21 +12,24 @@
 #include "model/TypeDef.h"
 #include <llvm/DebugInfo.h>
 #include "model/Context.h"
+#include "spug/check.h"
 
 #include <map>
 #include <string>
 #include <vector>
 
 namespace llvm {
-    class Type;
     class Constant;
     class ExecutionEngine;
     class GlobalVariable;
+    class StructType;
+    class Type;
 }
 
 namespace builder {
 namespace mvll {
 
+class BModuleDef;
 class PlaceholderInstruction;
 class VTableBuilder;
 
@@ -34,9 +37,13 @@ SPUG_RCPTR(BTypeDef);
 
 // (RCPTR defined above)
 class BTypeDef : public model::TypeDef {
+private:
+    llvm::GlobalVariable *classInst;
+    llvm::Type *classInstType;
+    int classInstModuleId;
+
 public:
     unsigned fieldCount;
-    llvm::GlobalVariable *classInst;
     llvm::Type *rep;
     llvm::DIType debugInfo; // debug info (wrapper for MDNode*)
     unsigned nextVTableSlot;
@@ -57,6 +64,8 @@ public:
         model::TypeDef(metaType, name, pointer),
         fieldCount(0),
         classInst(0),
+        classInstType(0),
+        classInstModuleId(-1),
         rep(rep),
         nextVTableSlot(nextVTableSlot),
         firstVTableType(0) {
@@ -98,11 +107,17 @@ public:
     /**
      * Get the global variable, creating an extern instance in the module if
      * it lives in another module.
-     * @param execEng the execution engine (may be null if this is unknown or
-     *  there is no execution engine)
      */
-    llvm::GlobalVariable *getClassInstRep(llvm::Module *module,
-                                          llvm::ExecutionEngine *execEng
+    llvm::GlobalVariable *getClassInstRep(BModuleDef *module);
+
+    /**
+     * Create the class instance global.  This should only be called for the
+     * module that owns the class.
+     */
+    llvm::GlobalVariable *createClassInst(BModuleDef *module,
+                                          llvm::StructType *metaClassStructType,
+                                          llvm::Constant *classObjVal,
+                                          const std::string &canonicalName
                                           );
 
     /**
@@ -135,6 +150,11 @@ public:
 
     // See TypeDef.
     virtual void materializeVTable(model::Context &context);
+
+    /**
+     * Used for setting the class instance type during materialization.
+     */
+    void setClassInst(llvm::GlobalVariable *classInst);
 
 protected:
 

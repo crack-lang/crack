@@ -429,6 +429,8 @@ class MockBuilder : public builder::Builder {
             return new MockModuleDef(".builtin", 0);
         }
 
+        virtual void initialize(model::Context &context) {}
+
         virtual void *loadSharedLibrary(const std::string &name) {
             return 0;
         }

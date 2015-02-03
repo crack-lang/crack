@@ -31,6 +31,8 @@ class BExtFuncDef : public BFuncDef {
         virtual void *getFuncAddr(Builder &builder) {
             return addr;
         }
+
+        virtual void *getExtFuncAddr() const { return addr; }
 };
 
 }} // namespace builder::mvll

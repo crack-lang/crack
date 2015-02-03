@@ -20,6 +20,7 @@
 #include <llvm/IR/Function.h>
 #include <llvm/IR/Module.h>
 
+using namespace std;
 using namespace llvm;
 using namespace model;
 using namespace builder::mvll;
@@ -99,11 +100,22 @@ int BMemVarDefImpl::getInstSlot() const { return -1; }
 bool BMemVarDefImpl::isInstVar() const { return false; }
 
 // BGlobalVarDefImpl
+BGlobalVarDefImpl::BGlobalVarDefImpl(llvm::GlobalVariable *rep, 
+                                     int repModuleId
+                                     ) :
+    rep(rep),
+    llvmType(rep->getType()),
+    name(rep->getName()),
+    constant(rep->isConstant()),
+    repModuleId(repModuleId) {
+}
+
 Value *BGlobalVarDefImpl::getRep(LLVMBuilder &builder) {
-    if (rep->getParent() != builder.module)
-        return builder.getModVar(this, this->rep);
-    else
-        return rep;
+    if (repModuleId != builder.moduleDef->repId) {
+        repModuleId = builder.moduleDef->repId;
+        rep = builder.getModVar(this);
+    }
+    return rep;
 }
 
 void BGlobalVarDefImpl::fixModule(Module *oldMod, Module *newMod) {
@@ -116,7 +128,7 @@ ResultExprPtr BConstDefImpl::emitRef(Context &context, VarRef *var) {
     LLVMBuilder &b =
             dynamic_cast<LLVMBuilder &>(context.builder);
     if (rep->getParent() != b.module)
-        rep = b.getModFunc(func, rep);
+        rep = b.getModFunc(func);
     b.lastValue = rep;
     return new BResultExpr((Expr*)var, b.lastValue);
 }

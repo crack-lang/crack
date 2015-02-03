@@ -544,7 +544,7 @@ void Cacher::readVarDefGlobal(const std::string &sym,
 
     GlobalVariable *lg = dyn_cast<GlobalVariable>(rep);
     assert(lg && "readVarDefGlobal: not GlobalVariable rep");
-    BGlobalVarDefImpl *impl = new BGlobalVarDefImpl(lg);
+    BGlobalVarDefImpl *impl = new BGlobalVarDefImpl(lg, modDef->repId);
 
     // the member def itself
     VarDef *g = new VarDef(td.get(), sym);
@@ -743,9 +743,7 @@ void Cacher::readTypeDef(const std::string &sym,
 
     // retrieve the class implementation pointer
     GlobalVariable *impl = modDef->rep->getGlobalVariable(type->getFullName());
-    type->impl = new BGlobalVarDefImpl(impl);
-    type->classInst =
-        modDef->rep->getGlobalVariable(type->getFullName() + ":body");
+    type->impl = new BGlobalVarDefImpl(impl, modDef->repId);
 
     context->construct->registerDef(type.get());
 }
@@ -829,7 +827,7 @@ void Cacher::readFuncDef(const std::string &sym,
     BFuncDef *newF = new BFuncDef(bflags,
                                   sym,
                                   bargCount);
-    newF->setRep(f);
+    newF->setRep(f, modDef->repId);
 
     NamespacePtr owner;
     if (ownerStr)

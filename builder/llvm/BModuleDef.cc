@@ -24,12 +24,17 @@ using namespace llvm;
 
 BModuleDef::BModuleDef(const std::string &canonicalName,
                        model::Namespace *parent,
-                       llvm::Module *rep0
+                       llvm::Module *rep0,
+                       int repId
                        ) :
     ModuleDef(canonicalName, parent),
     cleanup(0),
     rep(rep0),
+    repId(repId),
     importList() {
+    SPUG_CHECK(repId != -1,
+               "Module id of " << canonicalName << " initialized to -1."
+               );
 }
 
 // We define this here so we don't have to includ Consts.h from BModuleDef.h

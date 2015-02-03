@@ -589,8 +589,10 @@ void LLVMBuilder::narrow(TypeDef *curType, TypeDef *ancestor) {
     }
 }
 
-Function *LLVMBuilder::getModFunc(FuncDef *funcDef, Function *funcRep) {
-    Function *func = module->getFunction(funcRep->getName());
+Function *LLVMBuilder::getModFunc(BFuncDef *funcDef) {
+    string name = funcDef->symbolName.size() ? funcDef->symbolName :
+                                               funcDef->getUniqueId();
+    Function *func = module->getFunction(name);
     if (!func) {
         // Not found, create a new one.  Since we're setting the name from the
         // name of the funcRep, and we know nothing of that name already
@@ -599,30 +601,34 @@ Function *LLVMBuilder::getModFunc(FuncDef *funcDef, Function *funcRep) {
         // practice, applying the symbol name was causing LLVM name mangling
         // to occur in ways that broke things).
         BFuncDef *bfuncDef = BFuncDefPtr::acast(funcDef);
-        func = Function::Create(funcRep->getFunctionType(),
+        func = Function::Create(bfuncDef->getLLVMFuncType(),
                                 Function::ExternalLinkage,
-                                funcRep->getName(),
+                                name,
                                 module
                                 );
+
+        // If this function is external, add the address.
+        void *addr = bfuncDef->getExtFuncAddr();
+        if (addr)
+            addGlobalFuncMapping(func, addr);
     }
     return func;
 }
 
-GlobalVariable *LLVMBuilder::getModVar(VarDefImpl *varDefImpl,
-                                       GlobalVariable *gvar
-                                       ) {
+GlobalVariable *LLVMBuilder::getModVar(BGlobalVarDefImpl *varDefImpl) {
 
-    GlobalVariable *global = module->getGlobalVariable(gvar->getName());
+    string name = varDefImpl->getName();
+    GlobalVariable *global = module->getGlobalVariable(name);
     if (!global) {
         // extract the raw type
-        Type *type = gvar->getType()->getElementType();
+        Type *type = varDefImpl->getLLVMType()->getElementType();
 
         global =
-            new GlobalVariable(*module, type, gvar->isConstant(),
-                            GlobalValue::ExternalLinkage,
-                            0, // initializer: null for externs
-                            gvar->getName()
-                            );
+            new GlobalVariable(*module, type, varDefImpl->isConstant(),
+                               GlobalValue::ExternalLinkage,
+                               0, // initializer: null for externs
+                               name
+                               );
     }
 
     return global;
@@ -726,15 +732,21 @@ void LLVMBuilder::emitExceptionCleanup(Context &context) {
     context.cleanupFrame->addCleanup(cleanup.get());
 }
 
-LLVMBuilder::LLVMBuilder() :
+LLVMBuilder::LLVMBuilder(LLVMBuilder *root) :
     debugInfo(0),
+    rootBuilder(root),
+    nextModuleId(0),
     module(0),
     builder(getGlobalContext()),
     func(0),
+    llvmVoidPtrType(root ? root->llvmVoidPtrType : 0),
     lastValue(0),
-    intzLLVM(0),
+    intzLLVM(root ? root->intzLLVM : 0),
     exceptionPersonalityFunc(0),
     unwindResumeFunc(0) {
+
+    if (root)
+        options = root->options;
 }
 
 ResultExprPtr LLVMBuilder::emitFuncCall(Context &context, FuncCall *funcCall) {
@@ -1312,6 +1324,14 @@ void LLVMBuilder::getInvokeBlocks(Context &context,
     }
 }
 
+int LLVMBuilder::getNextModuleId() {
+    if (rootBuilder) {
+        return rootBuilder->getNextModuleId();
+    } else {
+        return nextModuleId++;
+    }
+}
+
 Function *LLVMBuilder::getUnwindResumeFunc() {
     if (!unwindResumeFunc) {
         LLVMContext &lctx = getGlobalContext();
@@ -1329,7 +1349,9 @@ BModuleDef *LLVMBuilder::instantiateModule(Context &context,
                                            const string &name,
                                            Module *module
                                            ) {
-    return new BModuleDef(name, context.ns.get(), module);
+    return new BModuleDef(name, context.ns.get(), module,
+                          getNextModuleId()
+                          );
 }
 
 void LLVMBuilder::emitExceptionCleanupExpr(Context &context) {
@@ -1513,7 +1535,7 @@ void LLVMBuilder::emitEndTry(model::Context &context,
         enclosingCData->nested.push_back(cdata);
 
     } else {
-        cdata->fixAllSelectors(module);
+        cdata->fixAllSelectors(moduleDef.get());
     }
 }
 
@@ -2132,7 +2154,7 @@ VarDefPtr LLVMBuilder::emitVarDef(Context &context, TypeDef *type,
                                    Constant::getNullValue(tp->rep),
                                    module->getModuleIdentifier()+"."+name
                                    );
-            varDefImpl = new BGlobalVarDefImpl(gvar);
+            varDefImpl = new BGlobalVarDefImpl(gvar, moduleDef->repId);
             break;
         }
 
@@ -2319,7 +2341,7 @@ VarDefPtr LLVMBuilder::materializeVar(Context &context, const string &name,
                     type->getFullName() << " not found in module " <<
                     module->getModuleIdentifier()
                 );
-        result->impl = new BGlobalVarDefImpl(gvar);
+        result->impl = new BGlobalVarDefImpl(gvar, moduleDef->repId);
     }
     return result;
 }
@@ -2357,13 +2379,9 @@ TypeDefPtr LLVMBuilder::materializeType(Context &context, const string &name,
                "Unable to load global variable " << fullName <<
                 " from module " << module->getModuleIdentifier()
                );
-    result->impl = new BGlobalVarDefImpl(gvar);
-    result->classInst = module->getGlobalVariable(fullName + ":body");
-    SPUG_CHECK(result->classInst,
-               "Unable to load class instance " << fullName <<
-                ":body from module " << module->getModuleIdentifier()
-               );
+    result->impl = new BGlobalVarDefImpl(gvar, moduleDef->repId);
     result->complete = true;
+    result->setClassInst(module->getGlobalVariable(fullName + ":body"));
 
     return result;
 }
@@ -2385,7 +2403,10 @@ FuncDefPtr LLVMBuilder::materializeFunc(Context &context, FuncDef::Flags flags,
                 "Function " << fullName << " not found in module " <<
                     module->getModuleIdentifier()
                 );
-        result->setRep(func);
+        result->setRep(func, moduleDef->repId);
+        result->setLLVMFuncType(
+            dyn_cast<FunctionType>(func->getType()->getElementType())
+        );
     } else {
         // Create a null constant.  First we have to construct a type.
         vector<Type *> argTypes;
@@ -2396,13 +2417,16 @@ FuncDefPtr LLVMBuilder::materializeFunc(Context &context, FuncDef::Flags flags,
              )
             argTypes.push_back(BTypeDefPtr::arcast((*iter)->type)->rep);
 
-        Type *funcType =
+        FunctionType *funcType =
             FunctionType::get(BTypeDefPtr::acast(returnType)->rep,
                               argTypes,
                               false
                               );
 
-        result->setRep(Constant::getNullValue(funcType->getPointerTo()));
+        result->setRep(Constant::getNullValue(funcType->getPointerTo()),
+                       moduleDef->repId
+                       );
+        result->setLLVMFuncType(funcType);
     }
     return result;
 }
@@ -3301,6 +3325,11 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
 
     moduleDef = 0;
     return builtinMod;
+}
+
+void LLVMBuilder::initialize(Context &context) {
+    createLLVMModule(".root");
+    moduleDef = instantiateModule(context, ".root", module);
 }
 
 std::string LLVMBuilder::getSourcePath(const std::string &path) {

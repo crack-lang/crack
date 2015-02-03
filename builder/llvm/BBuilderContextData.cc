@@ -73,13 +73,13 @@ BasicBlock *BBuilderContextData::getUnwindBlock(Function *func) {
 
 void BBuilderContextData::CatchData::populateClassImpls(
     vector<Value *> &values,
-    Module *module
+    BModuleDef *module
 ) {
     for (int i = 0; i < catches.size(); ++i)
-        values.push_back(catches[i].type->getClassInstRep(module, 0));
+        values.push_back(catches[i].type->getClassInstRep(module));
 }
 
-void BBuilderContextData::CatchData::fixAllSelectors(Module *module) {
+void BBuilderContextData::CatchData::fixAllSelectors(BModuleDef *module) {
     // fix all of the incomplete selector functions now that we have all of
     // the catch clauses.
     for (vector<IncompleteCatchSelector *>::iterator iter = selectors.begin();

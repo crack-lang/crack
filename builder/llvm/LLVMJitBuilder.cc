@@ -64,6 +64,16 @@ ModuleDefPtr LLVMJitBuilder::registerPrimFuncs(model::Context &context) {
     BModuleDefPtr bMod = BModuleDefPtr::rcast(mod);
 }
 
+void LLVMJitBuilder::initialize(model::Context &context) {
+
+    // In the jit, we initialize root builders with the merged module so we
+    // have access to everything from annotations.
+    ModuleMerger *merger = getModuleMerger();
+    module = merger->getTarget();
+    moduleDef = instantiateModule(context, ".root", module);
+    moduleDef->repId = merger->getRepId();
+}
+
 ExecutionEngine *LLVMJitBuilder::getExecEng() {
     if (!execEng && rootBuilder)
         execEng = LLVMJitBuilderPtr::arcast(rootBuilder)->getExecEng();
@@ -88,6 +98,7 @@ void LLVMJitBuilder::setupCleanup(BModuleDef *moduleDef) {
 
 namespace {
 
+// XXX remove all the visitor stuff.
     class ModuleChangeVisitor : public Visitor {
         private:
             Module *oldMod, *newMod;
@@ -107,14 +118,6 @@ namespace {
                 // and it should already be correct.
                 BTypeDef *btype = BTypeDefPtr::cast(type);
                 if (btype) {
-
-                    // Ignore types that aren't in the old module.
-                    if (btype->classInst->getParent() != oldMod)
-                        return;
-
-                    btype->classInst =
-                        newMod->getGlobalVariable(btype->classInst->getName());
-
                     // We can discard the vtables at this point, they are no
                     // longer needed.
                     btype->vtables.clear();
@@ -157,17 +160,6 @@ namespace {
 }
 
 void LLVMJitBuilder::fixupAfterMerge(ModuleDef *moduleDef, Module *merged) {
-    // Now we need to fix the global variables, functions and type meta-data
-    // references in everything...
-    ModuleChangeVisitor visitor(module, merged);
-    moduleDef->visit(&visitor);
-
-    // Do the orphaned var defs.
-    BModuleDefPtr bmodDef = BModuleDefPtr::cast(moduleDef);
-    SPUG_FOR(vector<VarDefPtr>, i, bmodDef->orphanedDefs)
-        (*i)->visit(&visitor);
-    bmodDef->orphanedDefs.clear();
-
     // Add the module to the list of modules where we need to import the
     // cleanup.
     if (rootBuilder)
@@ -223,20 +215,24 @@ void LLVMJitBuilder::engineFinishModule(Context &context,
 void LLVMJitBuilder::mergeModule(ModuleDef *moduleDef) {
     ModuleMerger *merger = getModuleMerger();
     merger->merge(module);
+    BModuleDefPtr::acast(moduleDef)->repId = merger->getRepId();
+    BModuleDefPtr::acast(moduleDef)->rep = merger->getTarget();
     fixupAfterMerge(moduleDef, merger->getTarget());
     SPUG_FOR(vector<ModuleDefPtr>, i, moduleDef->getSlaves())
         fixupAfterMerge(BModuleDefPtr::rcast(*i), merger->getTarget());
 }
 
 void LLVMJitBuilder::fixClassInstRep(BTypeDef *type) {
-    type->getClassInstRep(module, execEng);
+    type->getClassInstRep(moduleDef.get());
 }
 
 BModuleDef *LLVMJitBuilder::instantiateModule(model::Context &context,
                                               const std::string &name,
                                               llvm::Module *owner
                                               ) {
-    return new BJitModuleDef(name, context.ns.get(), owner, 0);
+    return new BJitModuleDef(name, context.ns.get(), owner, getNextModuleId(),
+                             0
+                             );
 }
 
 namespace {
@@ -294,7 +290,9 @@ ModuleMerger *LLVMJitBuilder::getModuleMerger() {
     if (rootBuilder) {
         return LLVMJitBuilderPtr::rcast(rootBuilder)->getModuleMerger();
     } else if (!moduleMerger) {
-        moduleMerger = new ModuleMerger("merged-modules", getExecEng());
+        moduleMerger = new ModuleMerger("merged-modules", getNextModuleId(),
+                                        getExecEng()
+                                        );
         bindJitModule(moduleMerger->getTarget());
     }
     return moduleMerger;
@@ -324,7 +322,7 @@ void LLVMJitBuilder::addGlobalFuncMapping(Function* pointer,
 
 void LLVMJitBuilder::addGlobalFuncMapping(Function* pointer,
                                           void* real) {
-    execEng->updateGlobalMapping(pointer, real);
+    getExecEng()->updateGlobalMapping(pointer, real);
 }
 
 void LLVMJitBuilder::addGlobalVarMapping(GlobalValue* pointer,
@@ -387,12 +385,7 @@ FuncDefPtr LLVMJitBuilder::createExternFunc(
 }
 
 BuilderPtr LLVMJitBuilder::createChildBuilder() {
-    LLVMJitBuilder *result = new LLVMJitBuilder();
-    result->rootBuilder = rootBuilder ? rootBuilder : this;
-    result->llvmVoidPtrType = llvmVoidPtrType;
-    result->options = options;
-    result->intzLLVM = intzLLVM;
-    return result;
+    return new LLVMJitBuilder(rootBuilder ? rootBuilder.get() : this);
 }
 
 ModuleDefPtr LLVMJitBuilder::innerCreateModule(Context &context,
@@ -400,6 +393,7 @@ ModuleDefPtr LLVMJitBuilder::innerCreateModule(Context &context,
                                                ModuleDef *owner
                                                ) {
     return new BJitModuleDef(name, context.ns.get(), module,
+                             getNextModuleId(),
                              BJitModuleDefPtr::cast(owner)
                              );
 
@@ -443,82 +437,15 @@ void LLVMJitBuilder::innerCloseModule(Context &context, ModuleDef *moduleDef) {
     if (!moduleDef->isSlave()) {
         mergeModule(moduleDef);
         delete module;
-        this->moduleDef->clearRepFromConstants();
-        module = 0;
+    } else {
+        // This is a slave.  It shares a rep with its master and will be
+        // merged with its master, so we can just directly update its rep.
+        ModuleMerger *merger = getModuleMerger();
+        BModuleDefPtr::acast(moduleDef)->rep = merger->getTarget();
+        BModuleDefPtr::acast(moduleDef)->repId = merger->getRepId();
     }
-}
-
-namespace {
-
-    // Fix the reps for all functions in the overload to reference the correct
-    // reps in the new module.
-    void fixOverloadReps(OverloadDef *ovld, Module *module) {
-        for (OverloadDef::FuncList::iterator i = ovld->beginTopFuncs();
-             i != ovld->endTopFuncs();
-             ++i
-             ) {
-            BFuncDef *func = BFuncDefPtr::rcast(*i);
-
-            // ignore aliases, abstract methods and operations (ops don't
-            // have a rep). There is also at least one operation that is not
-            // a BFuncDef, so ignore that too.
-            if (!func || func->getOwner() != ovld->getOwner() ||
-                func->flags & FuncDef::abstract ||
-                OpDefPtr::cast(func)
-                )
-                continue;
-
-            Function *rep = module->getFunction((*i)->getUniqueId(0));
-            SPUG_CHECK(rep,
-                       "No rep found for function " << (*i)->getFullName()
-                       );
-            func->setRep(rep);
-        }
-    }
-
-    // Recursively fix all global variable and function reps in the given
-    // namespace to reference the correct reps in the new module.
-    // We do this as a fixup after merging a batch of cyclics.
-    void fixNamespaceReps(Namespace *ns, Module *module) {
-        for (Namespace::VarDefMap::iterator def = ns->beginDefs();
-             def != ns->endDefs();
-             ++def
-             ) {
-            // ignore aliases.
-            if (def->second->getOwner() != ns)
-                continue;
-
-            // Global variables and types.
-            if (BGlobalVarDefImpl *imp =
-                 BGlobalVarDefImplPtr::rcast(def->second->impl)
-                ) {
-                imp->setRep(
-                    module->getGlobalVariable(def->second->getFullName())
-                );
-
-                // Types also have a global variable impl, but we need to also
-                // to fix their class instances and then treat them like
-                // namespaces.
-                if (BTypeDef *type = BTypeDefPtr::rcast(def->second)) {
-                    type->classInst = module->getGlobalVariable(
-                        type->classInst->getName()
-                    );
-                    fixNamespaceReps(type, module);
-                }
-
-            // Overloads.
-            } else if (OverloadDef *ovld =
-                        OverloadDefPtr::rcast(def->second)
-                       ) {
-                fixOverloadReps(ovld, module);
-
-            // Misc. namespaces (some day we will have these).
-            } else if (Namespace *nested = NamespacePtr::rcast(def->second)) {
-                fixNamespaceReps(nested, module);
-            }
-        }
-
-    }
+    this->moduleDef->clearRepFromConstants();
+    module = 0;
 }
 
 void LLVMJitBuilder::doRunOrDump(Context &context) {
@@ -596,6 +523,7 @@ model::ModuleDefPtr LLVMJitBuilder::materializeModule(
         BJitModuleDefPtr bmod = new BJitModuleDef(canonicalName,
                                                   context.ns.get(),
                                                   module,
+                                                  getNextModuleId(),
                                                   0
                                                   );
         owner->addSlave(bmod.get());
@@ -640,7 +568,9 @@ model::ModuleDefPtr LLVMJitBuilder::materializeModule(
 //        bmod->clearRepFromConstants();
 
         // In this case, we set the module to the merged module.
-        module = getModuleMerger()->getTarget();
+        ModuleMerger *merger = getModuleMerger();
+        module = merger->getTarget();
+        bmod->repId = merger->getRepId();
     }
 
     return bmod;

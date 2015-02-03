@@ -18,7 +18,6 @@
 namespace llvm {
     class Function;
     class BasicBlock;
-    class Module;
     class SwitchInst;
     class Value;
 }
@@ -28,6 +27,7 @@ namespace builder { namespace mvll {
 class IncompleteCatchSelector;
 
 SPUG_RCPTR(BBuilderContextData);
+class BModuleDef;
 SPUG_RCPTR(BTypeDef);
 
 class BBuilderContextData : public model::BuilderContextData {
@@ -72,7 +72,7 @@ public:
          * in 'types'.
          */
         void populateClassImpls(std::vector<llvm::Value *> &values,
-                                llvm::Module *module
+                                BModuleDef *module
                                 );
 
         /** 
@@ -80,7 +80,7 @@ public:
          * implementation objects and calling Incomplete::fix() on them to 
          * convert them to calls to llvm.eh.selector().
          */
-        void fixAllSelectors(llvm::Module *module);
+        void fixAllSelectors(BModuleDef *module);
     };
 
     model::Context *context;

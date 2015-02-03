@@ -138,7 +138,8 @@ void LLVMLinkerBuilder::finishBuild(Context &context) {
     emitAggregateCleanup(finalir);
     BTypeDef *vtableType =
         BTypeDefPtr::rcast(context.construct->vtableBaseType);
-    Value *vtableTypeBody = vtableType->getClassInstRep(finalir, 0);
+    Value *vtableTypeBody =
+        finalir->getGlobalVariable(vtableType->getFullName() + ":body");
     createMain(finalir, options.get(), vtableTypeBody, mainModuleName);
 
     // possible LTO optimizations
@@ -172,19 +173,14 @@ void LLVMLinkerBuilder::finishBuild(Context &context) {
 }
 
 BuilderPtr LLVMLinkerBuilder::createChildBuilder() {
-    LLVMLinkerBuilder *result = new LLVMLinkerBuilder();
-    result->rootBuilder = rootBuilder ? rootBuilder : this;
-    result->llvmVoidPtrType = llvmVoidPtrType;
-    result->options = options;
-    result->intzLLVM = intzLLVM;
-    return result;
+    return new LLVMLinkerBuilder(rootBuilder ? rootBuilder.get() : this);
 }
 
 ModuleDefPtr LLVMLinkerBuilder::innerCreateModule(Context &context,
                                                   const string &name,
                                                   ModuleDef *owner
                                                   ) {
-    return new BModuleDef(name, context.ns.get(), module);
+    return new BModuleDef(name, context.ns.get(), module, getNextModuleId());
 }
 
 void LLVMLinkerBuilder::closeModule(Context &context, ModuleDef *moduleDef) {
@@ -280,7 +276,8 @@ void LLVMLinkerBuilder::engineFinishModule(model::Context &context,
 }
 
 void LLVMLinkerBuilder::fixClassInstRep(BTypeDef *type) {
-    type->getClassInstRep(module, 0);
+    // Not sure we ever need to do this since classInst is no longer public.
+    type->getClassInstRep(moduleDef.get());
 }
 
 model::ModuleDefPtr LLVMLinkerBuilder::materializeModule(

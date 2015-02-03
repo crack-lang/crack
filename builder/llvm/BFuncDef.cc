@@ -17,6 +17,7 @@
 
 using namespace builder::mvll;
 using namespace llvm;
+using namespace std;
 
 void BFuncDef::setOwner(model::Namespace *o) {
     owner = o;
@@ -28,20 +29,28 @@ void BFuncDef::setOwner(model::Namespace *o) {
 
 Constant *BFuncDef::getRep(LLVMBuilder &builder) {
     
-    // load the function for the correct module, but not for abstract methods 
-    // (that would result in an "extern" method for an abstract method, which 
-    // is an unresolved external)
-    Function *funcRep = dyn_cast<Function>(rep);
-    if (funcRep && funcRep->getParent() != builder.module)
-        return builder.getModFunc(this, funcRep);
-    else
+    // Load the function rep for the correct module.
+    if (repModuleId != builder.moduleDef->repId) {
+        repModuleId = builder.moduleDef->repId;
+        if (flags & FuncDef::abstract)
+            rep = Constant::getNullValue(llvmFuncType->getPointerTo());
+        else
+            rep = builder.getModFunc(this);
         return rep;
+    } else {
+        return rep;
+    }
 }
 
 Function *BFuncDef::getFuncRep(LLVMBuilder &builder) {
-    return dyn_cast<Function>(rep);
+    return dyn_cast<Function>(getRep(builder));
 }
 
+void BFuncDef::setRep(llvm::Constant *newRep, int newRepModuleId) {
+    rep = newRep;
+    repModuleId = newRepModuleId;
+}
+    
 void BFuncDef::fixModule(Module *oldMod, Module *newMod) {
     Function *func = llvm::dyn_cast<Function>(rep);
     if (func && func->getParent() == oldMod)

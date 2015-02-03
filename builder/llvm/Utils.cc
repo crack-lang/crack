@@ -197,9 +197,7 @@ void createClassImpl(Context &context, BTypeDef *type) {
 
         // get the class body global variable
         Constant *baseClassPtr = 
-            base->getClassInstRep(llvmBuilder.module, 
-                                  llvmBuilder.getExecEng()
-                                  );
+            base->getClassInstRep(llvmBuilder.moduleDef.get());
         
         // 1) if the base class is Class, just use the pointer
         // 2) if it's Class[BaseName], GEP our way into the base class 
@@ -279,25 +277,26 @@ void createClassImpl(Context &context, BTypeDef *type) {
     }
 
     // Create the class global variable
-    type->classInst =
-        new GlobalVariable(*llvmBuilder.module, metaClassStructType,
-                           true, // is constant
-                           GlobalValue::ExternalLinkage,
-                           classObjVal,
-                           canonicalName +  ":body"
-                           );
+    GlobalVariable *classInst =
+        type->createClassInst(llvmBuilder.moduleDef.get(),
+                            metaClassStructType,
+                            classObjVal,
+                            canonicalName
+                            );
 
     // create the pointer to the class instance
     GlobalVariable *classInstPtr =
         new GlobalVariable(*llvmBuilder.module, metaClassPtrType,
                            true, // is constant
                            GlobalVariable::ExternalLinkage,
-                           type->classInst,
+                           classInst,
                            canonicalName
                            );
 
     // store the impl object in the class
-    type->impl = new BGlobalVarDefImpl(classInstPtr);
+    type->impl = new BGlobalVarDefImpl(classInstPtr, 
+                                       llvmBuilder.moduleDef->repId
+                                       );
 }
 
 // Create a new meta-class.

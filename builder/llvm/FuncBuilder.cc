@@ -66,6 +66,7 @@ void FuncBuilder::finish(bool storeDef) {
     LLVMBuilder &builder =
             dynamic_cast<LLVMBuilder &>(context.builder);
 
+    funcDef->setLLVMFuncType(llvmFuncType);
     if (!(funcDef->flags & FuncDef::abstract)) {
         ContextPtr defCtx = context.getParent()->getDefContext();
         Function *func = Function::Create(llvmFuncType,
@@ -107,7 +108,7 @@ void FuncBuilder::finish(bool storeDef) {
         // pointer
         funcDef->impl = new BConstDefImpl(funcDef.get(), func);
 
-        funcDef->setRep(func);
+        funcDef->setRep(func, builder.moduleDef->repId);
     } else {
         // Create a null constant of the type of the function
         Constant *rep = Constant::getNullValue(llvmFuncType->getPointerTo());
@@ -115,7 +116,7 @@ void FuncBuilder::finish(bool storeDef) {
                    "Unable to create null value for type of " <<
                     *funcDef
                    );
-        funcDef->setRep(rep);
+        funcDef->setRep(rep, builder.moduleDef->repId);
     }
 
     // get or create the type registered for the function

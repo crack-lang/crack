@@ -94,14 +94,26 @@ private:
     // global var rep's are module specific, this variable points to the
     // value for the module most recently evaluated by getRep().
     llvm::GlobalVariable *rep;
+    llvm::PointerType *llvmType;
+    std::string name;
+    bool constant;
+    int repModuleId;
 public:
 
-    BGlobalVarDefImpl(llvm::GlobalVariable *rep) : rep(rep) {}
+    BGlobalVarDefImpl(llvm::GlobalVariable *rep, int repModuleId);
 
     virtual llvm::Value *getRep(LLVMBuilder &builder);
     
-    void setRep(llvm::GlobalVariable *newRep) {
+    llvm::PointerType *getLLVMType() const {
+        return llvmType;
+    }
+    
+    std::string getName() const { return name; }
+    bool isConstant() const { return constant; }
+    
+    void setRep(llvm::GlobalVariable *newRep, int newRepModuleId) {
         rep = newRep;
+        repModuleId = newRepModuleId;
     }
     
     void fixModule(llvm::Module *oldMod, llvm::Module *newMod);
@@ -112,12 +124,12 @@ SPUG_RCPTR(BConstDefImpl);
 class BConstDefImpl : public model::VarDefImpl {
 private:
     // we use a raw pointer here because a FuncDef owns its impl.
-    model::FuncDef *func;
+    BFuncDef *func;
     llvm::Function *rep;
 
 public:
 
-    BConstDefImpl(model::FuncDef *func, llvm::Function *rep) : 
+    BConstDefImpl(BFuncDef *func, llvm::Function *rep) : 
         func(func), rep(rep) {}
 
     virtual model::ResultExprPtr emitRef(model::Context &context,

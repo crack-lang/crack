@@ -30,6 +30,14 @@ private:
     // it.
     llvm::Constant *rep;
 
+    // The function type.  We need to store this so we can produce an external
+    // for the function when resolving it from another module.
+    llvm::FunctionType *llvmFuncType;
+
+    // This is the rep's module id, which is used in getRep() to verify that
+    // we're using the right rep for the current module.
+    int repModuleId;
+
 public:
     // low level symbol name as used by llvm::Function *rep
     // this should be empty, unless it needs to link against an external symbol
@@ -47,9 +55,11 @@ public:
     BFuncDef(FuncDef::Flags flags, const std::string &name,
              size_t argCount
              ) :
-    model::FuncDef(flags, name, argCount),
-    rep(0),
-    symbolName() {
+        model::FuncDef(flags, name, argCount),
+        rep(0),
+        llvmFuncType(0),
+        repModuleId(-1),
+        symbolName() {
     }
 
     /**
@@ -72,12 +82,28 @@ public:
     /**
      * Set the low-level function.
      */
-    void setRep(llvm::Constant *newRep) {
-        rep = newRep;
+    void setRep(llvm::Constant *newRep, int moduleId);
+
+    void setLLVMFuncType(llvm::FunctionType *funcType) {
+        SPUG_CHECK(!llvmFuncType, "Resetting type for function " << getFullName());
+        llvmFuncType = funcType;
+    }
+
+    llvm::FunctionType *getLLVMFuncType() const {
+        SPUG_CHECK(llvmFuncType,
+                   "Type not defined for function " << getFullName()
+                   );
+        return llvmFuncType;
     }
 
     void fixModule(llvm::Module *oldMod, llvm::Module *newMod);
     virtual void *getFuncAddr(Builder &builder);
+
+    /**
+     * If this is an external funtction (see BExtFuncDef), returns the
+     * function address, otherwise returns null.
+     */
+    virtual void *getExtFuncAddr() const { return 0; }
 
 };
 

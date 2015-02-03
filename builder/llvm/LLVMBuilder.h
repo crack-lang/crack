@@ -29,6 +29,7 @@ namespace builder {
 namespace mvll {
 
 class BFuncDef;
+class BGlobalVarDefImpl;
 SPUG_RCPTR(BHeapVarDefImpl);
 class DebugInfo;
 class FuncBuilder;
@@ -188,6 +189,13 @@ class LLVMBuilder : public Builder {
          */
         virtual void fixClassInstRep(BTypeDef *type) = 0;
 
+        // The module id to use for the next module.  This is a monotonically 
+        // increasing value which is used to verify that the rep of a def is 
+        // associated with the current module.
+        // This is also maintained by the root module.
+        int nextModuleId;
+        int getNextModuleId();
+                
     public:
         // currently experimenting with making these public to give objects in 
         // LLVMBuilder.cc's anonymous internal namespace access to them.  It 
@@ -237,12 +245,9 @@ class LLVMBuilder : public Builder {
 
         void narrow(model::TypeDef *curType, model::TypeDef *ancestor);
 
-        llvm::Function *getModFunc(model::FuncDef *funcDef,
-                                   llvm::Function *funcRep);
+        llvm::Function *getModFunc(BFuncDef *funcDef);
 
-        llvm::GlobalVariable *getModVar(model::VarDefImpl *varDef,
-                                        llvm::GlobalVariable *gvar
-                                        );
+        llvm::GlobalVariable *getModVar(BGlobalVarDefImpl *varDef);
         
         BTypeDefPtr getFuncType(model::Context &context,
                                 model::FuncDef *funcDef,
@@ -290,7 +295,7 @@ class LLVMBuilder : public Builder {
         /** Return the execution engine if there is one, null if not. */        
         virtual llvm::ExecutionEngine *getExecEng() = 0;
 
-        LLVMBuilder();
+        LLVMBuilder(LLVMBuilder *root = 0);
 
         virtual model::ResultExprPtr emitFuncCall(
             model::Context &context, 
@@ -545,6 +550,8 @@ class LLVMBuilder : public Builder {
                                                   );
 
         virtual model::ModuleDefPtr registerPrimFuncs(model::Context &context);
+        
+        virtual void initialize(model::Context &context);
 
         virtual void *loadSharedLibrary(const std::string &name);
 
