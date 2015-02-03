@@ -413,8 +413,6 @@ class TypeDef : public VarDef, public Namespace {
          */
         TypeDefPtr getStubAncestor();
 
-        virtual void visit(Visitor *visitor);
-
         /**
          * Do whatever is needed to reconstruct the VTable at the end of 
          * loading the class.

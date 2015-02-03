@@ -10,7 +10,6 @@
 
 #include "model/OverloadDef.h"
 #include "model/StatState.h"
-#include "model/Visitor.h"
 #include "BJitModuleDef.h"
 #include "DebugInfo.h"
 #include "StructResolver.h"
@@ -94,69 +93,6 @@ void LLVMJitBuilder::setupCleanup(BModuleDef *moduleDef) {
         SPUG_CHECK(addr, "Unable to resolve cleanup function");
         moduleDef->cleanup = reinterpret_cast<void (*)()>(addr);
     }
-}
-
-namespace {
-
-// XXX remove all the visitor stuff.
-    class ModuleChangeVisitor : public Visitor {
-        private:
-            Module *oldMod, *newMod;
-
-        public:
-            ModuleChangeVisitor(Module *oldMod, Module *newMod) :
-                oldMod(oldMod),
-                newMod(newMod) {
-            }
-
-            virtual void onModuleDef(ModuleDef *module) {
-                BJitModuleDefPtr::cast(module)->rep = newMod;
-            }
-
-            virtual void onTypeDef(TypeDef *type) {
-                // We don't have to touch the 'rep' because types are global
-                // and it should already be correct.
-                BTypeDef *btype = BTypeDefPtr::cast(type);
-                if (btype) {
-                    // We can discard the vtables at this point, they are no
-                    // longer needed.
-                    btype->vtables.clear();
-                }
-
-                // Types also have all of the global variable implementation
-                // machinery, so we need to do onVarDef() on them, too.
-                onVarDef(type);
-            }
-
-            virtual void onVarDef(VarDef *var) {
-                // We just reset the rep for two of the types that are
-                // sensitive to it: these reps get checked against the current
-                // module, but there's a small chance that the module object
-                // address could be reused.
-                VarDefImpl *impl = var->impl.get();
-                if (BGlobalVarDefImpl *glblImpl =
-                     BGlobalVarDefImplPtr::cast(impl)
-                    ) {
-                    glblImpl->fixModule(oldMod, newMod);
-                } else if (BConstDefImpl *cnstImpl =
-                          BConstDefImplPtr::cast(impl)
-                         ) {
-                    cnstImpl->fixModule(oldMod, newMod);
-                }
-            }
-
-            virtual void onOverloadDef(OverloadDef *ovld) {
-                onVarDef(ovld);
-            }
-
-            virtual void onFuncDef(FuncDef *func) {
-                BFuncDefPtr bfunc = BFuncDefPtr::cast(func);
-                if (bfunc)
-                    bfunc->fixModule(oldMod, newMod);
-                onVarDef(func);
-            }
-
-    };
 }
 
 void LLVMJitBuilder::fixupAfterMerge(ModuleDef *moduleDef, Module *merged) {

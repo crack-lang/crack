@@ -221,12 +221,6 @@ class ModuleDef : public VarDef, public Namespace {
         virtual TypeDefPtr getType(const std::string &name);
 
         /**
-         * Apply the visitor to the module and all of its contents, 
-         * recursively.
-         */
-        virtual void visit(Visitor *visitor);
-
-        /**
          * Run the module main function.  This should generally only be called 
          * on the top-level script, all imported modules will have their main 
          * function called from that.

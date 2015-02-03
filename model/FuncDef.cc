@@ -21,7 +21,6 @@
 #include "Serializer.h"
 #include "TypeDef.h"
 #include "VarDefImpl.h"
-#include "Visitor.h"
 
 using namespace model;
 using namespace std;
@@ -352,8 +351,4 @@ FuncDefPtr FuncDef::deserialize(Deserializer &deser, const string &name) {
     result->vtableSlot = spec.vtableSlot;
 
     return result;
-}
-
-void FuncDef::visit(Visitor *visitor) {
-    visitor->onFuncDef(this);
 }

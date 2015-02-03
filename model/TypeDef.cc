@@ -38,7 +38,6 @@
 #include "VarDef.h"
 #include "VarDefImpl.h"
 #include "VarRef.h"
-#include "Visitor.h"
 
 using namespace builder;
 using namespace std;
@@ -1538,10 +1537,4 @@ TypeDefPtr TypeDef::getStubAncestor() {
     }
 
     return 0;
-}
-
-void TypeDef::visit(Visitor *visitor) {
-    SPUG_FOR(VarDefMap, iter, defs)
-        iter->second->visit(visitor);
-    visitor->onTypeDef(this);
 }

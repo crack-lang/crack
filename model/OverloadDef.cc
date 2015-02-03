@@ -18,7 +18,6 @@
 #include "Serializer.h"
 #include "TypeDef.h"
 #include "VarDefImpl.h"
-#include "Visitor.h"
 
 using namespace std;
 using namespace model;
@@ -538,10 +537,4 @@ VarDefPtr OverloadDef::replaceAllStubs(Context &context) {
          )
         *iter = (*iter)->replaceAllStubs(context);
     return this;
-}
-
-void OverloadDef::visit(Visitor *visitor) {
-    SPUG_FOR(FuncList, iter, funcs)
-        (*iter)->visit(visitor);
-    visitor->onOverloadDef(this);
 }

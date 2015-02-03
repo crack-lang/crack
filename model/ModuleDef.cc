@@ -18,7 +18,6 @@
 #include "ModuleStub.h"
 #include "Serializer.h"
 #include "StatState.h"
-#include "Visitor.h"
 
 using namespace std;
 using namespace model;
@@ -418,14 +417,4 @@ VarDefPtr ModuleDef::replaceAllStubs(Context &context) {
 
 TypeDefPtr ModuleDef::getType(const string &name) {
     return lookUp(name);
-}
-
-void ModuleDef::visit(Visitor *visitor) {
-    for (VarDefMap::iterator iter = defs.begin();
-         iter != defs.end();
-         ++iter
-         )
-        iter->second->visit(visitor);
-
-    visitor->onModuleDef(this);
 }
