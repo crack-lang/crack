@@ -482,9 +482,6 @@ model::ModuleDefPtr LLVMJitBuilder::materializeModule(
         structResolver.buildTypeMap();
         structResolver.run();
 
-        // entry function
-        func = c.getEntryFunction();
-
         engineBindModule(bmod.get());
         doRunOrDump(context);
 

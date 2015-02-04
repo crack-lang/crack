@@ -2443,6 +2443,8 @@ void LLVMBuilder::cacheModule(Context &context, ModuleDef *module) {
     vector<Value *> dList;
     NamedMDNode *node;
 
+    // Cacher metadata is mostly obsolete, but we still rely on it for shared
+    // library imports.
     Cacher cacher(context, options.get(), BModuleDefPtr::cast(module));
     cacher.writeMetadata();
 
