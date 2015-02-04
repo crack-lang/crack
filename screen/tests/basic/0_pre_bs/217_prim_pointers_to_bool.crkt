@@ -1,0 +1,14 @@
+%%TEST%%
+primitive pointers convert to bool
+%%ARGS%%
+%%FILE%%
+array[int] ai;
+if (ai) puts('FAILED array'); else puts('ok');
+
+function[void] f;
+if (f) puts('FAILED function'); else puts('ok');
+
+%%EXPECT%%
+ok
+ok
+%%STDIN%%

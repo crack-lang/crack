@@ -106,6 +106,14 @@ TypeDefPtr FunctionTypeDef::getSpecialization(Context &context,
         tempSpec.get()
     );
 
+    // and "oper to .builtin.bool".
+    context.addDef(
+        new BoolOpDef(context.construct->boolType.get(),
+                      "oper to .builtin.bool"
+                      ),
+        tempSpec.get()
+    );
+
     // Give it a specialized "oper call" method, which wraps the
     // call to the function pointer
     FuncDefPtr fptrCall = new FunctionPtrOpDef(returnCType, arity);

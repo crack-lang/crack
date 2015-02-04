@@ -56,9 +56,17 @@ TypeDefPtr ArrayTypeDef::getSpecialization(Context &context,
                          );
     tempSpec->setOwner(this->owner);
 
+    // Add convertion to voidptr and to bool.
     context.addDef(new VoidPtrOpDef(context.construct->voidptrType.get()),
                    tempSpec.get()
                    );
+    context.addDef(
+        new BoolOpDef(context.construct->boolType.get(),
+                      "oper to .builtin.bool"
+                      ),
+        tempSpec.get()
+    );
+
 
     tempSpec->defaultInitializer = new NullConst(tempSpec.get());
 
