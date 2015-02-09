@@ -57,10 +57,6 @@ class VarDef : public virtual spug::RCBase {
         VarDefImplPtr impl;
         bool constant;
         
-        // this flag is true if we've run replaceAllStubs() on this object and 
-        // it is guaranteed to not reference any stubs.
-        bool stubFree;
-        
         // This flag is true for private defs that are exposed via an alias.  
         // (It should also be true for private types that are exposed as a 
         // return value).
@@ -257,24 +253,6 @@ class VarDef : public virtual spug::RCBase {
          * all definitions that it contains.
          */
         virtual void onDeserialized(Context &context) {}
-        
-        /**
-         * Returns true if the definition is a stub.
-         */
-        virtual bool isStub() const { return false; }
-        
-        /**
-         * Replace a stub object created during deserialization with the 
-         * actual definition.  Returns the replacement if there is one, null 
-         * if not.
-         */
-        virtual VarDefPtr replaceStub(Context &context) { return 0; }
-        
-        /**
-         * Recursively replace all stubs referenced by the definition.  
-         * Returns the replaceStub() or this var (not null like replaceStub()).
-         */
-        virtual VarDefPtr replaceAllStubs(Context &context);
 };
 
 inline std::ostream &operator <<(std::ostream &out, const VarDef &def) {

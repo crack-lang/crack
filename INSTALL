@@ -70,7 +70,10 @@ Here are the packages required to build crack on different operating systems
 Ubuntu\/Debian
 ''''''''''''''
 
-build-essential
+Basic requirements for building:
+    build-essential
+    libpcre3-dev (required for tests and documentation generation)
+    LLVM 3.3 from source (see above)
 
 To build from the repository (not a release tarball):
     autoconf
@@ -78,6 +81,10 @@ To build from the repository (not a release tarball):
     libtool
     gettext
 
+Special requirements for extensions (this list is probably incomplete):
+    sdl: libsdl1.2-dev
+    gtk: ??? tbd libgtk2.0-dev
+    ssl: libssl-dev
 
 =========================================================================
 

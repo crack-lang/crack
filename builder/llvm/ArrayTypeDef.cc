@@ -35,11 +35,6 @@ TypeDefPtr ArrayTypeDef::getSpecialization(Context &context,
     if (spec)
         return spec;
 
-    // Do special magic if any of the parameters are stubs.
-    TypeDefPtr stub = getSpecializationStubSafe(context, types);
-    if (stub)
-        return stub.get();
-
     // create it.
 
     assert(types->size() == 1);

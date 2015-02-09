@@ -237,7 +237,6 @@ noinst_HEADERS = \
     model/LocalNamespace.h \
     model/ModuleDef.h \
     model/ModuleDefMap.h \
-    model/ModuleStub.h \
     model/MultiExpr.h \
     model/Namespace.h \
     model/NamespaceStub.h \

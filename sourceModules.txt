@@ -10,7 +10,6 @@ model/ConstVarDef.cc
 model/Deref.cc
 model/Deserializer.cc
 model/GetRegisterExpr.cc
-model/ModuleStub.cc
 model/StatState.cc
 model/StrConst.cc
 model/AssignExpr.cc

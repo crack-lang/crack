@@ -22,7 +22,6 @@
 #include "CompositeNamespace.h"
 #include "Expr.h"
 #include "ModuleDefMap.h"
-#include "ModuleStub.h"
 #include "NestedDeserializer.h"
 #include "OverloadDef.h"
 #include "ProtoBuf.h"
@@ -39,7 +38,6 @@ VarDef::VarDef(TypeDef *type, const std::string &name) :
     name(name),
     owner(0),
     constant(false),
-    stubFree(false),
     exposed(false) {
 }
 
@@ -483,17 +481,4 @@ VarDefPtr VarDef::deserialize(Deserializer &deser) {
                                                  type.get(),
                                                  instSlot
                                                  );
-}
-
-VarDefPtr VarDef::replaceAllStubs(Context &context) {
-    if (stubFree)
-        return this;
-    stubFree = true;
-    VarDefPtr replacement = replaceStub(context);
-    if (replacement)
-        return replacement;
-
-    if (type)
-        type = type->replaceAllStubs(context);
-    return this;
 }

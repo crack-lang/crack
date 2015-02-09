@@ -524,17 +524,3 @@ OverloadDefPtr OverloadDef::deserialize(Deserializer &deser,
     }
     return ovld;
 }
-
-VarDefPtr OverloadDef::replaceAllStubs(Context &context) {
-    if (stubFree)
-        return this;
-    VarDefPtr replacement = replaceStub(context);
-    if (replacement)
-        return replacement;
-
-    for (FuncList::iterator iter = funcs.begin(); iter != funcs.end();
-         ++iter
-         )
-        *iter = (*iter)->replaceAllStubs(context);
-    return this;
-}

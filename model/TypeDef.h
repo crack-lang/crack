@@ -39,6 +39,11 @@ class TypeDef : public VarDef, public Namespace {
         bool hasAbstractFuncs(OverloadDef *overload,
                               std::vector<FuncDefPtr> *abstractFuncs
                               );
+        /** 
+         * Returns the specialized name for the type.
+         */
+        std::string getSpecializedName(TypeVecObj *types, bool fullName);
+
 
     protected:
         TypeDef *findSpecialization(TypeVecObj *types);
@@ -175,12 +180,6 @@ class TypeDef : public VarDef, public Namespace {
         }
         
         ~TypeDef() { if (generic) delete generic; }
-
-        /** 
-         * Returns the specialized name for the type.
-         * This is only exposed for the stub types in ModuleStub.
-         */
-        std::string getSpecializedName(TypeVecObj *types, bool fullName);
 
         /** required implementation of Namespace::getModule() */
         virtual ModuleDefPtr getModule();
@@ -405,13 +404,6 @@ class TypeDef : public VarDef, public Namespace {
         static TypeDefPtr deserializeTypeDef(Deserializer &deser,
                                              const char *name = 0
                                              );
-
-        virtual VarDefPtr replaceAllStubs(Context &context);
-        
-        /**
-         * If any of the ancestors is a stub, returns the first one discovered.
-         */
-        TypeDefPtr getStubAncestor();
 
         /**
          * Do whatever is needed to reconstruct the VTable at the end of 

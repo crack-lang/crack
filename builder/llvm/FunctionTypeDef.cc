@@ -42,11 +42,6 @@ TypeDefPtr FunctionTypeDef::getSpecialization(Context &context,
     if (spec)
         return spec;
 
-    // Do special magic if any of the parameters are stubs.
-    TypeDefPtr stub = getSpecializationStubSafe(context, types);
-    if (stub)
-        return stub;
-
     // need at least one, the return type
     assert(types->size() >= 1);
     int arity(types->size() - 1);

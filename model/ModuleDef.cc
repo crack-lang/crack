@@ -15,7 +15,6 @@
 #include "util/SourceDigest.h"
 #include "Context.h"
 #include "Deserializer.h"
-#include "ModuleStub.h"
 #include "Serializer.h"
 #include "StatState.h"
 
@@ -282,14 +281,6 @@ ModuleDefPtr ModuleDef::deserialize(Deserializer &deser,
         }
     }
 
-    // store a module placeholder so that if we end up cycling back to this
-    // module, we don't recurse.
-    ModuleStubPtr stub = new ModuleStub(canonicalName);
-    pair<Construct::ModuleMap::iterator, bool> existing =
-        deser.context->construct->moduleCache.insert(
-            make_pair(canonicalName, stub)
-        );
-
     // read and load the dependencies
     int count = deser.readUInt("#deps");
     for (int i = 0; i < count; ++i) {
@@ -313,7 +304,6 @@ ModuleDefPtr ModuleDef::deserialize(Deserializer &deser,
                     canonicalName << "(depending on " <<
                     moduleDigest.asHex() <<
                     " current = " << mod->metaDigest.asHex() << ")" << endl;
-            deser.context->construct->moduleCache.erase(existing.first);
             if (Serializer::trace)
                 cerr << ">>>> Finished deserializing DEP MISMATCH " <<
                     canonicalName << endl;
@@ -393,26 +383,6 @@ ModuleDefPtr ModuleDef::deserializeSlaveRef(Deserializer &deser) {
     Deserializer::ReadObjectResult readObj =
         deser.readObject(SlaveModuleReader(this), "owner");
     return ModuleDefPtr::arcast(readObj.object);
-}
-
-void ModuleDef::replaceStubsInDefs(Context &context) {
-    for (VarDefMap::iterator iter = defs.begin();
-         iter != defs.end();
-         ++iter
-         )
-        iter->second = iter->second->replaceAllStubs(context);
-}
-
-VarDefPtr ModuleDef::replaceAllStubs(Context &context) {
-    if (stubFree)
-        return this;
-    stubFree = true;
-    VarDefPtr replacement = replaceStub(context);
-    if (replacement)
-        return replacement;
-
-    replaceStubsInDefs(context);
-    return 0;
 }
 
 TypeDefPtr ModuleDef::getType(const string &name) {

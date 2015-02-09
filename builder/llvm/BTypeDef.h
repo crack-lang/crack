@@ -155,19 +155,6 @@ public:
      * Used for setting the class instance type during materialization.
      */
     void setClassInst(llvm::GlobalVariable *classInst);
-
-protected:
-
-    /**
-     * Utility method for use by array and function types.  If any of the
-     * params in 'types' are stubs, returns a generic stub for the type.
-     * Otherwise returns null.
-     */
-    model::TypeDefPtr getSpecializationStubSafe(
-        model::Context &context,
-        model::TypeDef::TypeVecObj *types
-    );
-
 };
 
 } // end namespace builder::vmll

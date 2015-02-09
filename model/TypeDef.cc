@@ -29,7 +29,6 @@
 #include "InstVarDef.h"
 #include "OverloadDef.h"
 #include "ModuleDef.h"
-#include "ModuleStub.h"
 #include "NestedDeserializer.h"
 #include "NullConst.h"
 #include "ProtoBuf.h"
@@ -910,29 +909,6 @@ namespace {
             virtual void runMain(builder::Builder &builder) {}
             virtual bool isHiddenScope() { return true; }
     };
-    
-    // Callback to replace a stubbed instantiation in the instantiation cache 
-    // when its module is replaced.
-    struct FixStubbedInstantiation : public ModuleStub::Callback {
-        TypeDef::TypeVecObjPtr parms;
-        TypeDefPtr generic, instantiation;
-        FixStubbedInstantiation(TypeDef *generic, TypeDef *instantiation,
-                                TypeDef::TypeVecObj *parms
-                                ) :
-            parms(parms),
-            generic(generic),
-            instantiation(instantiation) {
-        }
-        
-        virtual void run(Context &context) {
-            TypeDef::SpecializationCache::iterator entry = 
-                generic->generic->find(parms.get());
-            
-            // make sure it hasn't already been replaced
-            if (entry->second == instantiation)
-                entry->second = instantiation->replaceStub(context);
-        }
-    };
 }
 
 TypeDefPtr TypeDef::getSpecialization(Context &context, 
@@ -1093,12 +1069,6 @@ TypeDefPtr TypeDef::getSpecialization(Context &context,
         nameInModule = newTypeName;
         result = extractInstantiation(module.get(), types);
     }
-
-    // Fix up stubs (TODO: remove).
-    if (result->isStub())
-        ModuleStubPtr::rcast(module)->registerCallback(
-            new FixStubbedInstantiation(this, result, types)
-        );
 
     // record a dependency on the owner's module
     if (!copersistent)
@@ -1474,67 +1444,4 @@ void TypeDef::deserializeDecl(Deserializer &deser) {
         ContextStackFrame<Deserializer> frame(deser, classContext.get());
         deserializeTypeDecls(deser);
     }
-}
-
-VarDefPtr TypeDef::replaceAllStubs(Context &context) {
-    if (stubFree)
-        return this;
-
-    stubFree = true;
-    VarDefPtr replacement = replaceStub(context);
-    if (replacement)
-        return replacement;
-    
-    // fix all bases
-    for (TypeVec::iterator iter = parents.begin(); iter != parents.end(); 
-         ++iter
-         )
-        *iter = (*iter)->replaceAllStubs(context);
-    
-    // if this is a generic specialization, fix all parameters
-    if (genericParms.size()) {
-        for (TypeVec::iterator iter = genericParms.begin(); 
-             iter != genericParms.end();
-             ++iter
-             )
-            *iter = (*iter)->replaceAllStubs(context);
-    }
-    
-    // if this is a generic instantiation, fix all specializations.
-    if (generic) {
-        for (SpecializationCache::iterator iter = generic->begin();
-             iter != generic->end();
-             ++iter
-             )
-            iter->second = iter->second->replaceAllStubs(context);
-    }
-
-    if (templateType)
-        templateType =
-            TypeDefPtr::rcast(templateType->replaceAllStubs(context));
-
-    // We don't need to worry about meta, metas only have dependencies on 
-    // other metas, and the meta itself should never be stubbed since it is 
-    // created at the same time as the class.
-    
-    for (VarDefMap::iterator iter = defs.begin(); iter != defs.end(); ++iter)
-        iter->second = iter->second->replaceAllStubs(context);
-    
-    return this;
-}
-
-TypeDefPtr TypeDef::getStubAncestor() {
-    if (isStub())
-        return this;
-    
-    for (TypeVec::const_iterator iter = parents.begin();
-         iter != parents.end();
-         ++iter
-         ) {
-        TypeDefPtr result = (*iter)->getStubAncestor();
-        if (result)
-            return result;
-    }
-
-    return 0;
 }

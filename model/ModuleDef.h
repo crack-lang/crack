@@ -205,15 +205,6 @@ class ModuleDef : public VarDef, public Namespace {
         ModuleDefPtr deserializeSlaveRef(Deserializer &deser);
 
         /**
-         * Replace all stubs in the symbol table.  This can be used 
-         * independently to fix cyclically referenced stubs in a newly 
-         * materialized module.
-         */
-        void replaceStubsInDefs(Context &context);
-
-        virtual VarDefPtr replaceAllStubs(Context &context);
-        
-        /**
          * Looks up a type in the module for purposes of generic 
          * instantiation.  Unlike lookUp(), this does the right thing for stub 
          * modules.

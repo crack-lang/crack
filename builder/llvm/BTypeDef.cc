@@ -13,7 +13,6 @@
 #include <llvm/IR/GlobalVariable.h>
 #include <llvm/IR/Module.h>
 #include "model/Context.h"
-#include "model/ModuleStub.h"
 #include "model/OverloadDef.h"
 #include "PlaceholderInstruction.h"
 #include "VTableBuilder.h"
@@ -309,57 +308,7 @@ void BTypeDef::fixIncompletes(Context &context) {
     complete = true;
 }
 
-namespace {
-    struct DeserializedCallback : ModuleStub::Callback {
-        LLVMBuilderPtr builder;
-        BTypeDefPtr vtableBaseType, type;
-
-        DeserializedCallback(LLVMBuilder *builder, BTypeDef *vtableBaseType,
-                             BTypeDef *type
-                             ) :
-            builder(builder),
-            vtableBaseType(vtableBaseType),
-            type(type) {
-        }
-        
-        static void buildVTableOrDefer(LLVMBuilder *builder, 
-                                       BTypeDef *vtableBaseType,
-                                       BTypeDef *type
-                                       ) {
-            // if there are stub ancestors, we need to defer processing until 
-            // the module is materialized - otherwise we can't create vtables.
-            if (TypeDefPtr stubAncestor = type->getStubAncestor()) {
-                SPUG_CHECK(false,
-                           "While building vtable, found a stub ancestor: " <<
-                            stubAncestor->getFullName() << " of class: " << type->getFullName() <<
-                            endl
-                           );
-                ModuleStubPtr moduleStub =
-                    ModuleStubPtr::rcast(stubAncestor->getModule());
-                SPUG_CHECK(moduleStub->getFullName() != 
-                            type->getModule()->getFullName(),
-                           "Attempting to replace the stub for ancestor " <<
-                            stubAncestor->getDisplayName() << " of type " <<
-                            type->getDisplayName() << 
-                            " when both are from module: " <<
-                            moduleStub->getFullName()
-                           );
-                moduleStub->registerCallback(
-                    new DeserializedCallback(builder, vtableBaseType, type)
-                );
-            } else {
-                VTableBuilder vtb(builder, vtableBaseType);
-                type->createAllVTables(vtb, ".vtable." + type->getFullName());
-                vtb.materialize(type);
-            }
-        }
-
-        virtual void run(Context &context) {
-            buildVTableOrDefer(builder.get(), vtableBaseType.get(), type.get());
-        }
-    };
-}        
-
+// XXX think this can go away, too.
 void BTypeDef::onDeserialized(Context &context) {
     // fix up all of our contents.    
     onNamespaceDeserialized(context);
@@ -367,11 +316,11 @@ void BTypeDef::onDeserialized(Context &context) {
 
 void BTypeDef::materializeVTable(Context &context) {
     if (hasVTable) {
-        DeserializedCallback::buildVTableOrDefer(
-            LLVMBuilderPtr::cast(&context.builder),
-            BTypeDefPtr::arcast(context.construct->vtableBaseType),
-            this
-        );
+        VTableBuilder vtb(LLVMBuilderPtr::cast(&context.builder), 
+                          BTypeDefPtr::arcast(context.construct->vtableBaseType)
+                          );
+        createAllVTables(vtb, ".vtable." + getFullName());
+        vtb.materialize(this);
     }
 }        
 
@@ -381,21 +330,4 @@ void BTypeDef::setClassInst(llvm::GlobalVariable *classInst) {
                );
     this->classInst = classInst;
     this->classInstType = classInst->getType()->getElementType();
-}
-    
-
-TypeDefPtr BTypeDef::getSpecializationStubSafe(Context &context, 
-                                               TypeDef::TypeVecObj *types
-                                               ) {
-    for (TypeVecObj::iterator iter = types->begin(); iter != types->end();
-        ++iter
-        )
-        if ((*iter)->isStub())
-            return ModuleStub::createGenericStub(context.ns->getModule().get(),
-                                                iter->get(),
-                                                this,
-                                                types
-                                                );
-    
-    return 0;
 }
