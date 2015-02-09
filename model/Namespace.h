@@ -298,12 +298,6 @@ class Namespace : public virtual spug::RCBase {
          * Returns the next object id after deserialization.
          */
         static void deserializeTypeDecls(Deserializer &deser);
-        
-        /**
-         * Helper function for closing off module serialization.  Calls 
-         * "onDeserialized()" for all defs in the namespace.
-         */
-        void onNamespaceDeserialized(Context &context);
 };
 
 inline std::ostream &operator <<(std::ostream &out, const Namespace &ns) {

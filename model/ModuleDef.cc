@@ -348,7 +348,6 @@ ModuleDefPtr ModuleDef::deserialize(Deserializer &deser,
     mod->metaDigest = deser.hasher.getDigest();
     mod->sourcePath = sourcePath;
     mod->sourceDigest = recordedSourceDigest;
-    mod->onDeserialized(*deser.context);
 
     if (Serializer::trace)
         cerr << ">>>> Finished deserializing module " << canonicalName << endl;

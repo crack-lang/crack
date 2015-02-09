@@ -492,13 +492,3 @@ void Namespace::deserializeDefs(Deserializer &deser) {
     Serializer::StackFrame<Deserializer> digestState(deser, false);
     deserializeDefs(deser, "#privateDefs", false);
 }
-
-void Namespace::onNamespaceDeserialized(Context &context) {
-    for (VarDefMap::iterator iter = defs.begin();
-         iter != defs.end();
-         ++iter
-         ) {
-        if (iter->second->getOwner() == this)
-            iter->second->onDeserialized(context);
-    }
-}

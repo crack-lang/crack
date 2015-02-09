@@ -145,9 +145,6 @@ public:
      */
     void fixIncompletes(model::Context &context);
 
-    // See VarDef.
-    virtual void onDeserialized(model::Context &context);
-
     // See TypeDef.
     virtual void materializeVTable(model::Context &context);
 

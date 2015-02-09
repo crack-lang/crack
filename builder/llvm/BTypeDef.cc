@@ -308,12 +308,6 @@ void BTypeDef::fixIncompletes(Context &context) {
     complete = true;
 }
 
-// XXX think this can go away, too.
-void BTypeDef::onDeserialized(Context &context) {
-    // fix up all of our contents.    
-    onNamespaceDeserialized(context);
-}
-
 void BTypeDef::materializeVTable(Context &context) {
     if (hasVTable) {
         VTableBuilder vtb(LLVMBuilderPtr::cast(&context.builder), 

@@ -65,8 +65,6 @@ public:
 
     void recordDependency(ModuleDef *other);
 
-    virtual void onDeserialized(model::Context &context);
-
     /**
      * Clears the 'rep' and 'module' fields from all constants so there's no
      * chance that they can coincidentally match another module.

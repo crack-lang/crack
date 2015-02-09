@@ -59,10 +59,6 @@ void BModuleDef::recordDependency(ModuleDef *other) {
     orderedForCache.push_back(def.get());
 }
 
-void BModuleDef::onDeserialized(Context &context) {
-    onNamespaceDeserialized(context);
-}
-
 void BModuleDef::clearRepFromConstants() {
     SPUG_FOR(vector<BStrConstPtr>, i, stringConstants) {
         (*i)->module = 0;
