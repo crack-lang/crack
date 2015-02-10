@@ -187,6 +187,17 @@ FuncDefPtr TypeDef::getFuncDef(Context &context,
     return func;
 }
 
+FuncDefPtr TypeDef::getOperNew(Context &context, 
+                               std::vector<ExprPtr> &args
+                               ) const {
+    FuncDefPtr func = context.lookUp("oper new", args, 
+                                     const_cast<TypeDef *>(this)
+                                     );
+    if (func && func->returnType.get() != this)
+        func = 0;
+    return func;
+}
+
 bool TypeDef::hasInstSlot() const {
     return false;
 }

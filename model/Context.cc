@@ -470,36 +470,23 @@ ExprPtr Context::emitConstSequence(TypeDef *type,
                                    ) {
     // see if there is a new function for the type that accepts an element 
     // count.
-    OverloadDefPtr ovld = lookUp("oper new", type);
-    if (!ovld)
-        error(SPUG_FSTR("Cannot construct an instance of type " << 
-                        type->name
-                        )
-              );
-    
-    FuncDef *cons;
-    TypeDef *uintType = construct->uintType.get();
     vector<ExprPtr> consArgs(1);
     consArgs[0] = builder.createIntConst(*this, elems.size());
-    cons = ovld->getMatch(*this, consArgs, false);
-    ConstSequenceExprPtr expr = new ConstSequenceExpr(type);
-    
-    if (cons) {
-        expr->container = builder.createFuncCall(cons);
-        expr->container->args = consArgs;
-
-    // no 'oper new(uint)', try to find a default constructor.
-    } else {
+    FuncDefPtr cons = type->getOperNew(*this, consArgs);
+    if (!cons) {
         consArgs.clear();
-        cons = ovld->getMatch(*this, consArgs, false);
-        if (!cons || cons->getOwner() != type)
-            error(SPUG_FSTR(type->name << " has neither a constructor "
-                             "accepting a uint nor a default constructor."
-                            )
-                  );
-        
-        expr->container = builder.createFuncCall(cons);
+        cons = type->getOperNew(*this, consArgs);
     }
+
+    if (!cons)
+        error(SPUG_FSTR(type->name << " has neither a constructor "
+                         "accepting a uint nor a default constructor."
+                        )
+              );
+
+    ConstSequenceExprPtr expr = new ConstSequenceExpr(type);
+    expr->container = builder.createFuncCall(cons.get());
+    expr->container->args = consArgs;
     
     // create append calls for each of the elements
     for (int i = 0; i < elems.size(); ++i) {
@@ -516,6 +503,7 @@ ExprPtr Context::emitConstSequence(TypeDef *type,
 
         // if there's no appender, try looking up index assignment
         } else {
+            TypeDef *uintType = construct->uintType.get();
             args.insert(args.begin(),
                         builder.createIntConst(*this, i, uintType)
                         );

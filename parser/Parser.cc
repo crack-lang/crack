@@ -1616,10 +1616,7 @@ void Parser::parseInitializers(Initializers *inits, Expr *receiver) {
             parseMethodArgs(args);
             
             // look up the appropriate constructor
-            FuncDefPtr operNew = 
-               context->lookUp("oper new", args, 
-                               varDef->type.get()
-                               );
+            FuncDefPtr operNew = varDef->type->getFuncDef(*context, args);
             if (!operNew)
                error(tok2,
                      SPUG_FSTR("No matching constructor found for instance "

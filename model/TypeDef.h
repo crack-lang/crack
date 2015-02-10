@@ -200,6 +200,16 @@ class TypeDef : public VarDef, public Namespace {
                                       ) const;
         
         /**
+         * Returns the 'oper new' function for the class matching the given 
+         * args or null if none exists.
+         * This is equivalent to getFuncDef() except it does not produce an 
+         * error if the function is not found.
+         */
+        FuncDefPtr getOperNew(Context &context,
+                              std::vector<ExprPtr> &args
+                              ) const;
+        
+        /**
          * Overrides VarDef::hasInstSlot() to return false (nested classes 
          * don't need an instance slot).
          */

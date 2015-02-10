@@ -1,0 +1,12 @@
+%%TEST%%
+constructor selection in sequence constants
+%%ARGS%%
+%%FILE%%
+# Make sure we don't use A.oper init(int) when constructing a sequence for B.
+class A { oper init() {} oper init(int c) {} void append(int i) {} }
+class B : A {}
+x := B![1, 2, 3];
+puts('ok');
+%%EXPECT%%
+ok
+%%STDIN%%

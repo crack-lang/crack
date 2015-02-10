@@ -1,0 +1,20 @@
+%%TEST%%
+Instance initializer constructor selection.
+%%ARGS%%
+%%FILE%%
+# Make sure we get an error in an instance variable initializer when matching
+# a constructor from the variable's base class that isn't in the variable's
+# class.
+class A { oper init() {} oper init(int c) {} void append(int i) {} }
+class B : A {}
+
+class C {
+    B b;
+    oper init() : b(100) {}
+}
+
+puts('fail');
+
+%%EXPECT%%
+ParseError: %SCRIPTNAME%:9:24: No constructor for B with these argument types: (int).  (Ancestor class A has a matching constructor)
+%%STDIN%%
