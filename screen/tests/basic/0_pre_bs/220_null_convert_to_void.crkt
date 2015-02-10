@@ -1,0 +1,8 @@
+%%TEST%%
+get an error when converting null to void.
+%%ARGS%%
+%%FILE%%
+void f() { return null; }
+%%EXPECT%%
+ParseError: %SCRIPTNAME%:1:19: Invalid return type voidptr for function returning void
+%%STDIN%%

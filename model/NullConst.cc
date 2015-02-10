@@ -20,6 +20,8 @@ ResultExprPtr NullConst::emit(Context &context) {
 }
 
 ExprPtr NullConst::convert(Context &context, TypeDef *newType) {
+    if (newType->matches(*context.construct->voidType))
+        return 0;
     return new NullConst(newType);
 }
 
