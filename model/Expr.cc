@@ -7,6 +7,7 @@
 
 #include "Expr.h"
 
+#include "spug/check.h"
 #include "spug/StringFmt.h"
 #include "builder/Builder.h"
 #include "Context.h"
@@ -61,10 +62,29 @@ bool Expr::isAdaptive() const {
 ExprPtr Expr::foldConstants() { return this; }
 
 ExprPtr Expr::makeCall(Context &context, FuncCall::ExprVec &args) const {
-    context.error(SPUG_FSTR("Instance of " << type->getDisplayName() <<
-                             " is not callable."
-                            )
-                  );
+    FuncDefPtr func = context.lookUp("oper call", args, type.get());
+    if (!func)
+        context.error(SPUG_FSTR("Instance of " << type->getDisplayName() <<
+                                 " does not have an 'oper call' method "
+                                 " and can not be called."
+                                )
+                      );
+    SPUG_CHECK(!func->isExplicitlyScoped(),
+               "Unexpected use of an explicitly scoped function in a "
+                "general expression."
+               );
+    FuncCallPtr funcCall = context.builder.createFuncCall(func.get());
+    funcCall->args = args;
+    if (func->needsReceiver()) {
+        SPUG_CHECK(type->isDerivedFrom(func->receiverType.get()),
+                   "Receiver in an 'oper call' is not the type that it "
+                    "was obtained from.  receiver type = " <<
+                    func->receiverType->getDisplayName() <<
+                    " expr type = " << type->getDisplayName()
+                   );
+        funcCall->receiver = const_cast<Expr *>(this);
+    }
+    return funcCall;
 }
 
 void Expr::dump() const { writeTo(std::cerr); }

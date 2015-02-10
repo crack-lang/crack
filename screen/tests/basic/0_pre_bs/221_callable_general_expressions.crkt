@@ -1,0 +1,38 @@
+%%TEST%%
+general expressions are callable
+%%ARGS%%
+%%FILE%%
+# Exercises the Expr::makeCall() method.
+class A {
+     void oper call() {
+          puts('called instance');
+     }
+
+     void method(int i) {
+          puts('called method');
+     }
+}
+
+A()();
+
+void f() { puts('called function'); }
+function[void] getF() { return f; }
+getF()();
+
+function[void, A, int] getMethod() { return A.method; }
+getMethod()(A(), 100);
+
+class B {
+     @static void oper call() {
+          puts('called static oper call');
+     }
+}
+
+B()();
+
+%%EXPECT%%
+called instance
+called function
+called method
+called static oper call
+%%STDIN%%
