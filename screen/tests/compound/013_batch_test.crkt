@@ -224,6 +224,13 @@ test.mod('mod1', "
     ");
 test.run();
 
+test.mod('mod1', "
+    class A[T] {}
+    alias AI = A[int];
+    ");
+test.main("import mod1 AI;");
+test.run();
+
 %%REXPECT%%
 out: alias
 terminated: success
@@ -275,6 +282,9 @@ out: generic dependencies
 terminated: success
 err: ParseError: ./mod2.crk:3:1: Instance of mod1.A has no member f
 err:   in generic instantiation at .*/main.crk:4:4
+err:\s*
+terminated, rc = 2049
+err: ParseError: .*/main.crk:1:13: Name AI does not belong to module mod1.  Second-order imports are not allowed.
 err:\s*
 terminated, rc = 2049
 %%STDIN%%

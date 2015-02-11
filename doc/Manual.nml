@@ -2766,20 +2766,27 @@ Note that this mechanism can not be used to make module protected symbols
 importable.  To import a symbol, it must still be public.  To offer a
 non-public symbol for import, you must define an alias.
 
-Aliases also circumvent the second order import rule: any public alias is
-effectively added to the exported symbols list for the module, making it
-appear as though it were defined in the module itself.  This feature is
-particularly useful for creating aliases for generics:
+Note that aliases by themselves to not circumvent the second-order import 
+rule.  To export symbols from another module you must use @`export_symbols`, 
+and that goes for aliases for generic instantiatons, too:
 
 {{
     import crack.cont.hashmap HashMap;
 
     class MyObj {}
     alias MyMap = HashMap[String, MyObj];
+    
+    # Even though X is defined in this module, X[int] is not because generics 
+    # are instantiated in their own modules.
+    class X[T] {}
+    alias XInt = X[int];
+    
+    @export_symbols MyMap, XInt;
 }}
 
-We can now import #MyMap# from other modules, providing them with a more
-abbreviated name for the type and insulating them from implementation changes.
+We can now import #MyMap# and #XInt# from other modules, providing them with 
+a more abbreviated name for the type and insulating them from implementation 
+changes.
 
 Protocols
 ---------

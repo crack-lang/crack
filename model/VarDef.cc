@@ -129,7 +129,7 @@ namespace {
 }
 
 bool VarDef::isImportableFrom(ModuleDef *module, const string &impName) const {
-    return owner->getRealModule().get() == module ||
+    return owner->getModule().get() == module ||
            module->exports.find(impName) != module->exports.end();
 }
 
