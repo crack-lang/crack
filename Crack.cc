@@ -105,7 +105,7 @@ bool Crack::init() {
     return true;
 }
 
-int Crack::runScript(std::istream &src, const std::string &name) {
+int Crack::runScript(std::istream &src, const std::string &name, bool notAFile) {
     if (!init())
         return 1;
     options->optionMap["mainUnit"] = name;
@@ -117,7 +117,7 @@ int Crack::runScript(std::istream &src, const std::string &name) {
             // from the script.
             options->optionMap["out"] = name + ".bin";
     }
-    return construct->runScript(src, name);
+    return construct->runScript(src, name, notAFile);
 }
 
 void Crack::callModuleDestructors() {

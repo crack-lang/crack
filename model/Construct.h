@@ -362,8 +362,13 @@ class Construct : public spug::RCBase, public Options {
          * @param src the script's source stream.
          * @param name the script's name (for use in error reporting and 
          *  script module creation).
+         * @param notAFile Set to true if the input is not a file and 
+         *  therefore should not be cached (added for scripts read from 
+         *  standard input).
          */
-        int runScript(std::istream &src, const std::string &name);
+        int runScript(std::istream &src, const std::string &name,
+                      bool notAFile
+                      );
 
         /**
          * Returns the current builder.

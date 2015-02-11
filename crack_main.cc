@@ -297,17 +297,16 @@ int main(int argc, char **argv) {
               crack.options->optionMap.end()) {
             crack.options->optionMap["out"] = "crack_output";
         }
-        rc = crack.runScript(cin, "<stdin>");
+        rc = crack.runScript(cin, "<stdin>", true);
     } else {
         // it's the script name - run it.
         ifstream src(argv[optind]);
         if (!src.good()) {
             cerr << "Unable to open: " << argv[optind] << endl;
             rc = -1;
-        }
-        else {
+        } else {
             crack.setArgv(argc - optind, &argv[optind]);
-            rc = crack.runScript(src, argv[optind]);
+            rc = crack.runScript(src, argv[optind], false);
         }
     }
     

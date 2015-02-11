@@ -766,7 +766,7 @@ namespace {
     }
 }
 
-int Construct::runScript(istream &src, const string &name) {
+int Construct::runScript(istream &src, const string &name, bool notAFile) {
     
     // get the canonical name for the script
     string canName = modNameFromFile(name);
@@ -789,7 +789,7 @@ int Construct::runScript(istream &src, const string &name) {
         // we check cacheMode again after init,
         // because it might have been disabled if
         // we couldn't find an appropriate cache directory
-        if (rootContext->construct->cacheMode)
+        if (rootContext->construct->cacheMode && !notAFile)
             modDef = context->materializeModule(canName);
 
         if (modDef) {
