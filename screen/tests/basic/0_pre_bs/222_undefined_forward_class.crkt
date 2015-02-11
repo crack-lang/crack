@@ -1,0 +1,8 @@
+%%TEST%%
+Undefined forward declared classes.
+%%ARGS%%
+%%FILE%%
+class A;
+%%EXPECT%%
+ParseError: %SCRIPTNAME%:2:1: Forward declared type not defined at the end of the block: A
+%%STDIN%%
