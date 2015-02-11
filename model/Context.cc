@@ -361,7 +361,7 @@ void Context::checkForUnresolvedForwards() {
         
         // Check for an unresolved type.
         if (TypeDef *type = TypeDefPtr::rcast(iter->second)) {
-            if (type->forward)
+            if (type->forward && type->getOwner() == ns)
                 error(SPUG_FSTR("Forward declared type not defined at the end " 
                                  "of the block: " << type->getDisplayName()
                                 )
