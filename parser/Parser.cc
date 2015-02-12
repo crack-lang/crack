@@ -180,22 +180,32 @@ FuncDefPtr Parser::lookUpBinOp(const string &op, FuncCall::ExprVec &args) {
 }   
 
 namespace {
-   class ExplicitlyScopedDef : public VarDef {
+   class ExplicitlyScopedDef : public OverloadDef {
       private:
-         VarDefPtr rep;
+         OverloadDefPtr rep;
 
       public:
-         ExplicitlyScopedDef(VarDef *def) :
-            VarDef(def->type.get(), def->name),
+         ExplicitlyScopedDef(OverloadDef *def) :
+            OverloadDef(def->name),
             rep(def) {
-            
+
             // This is a dirty trick: copy the rep's owner so we can pass 
             // access protection rules even though we're not really owned by 
             // the owner's namespace.
             owner = def->getOwner();
             
-            // And the same idea for the impl.
+            // And the same idea for the impl and type.
             impl = def->impl;
+            type = def->type;
+         }
+         
+         // Override the overload def's functions used during conversion.
+         virtual FuncDef *getMatch(TypeDef *type) const {
+            return rep->getMatch(type);
+         }
+         
+         virtual FuncDefPtr getSingleFunction() const {
+            return rep->getSingleFunction();
          }
 
          virtual bool isExplicitlyScoped() const {
@@ -238,8 +248,8 @@ bool Parser::parseScoping(Namespace *ns, VarDefPtr &var, Token &lastName) {
       context->checkAccessible(var.get(), lastName.getData());
       
       // If we got an overload, convert it into an ExplicitlyScopedDef
-      if (OverloadDefPtr::rcast(var))
-         var = new ExplicitlyScopedDef(var.get());
+      if (OverloadDef *ovld = OverloadDefPtr::rcast(var))
+         var = new ExplicitlyScopedDef(ovld);
       
       // Stop when we get something that isn't a namespace.
       if (!(ns = NamespacePtr::rcast(var)))
@@ -3465,8 +3475,8 @@ void Parser::parsePostDot(ExprPtr &expr, TypeDefPtr &type) {
                );
                
       // If we got an overload, convert it into an ExplicitlyScopedDef
-      if (OverloadDefPtr::rcast(def))
-         def = new ExplicitlyScopedDef(def.get());
+      if (OverloadDef *ovld = OverloadDefPtr::rcast(def))
+         def = new ExplicitlyScopedDef(ovld);
 
       expr = context->createVarRef(def.get());
    } else if (def) {

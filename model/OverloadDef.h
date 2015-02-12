@@ -27,6 +27,9 @@ SPUG_RCPTR(OverloadDef);
  * An overloaded function. 
  * Overloads are not currently created by the builder, as they are presumed to 
  * be purely administrative entities with no representation in the backend.
+ * 
+ * TODO: Break out the additional virtual functions (e.g. getMatch(Type)) into 
+ * an interface.
  */
 class OverloadDef : public VarDef {
     public:
@@ -95,8 +98,11 @@ class OverloadDef : public VarDef {
         /**
          * Return the overload matching the requested function type, null if 
          * none exists.
+         * 
+         * This is virtual so we can override it for ExplicitlyScopedDef in 
+         * the parser.
          */
-        FuncDef *getMatch(TypeDef *funcType) const;
+        virtual FuncDef *getMatch(TypeDef *funcType) const;
         
         /**
          * Returns the overload with the matching signature if there is one, 
@@ -200,8 +206,11 @@ class OverloadDef : public VarDef {
         /**
          * If the overload consists of only one function, returns the 
          * function.  Otherwise returns null.
+         * 
+         * This is virtual so we can override it for ExplicitlyScopedDef in 
+         * the parser.
          */
-        FuncDefPtr getSingleFunction() const;
+        virtual FuncDefPtr getSingleFunction() const;
         
         /**
          * Make sure we have an implementation object, create one if we don't.

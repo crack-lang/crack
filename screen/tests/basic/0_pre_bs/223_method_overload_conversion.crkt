@@ -1,0 +1,17 @@
+%%TEST%%
+method overload conversion
+%%ARGS%%
+%%FILE%%
+class A {
+     void f() { puts('f()'); }
+     void f(int i) { puts('f(int)'); }
+}
+
+function[void, A, int] g = A.f;
+g(A(), 100);
+function[void, A] h = A.f;
+h(A());
+%%EXPECT%%
+f(int)
+f()
+%%STDIN%%
