@@ -1,0 +1,15 @@
+%%TEST%%
+arg list mismatch calling a function variable
+%%ARGS%%
+%%FILE%%
+void f() {}
+function[void] g = f;
+g(1);
+%%EXPECT%%
+ParseError: %SCRIPTNAME%:3:4: Instance of function[.builtin.void] cannot be called with arguments (int)
+
+Possible overloads for oper call:
+  void .builtin.function[.builtin.void].oper call()
+
+
+%%STDIN%%

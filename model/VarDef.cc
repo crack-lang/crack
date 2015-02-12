@@ -51,13 +51,21 @@ ResultExprPtr VarDef::emitAssignment(Context &context, Expr *expr) {
 FuncDefPtr VarDef::getFuncDef(Context &context,
                               std::vector<ExprPtr> &args
                               ) const {
-    FuncDefPtr func = context.lookUp("oper call", args, type.get());
-    if (!func)
+    OverloadDefPtr ovld = context.lookUp("oper call", type.get());
+    if (!ovld)
         context.error(SPUG_FSTR("Instance of " << type->getDisplayName() <<
                                  " does not have an 'oper call' method "
                                  " and can not be called."
                                 )
                       );
+    FuncDefPtr func = ovld->getMatch(context, args, true);
+    if (!func) {
+        ostringstream msg;
+        msg << "Instance of " << type->getDisplayName() <<
+            " cannot be called with arguments (" << args << ")" << endl;
+        context.maybeExplainOverload(msg, ovld->name, type.get());
+        context.error(msg.str());
+    }
     return func;
 }
 
