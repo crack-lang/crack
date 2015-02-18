@@ -57,7 +57,7 @@ class FDWriter : FileHandle, Writer {
         write(fd, cstr, strlen(cstr));
     }
 
-    Object _iface_getWriterObject() { return this; }
+    Object oper from Writer() { return this; }
 };
 
 ## Writer for a file descriptor that closes the file descriptor upon
@@ -91,10 +91,10 @@ class OwningFDWriter : FDWriter {
     }
 
     # Since we can't load crack.ann yet, add the interface plumbing manually
-    @abstract Object _iface_getReaderObject();
-    oper bind() { if (!(this is null)) _iface_getReaderObject().oper bind(); }
+    @abstract Object oper from Reader();
+    oper bind() { if (!(this is null)) this.oper from Reader().oper bind(); }
     oper release() {
-        if (!(this is null)) _iface_getReaderObject().oper release();
+        if (!(this is null)) this.oper from Reader().oper release();
     }
 };
 
@@ -119,7 +119,7 @@ class FDReader : FileHandle, Reader {
         return rc;
     }
 
-    Object _iface_getReaderObject() { return this; }
+    Object oper from Reader() { return this; }
 };
 
 ## Reader for a file descriptor that closes the file descriptor upon
@@ -313,8 +313,8 @@ class StandardFormatter : Formatter {
         write(Buffer(buffer.buffer + start, buffer.cap - start));
     }
 
-    Object _iface_getWriterObject() { return this; }
-    Object _iface_getFormatterObject() { return this; }
+    Object oper from Writer() { return this; }
+    Object oper from Formatter() { return this; }
 }
 
 cout := StandardFormatter(FDWriter(1));
@@ -373,7 +373,7 @@ class StringWriter : AppendBuffer, Writer {
         return CString(buffer, size - 1, false);
     }
 
-    Object _iface_getWriterObject() { return this; }
+    Object oper from Writer() { return this; }
 };
 
 ## Lets you wrap an AppendBuffer with a Writer interface.
@@ -387,7 +387,7 @@ class AppendBufferWriter : Object, Writer {
         buffer.extend(data);
     }
 
-    Object _iface_getWriterObject() { return this; }
+    Object oper from Writer() { return this; }
 }
 
 
@@ -413,7 +413,7 @@ class StringReader : Object, Reader {
         return count;
     }
 
-    Object _iface_getReaderObject() { return this; }
+    Object oper from Reader() { return this; }
 }
 
 ## Convenience wrapper, equivalent to StandardFormatter(StringWriter())

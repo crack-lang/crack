@@ -659,9 +659,9 @@ string Parser::parseOperSpec() {
          toker.putBack(tok);
          return "oper []";
       }
-   } else if (ident == "to") {
+   } else if (ident == "to" || ident == "from") {
       TypeDefPtr type = parseTypeSpec();
-      return "oper to " + type->getFullName();
+      return "oper " + ident + " " + type->getFullName();
    } else if (ident == "r") {
       tok = getToken();
       if (tok.isBinOp())
@@ -2851,29 +2851,37 @@ void Parser::parsePostOper(TypeDef *returnType) {
          
          expectToken(Token::lparen, "expected argument list");
          parseFuncDef(returnType, tok, "oper call", normal, -1);
-      } else if (ident == "to") {
+      } else if (ident == "to" || ident == "from") {
          TypeDefPtr type = parseTypeSpec();
 
          // check for instance scope
          if (context->scope != Context::composite)
             error(tok, 
-                  SPUG_FSTR("oper to " << type->getDisplayName() << 
+                  SPUG_FSTR("oper " << ident << ' ' << type->getDisplayName() << 
                              " can only be defined in a class scope."
                             )
                   );
 
-         // make sure that our return types is the type that we're converting 
-         // to.
-         if (!returnType)
-            returnType = type.get();
-         else if (returnType != type.get())
-            error(tok, SPUG_FSTR("oper to " << type->getDisplayName() <<
-                                 " must return " << type->getDisplayName()
+         if (ident == "to") {
+            // make sure that our return types is the type that we're converting 
+            // to.
+            if (!returnType)
+               returnType = type.get();
+            else if (returnType != type.get())
+               error(tok, SPUG_FSTR("oper to " << type->getDisplayName() <<
+                                    " must return " << type->getDisplayName()
+                                    )
+                     );
+         } else if (!returnType) {
+            error(tok, SPUG_FSTR("oper from " << type->getDisplayName() <<
+                                  " requires a return type."
                                  )
                   );
+         }
 
          expectToken(Token::lparen, "expected argument list");
-         parseFuncDef(returnType, tok, "oper to " + type->getFullName(), 
+         parseFuncDef(returnType, tok, 
+                      "oper " + ident + " " + type->getFullName(), 
                       normal,
                       0
                       );

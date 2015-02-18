@@ -1,0 +1,82 @@
+%%TEST%%
+interfaces using "oper from"
+%%ARGS%%
+%%FILE%%
+import crack.io cout;
+@import crack.ann interface, implements;
+import crack.functor Functor1;
+
+if (true) {
+     @interface A {
+          @abstract void f();
+     }
+
+     @interface B {
+          @abstract void g();
+     }
+
+     @interface C : A, B {
+          @abstract void h();
+     }
+
+     class Impl : Object @implements C {
+          void f() {}
+          void g() {}
+          void h() {}
+
+          oper init() {
+               cout `Impl created\n`;
+          }
+
+          oper del() {
+               cout `Impl destroyed\n`;
+          }
+
+     }
+
+     A a = Impl();
+     B b = Impl();
+     C c = Impl();
+}
+
+if (true) {
+     class A : Object @implements Functor1[void, int], Functor1[void, String] {
+          void oper call(int i) {}
+          void oper call(String s) {}
+     }
+
+     @interface Foo : Functor1[void, int] {
+          void oper call(int i) {}
+     }
+
+     alias X = Functor1[void, int];
+     class B : Object @implements X {
+          void oper call(int i) {
+               cout `in B\n`;
+          }
+     }
+
+     @interface C : X {
+          @abstract void f() {}
+     }
+
+     class D : Object @implements C {
+          void oper call(int i) {
+               cout `in D\n`;
+          }
+     }
+
+     B()(100);
+     D()(100);
+}
+
+%%EXPECT%%
+Impl created
+Impl created
+Impl created
+Impl destroyed
+Impl destroyed
+Impl destroyed
+in B
+in D
+%%STDIN%%

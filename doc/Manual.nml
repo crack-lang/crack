@@ -2234,41 +2234,33 @@ This approach has some limitations.  The #@interface# and #@implementation#
 annotations are really just syntactic sugar for class definitions.
 #@interface# generates a class definition from the syntax that follows it and
 injects three special methods: #oper bind()#, #oper release()# and
-#get#/IFaceName/#Object()# (where /IFaceName/ is the name of the interface,
-#Drawable# in the example above).  The #get#/IFaceName/#Object()# methods
-have a return type of #Object# and they exist to provide an instance of
+#oper from# /IFaceName/#()# (where /IFaceName/ is the name of the interface,
+#Drawable# in the example above).  
+
+#oper from# is a special operator created to facilitate interfaces (as well as 
+general translation across inheritance hierarchies).  For interfaces, these methods
+are defined with a return type of #Object# and they exist to provide an instance of
 #Object# for the #oper bind()# and #oper release()# methods to delegate to.
-The #get#/IFaceName/#Object()# methods defined for an interface always return
-null because interfaces are never derived from #Object#: they are derived from
-#VTableBase#.
+These are defined as #@abstract# in the interface class.
 
 #@implements# does something similar with the implementation class:
 for every interface class name that follows it (you can have a comma
-separated list of them) it generates a #get#/IFaceName/#Object()# method that
+separated list of them) it generates an #oper from# /IFaceName/#()# method that
 simply returns "this".  Implementation classes must therefore derive from
 Object, either indirectly or directly and they must do so explicitly. So,
 "#class A @implements IFace#" would be illegal, you'd have to use "#class A
 : Object @implements IFace#" instead.
 
-These annotations are a very weak form of syntactic sugar, as such:
-
--   errors are likely to be non-obvious
--   the methods that they rely on for obtaining an #Object# instance are
-    constructed from the class name, and subject to non-obvious naming
-    conflicts with similarly named methods defined by the programmer.
-
-Annotations are actually implemented as abstract classes containing a special
-method that allows the system to use them as an #Object#.  If you try to
-inherit from them without using #@implements# you will get an error like this:
+These annotations are a very weak form of syntactic sugar that mostly works, 
+however failure to use them correctly may produce non-obvious errors.  For 
+example, if you try to inherit from an interface without using #@implements# 
+(or explicitly defining the #oper from# methods yourself) you'll get an error 
+like:
 
 {{
     ParseError: myfile.crk:100: Non-abstract class Bar has abstract methods:
-      crack.lang.Object myfile.crk.Foo._iface_getFooObject()
+      crack.lang.Object myfile.crk.Foo.oper from myfile.crk.Foo()
 }}
-
-Versions of Crack after 0.9 will continue to provide some form
-of the #@interface# and #@implements# annotations (hopefully a refined form)
-but will ultimately implement them in terms of virtual inheritance.
 
 Special Methods
 '''''''''''''''
@@ -2289,6 +2281,10 @@ invoked using a #null# value as the receiver.
     If this method is defined for a type, instances of the class can be
     implicitly converted to that type.  Specifying the return type is
     optional. If it is specified it must be the same as the type in the name.
+#oper from #/type/::
+    This is a special function used to implement interfaces.  The interface 
+    annotations defines it as an abstract method and the @implements macro 
+    generates an implementation for it.
 #oper del#::
     The destructor.
 #oper bind#::

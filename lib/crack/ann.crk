@@ -885,159 +885,6 @@ class TokenWriter {
     }
 }
 
-## An annotation that defines an interface.
-void interface(CrackContext ctx) {
-    nameTok := ctx.getToken();
-    if (!nameTok.isIdent())
-        ctx.error(nameTok, 'identifier expected for interface name'.buffer);
-
-    # check for generic arguments
-    tok := ctx.getToken();
-    NodeListImpl genericArgs = {};
-    if (tok.isLBracket()) {
-        genericArgs.append(Tok(tok));
-        _parseGenericArgs(ctx, genericArgs);
-    } else {
-        ctx.putBack(tok);
-    }
-
-    # for injecting the bind(), release() and get*Object() methods
-    StringFormatter f = {};
-
-    # check for base interfaces
-    NodeListImpl interfaces = {};
-    tok = ctx.getToken();
-    if (tok.isColon()) {
-        # copied from the @implements annotation below:
-        Array[String] ifaces = {4};
-        Token firstTok;
-        while (true) {
-
-            tok := ctx.getToken();
-
-            if (firstTok is null)
-                firstTok = tok;
-
-            if (tok.isLCurly()) {
-                ctx.putBack(tok);
-                break;
-
-            # store identifiers in an array so we can generate the get*Object()
-            # methods.
-            } else if (tok.isIdent()) {
-                ifaces.append(String(tok.getText()));
-            }
-            interfaces.pushHead(Tok(tok));
-        }
-
-        f `@abstract Object _iface_get$(nameTok.getText())Object();\n`;
-        for (iface :in ifaces)
-            f `    Object _iface_get$(iface)Object() { return _iface_get$(nameTok.getText())Object(); }\n`;
-        f `}\0`;
-
-    } else {
-        ctx.putBack(tok);
-
-        f `
-        @abstract Object _iface_get$(nameTok.getText())Object();
-        @final oper bind() {
-            if (!(this is null))
-                _iface_get$(nameTok.getText())Object().oper bind();
-        }
-        @final oper release() {
-            if (!(this is null))
-                _iface_get$(nameTok.getText())Object().oper release();
-        }
-        @final oper to Object() {
-            if (!(this is null))
-                return _iface_get$(nameTok.getText())Object();
-            else
-                return null;
-        }
-        @final oper to bool() {
-            return !(this is null) &&
-                _iface_get$(nameTok.getText())Object().isTrue();
-        }
-    }\0`;
-
-    }
-
-    # read the body
-    body := readBlock(ctx);
-
-    # remove the closing bracket, store the location for error reporting
-    loc := body.popHead().getLocation();
-
-    ctx.inject(loc.getName(), loc.getLineNumber(), f.string().buffer);
-
-    # expand the body and opening bracket
-    body.expand(ctx, null);
-
-    # expand the base interface list
-    interfaces.expand(ctx, null);
-
-    # inject the class definition
-    loc = nameTok.getLocation();
-    f = StringFormatter();
-    f `@abstract class $(nameTok.getText())$(TokenWriter(genericArgs)) :
-        $(interfaces ? String() : "VTableBase")\0`;
-    ctx.inject(loc.getName(), loc.getLineNumber(), f.string().buffer);
-}
-
-## An annotation to be used before the list of interfaces that a class
-## implements, e.g.
-void implements(CrackContext ctx) {
-    # parse the list of interfaces
-    NodeListImpl interfaces = {};
-    Array[String] ifaces = {4};
-
-    Token firstTok;
-    while (true) {
-        tok := ctx.getToken();
-
-        if (firstTok is null)
-            firstTok = tok;
-
-        if (tok.isLCurly()) {
-            ctx.putBack(tok);
-            break;
-
-        # store identifiers in an array so we can generate the get*Object()
-        # methods.
-        } else if (tok.isIdent()) {
-            ifaces.append(String(tok.getText()));
-        }
-        interfaces.pushHead(Tok(tok));
-    }
-
-    # add a comma to the end of the list (so it will show up at the beginning
-    # of the list when we expand it)
-    interfaces.append(
-        Tok(Token(TOK_COMMA, ",".buffer, firstTok.getLocation()))
-    );
-
-
-    # read the body.
-    body := readBlock(ctx);
-
-    # remove the closing bracket, store the location for error reporting
-    loc := body.popHead().getLocation();
-
-    # inject the get*Object() implementation
-    StringFormatter f = {};
-    for (iface :in ifaces)
-        f `    Object _iface_get$(iface)Object() { return this; }\n`;
-    f `}\0`;
-    ctx.inject(loc.getName(), loc.getLineNumber(), f.string().buffer);
-
-    # inject the body
-    body.expand(ctx, null);
-
-    # inject the interfaces
-    for (node :in interfaces)
-        node.expand(ctx, null);
-}
-
 void warn(CrackContext ctx) {
     tok := ctx.getToken();
     if (!tok.isString())
@@ -1088,7 +935,8 @@ class Type {
         if (!tok.isIdent())
             ctx.error(tok, 'Identifier expected for type name'.buffer);
         String name = {tok.getText()};
-        result.pushHead(Tok(tok));
+        if (!(result is null))
+            result.pushHead(Tok(tok));
         
         Array[Type] params;
         tok = ctx.getToken();
@@ -1096,11 +944,13 @@ class Type {
             
             # got a left bracket, parse the type parameters
             params = Array[Type]();
-            result.pushHead(Tok(tok));
+            if (!(result is null))
+                result.pushHead(Tok(tok));
             while (true) {
                 params.append(Type.parse(ctx, result));
                 tok = ctx.getToken();
-                result.pushHead(Tok(tok));
+                if (!(result is null))
+                    result.pushHead(Tok(tok));
                 if (tok.isRBracket()) {
                     break;
                 } else if (!tok.isComma()) {
@@ -1276,7 +1126,8 @@ String _capitalize(String str) {
     return str;
 }
 
-# quickly create property accessors, inspired by Ruby's attr_accessor and C#'s properties
+# quickly create property accessors, inspired by Ruby's attr_accessor and 
+# C#'s properties.
 void property(CrackContext ctx) {
     readonlyAttr := ctx.getToken();
     ctx.putBack(readonlyAttr);
@@ -1366,4 +1217,162 @@ void property(CrackContext ctx) {
     # field
     ctx.inject(@FILE.buffer, @LINE, FStr() `_$(nameToken.getText()); \0`.buffer);
     typeNodes.expand(ctx, null);
+}
+
+## An annotation that defines an interface.
+void interface(CrackContext ctx) {
+    nameTok := ctx.getToken();
+    if (!nameTok.isIdent())
+        ctx.error(nameTok, 'identifier expected for interface name'.buffer);
+
+    # check for generic arguments
+    tok := ctx.getToken();
+    NodeListImpl genericArgs = {};
+    if (tok.isLBracket()) {
+        genericArgs.append(Tok(tok));
+        _parseGenericArgs(ctx, genericArgs);
+    } else {
+        ctx.putBack(tok);
+    }
+
+    # for injecting the bind(), release() and get*Object() methods
+    StringFormatter f = {};
+
+    # check for base interfaces
+    NodeListImpl interfaces = {};
+    tok = ctx.getToken();
+    if (tok.isColon()) {
+        # copied from the @implements annotation below:
+        Array[Type] ifaces = {4};
+        Token firstTok;
+        while (true) {
+
+            tok := ctx.getToken();
+
+            if (firstTok is null)
+                firstTok = tok;
+
+            if (tok.isLCurly()) {
+                ctx.putBack(tok);
+                break;
+
+            # store identifiers in an array so we can generate the get*Object()
+            # methods.
+            } else if (tok.isIdent()) {
+                ctx.putBack(tok);
+                ifaces.append(Type.parse(ctx, interfaces));
+                continue;
+            }
+            interfaces.pushHead(Tok(tok));
+        }
+
+        f `@abstract Object oper from $(nameTok.getText())();\n`;
+        for (iface :in ifaces)
+            f I`    Object oper from $(iface) () {
+                        return this.oper from $(nameTok.getText())(); }\n`;
+        f `}\0`;
+
+    } else {
+        ctx.putBack(tok);
+
+        f `
+        @abstract Object oper from $(nameTok.getText())();
+        @final oper bind() {
+            if (!(this is null))
+                this.oper from $(nameTok.getText())().oper bind();
+        }
+        @final oper release() {
+            if (!(this is null))
+                this.oper from $(nameTok.getText())().oper release();
+        }
+        @final oper to Object() {
+            if (!(this is null))
+                return this.oper from $(nameTok.getText())();
+            else
+                return null;
+        }
+        @final oper to bool() {
+            return !(this is null) &&
+                this.oper from $(nameTok.getText())().isTrue();
+        }
+    }\0`;
+
+    }
+
+    # read the body
+    body := readBlock(ctx);
+
+    # remove the closing bracket, store the location for error reporting
+    loc := body.popHead().getLocation();
+
+    ctx.inject(loc.getName(), loc.getLineNumber(), f.string().buffer);
+
+    # expand the body and opening bracket
+    body.expand(ctx, null);
+
+    # expand the base interface list
+    interfaces.expand(ctx, null);
+
+    # inject the class definition
+    loc = nameTok.getLocation();
+    f = StringFormatter();
+    f `@abstract class $(nameTok.getText())$(TokenWriter(genericArgs)) :
+        $(interfaces ? String() : "VTableBase")\0`;
+    ctx.inject(loc.getName(), loc.getLineNumber(), f.string().buffer);
+}
+
+## An annotation to be used before the list of interfaces that a class
+## implements, e.g.
+void implements(CrackContext ctx) {
+    # parse the list of interfaces
+    NodeListImpl interfaces = {};
+    Array[Type] ifaces = {4};
+
+    Token firstTok;
+    while (true) {
+        tok := ctx.getToken();
+
+        if (firstTok is null)
+            firstTok = tok;
+
+        if (tok.isLCurly()) {
+            ctx.putBack(tok);
+            break;
+
+        # store identifiers in an array so we can generate the oper from *()
+        # methods.
+        } else if (tok.isIdent()) {
+            ctx.putBack(tok);
+            ifaces.append(Type.parse(ctx, interfaces));
+            continue;
+        }
+        interfaces.pushHead(Tok(tok));
+    }
+
+    # add a comma to the end of the list (so it will show up at the beginning
+    # of the list when we expand it)
+    interfaces.append(
+        Tok(Token(TOK_COMMA, ",".buffer, firstTok.getLocation()))
+    );
+
+
+    # read the body.
+    body := readBlock(ctx);
+
+    # remove the closing bracket, store the location for error reporting
+    loc := body.popHead().getLocation();
+
+    # inject the get*Object() implementation
+    StringFormatter f = {};
+    for (iface :in ifaces) 
+        f `    Object oper from $iface() { return this; }\n`;
+    f `}\0`;
+    ctx.inject(loc.getName(), loc.getLineNumber(), f.string().buffer);
+
+    # inject the body
+    body.expand(ctx, null);
+
+    # inject the interfaces
+    for (node :in interfaces)
+        node.expand(ctx, null);
 }

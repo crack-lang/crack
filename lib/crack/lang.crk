@@ -138,16 +138,16 @@ class Buffer;
     void flush() {}
 
     # since we can't load annotations yet, implement an interface by hand
-    @abstract Object _iface_getWriterObject();
-    oper bind() { if (!(this is null)) _iface_getWriterObject().oper bind(); }
+    @abstract Object oper from Writer();
+    oper bind() { if (!(this is null)) this.oper from Writer().oper bind(); }
     oper release() {
-        if (!(this is null)) _iface_getWriterObject().oper release();
+        if (!(this is null)) this.oper from Writer().oper release();
     }
 }
 
 @abstract class Formatter : Object, Writer {
 
-    @abstract Object _iface_getFormatterObject();
+    @abstract Object oper from Formatter();
     @abstract void format(StaticString data);
 
     @abstract void format(int16 val);
@@ -1054,7 +1054,7 @@ void uncaughtExceptionHandler(Object ex) {
     class StdErr : Object, Writer {
         void write(Buffer buf) { write(2, buf.buffer, buf.size); }
         void write(byteptr string) { write(2, string, strlen(string)); }
-        Object _iface_getWriterObject() { return this; }
+        Object oper from Writer() { return this; }
     }
 
     writer := StdErr();
