@@ -2249,7 +2249,13 @@ separated list of them) it generates an #oper from# /IFaceName/#()# method that
 simply returns "this".  Implementation classes must therefore derive from
 Object, either indirectly or directly and they must do so explicitly. So,
 "#class A @implements IFace#" would be illegal, you'd have to use "#class A
-: Object @implements IFace#" instead.
+: Object @implements IFace#" instead.  You can avoid the additional verbosity 
+by using the #@impl# annotation, which also expands the ": Object" part, 
+letting you write:
+
+{{
+    class A @impl IFace {
+}}
 
 These annotations are a very weak form of syntactic sugar that mostly works, 
 however failure to use them correctly may produce non-obvious errors.  For 
@@ -2260,6 +2266,19 @@ like:
 {{
     ParseError: myfile.crk:100: Non-abstract class Bar has abstract methods:
       crack.lang.Object myfile.crk.Foo.oper from myfile.crk.Foo()
+}}
+
+Likewise, redefining the name of an interface class from within an interface 
+or its implementation is bad:
+
+{{
+    @interface A {
+        void A() {}  # DON'T DO THIS.
+    }
+    
+    class B @impl A {
+        void A() {}  # OR THIS.
+    }
 }}
 
 Special Methods
@@ -2470,7 +2489,7 @@ to represent our actions:
         void run() { ... }
     }
 
-    class Alarm : Object @implements Functor0[void] {
+    class Alarm @impl Functor0[void] {
         void oper call() {
             cout `Time to wake up!\n`;
         }
@@ -2484,7 +2503,7 @@ to represent our actions:
 functor we would use #Functor2#:
 
 {{
-    class CompareX : Object @implements Functor2[int, MyObj, MyObj] {
+    class CompareX @impl Functor2[int, MyObj, MyObj] {
         int oper call(MyObj a, MyObj b) {
             return cmp(a.x, b.x);
         }
@@ -3588,8 +3607,8 @@ Crack defines the following special built-in annotations:
 The Standard Annotations
 ''''''''''''''''''''''''
 
-The #crack.ann# module defines a set of standard annotations.  Two of them
-are #@interface# and #@implements# where are documented above in
+The #crack.ann# module defines a set of standard annotations.  Three of them
+are #@interface#, #@implements# and #@impl# where are documented above in
 \X(Interfaces).  The others allow you to define macros.  Crack macros are
 similar to C preprocessor macros with some improvements.
 

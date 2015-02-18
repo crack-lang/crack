@@ -1321,9 +1321,7 @@ void interface(CrackContext ctx) {
     ctx.inject(loc.getName(), loc.getLineNumber(), f.string().buffer);
 }
 
-## An annotation to be used before the list of interfaces that a class
-## implements, e.g.
-void implements(CrackContext ctx) {
+void _implements(CrackContext ctx, bool emitObject) {
     # parse the list of interfaces
     NodeListImpl interfaces = {};
     Array[Type] ifaces = {4};
@@ -1355,7 +1353,6 @@ void implements(CrackContext ctx) {
         Tok(Token(TOK_COMMA, ",".buffer, firstTok.getLocation()))
     );
 
-
     # read the body.
     body := readBlock(ctx);
 
@@ -1375,4 +1372,22 @@ void implements(CrackContext ctx) {
     # inject the interfaces
     for (node :in interfaces)
         node.expand(ctx, null);
+    
+    # emit ": Object" for @impl
+    if (emitObject) {
+        loc = firstTok.getLocation();
+        ctx.inject(loc.getName(), loc.getLineNumber(), ': Object'.buffer);
+    }
+}
+
+## An annotation to be used before the list of interfaces that a class
+## implements, e.g.
+void implements(CrackContext ctx) {
+    _implements(ctx, false);
+}
+
+## Shorthand so we can say "class A @impl IFace" instead of 
+## "class A : Object @implements IFace"
+void impl(CrackContext ctx) {
+    _implements(ctx, true);
 }

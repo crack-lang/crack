@@ -7,7 +7,7 @@
 
 import crack.io cout, StringFormatter;
 import crack.cont.array Array;
-@import crack.ann define, interface, implements;
+@import crack.ann define, interface, impl, implements;
 @import test.testmac foo, bar, tm_concat, tm_stringify;
 
 @define oneHundred() { 100 }
@@ -89,6 +89,18 @@ result = StringFormatter();
 b = null;
 if (result.string() != 'Bar deleted')
     cout `Failed on interface cleanup\n`;
+
+if (true) {
+    result = StringFormatter();
+    class Baz @impl Foo {
+        void do() { result `baz function called` }
+    }
+
+    Foo f = Baz();
+    f.do();
+    if (result.string() != 'baz function called')
+        cout `Failed @impl annotation.`;
+}
 
 if (1) {
     @interface Gen1[A] { A a; }
