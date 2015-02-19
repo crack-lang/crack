@@ -18,6 +18,9 @@
 #   Makes a class implement the list of interfaces that follows them (this
 #   mainly entails doing normal class derivation and implementing the
 #   'get<interface>Object()' method.
+# class A @impl I, J { ... }
+#   Equivalent to "class A : Object I, J { ... }".  Shorthand for the most 
+#   common case.
 
 import crack.compiler CrackContext, Location, Token, TOK_COMMA, TOK_LCURLY,
     TOK_LPAREN, TOK_POPERRCTX, TOK_RCURLY, TOK_RPAREN, TOK_STRING;
