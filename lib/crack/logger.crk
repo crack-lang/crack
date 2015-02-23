@@ -18,7 +18,7 @@ import crack.runtime usecs;
 import crack.strutil StringArray;
 import crack.sys argv, env;
 import crack.time Date;
-@import crack.ann define, implements;
+@import crack.ann define, impl;
 
 defaultTimeFormat := "%Y-%m-%dT%H:%M:%S";
 
@@ -111,7 +111,7 @@ class LevelField : MessageField {
     }
 }
 
-class Logger : Object @implements Functor2[void, uint, String] {
+class Logger @impl Functor2[void, uint, String] {
     LoggerOptions options;
     Array[MessageField] _fields;
     HashMap[String, MessageField] _availableFields;

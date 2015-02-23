@@ -21,7 +21,7 @@ import crack.functor Functor2;
 
 import crack.io cerr;
 
-@import crack.ann define, interface, implements;
+@import crack.ann define, interface, impl;
 
 // see Process.h in  runtime
 const int
@@ -53,7 +53,7 @@ FDWriter _makeWriter(Process proc, int fd);
 ## Implements ProcessHandler and provides the translation from the data 
 ## handlers to the line handlers, making it easy to implement any combination 
 ## of line reader and data reader for a process.
-class ProcessHandlerImpl : Object @implements ProcessHandler {
+class ProcessHandlerImpl @impl ProcessHandler {
     AppendBuffer outBuf = {1024}, errBuf = {1024};
     bool outDone, errDone;
 
@@ -124,8 +124,7 @@ class Process {
     # that react to input events by reading from the appropriate stream and 
     # passing the data the cooresponding methods in ProcessHandler.
     @define __callback(dst) {
-        class __$$dst$$Callback : Object 
-                @implements Functor2[int, Poller, PollEvent] {
+        class __$$dst$$Callback @impl Functor2[int, Poller, PollEvent] {
             ManagedBuffer buf = {1024};
             __Status status;
             

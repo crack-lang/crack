@@ -9,7 +9,7 @@ import crack.lang die;
 import crack.io cout, Writer;
 import crack.regex escape, Regex, Match;
 import crack.functor Functor2;
-@import crack.ann implements;
+@import crack.ann impl;
 
 rx := Regex('simple');
 m := rx.search('not simple');
@@ -78,7 +78,7 @@ if (1) {
 
 # simple test of functors
 if (1) {
-    class F : Object @implements Functor2[void, Match, Writer] {
+    class F @impl Functor2[void, Match, Writer] {
         void oper call(Match mx, Writer out) {
             if (mx.group() != 'pat')
                 cout `FAILED match during value replacement.\n`;

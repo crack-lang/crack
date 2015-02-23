@@ -16,7 +16,7 @@ import crack.net Address, InetAddress, Poller, PollEvent, Socket, UnixAddress,
 import crack.runtime read, write;
 import crack.time TimeDelta;
 
-@import crack.ann implements;
+@import crack.ann impl;
 
 Poller _poller;
 
@@ -69,8 +69,7 @@ class ConnectionState {
 ## all of the actual reading and writing and buffer management, delegating
 ## processing of the contents of the buffers to the user connection handler
 ## functor.
-class ConnectionController : Object
-                             @implements Functor2[int, Poller, PollEvent] {
+class ConnectionController @impl Functor2[int, Poller, PollEvent] {
     AppendBuffer outbuf, inbuf;
     Functor1[void, ConnectionState] handler;
 
@@ -152,7 +151,7 @@ class ConnectionController : Object
 ##  XXX really think about this.
 ## The server creates an instance of one of these
 ## every time a new client connects to the server.
-class IP4Server[Factory] : Object @implements Functor2[int, Poller, PollEvent] {
+class IP4Server[Factory] @impl Functor2[int, Poller, PollEvent] {
     Poller __poller;
     Socket __socket;
     alias ConnHandler = typeof(Factory.makeConnectionHandler(null));

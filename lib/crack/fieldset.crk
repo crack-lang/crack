@@ -55,7 +55,7 @@
 
 import crack.cont.hashmap HashMap;
 
-@import crack.ann interface, implements;
+@import crack.ann interface, impl;
 
 ## Interface for objects that allow you to store and retrieve arbitrary fields.
 @interface FieldSet {
@@ -70,7 +70,7 @@ import crack.cont.hashmap HashMap;
 }
 
 ## Implements FieldSet as a HashMap.
-class HashMapFieldSet : Object @implements FieldSet {
+class HashMapFieldSet @impl FieldSet {
     alias __FieldMap = HashMap[uintz, Object];
     __FieldMap __map;
 

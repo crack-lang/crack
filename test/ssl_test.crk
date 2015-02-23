@@ -14,7 +14,7 @@ import crack.ext._ssl SSL_library_init, BIO, SSL, SSL_CTX, SSLv23_method,
     SSL_ERROR_WANT_READ;
 @import crack.ann assert, implements;
 
-class SSLStuff : Object @implements Reader, Writer {
+class SSLStuff @impl Reader, Writer {
     String name;
     SSL_CTX ctx = SSL_CTX_new(SSLv23_method());
     SSL ssl;
@@ -65,7 +65,7 @@ class SSLStuff : Object @implements Reader, Writer {
         return rd.write(buf.buffer, buf.size);
     }
 
-    class ChannelInterface : Object @implements Reader, Writer {
+    class ChannelInterface @impl Reader, Writer {
         SSLStuff ssl;
         oper init(SSLStuff ssl) : ssl = ssl {}
         uint read(WriteBuffer buf) { return ssl.readBIO(buf); }

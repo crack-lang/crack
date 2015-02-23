@@ -9,7 +9,7 @@ import crack.io cout, cerr, FDReader, Formatter, FStr, Reader, Writer;
 import crack.time TimeDelta;
 import crack.net Poller;
 import crack.runtime TimeVal, floor;
-@import crack.ann define, interface, implements, struct;
+@import crack.ann define, interface, impl, struct;
 import crack.cont.list List;
 import crack.math cos, sin, sqrt;
 import crack.ext._sdl SDL_Event, SDL_EventNew, SDL_Event_GetType, 
@@ -1086,7 +1086,7 @@ class Sphere {
 }
 
 ## An abstract triangle.
-class Tri : Object @implements Poly {
+class Tri @impl Poly {
 
     Vector coord0, coord1, coord2;
 

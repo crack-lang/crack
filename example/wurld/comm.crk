@@ -15,7 +15,7 @@ import crack.net Address;
 import crack.exp.net.facade ConnectionState;
 import crack.serial BufferDeserializer, SerialWriter;
 
-@import crack.ann implements, interface;
+@import crack.ann impl, interface;
 
 const uint
     METHOD_SET_VIEW = 1,
@@ -35,7 +35,7 @@ const uint
 
 ## Communications proxy for a remote WurldInst object.  Calling these methods
 ## results in a message being sent asynchronously to the remote instance.
-class Proxy : Object @implements WurldInst {
+class Proxy @impl WurldInst {
     SerialWriter ser;
     uint id;
 
@@ -75,7 +75,7 @@ Proxy firstProxy;
 HashMap[Address, Proxy] proxies = {};
 uint nextIdentifier = 1;
 
-class CommManager : Object @implements Functor1[void, ConnectionState] {
+class CommManager @impl Functor1[void, ConnectionState] {
     AppendBuffer outbuf;
     BufferDeserializer deser;
     uint clientId;

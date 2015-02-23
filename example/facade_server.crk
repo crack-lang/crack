@@ -4,9 +4,9 @@ import crack.io cerr;
 import crack.functor Functor1;
 import crack.net.facade mainloop, IP4Server, ConnectionState;
 
-@import crack.ann implements;
+@import crack.ann impl;
 
-class ClientHandler : Object @implements Functor1[void, ConnectionState] {
+class ClientHandler @impl Functor1[void, ConnectionState] {
     oper init() {}
 
     void oper call(ConnectionState state) {

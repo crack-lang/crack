@@ -3,7 +3,7 @@ interfaces using "oper from"
 %%ARGS%%
 %%FILE%%
 import crack.io cout;
-@import crack.ann interface, implements;
+@import crack.ann interface, impl;
 import crack.functor Functor1;
 
 if (true) {
@@ -19,7 +19,7 @@ if (true) {
           @abstract void h();
      }
 
-     class Impl : Object @implements C {
+     class Impl @impl C {
           void f() {}
           void g() {}
           void h() {}
@@ -40,7 +40,7 @@ if (true) {
 }
 
 if (true) {
-     class A : Object @implements Functor1[void, int], Functor1[void, String] {
+     class A @impl Functor1[void, int], Functor1[void, String] {
           void oper call(int i) {}
           void oper call(String s) {}
      }
@@ -50,7 +50,7 @@ if (true) {
      }
 
      alias X = Functor1[void, int];
-     class B : Object @implements X {
+     class B @impl X {
           void oper call(int i) {
                cout `in B\n`;
           }
@@ -60,7 +60,7 @@ if (true) {
           @abstract void f() {}
      }
 
-     class D : Object @implements C {
+     class D @impl C {
           void oper call(int i) {
                cout `in D\n`;
           }
