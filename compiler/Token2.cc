@@ -51,10 +51,9 @@ size_t Token::getTextSize() {
 }
 
 Location *Token::getLocation() {
-    if (!loc) {
+    if (!loc)
         loc = new Location(rep->getLocation());
-        loc->bind();
-    }
+    loc->bind();
     return loc;
 }
 
@@ -75,10 +74,9 @@ size_t Token::_getTextSize(Token *inst) {
 }
 
 Location *Token::_getLocation(Token *inst) {
-    if (!inst->loc) {
+    if (!inst->loc)
         inst->loc = new Location(inst->rep->getLocation());
-        inst->loc->bind();
-    }
+    inst->loc->bind();
     return inst->loc;
 }
 
