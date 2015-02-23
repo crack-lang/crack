@@ -104,6 +104,8 @@ class Token : public crack::ext::RCObj {
         static bool _isBinOp(Token *inst);
         static bool _isAugAssign(Token *inst);
         
+        Token(const Token &other);
+        
     public:
         parser::Token *rep;
         Location *loc;
