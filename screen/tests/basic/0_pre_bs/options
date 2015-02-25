@@ -1,2 +1,2 @@
 %%OPTS%%
--q -Gn -l %SOURCEDIR%:%SOURCEDIR%/lib:%SOURCEDIR%/.libs:%BUILDDIR%/lib
+-q -Gn -l %SOURCEDIR%:%SOURCEDIR%/lib:%SOURCEDIR%/.libs:%BUILDDIR%/lib -K

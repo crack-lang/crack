@@ -51,7 +51,7 @@ struct option longopts[] = {
     {"optimize", true, 0, 'O'},
     {"verbosity", false, 0, 'v'},
     {"quiet", false, 0, 'q'},
-    {"no-cache", false, 0, 'C'},
+    {"no-cache", false, 0, 'K'},
     {"no-bootstrap", false, 0, 'n'},
     {"no-default-paths", false, 0, 'G'},
     {"migration-warnings", false, 0, 'm'},
@@ -84,7 +84,10 @@ void usage(int retval) {
     cout << " -G --no-default-paths\n    Do not include default module"
             " search paths" << endl;
 
-    cout << " -C\n    Turn on module caching (unfinished, not fully working)" << endl;
+    cout << " -C\n    Turn on module caching (already enabled by" << endl;
+    cout << "    default, this just overrrides the CRACK_NOCACHE" << endl;
+    cout << "    environment variable." << endl;
+    cout << " -K\n    Disable module caching." << endl;
 
     cout << " -g --debug\n    Generate DWARF debug information" << endl;
     cout << " -O <N> --optimize\n    Use optimization level N (default 2)" << 
@@ -133,6 +136,18 @@ int main(int argc, char **argv) {
     string libPath;
     if (getenv("CRACK_LIB_PATH"))
         libPath = getenv("CRACK_LIB_PATH");
+    
+    if (const char *caching = getenv("CRACK_CACHING")) {
+        if (!strcasecmp(caching, "true")) {
+            crack.cacheMode = true;
+        } else if (!strcasecmp(caching, "false")) {
+            crack.cacheMode = false;
+        } else {
+            cerr << "Illegal value for 'CRACK_CACHING', must be 'true' or "
+                    "'false'." << endl;
+            exit(1);
+        }
+    }
 
     // parse the main module
     int opt, idx;
@@ -141,7 +156,7 @@ int main(int argc, char **argv) {
     bool optionsError = false;
     bool useDoubleBuilder = false;    
     bool doDumpFuncTable = false;
-    while ((opt = getopt_long(argc, argv, "+B:b:dgO:nCGml:vqt:", longopts, 
+    while ((opt = getopt_long(argc, argv, "+B:b:dgO:nCKGml:vqt:", longopts, 
                               &idx
                               )
             ) != -1
@@ -161,11 +176,13 @@ int main(int argc, char **argv) {
                 optionsError = true;
                 break;
             case 'B':
-                if (strncmp("llvm-native",optarg,11) == 0)
+                if (strncmp("llvm-native",optarg,11) == 0) {
                     bType = nativeBuilder;
-                else if (strncmp("llvm-jit",optarg,8) == 0)
+                    // Caching doesn't work with native mode yet.
+                    crack.cacheMode = false;
+                } else if (strncmp("llvm-jit",optarg,8) == 0) {
                     bType = jitBuilder;
-                else {
+                } else {
                     cerr << "Unknown builder: " << optarg << endl;
                     exit(1);
                 }
@@ -210,7 +227,12 @@ int main(int argc, char **argv) {
                 crack.options->dumpMode = true;
                 break;
             case 'C':
-                crack.cacheMode = true;
+                // Ignore caching for native builder.
+                if (bType != nativeBuilder)
+                    crack.cacheMode = true;
+                break;
+            case 'K':
+                crack.cacheMode = false;
                 break;
             case 'h':
                 usage(0);

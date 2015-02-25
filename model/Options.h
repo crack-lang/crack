@@ -20,7 +20,7 @@ struct Options {
     // date.
     bool cacheMode;
 
-    Options() : migrationWarnings(false), cacheMode(false) {}
+    Options() : migrationWarnings(false), cacheMode(true) {}
 
     // copy the options from another Options object.  This is useful because
     // we typically inherit this struct.
