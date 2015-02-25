@@ -242,7 +242,7 @@ class Buffer : Object {
     uint makeHashVal() {
         uint hash;
         for (int i = 0; i < size; ++i)
-            hash = (hash << 5 ^ hash >> 21) ^ buffer[i];
+            hash = (hash << 8 ^ hash >> 24) ^ buffer[i];
         return hash;
     }
 
