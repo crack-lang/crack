@@ -574,6 +574,7 @@ class Poller {
     ## wait for the next event and then process all events (this is equivalent 
     ## to "poller.wait(timeout); while (poller.nx()) ;").  This should only be 
     ## used when all pollables have event handlers.
+    ## 'timeout' may be null, in which case we wait indefinitely.
     void waitAndProcess(TimeDelta timeout) {
         wait(timeout);
         while (nx()) ;
