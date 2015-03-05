@@ -47,6 +47,14 @@ FDWriter _makeWriter(Process proc, int fd);
     @abstract void onOutLine(Buffer data);
     @abstract void onErrData(Buffer data);
     @abstract void onErrLine(Buffer data);
+    
+    ## Called when the process is terminated with the process result code.  
+    ## The process result code is composed of one of the CRK_PROC values above 
+    ## ored with the process exit code.  In the case of CRK_PROC_KILLED, the 
+    ## process exit code should be the signal that killed the process.
+    ##
+    ## It is not necessary for this handler to remove any process handles from
+    ## the Poller, this is done automatically.
     @abstract void onTerminate(int resultCode);
 }
 
@@ -91,12 +99,20 @@ class Process {
         bool outDone, errDone;
         int pid, exitCode;
         ProcessHandler handler;
+
+        # We store 'process' just to ensure that the process doesn't get 
+        # deleted (and its output streams closed) while we're processing.
+        Process process;
         
-        oper init(ProcessHandler handler, int pid, bool outDone, bool errDone) : 
+        oper init(Process process, ProcessHandler handler, int pid, 
+                  bool outDone, 
+                  bool errDone
+                  ) : 
             handler = handler, 
             pid = pid,
             outDone = outDone,
-            errDone = errDone {
+            errDone = errDone,
+            process = process {
         }
         
         void onStreamsClosed() {
@@ -232,7 +248,7 @@ class Process {
     ## Add the file descriptors for management in the poller.
     ## XXX we should also be adding a SIGCHLD handler.
     void addTo(Poller poller, ProcessHandler handler) {
-        __addTo(poller, __Status(handler, _pid, !__stdout, !__stderr));
+        __addTo(poller, __Status(this, handler, _pid, !__stdout, !__stderr));
     }
     
     ## Remove the file descriptors from the poller.
@@ -248,7 +264,7 @@ class Process {
     ## XXX needs to deal with stdin.
     int run(ProcessHandler handler) {
         Poller poller = {};
-        __Status status = {handler, _pid, !__stdout, !__stderr};
+        __Status status = {this, handler, _pid, !__stdout, !__stderr};
         if (__addTo(poller, status)) {
             # keep reading until both of the output streams have closed.
             while (poller)
