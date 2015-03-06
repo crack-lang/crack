@@ -452,6 +452,7 @@ void LLVMJitBuilder::registerCleanups() {
 
 model::ModuleDefPtr LLVMJitBuilder::materializeModule(
     Context &context,
+    CacheFile *cacheFile,
     const string &canonicalName,
     ModuleDef *owner
 ) {
@@ -466,8 +467,8 @@ model::ModuleDefPtr LLVMJitBuilder::materializeModule(
         return bmod;
     }
 
-    Cacher c(context, options.get());
-    BJitModuleDefPtr bmod = c.maybeLoadFromCache(canonicalName);
+    LLVMCacheFile *cf = LLVMCacheFilePtr::cast(cacheFile);
+    BJitModuleDefPtr bmod = cf->maybeLoadFromCache();
 
     moduleDef = bmod;
     if (bmod) {

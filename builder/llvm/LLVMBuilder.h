@@ -10,11 +10,16 @@
 #define _builder_LLVMBuilder_h_
 
 #include <map>
+
 #include <llvm/IR/IRBuilder.h>
+#include <llvm/ADT/OwningPtr.h>
+#include <llvm/Support/MemoryBuffer.h>
+
 #include "builder/Builder.h"
 #include "BTypeDef.h"
 #include "BBuilderContextData.h"
 #include "BModuleDef.h"
+#include "Cacher.h"
 
 namespace llvm {
     class Module;
@@ -55,8 +60,33 @@ class LLVMBuilder : public Builder {
         SharedLibMap &getSharedLibs() {
             return getRoot().sharedLibs;
         }
-
+        
     protected:
+
+        class LLVMCacheFile : public CacheFile {
+            private:
+                Cacher cacher;
+                std::string canonicalName;
+
+            public:
+                LLVMCacheFile(model::Context &context, 
+                              BuilderOptions *options,
+                              const std::string &canonicalName
+                              ) :
+                    cacher(context, options),
+                    canonicalName(canonicalName) {
+                }
+                llvm::OwningPtr<llvm::MemoryBuffer> fileBuf;
+                
+                bool getCacheFile() {
+                    return cacher.getCacheFile(canonicalName, fileBuf);
+                }
+                
+                BModuleDefPtr maybeLoadFromCache() {
+                    return cacher.maybeLoadFromCache(canonicalName, fileBuf);
+                }
+        };
+        SPUG_RCPTR(LLVMCacheFile);
 
         llvm::Function *callocFunc;
         DebugInfo *debugInfo;
@@ -499,6 +529,10 @@ class LLVMBuilder : public Builder {
                                          model::ModuleDef *owner
                                          );
 
+        virtual CacheFilePtr getCacheFile(model::Context &context,
+                                          const std::string &canonicalName
+                                          );
+
         virtual model::VarDefPtr materializeVar(
             model::Context &context,
             const std::string &name,
@@ -528,7 +562,14 @@ class LLVMBuilder : public Builder {
 
         virtual void cacheModule(
             model::Context &context,
-            model::ModuleDef *module
+            model::ModuleDef *module,
+            const std::string &uniquifier
+        );
+
+        virtual void finishCachedModule(
+            model::Context &context,
+            model::ModuleDef *module,
+            const std::string &uniquifier
         );
         
         virtual model::CleanupFramePtr

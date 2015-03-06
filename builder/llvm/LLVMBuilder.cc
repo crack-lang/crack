@@ -39,6 +39,7 @@
 #include <dlfcn.h>
 #include <stddef.h>
 #include <stdlib.h>
+#include <unistd.h>
 #include <errno.h>
 
 #include <llvm/Bitcode/ReaderWriter.h>
@@ -2324,6 +2325,18 @@ ResultExprPtr LLVMBuilder::emitFieldAssign(Context &context,
     return new BResultExpr(assign, temp);
 }
 
+Builder::CacheFilePtr LLVMBuilder::getCacheFile(Context &context,
+                                                const std::string &canonicalName
+                                                ) {
+    LLVMCacheFilePtr cacheFile = new LLVMCacheFile(context, options.get(),
+                                                   canonicalName
+                                                   );
+    if (cacheFile->getCacheFile())
+        return cacheFile;
+    else
+        return 0;
+}
+
 VarDefPtr LLVMBuilder::materializeVar(Context &context, const string &name,
                                       TypeDef *type,
                                       int instSlot
@@ -2427,14 +2440,16 @@ FuncDefPtr LLVMBuilder::materializeFunc(Context &context, FuncDef::Flags flags,
     return result;
 }
 
-void LLVMBuilder::cacheModule(Context &context, ModuleDef *module) {
+void LLVMBuilder::cacheModule(Context &context, ModuleDef *module,
+                              const std::string &uniquifier
+                              ) {
     string errors;
     string path = getCacheFilePath(options.get(),
                                    *context.construct,
                                    module->getNamespaceName(),
                                    "bc"
                                    );
-    tool_output_file out(path.c_str(), errors, 0);
+    tool_output_file out((path + uniquifier).c_str(), errors, 0);
     if (errors.size())
         throw spug::Exception(errors);
 
@@ -2455,6 +2470,17 @@ void LLVMBuilder::cacheModule(Context &context, ModuleDef *module) {
     }
 
     out.keep();
+}
+
+void LLVMBuilder::finishCachedModule(Context &context, ModuleDef *module,
+                                     const string &uniquifier
+                                     ) {
+    string finalPath = getCacheFilePath(options.get(),
+                                        *context.construct,
+                                        module->getNamespaceName(),
+                                        "bc"
+                                        );
+    move(finalPath + uniquifier, finalPath);
 }
 
 ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {

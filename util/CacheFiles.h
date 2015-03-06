@@ -28,6 +28,12 @@ bool initCacheDirectory(builder::BuilderOptions *o,
                         model::Construct &construct
                         );
 
+/**
+ * Move file 'src' to 'dst' (does a remove of 'dst' followed by a link(src,
+ * dst).
+ */
+void move(const std::string &src, const std::string &dst);
+
 }} // end namespace crack::util
 
 #endif

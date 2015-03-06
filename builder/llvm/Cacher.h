@@ -14,6 +14,8 @@
 #include <vector>
 #include <map>
 
+#include <llvm/Support/MemoryBuffer.h>
+
 namespace llvm {
     class Module;
     class MDNode;
@@ -59,8 +61,13 @@ public:
            );
 
     void writeMetadata();
-    BModuleDefPtr maybeLoadFromCache(const std::string &canonicalName);
-
+    bool getCacheFile(const std::string &canonicalName,
+                      llvm::OwningPtr<llvm::MemoryBuffer> &fileBuf
+                      );
+    BModuleDefPtr maybeLoadFromCache(
+        const std::string &canonicalName,
+        llvm::OwningPtr<llvm::MemoryBuffer> &fileBuf
+    );
 };
 
 } // end namespace builder::vmll

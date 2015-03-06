@@ -18,12 +18,15 @@ test.mod('mod', "puts('baz'); void f(int i) {}");
 test.run();
 %%REXPECT%%
 err: mod out-of-date or not in the cache.  Building from: \./mod.crk
+err: Moving cached file from .*/mod.crkmeta..* to .*/mod.crkmeta
+err: Moving cached file from .*/.*main_2ecrk.crkmeta
 out: foo
 terminated: success
 err: digests don't match for mod.crk got .*
 err:   current = .*
 err:   module: mod
 err: mod out-of-date or not in the cache.  Building from: \./mod.crk
+err: Moving cached file from .*/mod.crkmeta..* to .*/mod.crkmeta
 err: Reusing cached script .*/main.crk
 out: bar
 terminated: success
@@ -31,7 +34,9 @@ err: digests don't match for mod.crk got .*
 err:   current = .*
 err:   module: mod
 err: mod out-of-date or not in the cache.  Building from: \./mod.crk
+err: Moving cached file from .*/mod.crkmeta..* to .*/mod.crkmeta
 err: meta digest doesn't match for dependency mod, need to rebuild \.main\..*main_2ecrk\(depending on .* current = .*\)
+err: Moving cached file from .*/.*main_2ecrk.crkmeta
 out: baz
 terminated: success
 %%STDIN%%

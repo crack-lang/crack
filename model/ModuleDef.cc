@@ -281,6 +281,19 @@ ModuleDefPtr ModuleDef::deserialize(Deserializer &deser,
         }
     }
 
+    // See if the builder can open its file.
+    builder::Builder::CacheFilePtr builderCache =
+        deser.context->builder.getCacheFile(*deser.context, canonicalName);
+    if (!builderCache) {
+        if (Construct::traceCaching)
+            cerr << "No builder cache file for " << sourcePath << "@" <<
+                recordedSourceDigest.asHex() << endl;
+        if (Serializer::trace)
+            cerr << ">>>> Finished deserializing NO BUILDER CACHE " <<
+                canonicalName << endl;
+        return 0;
+    }
+
     // read and load the dependencies
     int count = deser.readUInt("#deps");
     for (int i = 0; i < count; ++i) {
@@ -315,7 +328,9 @@ ModuleDefPtr ModuleDef::deserialize(Deserializer &deser,
 
     // deserialize the actual code through the builder.
     ModuleDefPtr mod =
-        deser.context->builder.materializeModule(*deser.context, canonicalName,
+        deser.context->builder.materializeModule(*deser.context,
+                                                 builderCache.get(),
+                                                 canonicalName,
                                                  0 // owner
                                                  );
 
@@ -369,6 +384,9 @@ namespace {
                                            );
             ModuleDefPtr mod = deser.context->builder.materializeModule(
                 *deser.context,
+                deser.context->builder.getCacheFile(*deser.context,
+                                                    name
+                                                    ).get(),
                 name,
                 master.get()
             );

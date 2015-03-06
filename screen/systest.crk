@@ -5,13 +5,14 @@ import crack.compiler CrackContext, Token;
 import crack.cont.array Array;
 import crack.cont.treemap TreeMap;
 import crack.fs cwd, Path, makePath;
-import crack.io FStr, cout, cerr;
+import crack.io cout, cerr, FStr, StringFormatter;
 import crack.lang Buffer, FreeBase, Exception;
+import crack.net Poller;
 import crack.regex Regex;
 import crack.strutil StringArray;
 import crack.sys argv;
-import crack.process Process, ProcessHandlerImpl, CRK_PIPE_STDOUT,
-    CRK_PIPE_STDERR, CRK_PROC_EXITED;
+import crack.process Process, ProcessHandler, ProcessHandlerImpl,
+    CRK_PIPE_STDOUT, CRK_PIPE_STDERR, CRK_PROC_EXITED;
 
 CmdOptions opts = [
     Option('crack_bin', '', 'The full path to the crack binary.', '', CMD_STR),
@@ -33,15 +34,18 @@ CmdOptions opts = [
 opts.parse(argv);
 
 class MyProcHandler : ProcessHandlerImpl {
+    StringFormatter out = {}, err = {};
     void onOutLine(Buffer buf) {
-        cout `out: $buf`;
+        out `out: $buf`;
     }
 
     void onErrLine(Buffer buf) {
-        cout `err: $buf`;
+        err `err: $buf`;
     }
 
     void onTerminate(int resultCode) {
+        cout.write(err.string());
+        cout.write(out.string());
         if (resultCode == CRK_PROC_EXITED)
             cout `terminated: success\n`;
         else
@@ -76,6 +80,9 @@ class Test {
     ## If true, run the script in pre-bootstrap (-n) mode.
     bool preBootstrap;
 
+    # Fully qualified extra library path.
+    String __libPath;
+
     oper init(Path root, Path crackBin, Path testtmp, StringArray runFlags) :
         root = root,
         crackBin = crackBin,
@@ -109,8 +116,19 @@ class Test {
         __trace.append(mod);
     }
 
-    ## Run the specified script
-    void runScript(String script) {
+    ## Creates a directory to that you can install libraries in and sets the
+    ## library path for any subsequent scripts that are run to it.
+    ## This allows you to create multiple versions of the same library to be
+    ## loaded concurrently by multiple instances of the test launched with
+    ## start().
+    Path makeLibPath(String baseName) {
+        path := testtmp/baseName;
+        path.makeDirs();
+        __libPath = path.getFullName();
+        return path;
+    }
+
+    StringArray __makeCmd(String script) {
         StringArray cmd = [
             crackBin.getFullName(), '-l', (root/'lib').getFullName(),
             '-b', 'cachePath=' + cacheDir.getFullName(), '-q'
@@ -124,8 +142,20 @@ class Test {
             cmd.append(__trace.join(','));
         }
 
+        # Add the extension library path(s) (if any)
+        if (__libPath) {
+            cmd.append('-l');
+            cmd.append(__libPath);
+        }
+
         cmd.extend(runFlags);
         cmd.append(script);
+        return cmd;
+    }
+
+    ## Run the specified script
+    void runScript(String script) {
+        StringArray cmd = __makeCmd(script);
         Process(cmd, CRK_PIPE_STDOUT | CRK_PIPE_STDERR).run(MyProcHandler());
     }
 
@@ -145,6 +175,12 @@ class Test {
     void run() {
         cwd.set(testtmp);
         runScript((testtmp/'main.crk').getFullName());
+    }
+
+    ## Start the script managed by the 'poller'.
+    void start(String scriptName, Poller poller, ProcessHandler handler) {
+        cmd := __makeCmd((testtmp/scriptName).getFullName());
+        Process(cmd, CRK_PIPE_STDOUT | CRK_PIPE_STDERR).addTo(poller, handler);
     }
 
     ## Remove all cache files matching the specified pattern.  A "match" is

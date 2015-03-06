@@ -138,6 +138,7 @@ class LLVMJitBuilder : public LLVMBuilder {
 
         virtual model::ModuleDefPtr materializeModule(
             model::Context &context,
+            CacheFile *cacheFile,
             const std::string &canonicalName,
             model::ModuleDef *owner
         );

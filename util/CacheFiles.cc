@@ -168,4 +168,9 @@ string getCacheFilePath(BuilderOptions* options,
 #endif
 }
 
+void move(const std::string &src, const std::string &dst) {
+    unlink(dst.c_str());
+    int ignore = link(src.c_str(), dst.c_str());
+}
+
 }} // namespace crack::util

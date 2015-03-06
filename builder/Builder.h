@@ -46,6 +46,13 @@ SPUG_RCPTR(Builder);
 class Builder : public spug::RCBase {
 
     public:
+        /** 
+         * Abstract representation of an opened cache file. Specialized by 
+         * builder implementations.
+         */
+        class CacheFile : public RCBase {};
+        SPUG_RCPTR(CacheFile);
+
         BuilderOptionsPtr options;
 
         Builder(): options(0) { }
@@ -409,9 +416,24 @@ class Builder : public spug::RCBase {
                                  ) = 0;
 
         /**
+         * Open the cache file(s) to be used by materializeModule, or return 
+         * null if unable to.
+         * 
+         * Separating this out into two methods facilitates the file locking 
+         * mechanism, see model/Context.cc:cacheModule().
+         * @param context the module context.
+         * @param canonicalName the module's canonical name.
+         */
+        virtual CacheFilePtr getCacheFile(
+            model::Context &context,
+            const std::string &canonicalName
+        ) = 0;
+
+        /**
          * Materialize a module from a builder specific cache. Returns NULL in
          * the event of a cache miss.
          * @param context the module context.
+         * @param cacheFile cache file object returned from getCacheFile().
          * @param canonicalName the module's canonical name.
          * @param owner the module's owner - this should be null unless the
          *  module is being defined inside another module that it depends on.
@@ -420,6 +442,7 @@ class Builder : public spug::RCBase {
          */
         virtual model::ModuleDefPtr materializeModule(
             model::Context &context,
+            CacheFile *cacheFile,
             const std::string &canonicalName,
             model::ModuleDef *owner
         ) = 0;
@@ -470,10 +493,28 @@ class Builder : public spug::RCBase {
         /**
          * Write the module implementation to the persistent cache in whatever 
          * format is appropriate.
+         * 
+         * This should also clean up any other cached copies of the module.
+         * 
+         * @param uniquifier A string that is globally unique at a given point 
+         *  in time (generally hostname.pid) that should be appended to all 
+         *  file ids.
          */
         virtual void cacheModule(
             model::Context &context,
-            model::ModuleDef *module
+            model::ModuleDef *module,
+            const std::string &uniquifier
+        ) = 0;
+        
+        /**
+         * Convert the uniquified cached module to the non-unique one.
+         * This basically moves a file of the form modulename.uniquifier to 
+         * modulename after the metadata file has been moved into place.
+         */
+        virtual void finishCachedModule(
+            model::Context &context,
+            model::ModuleDef *module,
+            const std::string &uniquifier
         ) = 0;
 
         /**

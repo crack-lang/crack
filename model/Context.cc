@@ -277,11 +277,56 @@ void Context::cacheModule(ModuleDef *mod) {
                                            "crkmeta"
                                            );
     
-    ofstream dst(metaDataPath.c_str());
+    // Here's how collision-safe caching works:
+    // 1) We try to open the metadata file ('canonical-name.crkmeta') and 
+    //    read it if successful:
+    //    a) Verify that it contains the correct hash of the source 
+    //       file and fail if it doesn't.
+    //    b) Try to open the builder file (Builder::getCacheFile()) and fail 
+    //       if we can't.
+    //    c) Read the remainder of the metadata file (after the header).
+    //    d) Load the builder file.
+    // 2) If we fail at any point during 1):
+    //    a) recompile the module.
+    //    b) Write a copy of the metadata file qualified by a GUID so that no 
+    //       other process could be writing or reading that copy.
+    //    c) Delete the existing builder file and begin writing the builder 
+    //      file also qualified by the GUID.
+    //    d) Rename the metadata file so it no longer contains the GUID (other 
+    //      processes can now load it in 1)
+    //    e) Rename the builder file so that it no longer contains the GUID.
+    // This algorithm assumes serializetion of remove/rename operations.  It 
+    // should also be noted that failure in step 1.c and 1.d is catastrophic: 
+    // it currently breaks the running process and requires manual 
+    // intervention to repair the cache.  This is desirable for 0.10 where
+    // we want to see instances of cache failure, but should probably be fixed 
+    // for 1.0.
+    
+    // Try to construct a globally unique filename to prevent one process from 
+    // reading a cachefile while another process is writing it.
+    char hostname[256];
+    gethostname(hostname, 256);
+    hostname[255] = 0;
+    pid_t pid = getpid();
+    
+    string uniquifier = SPUG_FSTR('.' << hostname << '.' << pid);
+    string tempFileName = metaDataPath + uniquifier;
+    ofstream dst(tempFileName.c_str());
     Serializer ser(dst);
     mod->serialize(ser);
+    dst.close();
     
-    builder.cacheModule(*this, mod);
+    builder.cacheModule(*this, mod, uniquifier);
+    
+    // When the builder is done, we can move the meta-file into place because 
+    // it's ready to be used by another process.
+    if (Construct::traceCaching)
+        cerr << "Moving cached file from " << tempFileName << " to " <<
+            metaDataPath << endl;
+    move(tempFileName, metaDataPath);
+    
+    // Now let the builder move its cache files into place.
+    builder.finishCachedModule(*this, mod, uniquifier);
 }
 
 ExprPtr Context::getStrConst(const std::string &value, bool raw) {

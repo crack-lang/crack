@@ -56,6 +56,10 @@ test.run();
 %%REXPECT%%
 err: mod2 out-of-date or not in the cache.  Building from: ./mod2.crk
 err: mod1 out-of-date or not in the cache.  Building from: ./mod1.crk
+err: Moving cached file from .*/mod1.crkmeta..* to .*/mod1.crkmeta
+err: Moving cached file from .*/mod2.crkmeta..* to .*/mod2.crkmeta
+err: Moving cached file from .*/mod2.A\[.builtin.int\].crkmeta..* to .*/mod2.A\[.builtin.int\].crkmeta
+err: Moving cached file from .*/.*main_2ecrk.crkmeta
 err: ok
 terminated: success
 err: digests don't match for mod2.crk got .*
@@ -63,6 +67,7 @@ err:   current = .*
 err:   module: mod2
 err: mod2 out-of-date or not in the cache.  Building from: ./mod2.crk
 err: Reusing cached module mod1
+err: Moving cached file from .*/mod2.crkmeta..* to .*/mod2.crkmeta
 err: digests don't match for mod2.crk got .*
 err:   current = .*
 err:   module: mod2.A\[.builtin.int\]
@@ -70,6 +75,7 @@ err: Source for mod2.A\[.builtin.int\] not found.  Not compiling it at this time
 err: digests don't match for mod2.crk got .*
 err:   current = .*
 err:   module: mod2.A\[.builtin.int\]
+err: Moving cached file from .*/mod2.A\[.builtin.int\].crkmeta..* to .*/mod2.A\[.builtin.int\].crkmeta
 err: Reusing cached script .*/main.crk
 err: ok
 terminated: success
@@ -78,6 +84,8 @@ err:   current = .*
 err:   module: .main..*main_2ecrk
 err: Reusing cached module mod1
 err: Reusing cached module mod2
+err: Moving cached file from .*/mod2.A\[.builtin.float\].crkmeta..* to .*/mod2.A\[.builtin.float\].crkmeta
+err: Moving cached file from .*/.*main_2ecrk.crkmeta
 err: ok
 terminated: success
 %%STDIN%%

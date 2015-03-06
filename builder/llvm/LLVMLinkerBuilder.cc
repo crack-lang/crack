@@ -282,12 +282,11 @@ void LLVMLinkerBuilder::fixClassInstRep(BTypeDef *type) {
 
 model::ModuleDefPtr LLVMLinkerBuilder::materializeModule(
     model::Context &context,
+    CacheFile *cacheFile,
     const std::string &canonicalName,
     model::ModuleDef *owner
 ) {
-
-    Cacher c(context, options.get());
-    return c.maybeLoadFromCache(canonicalName);
+    return LLVMCacheFilePtr::cast(cacheFile)->maybeLoadFromCache();
 }
 
 ExecutionEngine *LLVMLinkerBuilder::getExecEng() {

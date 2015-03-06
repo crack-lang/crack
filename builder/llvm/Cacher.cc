@@ -130,7 +130,32 @@ Cacher::Cacher(model::Context &c, builder::BuilderOptions *o,
     options(o) {
 }
 
-BModuleDefPtr Cacher::maybeLoadFromCache(const string &canonicalName) {
+bool Cacher::getCacheFile(const string &canonicalName,
+                          OwningPtr<MemoryBuffer> &fileBuf
+                          ) {
+    string cacheFile = getCacheFilePath(options, *parentContext.construct, 
+                                        canonicalName, 
+                                        "bc"
+                                        );
+    if (cacheFile.empty())
+        return false;
+
+    VLOG(2) << "[" << canonicalName << "] cache: maybeLoad "
+        << cacheFile << endl;
+
+    if (error_code ec = MemoryBuffer::getFile(cacheFile.c_str(), fileBuf)) {
+        VLOG(2) << "[" << canonicalName <<
+            "] cache: not cached or inaccessible" << endl;
+        return false;
+    }
+
+    return true;
+}
+
+BModuleDefPtr Cacher::maybeLoadFromCache(
+    const string &canonicalName,
+    OwningPtr<MemoryBuffer> &fileBuf
+) {
 
     // create a builder and module context
     builder = 
@@ -142,23 +167,6 @@ BModuleDefPtr Cacher::maybeLoadFromCache(const string &canonicalName) {
                           0 // no compile namespace necessary
                           );
     context->toplevel = true;
-
-    string cacheFile = getCacheFilePath(options, *context->construct, 
-                                        canonicalName, 
-                                        "bc"
-                                        );
-    if (cacheFile.empty())
-        return NULL;
-
-    VLOG(2) << "[" << canonicalName << "] cache: maybeLoad "
-        << cacheFile << endl;
-
-    OwningPtr<MemoryBuffer> fileBuf;
-    if (error_code ec = MemoryBuffer::getFile(cacheFile.c_str(), fileBuf)) {
-        VLOG(2) << "[" << canonicalName <<
-            "] cache: not cached or inaccessible" << endl;
-        return NULL;
-    }
 
     string errMsg;
     Module *module = getLazyBitcodeModule(fileBuf.take(),

@@ -1,0 +1,90 @@
+%%TEST%%
+cache files are immune to write collisions
+%%ARGS%%
+%%FILE%%
+# This is a basic sanity check to verify that multiple processes can be
+# writing and reading to the same cache file simultaneously.
+# It isn't a very rigorous test.  It just runs NUM_INSTANCES process pairs.
+# One element of the pair should generally write all of the cache entries and
+# the other should generally read them. NUM_INSTANCES can be writing the cache
+# simultaneously.
+# It has mostly proven useful as a proof of the meta-data file caching.  It
+# revealed a bug in this after its creation and has demonstrated no failures
+# since.  It has also (on one occassion) demonstrated the correct behavior of
+# the "regenerate cache files if bitcode isn't found" feature, but this is
+# far harder to reproduce using this method.
+
+import systest test;
+import crack.ascii parseInt, radix;
+import crack.cont.array Array;
+import crack.io cerr, FStr, StringWriter;
+import crack.lang Buffer;
+import crack.net Poller;
+import crack.process ProcessHandler, CRK_PROC_EXITED;
+
+@import crack.ann impl;
+
+class MyHandler @impl ProcessHandler {
+    StringWriter stdout = {};
+    int childIndex;
+
+    oper init(int childIndex) : childIndex = childIndex {}
+
+    void onOutData(Buffer data) {
+        stdout.write(data);
+    }
+
+    void onErrData(Buffer data) {
+        if (data) {
+            cerr `$childIndex: `;
+            cerr.write(data);
+        }
+    }
+
+    void onOutLine(Buffer data) {}
+    void onErrLine(Buffer data) {}
+    void onTerminate(int resultCode) {
+        if (resultCode != CRK_PROC_EXITED)
+            cerr `Process finished with invalid code: $resultCode\n`;
+    }
+}
+
+const NUM_INSTANCES := 20;
+
+test.preBootstrap = true;
+
+poller := Poller();
+handlers := Array[MyHandler]();
+for (int i = 0; i < NUM_INSTANCES; ++i) {
+    lib := 'l' + radix(i, 10);
+    test.makeLibPath(lib);
+    test.mod(lib + '/mod', FStr() `int f() { return $i; }`);
+    test.mod(lib, 'import mod f; printint(f());');
+
+    handler := MyHandler(i * 2);
+    handlers.append(handler);
+    test.start(lib + '.crk', poller, handler);
+
+    # Start a second instance, should try to use the cache and sometimes fail
+    # to find the builder file.
+    handler = MyHandler(i * 2 + 1);
+    handlers.append(handler);
+    test.start(lib + '.crk', poller, handler);
+}
+
+while (poller)
+    poller.waitAndProcess(null);
+
+for (int i = 0; i < NUM_INSTANCES; ++i) {
+    for (int j = 0; j < 2; ++j) {
+        outAsString := handlers[i * 2 + j].stdout.string();
+        if (!outAsString || parseInt(outAsString) != i)
+            cerr `Bad output from $i: $(outAsString.getRepr())\n`;
+    }
+}
+
+cerr `ok\n`;
+
+%%EXPECT%%
+ok
+%%STDIN%%

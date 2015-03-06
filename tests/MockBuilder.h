@@ -333,8 +333,16 @@ class MockBuilder : public builder::Builder {
                                  ) {
         }
 
+        virtual CacheFilePtr getCacheFile(
+            model::Context &context,
+            const std::string &canonicalName
+        ) {
+            return new CacheFile();
+        }
+
         virtual model::ModuleDefPtr materializeModule(
             model::Context &context,
+            CacheFile *cacheFile,
             const std::string &canonicalName,
             model::ModuleDef *owner
         ) {
@@ -383,8 +391,16 @@ class MockBuilder : public builder::Builder {
         }
 
         virtual void cacheModule(model::Context &context,
-                                 model::ModuleDef *module
+                                 model::ModuleDef *module,
+                                 const std::string &uniquifier
                                  ) {
+        }
+
+        virtual void finishCachedModule(
+            model::Context &context,
+            model::ModuleDef *module,
+            const std::string &uniquifier
+        ) {
         }
 
         virtual model::CleanupFramePtr createCleanupFrame(
