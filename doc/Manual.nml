@@ -1572,6 +1572,24 @@ can do this:
         cout `Foo is an Object\n`;
 }}
 
+Methods are Functions
+'''''''''''''''''''''
+
+For purposes of typing, methods are functions whose first argument is an 
+instance of the class.
+
+This means that we can assign them to variables:
+
+{{
+    class A {
+        void f(int i) {
+            ...
+        }
+    }
+    
+    function[void, A, int] g = A.f;
+}}
+
 Constructors
 ''''''''''''
 
