@@ -1590,6 +1590,75 @@ This means that we can assign them to variables:
     function[void, A, int] g = A.f;
 }}
 
+Dereferencing Versus Scoping
+''''''''''''''''''''''''''''
+
+The period symbol ('.') can be used for both dereferencing and scoping.  
+Dereferencing is accessing a method or instance variable from an object.  
+Scoping is accessing a name from a nested scope.  For example, to dereference 
+a method or instance variable:
+
+{{
+    class A {
+        int i;
+        void f() {}
+    }
+    
+    a := A();
+    a.f();
+    a.i = 1;
+}}
+
+But was can also use the period as a scoping operator to indicate "a 
+definition within a namespace:"
+
+{{
+    function[void, A] g = A.f;
+    
+    class B {
+        class C {}
+    }
+    
+    b := B.C();  # Use the nested class B.C.
+}}
+
+This could produce ambiguities because, as we've said, classes are also 
+instances.  For example, let's say we define a class with an "isSubclass()" 
+method:
+
+{{
+    class A {
+        @static bool isSubclass(Class c) { return false; }
+    }
+}}
+
+(See the discussion on \X(Static and Final Methods) below)
+
+It isn't immediately obvious whether #A.isSubclass(B)# means:
+
+-   Calling the method defined in the class above ('.' is a /scoping operator/)
+-   Calling the built-in metaclass method #isSubclass()# ('.' is a 
+    /dereferencing operator/).
+
+To resolve this, dereferencing always takes precedence over scopoing.  If it 
+is possible that the period can be used as a dereferencing operator, it will 
+be used as a dereferencing operator.  It will only be used as a scoping 
+operator if there is no conflicting dereferencing usage.
+
+To call the explicitly defined #isSubclass()# method above, you would have to 
+make use of the explicit scoping operator, the double-colon ("::"):
+
+{{
+    A::isSubclass(B);
+}}
+
+This operator unambiguously refers to a variable within the scope of a 
+namespace, it can not be used to dereference an instance.
+
+The period operator is preferred for scoping.  It's more convenient to type, 
+easier to read and comfortable for users of languages like Python and Java.  
+The explicit scoping operator is seldom necessary.
+
 Constructors
 ''''''''''''
 
