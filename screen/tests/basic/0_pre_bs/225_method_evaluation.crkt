@@ -1,0 +1,8 @@
+%%TEST%%
+evaluation of bound methods
+%%ARGS%%
+%%FILE%%
+class A { void f() {} } function[void, A] f = A().f;
+%%EXPECT%%
+ParseError: %SCRIPTNAME%:1:43: Bound methods can not be evaluated.
+%%STDIN%%
