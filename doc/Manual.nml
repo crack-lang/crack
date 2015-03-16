@@ -12,7 +12,7 @@
 The Crack Programming Language Guide
 ====================================
 
-This is the Manual for version 0.9 of the Crack Programming Language.  We
+This is the Manual for version 0.10 of the Crack Programming Language.  We
 regard this version largely as an alpha 1.0 release - compatibility breakage
 between this and 1.0 should be very limited.  There are still some usability
 gaps in the system, mostly with respect to debugging and caching.  And as of
@@ -23,6 +23,24 @@ looking for a language like this, now is an excellent time to get involved in
 it.
 
 So without further caveats - let's do some Crack!
+
+Important Note on Caching
+-------------------------
+
+Crack 0.10 enables module caching by default.  When a Crack module is 
+compiled, the compiler stores the modules metadata and LLVM bitcode in your
+`$HOME/.crack/cache` directory and reuses this information if it exists and is 
+up to date with respect to the source file and all dependencies.
+
+While there are no known bugs in the caching mechanism, it is extremely likely 
+that there are a few unknown bugs in it.  If the compiler breaks or throws an 
+exception, try moving `$HOME/.crack/cache` to `$HOME/.crack/cache.org` and run 
+your program again.  If it succeeds the second time, then you have most likely 
+discovered a caching bug and we'd greatly appreciate it if you'd report this, 
+ideally including the cache files and source files that manifested it.
+
+To disable caching entirely, you may use the -K command line option or set the 
+"`CRACK_CACHING`" environment variable to false.
 
 Overview
 --------
@@ -669,7 +687,7 @@ You'll generally want to use the memory-managed #Array# collection instead
 Control Structures
 ------------------
 
-Crack 0.9 supports four control structures: the "if\/else" statement,
+Crack 0.10 supports four control structures: the "if\/else" statement,
 the "while" statement, the "for" statement and the "try\/catch" statement.
 "if" runs code blocks depending on whether a condition is true or false:
 
@@ -2266,10 +2284,10 @@ compatible versions of the language.  Use #isSubclass()# instead.
 Interfaces
 ''''''''''
 
-As an interim solution to accommodate the lack of virtual base classes, Crack
-0.9 provides an /interface/ concept similar to that of Java.  In fact, the
-interface implementation makes it suitable for use as a limited form of
-virtual base class, but we'll mainly focus on the interface use case.
+Crack doesn't have virtual base classes, but it does have interfaces.  In 
+practice, you can do almost anything that you can do with virtual base classes
+using Crack's underlying mechanism for this, but we'll mainly focus on the 
+interface use case.
 
 The #crack.ann# module provides two special annotations: #@interface# and
 #@implements# (for more general information see \X(Annotations)).
@@ -3118,7 +3136,7 @@ variable is actually defined.
 When a sequence constant is defined, the compiler does the following:
 
 -   Searches for a constructor for the type that can accept an unsigned
-    integer value (as of 0.9 - we will eventually be switching to an integer
+    integer value (as of 0.10 - we will eventually be switching to an integer
     type large enough to accommodate a memory size).  This #uint# value is
     assumed to be the number of elements in the sequence.
 -   That failing, it searches for a default constructor for the type.
@@ -3808,7 +3826,7 @@ member variables.  For example:
     Coord c = {10, 20};
 }}
 
-Structs are very limited as of Crack 0.9.  In particular:
+Structs are very limited as of Crack 0.10.  In particular:
 
 -   They don't support inheritence.
 -   You can't add any other methods.
@@ -3924,7 +3942,7 @@ extension, you'll want to:
 -   build it into a shared library, linked with whatever support code it needs
     (usually the code it's wrapping)
 -   Add the include directory for crack headers to the include path (usually
-    something like #`/usr/local/include/crack-0.9`#)
+    something like #`/usr/local/include/crack-0.10`#)
 
 The Extension Generator
 '''''''''''''''''''''''
@@ -4078,7 +4096,7 @@ threading.
 Debugging
 ---------
 
-Crack has only minimal support for debugging in 0.9.  If your program
+Crack has only minimal support for debugging in 0.10.  If your program
 seg-faults or aborts, you can at least get a sparse stack-trace by running it
 in JIT mode under a fairly recent version of GDB (7.0 or later).
 
@@ -4598,7 +4616,7 @@ the type must define the comparison operators.
 Legacy Error Handling
 ---------------------
 
-Crack 0.9 continues to provide an error handling module (#crack.exp.error#).
+Crack 0.10 continues to provide an error handling module (#crack.exp.error#).
 However, this interface is deprecated in favor of exceptions.  This
 documentation should be regarded as purely of historical interest.
 

@@ -1,4 +1,16 @@
-
+0.10
+    -   Fixed all known caching bugs and made caching the default. (Completed 
+        redid cyclic dependencies)
+    -   Fixed inconsistencies in name access.
+    -   Enhancements to SDL modules (notably audio) and alsa midi.
+    -   Made JIT defer jitting of functions until they are needed.
+    -   Added the scoping operator ('::') and fixed the way the period 
+        operator does dereferencing and scoping.
+    -   Added "field sets" (allows you to attach arbitrary typed data to an 
+        object)
+    -   Replaced the "_iface_" functions hack used to implement interfaces 
+        with an "oper from" method.
+    -   Lots of smaller fixes and enhancements.
 0.9
     -   Added support for threading.
     -   Added the #crack.net.irc# module.

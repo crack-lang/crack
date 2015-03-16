@@ -17,19 +17,19 @@ lib_LTLIBRARIES = libCrackDebugTools.la libCrackLang.la \
     libCrackNativeRuntime.la
 libCrackLang_la_SOURCES = %libCrackSources%
 libCrackLang_la_CPPFLAGS = $(AM_CPPFLAGS)
-libCrackLang_la_LDFLAGS = -version-info 6:0:0 @LLVM_LDFLAGS@ @LLVM_LIBS@ \
+libCrackLang_la_LDFLAGS = -version-info 7:0:0 @LLVM_LDFLAGS@ @LLVM_LIBS@ \
     $(AM_LDFLAGS)
 libCrackLang_la_LIBADD = libCrackDebugTools.la
 
 libCrackDebugTools_la_SOURCES = debug/DebugTools.cc util/md5.c \
     util/SourceDigest.cc util/Hasher.cc
 libCrackDebugTools_la_CPPFLAGS = $(AM_CPPFLAGS)
-libCrackDebugTools_la_LDFLAGS = -version-info 2:0:1 @LLVM_LDFLAGS@ \
+libCrackDebugTools_la_LDFLAGS = -version-info 3:0:0 @LLVM_LDFLAGS@ \
     @LLVM_LIBS@ $(AM_LDFLAGS)
 
 libCrackNativeRuntime_la_SOURCES = ext/Stub.cc
 libCrackNativeRuntime_la_CPPFLAGS = $(AM_CPPFLAGS)
-libCrackNativeRuntime_la_LDFLAGS = -version-info 4:0:0 $(AM_LDFLAGS)
+libCrackNativeRuntime_la_LDFLAGS = -version-info 5:0:0 $(AM_LDFLAGS)
 
 rtlibdir = $(libdir)/crack-$(VERSION)/crack
 rtlib_LTLIBRARIES = runtime.la
@@ -303,11 +303,12 @@ extinc_HEADERS = \
     ext/util.h \
     ext/Var.h
 
-EXTRA_DIST = doc lib test Credits tools CMakeLists.txt opt/CMakeLists.txt \
+EXTRA_DIST = doc lib $(srcdir)/test/*.crk $(srcdir)/test/bad_extension.so \
+    $(srcdir)/test/screen $(srcdir)/test/test*.crt $(srcdir)/test/test*.key \
+    $(srcdir)/test/*.cc Credits tools CMakeLists.txt opt/CMakeLists.txt \
     sourceModules.txt runtimeModules.txt cmake COPYING doc/license \
     screen/builders.crk screen/config.crk screen/screen.crk screen/stats.crk \
-    screen/testdata.crk screen/planB screen/tests extras/JITEmitter.patch \
-    opt/*.crk
+    screen/testdata.crk screen/planB screen/tests $(srcdir)/opt/*.crk
     
 
 bin_PROGRAMS = crack
@@ -330,7 +331,7 @@ all: testbed
 
 doc/Manual.html: doc/Manual.nml doc/Manual.template crack testbed
 	$(MKDIR_P) doc
-	./crack -l $(srcdir)/lib:./lib $(srcdir)/tools/nml2html.crk -t \
+	./crack -l $(srcdir)/lib:./lib -K $(srcdir)/tools/nml2html.crk -t \
 	   $(srcdir)/doc/Manual.template \
 	   -o $@ \
 	   $(srcdir)/doc/Manual.nml
@@ -368,6 +369,8 @@ testbed: runtime.la $(extlib_LTLIBRARIES)
 	$(MKDIR_P) lib/crack/ext
 	ln -f .libs/runtime.so lib/crack
 	ln -f .libs/testext.so lib
+	ln -f .libs/runtime.la lib/crack
+	ln -f .libs/testext.la lib
 	for ext in $(EXTENSIONS); do \
 	  if [ -e .libs/$$ext.so ]; then \
 	    ln -f .libs/$$ext.so lib/crack/ext; \
