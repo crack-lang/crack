@@ -85,8 +85,8 @@ void usage(int retval) {
             " search paths" << endl;
 
     cout << " -C\n    Turn on module caching (already enabled by" << endl;
-    cout << "    default, this just overrrides the CRACK_NOCACHE" << endl;
-    cout << "    environment variable." << endl;
+    cout << "    default, this just overrrides the CRACK_CACHING" << endl;
+    cout << "    environment variable if it's set to false." << endl;
     cout << " -K\n    Disable module caching." << endl;
 
     cout << " -g --debug\n    Generate DWARF debug information" << endl;
