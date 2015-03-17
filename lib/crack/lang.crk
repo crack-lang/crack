@@ -168,6 +168,8 @@ class Buffer;
 
 }
 
+String _getRepr(Buffer buffer);
+
 ## The buffer base class containing a bytebuf and size.
 class Buffer : Object {
 
@@ -367,6 +369,10 @@ class Buffer : Object {
                !memcmp(buffer + (size - suffix.size), suffix.buffer, 
                       suffix.size
                       );
+    }
+    
+    String getRepr() {
+        return _getRepr(this);
     }
 }
 
@@ -729,27 +735,6 @@ class String : Buffer {
     ## Remove trailing newline from the end of the string
     String rtrim() { return rtrim(this); }
 
-    ## Returns a legal source representation of the string.
-    String getRepr() {
-        AppendBuffer buf = {size + 2};
-
-        buf.append(39); # "'"
-        for (uint i = 0; i < size; ++i) {
-            ch := buffer[i];
-            if (ch < 32 || ch > 127 || ch == 39 || ch == 92) {
-                buf.append(b'\\'); # '\'
-                buf.append(b'0' + (ch >> 6));
-                buf.append(b'0' + ((ch & 56) >> 3));
-                buf.append(b'0' + (ch & 7));
-            } else {
-                buf.append(ch)
-            }
-        }
-        buf.append(39);
-
-        return String(buf, true);
-    }
-
     void formatTo(Formatter f) {
         f.write(this);
     }
@@ -763,6 +748,27 @@ class String : Buffer {
             return null;
     }
 };
+
+## Returns a legal source representation of the string.
+String _getRepr(Buffer buffer) {
+    AppendBuffer buf = {buffer.size + 2};
+
+    buf.append(b"'");
+    for (uint i = 0; i < buffer.size; ++i) {
+        ch := buffer.buffer[i];
+        if (ch < 32 || ch > 127 || ch == 39 || ch == 92) {
+            buf.append(b'\\'); # '\'
+            buf.append(b'0' + (ch >> 6));
+            buf.append(b'0' + ((ch & 56) >> 3));
+            buf.append(b'0' + (ch & 7));
+        } else {
+            buf.append(ch)
+        }
+    }
+    buf.append(b"'");
+
+    return String(buf, true);
+}
 
 ## A substring of an existing string object.  Substrings are much
 ## lighter weight than full String objects because SubString doesn't manage
