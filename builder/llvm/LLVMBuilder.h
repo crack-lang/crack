@@ -569,7 +569,8 @@ class LLVMBuilder : public Builder {
         virtual void finishCachedModule(
             model::Context &context,
             model::ModuleDef *module,
-            const std::string &uniquifier
+            const std::string &uniquifier,
+            bool retain
         );
         
         virtual model::CleanupFramePtr

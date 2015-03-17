@@ -30,9 +30,10 @@ bool initCacheDirectory(builder::BuilderOptions *o,
 
 /**
  * Move file 'src' to 'dst' (does a remove of 'dst' followed by a link(src,
- * dst).
+ * dst).  Returns true if successful, false if not.
+ * This will attempt to delete both files if unable to create a link.
  */
-void move(const std::string &src, const std::string &dst);
+bool move(const std::string &src, const std::string &dst);
 
 }} // end namespace crack::util
 

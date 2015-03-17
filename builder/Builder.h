@@ -510,11 +510,13 @@ class Builder : public spug::RCBase {
          * Convert the uniquified cached module to the non-unique one.
          * This basically moves a file of the form modulename.uniquifier to 
          * modulename after the metadata file has been moved into place.
+         * @param retain if true, keep the cache file, otherwise delete it.
          */
         virtual void finishCachedModule(
             model::Context &context,
             model::ModuleDef *module,
-            const std::string &uniquifier
+            const std::string &uniquifier,
+            bool retain
         ) = 0;
 
         /**

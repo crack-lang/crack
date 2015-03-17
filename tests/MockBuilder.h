@@ -399,7 +399,8 @@ class MockBuilder : public builder::Builder {
         virtual void finishCachedModule(
             model::Context &context,
             model::ModuleDef *module,
-            const std::string &uniquifier
+            const std::string &uniquifier,
+            bool retain
         ) {
         }
 

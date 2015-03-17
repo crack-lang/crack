@@ -2473,14 +2473,19 @@ void LLVMBuilder::cacheModule(Context &context, ModuleDef *module,
 }
 
 void LLVMBuilder::finishCachedModule(Context &context, ModuleDef *module,
-                                     const string &uniquifier
+                                     const string &uniquifier,
+                                     bool retain
                                      ) {
     string finalPath = getCacheFilePath(options.get(),
                                         *context.construct,
                                         module->getNamespaceName(),
                                         "bc"
                                         );
-    move(finalPath + uniquifier, finalPath);
+    string tempPath = finalPath + uniquifier;
+    if (retain)
+        move(tempPath, finalPath);
+    else
+        unlink(tempPath.c_str());
 }
 
 ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {

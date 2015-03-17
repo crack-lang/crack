@@ -311,22 +311,36 @@ void Context::cacheModule(ModuleDef *mod) {
     
     string uniquifier = SPUG_FSTR('.' << hostname << '.' << pid);
     string tempFileName = metaDataPath + uniquifier;
-    ofstream dst(tempFileName.c_str());
-    Serializer ser(dst);
-    mod->serialize(ser);
-    dst.close();
     
-    builder.cacheModule(*this, mod, uniquifier);
-    
-    // When the builder is done, we can move the meta-file into place because 
-    // it's ready to be used by another process.
-    if (Construct::traceCaching)
-        cerr << "Moving cached file from " << tempFileName << " to " <<
-            metaDataPath << endl;
-    move(tempFileName, metaDataPath);
-    
-    // Now let the builder move its cache files into place.
-    builder.finishCachedModule(*this, mod, uniquifier);
+    try {
+        ofstream dst(tempFileName.c_str());
+        Serializer ser(dst);
+        mod->serialize(ser);
+        dst.close();
+    } catch (...) {
+        unlink(tempFileName.c_str());
+        throw;
+    }
+
+    try {    
+        builder.cacheModule(*this, mod, uniquifier);
+        
+        // When the builder is done, we can move the meta-file into place because 
+        // it's ready to be used by another process.
+        if (Construct::traceCaching)
+            cerr << "Moving cached file from " << tempFileName << " to " <<
+                metaDataPath << endl;
+        bool metaDataMoved = move(tempFileName, metaDataPath);
+        
+        // Now let the builder move its cache files into place.
+        builder.finishCachedModule(*this, mod, uniquifier, metaDataMoved);
+        if (!metaDataMoved)
+            unlink(tempFileName.c_str());
+    } catch (...) {
+        builder.finishCachedModule(*this, mod, uniquifier, false);
+        unlink(tempFileName.c_str());
+        throw;
+    }
 }
 
 ExprPtr Context::getStrConst(const std::string &value, bool raw) {
