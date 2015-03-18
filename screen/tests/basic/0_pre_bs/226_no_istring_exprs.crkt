@@ -1,0 +1,8 @@
+%%TEST%%
+I-string expressions produce an error
+%%ARGS%%
+%%FILE%%
+`test`
+%%EXPECT%%
+ParseError: %SCRIPTNAME%:1:1: Interpolated strings may not be used as expressions.
+%%STDIN%%

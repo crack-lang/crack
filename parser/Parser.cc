@@ -1263,7 +1263,7 @@ ExprPtr Parser::parseExpression(unsigned precedence) {
    
    // for an interpolated string
    } else if (tok.isIstrBegin()) {
-      assert(false && "istring expressions not yet implemented");
+      error(tok, "Interpolated strings may not be used as expressions.");
       // XXX we need to create a StringFormatter and pass it to parseIString() 
       // as the formatter.
 //      expr = parseIString(formatter);
