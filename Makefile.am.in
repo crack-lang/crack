@@ -331,7 +331,7 @@ all: testbed
 
 doc/Manual.html: doc/Manual.nml doc/Manual.template crack testbed
 	$(MKDIR_P) doc
-	./crack -l $(srcdir)/lib:./lib -K $(srcdir)/tools/nml2html.crk -t \
+	./crack -l $(srcdir)/lib:./lib $(srcdir)/tools/nml2html.crk -t \
 	   $(srcdir)/doc/Manual.template \
 	   -o $@ \
 	   $(srcdir)/doc/Manual.nml
@@ -361,16 +361,16 @@ uninstall-local:
 
 clean-local:
 	rm -rf $(EXTENSIONS:%=lib/crack/ext/%.so) screen/output \
-	   test/screen.bin* lib/crack/runtime.so \
-	   lib/testext.so test/.libs \
+	   test/screen.bin* lib/crack/runtime.so lib/crack/runtime.la \
+	   lib/testext.so lib/testext.la test/.libs \
 	   test/testext.la doc/Manual.html
 
 testbed: runtime.la $(extlib_LTLIBRARIES)
 	$(MKDIR_P) lib/crack/ext
-	ln -f .libs/runtime.so lib/crack
-	ln -f .libs/testext.so lib
-	ln -f .libs/runtime.la lib/crack
-	ln -f .libs/testext.la lib
+	$(INSTALL) .libs/runtime.so lib/crack
+	$(INSTALL) runtime.la lib/crack
+	$(INSTALL) .libs/testext.so lib
+	$(INSTALL) testext.la lib
 	for ext in $(EXTENSIONS); do \
 	  if [ -e .libs/$$ext.so ]; then \
 	    ln -f .libs/$$ext.so lib/crack/ext; \
