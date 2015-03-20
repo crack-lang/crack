@@ -308,7 +308,8 @@ EXTRA_DIST = doc lib $(srcdir)/test/*.crk $(srcdir)/test/bad_extension.so \
     $(srcdir)/test/*.cc Credits tools CMakeLists.txt opt/CMakeLists.txt \
     sourceModules.txt runtimeModules.txt cmake COPYING doc/license \
     screen/builders.crk screen/config.crk screen/screen.crk screen/stats.crk \
-    screen/testdata.crk screen/planB screen/tests $(srcdir)/opt/*.crk
+    screen/testdata.crk screen/planB screen/tests screen/systest.crk \
+    $(srcdir)/opt/*.crk
     
 
 bin_PROGRAMS = crack
@@ -377,6 +378,10 @@ testbed: runtime.la $(extlib_LTLIBRARIES)
 	  fi \
 	done
 
+# Note that the caching tests have to happen twice.
 check: testbed
 	./unittests
 	BUILD_ROOT=`pwd` $(srcdir)/test/screen
+	BUILD_ROOT=`pwd` $(srcdir)/test/screen -d screen/tests/caching
+	BUILD_ROOT=`pwd` $(srcdir)/test/screen -d screen/tests/caching
+	BUILD_ROOT=`pwd` $(srcdir)/test/screen -d screen/tests/compound
