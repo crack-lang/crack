@@ -7,7 +7,7 @@
 
 import crack.fs cwd, makePath, normalize, sysfs, Path, RealPath;
 import crack.io cout;
-import crack.lang InvalidArgumentError, ManagedBuffer;
+import crack.lang InvalidArgumentError, ManagedBuffer, SystemError;
 import crack.strutil StringArray;
 
 tempFile := RealPath('writer.out');
@@ -55,6 +55,16 @@ if (!tempDir.exists())
 
 if (!tempDir.isDir())
     cout `FAILED isDir() check on directory\n`;
+
+# Make sure 'errorOnExists' flag works.
+tempDir.makeDir(false);
+
+# Make sure makeDir() defaults to errorOnExists = true;
+try {
+    tempDir.makeDir();
+    cout `FAILED makeDir() on an existing directory does not error\n`;
+} catch (SystemError ex) {
+}
 
 Path foo = tempDir/'foo', bar = tempDir/'bar';
 foo.writeAll('this is foo');

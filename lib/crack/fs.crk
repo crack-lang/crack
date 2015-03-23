@@ -9,7 +9,7 @@
 
 import crack.runtime basename, chdir, closedir, dirname, errno, fileExists,
     free, fileRemove, getcwd, getDirEntry, malloc, mkdir, open, opendir,
-    readdir, rename, stat, strcpy, strlen, Dir, DirEntry, Stat, O_CREAT,
+    readdir, rename, stat, strcpy, strlen, Dir, DirEntry, Stat, EEXIST, O_CREAT,
     O_TRUNC, O_RDONLY, O_WRONLY, O_APPEND, PATH_MAX, S_IFDIR, S_IFLNK;
 import crack.sys strerror;
 import crack.io cout, FStr, OwningFDReader, OwningFDWriter, Reader, Writer;
@@ -51,7 +51,12 @@ class Path;
     @abstract Writer writer();
 
     ## Make a directory corresponding to the path.
-    @abstract void makeDir();
+    ## errorOnExists: throw an error if the directory already exists and is a
+    ##     directory.
+    @abstract void makeDir(bool errorOnExists);
+
+    ## Make a directory corresponding to the path.
+    @final void makeDir() { makeDir(true); }
 
     FullReader makeFullReader() {
         return FullReader(reader());
@@ -120,7 +125,7 @@ class Path;
     void makeDirs() {
         if (!exists()) {
             parent().makeDirs();
-            makeDir();
+            makeDir(false);
         }
     }
 
@@ -264,9 +269,12 @@ class RealPath : Path {
         return OwningFDWriter(fd);
     }
 
-    void makeDir() {
-        if (mkdir(__path.buffer, 0o777))
+    void makeDir(bool errorOnExists) {
+        if (mkdir(__path.buffer, 0o777)) {
+            if (!errorOnExists && errno() == EEXIST && isDir())
+                return;
             throw SystemError(FStr() `making directory $__path`);
+        }
     }
 
     void delete() {
@@ -349,7 +357,7 @@ class _CWD : Path {
 
     Reader reader() { return __path.reader(); }
     Writer writer() { return __path.writer(); }
-    void makeDir() { __path.makeDir(); }
+    void makeDir(bool errorOnExists) { __path.makeDir(errorOnExists); }
     Path oper [](String child) { return __path[child]; }
     Path _createNode(String path) { return __path._createNode(path); }
     Path oper /(String other) { return __path/other; }

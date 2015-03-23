@@ -5844,6 +5844,12 @@ you want to avoid code breakage when upgrading, we recommend two strategies:
 The remainder of this appendix describes the things you need to know when
 upgrading between versions.
 
+From 0.9 to 0.10
+----------------
+
+-   crack.fs.Path.makeDir() has been converted to a final function, 
+    makeDir(bool errorOnExists) is now the abstract that must be overriden.
+
 From 0.8 to 0.9
 ---------------
 
