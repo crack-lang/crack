@@ -110,7 +110,7 @@ int Crack::runScript(std::istream &src, const std::string &name, bool notAFile) 
         return 1;
     options->optionMap["mainUnit"] = name;
     if (options->optionMap.find("out") == options->optionMap.end()) {
-        if (name.substr(name.size() - 4) == ".crk")
+        if (name.size() > 4 && name.substr(name.size() - 4) == ".crk")
             options->optionMap["out"] = name.substr(0, name.size() - 4);
         else
             // no extension - add one to the output file to distinguish it 
