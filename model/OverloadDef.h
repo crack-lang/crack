@@ -170,7 +170,9 @@ class OverloadDef : public VarDef {
         std::pair<bool, bool> hasAliasesAndNonAliases() const;
         
         /**
-         * Returns true if the alias contains any exposed functions.
+         * Returns true if the overload contains any exposed functions. (See 
+         * VarDef, "exposed definitions" are private definitions exposed 
+         * through an alias).
          */
         bool hasExposedFuncs() const;
         
