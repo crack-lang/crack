@@ -46,9 +46,11 @@ class Path;
 
     ## Returns a reader for the path.  The path must be readable.
     @abstract Reader reader();
+    alias makeReader = reader;
 
     ## Returns a writer for the path.  The path must be writable.
     @abstract Writer writer();
+    alias makeWriter = writer;
 
     ## Make a directory corresponding to the path.
     ## errorOnExists: throw an error if the directory already exists and is a
@@ -251,16 +253,12 @@ class RealPath : Path {
         return OwningFDReader(fd);
     }
 
-    alias makeReader = reader;
-
     Writer writer() {
         fd := open(__path.buffer, O_CREAT | O_WRONLY | O_TRUNC, 0777);
         if (fd == -1)
             throw SystemError(FStr() `opening $__path`);
         return OwningFDWriter(fd);
     }
-
-    alias makeWriter = writer;
 
     Writer makeAppender() {
         fd := open(__path.buffer, O_APPEND | O_WRONLY, 0777);
