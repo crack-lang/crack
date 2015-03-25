@@ -38,6 +38,7 @@ void BTypeDef::extendVTables(VTableBuilder &vtb) {
          ++varIter
          ) {
 
+        // TODO: Try removing this loop, we shouldn't ever be storing FuncDefs.
         BFuncDef *funcDef = BFuncDefPtr::rcast(varIter->second);
         if (funcDef && (funcDef->flags & FuncDef::virtualized)) {
             vtb.add(funcDef);
@@ -57,7 +58,12 @@ void BTypeDef::extendVTables(VTableBuilder &vtb) {
                  fiter != overload->endTopFuncs();
                  ++fiter
                  )
-                if ((*fiter)->flags & FuncDef::virtualized)
+                if ((*fiter)->flags & FuncDef::virtualized &&
+                    
+                    // Make sure it's not an alias.  We don't want to add 
+                    // functions referenced by aliases to the vtable.
+                    (*fiter)->name == overload->name
+                    )
                     vtb.add(BFuncDefPtr::arcast(*fiter));
     }
 }

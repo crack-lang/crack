@@ -148,7 +148,10 @@ bool VarDef::isImportable(const Namespace *ns, const string &name) const {
     //    (the "second order import" rules) _and_
     // 2) It is either non-private (no leading underscore) or type-scoped and
     //    not class-private.
-    return (owner == ns || isExported(ns, name)) &&
+    return (owner->getRealModule() ==
+            const_cast<Namespace *>(ns)->getRealModule() ||
+            isExported(ns, name)
+            ) &&
            (name[0] != '_' ||
             (TypeDefPtr::cast(owner) && name.substr(0, 2) != "__")
             );

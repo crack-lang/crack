@@ -231,6 +231,22 @@ test.mod('mod1', "
 test.main("import mod1 AI;");
 test.run();
 
+test.mod('mod1', "
+    class A : VTableBase {
+        void f() { puts('wtf? A?'); }
+    }
+
+    class B : A {
+        void f() { puts('aliased override'); }
+        alias g = f;
+    }
+    ");
+test.main("import mod1 B; B().g()");
+test.run();
+test.rmCacheFiles('.main.*');
+test.run();
+
+
 %%REXPECT%%
 out: alias
 terminated: success
@@ -287,4 +303,8 @@ terminated, rc = 2049
 err: ParseError: .*/main.crk:1:13: Name AI does not belong to module mod1.  Second-order imports are not allowed.
 err:\s*
 terminated, rc = 2049
+out: aliased override
+terminated: success
+out: aliased override
+terminated: success
 %%STDIN%%
