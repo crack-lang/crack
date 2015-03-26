@@ -1,0 +1,12 @@
+%%TEST%%
+cyclic aliases
+%%ARGS%%
+%%FILE%%
+class A {
+    alias B = A;
+    void f() { puts('ok'); }
+}
+A.B().f();
+%%EXPECT%%
+ok
+%%STDIN%%

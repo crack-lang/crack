@@ -189,6 +189,9 @@ bool Namespace::isHiddenScope() {
 
 bool Namespace::hasGenerics() const {
     SPUG_FOR(VarDefMap, i, defs) {
+        // avoid aliases
+        if (isAlias(i->second.get(), i->first))
+            continue;
         Namespace *ns = NamespacePtr::rcast(i->second);
         if (ns && ns->hasGenerics())
             return true;
@@ -213,6 +216,10 @@ bool Namespace::hasAliasFor(VarDef *def) const {
         if (iter->second.get() == def)
             return true;
     return false;
+}
+
+bool Namespace::isAlias(const VarDef *def, const string &name) const {
+    return def->getOwner() != this || name != def->name;
 }
 
 void Namespace::addDef(VarDef *def) {
@@ -369,6 +376,8 @@ void Namespace::dump() const {
 void Namespace::getOrderedTypes(OrderedTypes &types, const ModuleDef *master) const {
     SPUG_FOR(VarDefMap, iter, defs) {
         if (TypeDef *type = TypeDefPtr::rcast(iter->second)) {
+            if (isAlias(iter->second.get(), iter->first))
+                continue;
             types.add(type, master);
             type->getOrderedTypes(types, master);
         }

@@ -183,6 +183,13 @@ class Namespace : public virtual spug::RCBase {
         bool hasAliasFor(VarDef *def) const;
 
         /**
+         * Returns true if the definition is an alias in the namespace.
+         * 'def' is assumed to be a definition stored in the namespace under 
+         * 'name', though this function doesn't verify that it is.
+         */
+        bool isAlias(const VarDef *def, const std::string &name) const;
+
+        /**
          * Add a new definition to the namespace (this may not be used for 
          * FuncDef's, these must be wrapped in an OverloadDef.  See Context 
          * for an easy way to add FuncDef's)
