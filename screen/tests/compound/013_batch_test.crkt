@@ -246,6 +246,22 @@ test.run();
 test.rmCacheFiles('.main.*');
 test.run();
 
+test.mod('mod1', "
+    class A {
+        void f() { puts('cached alias of base func'); }
+    }
+    ");
+test.mod('mod2', "
+    import mod1 A;
+    class B : A { alias g = f; }
+    ");
+test.main("
+    import mod2 B;
+    B().g();
+    ");
+test.run();
+test.rmCacheFiles('.main.*');
+test.run();
 
 %%REXPECT%%
 out: alias
@@ -306,5 +322,9 @@ terminated, rc = 2049
 out: aliased override
 terminated: success
 out: aliased override
+terminated: success
+out: cached alias of base func
+terminated: success
+out: cached alias of base func
 terminated: success
 %%STDIN%%
