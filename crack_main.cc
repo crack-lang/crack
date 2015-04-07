@@ -20,6 +20,7 @@
 #include "model/Serializer.h"
 #include "model/TypeDef.h"
 #include "builder/BuilderOptions.h"
+#include "builder/mdl/ModelBuilder.h"
 #include "builder/llvm/LLVMJitBuilder.h"
 #include "builder/llvm/LLVMLinkerBuilder.h"
 #include "builder/llvm/StructResolver.h"
@@ -37,6 +38,7 @@ using spug::Tracer;
 typedef enum {
     jitBuilder,
     nativeBuilder,
+    modelBuilder,
     doubleBuilder = 1001,
     dumpFuncTable = 1002,
 } builderType;
@@ -182,6 +184,8 @@ int main(int argc, char **argv) {
                     crack.cacheMode = false;
                 } else if (strncmp("llvm-jit",optarg,8) == 0) {
                     bType = jitBuilder;
+                } else if (strncmp("model", optarg, 4) == 0) {
+                    bType = modelBuilder;
                 } else {
                     cerr << "Unknown builder: " << optarg << endl;
                     exit(1);
@@ -298,8 +302,11 @@ int main(int argc, char **argv) {
             crack.setCompileTimeBuilder(new builder::mvll::LLVMJitBuilder());
     }
     else {
-        // compile to native binary
-        crack.setBuilder(new builder::mvll::LLVMLinkerBuilder());
+        if (bType == nativeBuilder)
+            // compile to native binary
+            crack.setBuilder(new builder::mvll::LLVMLinkerBuilder());
+        else
+            crack.setBuilder(new builder::mdl::ModelBuilder());
         crack.setCompileTimeBuilder(new builder::mvll::LLVMJitBuilder());
     }
 

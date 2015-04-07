@@ -32,12 +32,16 @@ libCrackNativeRuntime_la_CPPFLAGS = $(AM_CPPFLAGS)
 libCrackNativeRuntime_la_LDFLAGS = -version-info 5:0:0 $(AM_LDFLAGS)
 
 rtlibdir = $(libdir)/crack-$(VERSION)/crack
-rtlib_LTLIBRARIES = runtime.la
+rtlib_LTLIBRARIES = runtime.la compiler.la
 
 runtime_la_LDFLAGS = -avoid-version -module @LIBICONV@ $(AM_LDFLAGS)
 runtime_la_CPPFLAGS = @INCICONV@
 runtime_la_SOURCES = %libRuntimeSources%
 runtime_la_LIBADD = libCrackDebugTools.la
+
+compiler_la_LDFLAGS = -avoid-version -module $(AM_LDFLAGS)
+compiler_la_SOURCES = opt/compiler.cc
+compiler_la_LIBADD = libCrackLang.la
 
 # this is really annoying, testext needs to be installed in order to generate 
 # a .so file.
