@@ -30,10 +30,6 @@ namespace builder {
  */
 class Crack : public model::Options {
     private:
-        // the root context contains all of the builtin types and functions
-        // that are visible from all modules.
-        model::ContextPtr rootContext;
-        
         // the primary construct.
         model::ConstructPtr construct;
 
