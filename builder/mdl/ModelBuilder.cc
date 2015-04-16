@@ -7,73 +7,31 @@
 
 #include "ModelBuilder.h"
 
+#include "ArrayTypeDef.h"
 #include "ModelFuncDef.h"
+#include "Utils.h"
 
 using namespace model;
 using namespace builder::mdl;
 using namespace std;
+using namespace util;
+
+model::TypeDefPtr ModelBuilder::emitBeginClass(Context &context,
+                                               const string &name,
+                                               const vector<TypeDefPtr> &bases,
+                                               TypeDef *forwardDef
+                                               ) {
+    TypeDefPtr result;
+    if (forwardDef)
+        result = forwardDef;
+    else
+        result = new TypeDef(context.construct->classType.get(), name, true);
+    result->parents = bases;
+    context.ns = result;
+    return result;
+}
 
 namespace {
-    FuncDefPtr newFuncDef(TypeDef *returnType, FuncDef::Flags flags,
-                          const string &name,
-                          size_t argCount
-                          ) {
-        FuncDefPtr result = new ModelFuncDef(flags, name, argCount);
-        result->returnType = returnType;
-        return result;
-    }
-
-    FuncDefPtr newUnOpDef(TypeDef *returnType, const string &name,
-                          bool isMethod
-                          ) {
-        FuncDefPtr result = newFuncDef(
-            returnType,
-            FuncDef::builtin |
-             (isMethod ? FuncDef::method : FuncDef::noFlags),
-            name,
-            isMethod ? 0 : 1
-        );
-        if (isMethod)
-            result->receiverType = returnType;
-        else
-            result->args[0] = new ArgDef(returnType, "operand");
-        return result;
-    }
-
-    FuncDefPtr newBinOpDef(const string &name, TypeDef *argType,
-                           TypeDef *returnType,
-                           bool isMethod = false,
-                           bool isReversed = false
-                           ) {
-        FuncDefPtr result = newFuncDef(
-            returnType,
-            (isMethod ? FuncDef::method : FuncDef::noFlags) |
-             (isReversed ? FuncDef::reverse : FuncDef::noFlags) |
-             FuncDef::builtin,
-            name,
-            isMethod ? 1 : 2
-            );
-
-        int arg = 0;
-        if (isMethod)
-            result->receiverType = argType;
-        else
-            result->args[arg++] = new ArgDef(argType, "lhs");
-
-        result->args[arg++] = new ArgDef(argType, "rhs");
-        return result;
-    }
-
-    void addNopNew(Context &context, TypeDef *type) {
-        FuncDefPtr func = newFuncDef(type, FuncDef::noFlags, "oper new", 1);
-        func->args[0] = new ArgDef(type, "val");
-        context.addDef(func.get(), type);
-    }
-
-    FuncDefPtr newVoidPtrOpDef(TypeDef *resultType) {
-        return newUnOpDef(resultType, "oper to .builtin.voidptr", true);
-    }
-
     struct PrimTypeBuilder {
         vector<TypeDef *> deferMetaClass;
         Context &context;
@@ -497,6 +455,78 @@ ModuleDefPtr ModelBuilder::registerPrimFuncs(Context &context) {
     addNopNew(context, intzType);
     addNopNew(context, uintzType);
     addNopNew(context, floatType);
+
+    // These new operators truncate.
+    addConvNew(context, int64Type, uint64Type);
+    addConvNew(context, int64Type, int32Type);
+    addConvNew(context, int64Type, uint32Type);
+    addConvNew(context, int64Type, int16Type);
+    addConvNew(context, int64Type, uint16Type);
+    addConvNew(context, int64Type, byteType);
+
+    addConvNew(context, uint64Type, int64Type);
+    addConvNew(context, uint64Type, int32Type);
+    addConvNew(context, uint64Type, uint32Type);
+    addConvNew(context, uint64Type, int16Type);
+    addConvNew(context, uint64Type, uint16Type);
+    addConvNew(context, uint64Type, byteType);
+
+    addConvNew(context, int32Type, byteType);
+    addConvNew(context, int32Type, uint16Type);
+    addConvNew(context, int32Type, int16Type);
+    addConvNew(context, int32Type, uint32Type);
+
+    addConvNew(context, uint32Type, byteType);
+    addConvNew(context, uint32Type, int16Type);
+    addConvNew(context, uint32Type, uint16Type);
+    addConvNew(context, uint32Type, int32Type);
+
+    addConvNew(context, int16Type, byteType);
+    addConvNew(context, int16Type, uint16Type);
+
+    addConvNew(context, uint16Type, byteType);
+    addConvNew(context, uint16Type, int16Type);
+
+    addConvNew(context, intType, int16Type);
+    addConvNew(context, intType, uint16Type);
+    addConvNew(context, intType, int32Type);
+    addConvNew(context, intType, uint32Type);
+    addConvNew(context, intType, byteType);
+
+    addConvNew(context, uintType, int16Type);
+    addConvNew(context, uintType, uint16Type);
+    addConvNew(context, uintType, int32Type);
+    addConvNew(context, uintType, uint32Type);
+    addConvNew(context, uintType, byteType);
+
+    addConvNew(context, float64Type, float32Type);
+    addConvNew(context, float32Type, byteType);
+    addConvNew(context, float32Type, int16Type);
+    addConvNew(context, float32Type, uint16Type);
+    addConvNew(context, float32Type, int32Type);
+    addConvNew(context, float32Type, uint32Type);
+    addConvNew(context, float32Type, int64Type);
+    addConvNew(context, float32Type, uint64Type);
+    addConvNew(context, float64Type, byteType);
+    addConvNew(context, float64Type, int16Type);
+    addConvNew(context, float64Type, uint16Type);
+    addConvNew(context, float64Type, int32Type);
+    addConvNew(context, float64Type, uint32Type);
+    addConvNew(context, float64Type, int64Type);
+    addConvNew(context, float64Type, uint64Type);
+
+    addConvNew(context, int64Type, float32Type);
+    addConvNew(context, uint64Type, float32Type);
+    addConvNew(context, int64Type, float64Type);
+    addConvNew(context, uint64Type, float64Type);
+
+    // create the array generic
+    TypeDefPtr arrayType = new ArrayTypeDef(context.construct->classType.get(),
+                                            "array"
+                                            );
+    gd->arrayType = arrayType;
+    context.addDef(arrayType.get());
+    typeBuilder.deferMetaClass.push_back(arrayType.get());
 
     return builtins;
 }

@@ -46,7 +46,9 @@ parser/Parser.cc
 parser/ParseError.cc
 parser/Token.cc
 spug/Tracer.cc
+builder/mdl/ArrayTypeDef.cc
 builder/mdl/ModelBuilder.cc
+builder/mdl/Utils.cc
 builder/llvm/ArrayTypeDef.cc
 builder/llvm/BModuleDef.cc
 builder/llvm/BBuilderContextData.cc

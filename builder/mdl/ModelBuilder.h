@@ -58,7 +58,9 @@ class ModelBuilder : public builder::Builder {
         };
 
         virtual builder::BuilderPtr createChildBuilder() {
-            return new ModelBuilder();
+            ModelBuilderPtr result = new ModelBuilder();
+            result->options = options;
+            return result;
         }
 
         virtual model::ResultExprPtr emitFuncCall(
@@ -177,6 +179,7 @@ class ModelBuilder : public builder::Builder {
                               ) {
             model::FuncDefPtr result =
                 new ModelFuncDef(flags, name, args.size());
+            result->returnType = returnType;
             result->args = args;
         }
 
@@ -202,6 +205,7 @@ class ModelBuilder : public builder::Builder {
 
             model::FuncDefPtr func = new ModelFuncDef(flags, name, args.size());
             func->args = args;
+            func->returnType = returnType;
             return func;
         }
 
@@ -221,6 +225,7 @@ class ModelBuilder : public builder::Builder {
         ) {
             model::FuncDefPtr func = new ModelFuncDef(flags, name, args.size());
             func->args = args;
+            func->returnType = returnType;
             return func;
         }
 
@@ -229,18 +234,7 @@ class ModelBuilder : public builder::Builder {
             const std::string &name,
             const std::vector<model::TypeDefPtr> &bases,
             model::TypeDef *forwardDef
-        ) {
-            model::TypeDefPtr result;
-            if (forwardDef)
-                result = forwardDef;
-            else
-                result = new model::TypeDef(context.construct->classType.get(),
-                                            name,
-                                            true
-                                            );
-            result->parents = bases;
-            return result;
-        }
+        );
 
         virtual void emitEndClass(model::Context &context) {
         }
@@ -327,7 +321,7 @@ class ModelBuilder : public builder::Builder {
                                                  const std::string &path,
                                                  model::ModuleDef *owner
                                                  ) {
-            return new ModelModuleDef(name, owner);
+            return new ModelModuleDef(name, context.ns.get());
         }
 
         virtual void closeModule(model::Context &context,
