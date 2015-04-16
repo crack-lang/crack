@@ -1,0 +1,25 @@
+
+
+Goals of Crack:
+
+    1) C/C++/Java-like syntax
+    2) FAST!  Fast to compile, fast to execute.  No build definition necessary.
+    3) Extensible in C/C++
+    3) low-verbosity. "Brevity is next to Goddity"
+    4) Provide tools to protect compatibility:
+        Here are features we won't add:
+            a, b = f();  Tuple assignment.  The owner of f() can't extend the
+            return code.
+
+            "import *" - if a module writer adds a new function, it may
+            collide with something in your namespace.  We may provide
+            "import foo prefix*" assuming we can guarantee that the prefix
+            will not collide.
+
+            "import foo f; import bar f; // if is an overload" - the overloads
+            of foo.f ande bar.f may not collide at the time of writing, but
+            the author of either may introduce a collision.
+    5) It should be possible to write code free of invalid memory access
+        problems in Crack, but also possible to do dangerous things if you
+        make it explicit.
+        [For 1.0, we've failed to make this distinction explicit]
