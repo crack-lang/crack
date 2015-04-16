@@ -2,6 +2,7 @@
 .*\.(lo|la)$
 ^\.deps/.*$
 ^.*/\.deps/.*$
+^.*/\.dirstamp
 ^crack$
 ^depcomp$
 ^tester.*\.crk$
