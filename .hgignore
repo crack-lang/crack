@@ -10,6 +10,7 @@
 ^install-sh$
 ^libtool$
 ^ltmain.sh$
+^compile$
 \.a$
 ^\.libs$
 ^Makefile(\.in|\.am)?$
