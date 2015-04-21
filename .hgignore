@@ -32,6 +32,7 @@
 ^ext/crack_config\.h$
 stamp-h[12]$
 ^lib/crack/ext/.*\.so$
+^lib/crack/compiler\.so$
 ^run_all_tests.fail$
 ^test/run_all_tests.tmp$
 ^lib/crack/runtime.so$
