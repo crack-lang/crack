@@ -1,0 +1,20 @@
+%%TEST%%
+shadowing an unusable object with the define operator
+%%ARGS%%
+%%FILE%%
+# Because the variable name on the left side of the define operator is
+# evaluated as an expression before the define operator is parsed, we have to
+# supress any errors that result from its use (in this case, the fact that 'a'
+# is unusable from a static context).
+class A {
+    int a;
+    @static void f() {
+        a := 'string value';
+        puts('ok');
+    }
+}
+
+A.f();
+%%EXPECT%%
+ok
+%%STDIN%%
