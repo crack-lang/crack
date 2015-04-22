@@ -1,3 +1,5 @@
+## Terminal based user-interface. Like curses but hopefully with a cleaner
+## interface.
 
 import crack.ascii parseInt, wsplit;
 import crack.cont.array Array;
@@ -11,11 +13,43 @@ class Event {
 }
 
 class KeyEvent : Event {
+    String data;
+
+    oper init(String data) : data = data {}
 }
 
 class Coord {
     int x, y;
     oper init(int x, int y) : x = x, y = y {}
+    void formatTo(Formatter out) {
+        out `Coord($x, $y)`;
+    }
+
+    Coord oper +(Coord other) {
+        return Coord(x + other.x, y + other.y);
+    }
+
+    Coord oper -(Coord other) {
+        return Coord(x - other.x, y - other.y);
+    }
+
+    int cmp(Object other) {
+        if (o := Coord.cast(other)) {
+            rc := y - o.y; if (rc) return rc;
+            rc = x - o.x;
+            return rc;
+        } else {
+            return Object.cmp(other);
+        }
+    }
+
+    @final bool isOrigin() {
+        return x == 0 && y == 0;
+    }
+
+    Coord clone() {
+        return Coord(x, y);
+    }
 }
 
 @abstract class SimpleTermUI {
@@ -28,6 +62,7 @@ class Coord {
     @abstract Coord getSize();
     @abstract Event getEvent();
     @abstract void setRawMode(bool rawMode);
+    @abstract void showCursor(bool show);
 }
 
 
@@ -49,7 +84,7 @@ class ANSITermUI : SimpleTermUI {
     }
 
     void write(Coord pos, String text) {
-        __dst.write(FStr() `\033[$(pos.y + 1);$(pos.x + 1)f`);
+        __dst.write(FStr() `\033[$(pos.y + 1);$(pos.x + 1)f$text`);
     }
 
     void setPos(int x, int y) {
@@ -74,11 +109,27 @@ class ANSITermUI : SimpleTermUI {
     Event getEvent() { return null; }
 
     void setRawMode(bool rawMode) {
-        p := Process(StringArray!['/bin/stty', rawMode ? 'raw' : 'sane']);
+        StringArray cmd = ['/bin/stty'];
+        if (rawMode) {
+            cmd.append('raw');
+            cmd.append('-echo');
+        } else {
+            cmd.append('sane');
+        }
+        p := Process(cmd);
         p.run();
+    }
+
+    void showCursor(bool show) {
+        if (show)
+            __dst.write('\033[?25h');
+        else
+            __dst.write('\033[?25l');
     }
 }
 
+## Terminal interface that writes information instead of escape sequences so
+## you can see what would be getting written.
 class TestTermUI : SimpleTermUI {
     Formatter __out;
 
@@ -117,10 +168,10 @@ class TestTermUI : SimpleTermUI {
     void setRawMode(bool rawMode) {
         __out `setting raw: $rawMode\n`;
     }
-}
 
-@abstract class WriterCaster : Writer {
-  @static Object toObject(Writer val) { return val._iface_getWriterObject(); }
+    void showCursor(bool show) {
+        __out `showCursor: $show\n`;
+    }
 }
 
 # The number of unchanged characters in the buffer before we decide that a
@@ -129,6 +180,14 @@ class TestTermUI : SimpleTermUI {
 # usual upper-bound of the "change location" sequence (8 chars, assuming 2
 # chars of location).
 const END_DELTA := 8;
+
+Array[uint16] _makeArray(Coord size) {
+    count := size.x * size.y;
+    result := Array[uint16](count);
+    for (int i = 0; i < count; ++i)
+        result.append(0);
+    return result;
+}
 
 class TermApp {
 
@@ -144,7 +203,7 @@ class TermApp {
     int __width, __height;
 
     oper init() :
-        __term = ANSITermUI(FDWriter.cast(WriterCaster.toObject(cout.rep)),
+        __term = ANSITermUI(FDWriter.cast(cout.rep.oper from Writer()),
                             cin
                             ) {
     }
@@ -157,8 +216,8 @@ class TermApp {
         size := __term.getSize();
         __width = size.x;
         __height = size.y;
-        __cur = Array[uint16](size.x * size.y, 0);
-        __new = Array[uint16](size.x * size.y, 0);
+        __cur = _makeArray(size);
+        __new = _makeArray(size);
         __term.setRawMode(true);
         inRawMode = true;
         __term.clear(0);
@@ -248,6 +307,12 @@ class TermApp {
             __new[y * __width + x + i] = uint16((attr << 8) | text[i]);
     }
 
+    void showCursor(bool show) {
+        # XXX should probably hold onto this until the next flush, just for
+        # consistency.
+        __term.showCursor(show);
+    }
+
     oper del() {
         stop();
     }
@@ -311,9 +376,20 @@ class Window {
     TermApp __app;
 
     # Coordinates relative to parent and size.
-    uint __x, __y, __width, __height;
+    uint x, y, width, height;
 
     oper init(Window parent, uint x, uint y, uint width, uint height) {
+        __app = parent.__app;
+    }
+
+    ## Constructor for the root window.
+    oper init(TermApp app) : __app = app {}
+
+    ## Creates the top-level window, which occupies the entire screen.
+    oper init(TermApp app) : __app = app, x = 0, y = 0 {
+        size := app.getSize();
+        width = size.x;
+        height = size.y;
     }
 
     ## Called when the window is resized.  This will be followed by a call to
@@ -324,7 +400,22 @@ class Window {
 
     Window getParent() { return __parent; }
 
+    ## Returns the absolute position of the window (relative to the root
+    ## window).
+    Coord getAbsPos() {
+        int absX = x, absY = y;
+        cur := __parent;
+        while (cur) {
+            absX += cur.x;
+            absY += cur.y;
+            cur = cur.__parent;
+        }
+
+        return Coord(absX, absY);
+    }
+
     GraphicsContext getGraphicsContext() {
+        absPos := getAbsPos();
         return null; # GraphicsContext(getApp(),
     }
 
