@@ -1,0 +1,5 @@
+#!/bin/sh
+root=$(dirname $0)/../..
+
+$root/crack -Cl $root/lib  model_test.crk  "$@"
+
