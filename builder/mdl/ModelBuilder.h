@@ -411,7 +411,7 @@ class ModelBuilder : public builder::Builder {
         virtual model::StrConstPtr createStrConst(model::Context &context,
                                                   const std::string &val
                                                   ) {
-            return new model::StrConst(context.construct->stringType.get(),
+            return new model::StrConst(context.construct->byteptrType.get(),
                                        val
                                        );
         }
