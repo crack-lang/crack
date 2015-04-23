@@ -274,6 +274,18 @@ capWords = capitalize(words, 1);
 if (capWords != "This is a heading")
     cout `Failed to capitalize first word in string, got $capWords\n`;
 
+if (true) {
+    # Construct a string from two StaticStrings.
+    String s = 'foobar'.substr(0, 3);
+
+    cs := s.toCString();
+    if (cs != s)
+        cout `Failed conversion of "foo" to CString\n`;
+
+    if (!('foo'.toCString().isa(StaticString)))
+        cout `Failed empty conversion of StaticString to CString\n`;
+}
+
 
 cout `ok\n`;
 

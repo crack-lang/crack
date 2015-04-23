@@ -168,7 +168,10 @@ class Buffer;
 
 }
 
+class CString;
+
 String _getRepr(Buffer buffer);
+CString _makeCString(Buffer val);
 
 ## The buffer base class containing a bytebuf and size.
 class Buffer : Object {
@@ -374,6 +377,13 @@ class Buffer : Object {
     String getRepr() {
         return _getRepr(this);
     }
+
+    
+    ## Returns the buffer converted to the CString (or the object itself, if 
+    ## it already is a CString).
+    CString toCString() {
+        return _makeCString(this);
+    }
 }
 
 void _writeObject(Writer out) {
@@ -526,7 +536,6 @@ class AppendBuffer : ManagedBuffer {
 # these efficiently
 
 class SubString;
-class CString;
 SubString _substr(SubString target, uint pos, uint len);
 SubString substr(SubString target, int pos, uint len);
 SubString substr(SubString target, int pos);
@@ -928,6 +937,13 @@ class CString : String {
         String(buf, strlen(buf.buffer), takeOwnership) {
     }
 
+    CString toCString() {
+        return this;
+    }
+}
+
+CString _makeCString(Buffer val) {
+    return CString(val);
 }
 
 ## This class is used to represent static strings parsed out of the language 
