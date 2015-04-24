@@ -180,8 +180,6 @@ int main(int argc, char **argv) {
             case 'B':
                 if (strncmp("llvm-native",optarg,11) == 0) {
                     bType = nativeBuilder;
-                    // Caching doesn't work with native mode yet.
-                    crack.cacheMode = false;
                 } else if (strncmp("llvm-jit",optarg,8) == 0) {
                     bType = jitBuilder;
                 } else if (strncmp("model", optarg, 4) == 0) {
@@ -231,9 +229,7 @@ int main(int argc, char **argv) {
                 crack.options->dumpMode = true;
                 break;
             case 'C':
-                // Ignore caching for native builder.
-                if (bType != nativeBuilder)
-                    crack.cacheMode = true;
+                crack.cacheMode = true;
                 break;
             case 'K':
                 crack.cacheMode = false;
@@ -302,11 +298,15 @@ int main(int argc, char **argv) {
             crack.setCompileTimeBuilder(new builder::mvll::LLVMJitBuilder());
     }
     else {
-        if (bType == nativeBuilder)
+        if (bType == nativeBuilder) {
+            // Disable cache mode (doesn't work for native builders).
+            crack.cacheMode = false;
+
             // compile to native binary
             crack.setBuilder(new builder::mvll::LLVMLinkerBuilder());
-        else
+        } else {
             crack.setBuilder(new builder::mdl::ModelBuilder());
+        }
         crack.setCompileTimeBuilder(new builder::mvll::LLVMJitBuilder());
     }
 
