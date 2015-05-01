@@ -7,7 +7,10 @@
 
 #include "ModelBuilder.h"
 
+#include "spug/stlutil.h"
+
 #include "ArrayTypeDef.h"
+#include "FunctionTypeDef.h"
 #include "ModelFuncDef.h"
 #include "Utils.h"
 
@@ -15,6 +18,38 @@ using namespace model;
 using namespace builder::mdl;
 using namespace std;
 using namespace util;
+
+model::TypeDefPtr ModelBuilder::getFuncType(
+    Context &context,
+    TypeDef *returnType,
+    const vector<ArgDefPtr> &args
+) {
+    TypeDef::TypeVecObjPtr paramTypes = new TypeDef::TypeVecObj();
+    paramTypes->push_back(returnType);
+    SPUG_FOR(vector<ArgDefPtr>, arg, args)
+        paramTypes->push_back((*arg)->type.get());
+    return context.construct->functionType->getSpecialization(context,
+                                                              paramTypes.get()
+                                                              );
+}
+
+FuncDefPtr ModelBuilder::emitBeginFunc(
+    Context &context,
+    FuncDef::Flags flags,
+    const string &name,
+    TypeDef *returnType,
+    const vector<ArgDefPtr> &args,
+    FuncDef *existing
+) {
+    if (existing)
+        return existing;
+
+    model::FuncDefPtr func = new ModelFuncDef(flags, name, args.size());
+    func->args = args;
+    func->returnType = returnType;
+    func->type = getFuncType(context, returnType, args);
+    return func;
+}
 
 model::TypeDefPtr ModelBuilder::emitBeginClass(Context &context,
                                                const string &name,
@@ -58,7 +93,7 @@ namespace {
                             ExprPtr (*makeInitializer)(TypeDef *type) =
                                 makeNullInitializer
                             ) {
-            TypeDefPtr result = new TypeDef(classType, "voidptr", false);
+            TypeDefPtr result = new TypeDef(classType, name, false);
             if (makeInitializer)
                 result->defaultInitializer = makeInitializer(result.get());
             context.addDef(result.get());
@@ -527,6 +562,13 @@ ModuleDefPtr ModelBuilder::registerPrimFuncs(Context &context) {
     gd->arrayType = arrayType;
     context.addDef(arrayType.get());
     typeBuilder.deferMetaClass.push_back(arrayType.get());
+
+    TypeDefPtr functionType = new FunctionTypeDef(context.construct->classType.get(),
+                                                  "function"
+                                                  );
+    gd->functionType = functionType;
+    context.addDef(functionType.get());
+    typeBuilder.deferMetaClass.push_back(functionType.get());
 
     return builtins;
 }
