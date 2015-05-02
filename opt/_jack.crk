@@ -68,12 +68,21 @@
 
         @cname jack_deactivate
         int deactivate();
+
+        @cname jack_get_ports
+        array[byteptr] getPorts(byteptr port_name_pattern,
+                                byteptr type_name_pattern,
+                                uint64 flags
+                                );
     }
 
     @cname jack_client_open
     JackClient JackClient_open(byteptr name, int options,
                                array[int] status
                                );
+
+    @cname jack_free
+    void Jack_free(voidptr ptr);
 }
 
 

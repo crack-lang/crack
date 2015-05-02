@@ -81,6 +81,13 @@ void crack_ext__jack_cinit(crack::ext::Module *mod) {
         function_pint_c_suint32_c_svoidptr_q = function->getSpecialization(params);
     }
 
+    crack::ext::Type *array_pbyteptr_q;
+    {
+        std::vector<crack::ext::Type *> params(1);
+        params[0] = type_byteptr;
+        array_pbyteptr_q = array->getSpecialization(params);
+    }
+
     crack::ext::Type *type_JackClient = mod->addType("JackClient", sizeof(JackClient));
 
     f = type_JackClient->addMethod(
@@ -158,6 +165,22 @@ void crack_ext__jack_cinit(crack::ext::Module *mod) {
         (void *)jack_deactivate
     );
 
+
+    f = type_JackClient->addMethod(
+        array_pbyteptr_q, 
+        "getPorts",
+        (void *)jack_get_ports
+    );
+    f->addArg(type_byteptr, 
+              "port_name_pattern"
+              );
+    f->addArg(type_byteptr, 
+              "type_name_pattern"
+              );
+    f->addArg(type_uint64, 
+              "flags"
+              );
+
     type_JackClient->finish();
 
 
@@ -177,6 +200,11 @@ void crack_ext__jack_cinit(crack::ext::Module *mod) {
        f->addArg(type_byteptr, "name");
        f->addArg(type_int, "options");
        f->addArg(array_pint_q, "status");
+
+    f = mod->addFunc(type_void, "Jack_free",
+                     (void *)jack_free
+                     );
+       f->addArg(type_voidptr, "ptr");
 
 
     mod->addConstant(type_int, "JACK_NULL_OPTION",
