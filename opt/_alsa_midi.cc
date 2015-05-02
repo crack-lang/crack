@@ -26,6 +26,24 @@ void snd_seq_event_setNoteOn(snd_seq_event_t *event,                            
     snd_seq_ev_ext_t *snd_seq_event_getExt(snd_seq_event_t *event) {
         return &event->data.ext;
     }
+    snd_seq_port_subscribe_t *crk_snd_seq_port_subscribe_malloc() {
+        snd_seq_port_subscribe_t *result;
+        if (!snd_seq_port_subscribe_malloc(&result))
+            return result;
+        return NULL;
+    }
+    snd_seq_port_info_t *crk_snd_seq_port_info_malloc() {
+        snd_seq_port_info_t *result;
+        if (!snd_seq_port_info_malloc(&result))
+            return result;
+        return NULL;
+    }
+    snd_seq_client_info_t *crk_snd_seq_client_info_malloc() {
+        snd_seq_client_info_t *result;
+        if (!snd_seq_client_info_malloc(&result))
+            return result;
+        return NULL;
+    }
 typedef int Undef;
 
 
@@ -104,6 +122,26 @@ void crack_ext__alsa_midi_cinit(crack::ext::Module *mod) {
         type_snd_seq_ev_ext_t->addInstVar(type_byteptr, "ptr",
                                 CRACK_OFFSET(snd_seq_ev_ext_t, ptr));
     type_snd_seq_ev_ext_t->finish();
+
+
+    crack::ext::Type *type_snd_seq_addr_t = mod->addType("snd_seq_addr_t", sizeof(snd_seq_addr_t));
+        type_snd_seq_addr_t->addInstVar(type_byte, "client",
+                                CRACK_OFFSET(snd_seq_addr_t, client));
+        type_snd_seq_addr_t->addInstVar(type_byte, "port",
+                                CRACK_OFFSET(snd_seq_addr_t, port));
+    type_snd_seq_addr_t->finish();
+
+
+    crack::ext::Type *type_snd_seq_port_subscribe_t = mod->addType("snd_seq_port_subscribe_t", sizeof(Undef));
+    type_snd_seq_port_subscribe_t->finish();
+
+
+    crack::ext::Type *type_snd_seq_port_info_t = mod->addType("snd_seq_port_info_t", sizeof(Undef));
+    type_snd_seq_port_info_t->finish();
+
+
+    crack::ext::Type *type_snd_seq_client_info_t = mod->addType("snd_seq_client_info_t", sizeof(Undef));
+    type_snd_seq_client_info_t->finish();
 
 
     crack::ext::Type *type_snd_seq_event_t = mod->addType("snd_seq_event_t", sizeof(snd_seq_event_t));
@@ -314,6 +352,88 @@ void crack_ext__alsa_midi_cinit(crack::ext::Module *mod) {
        f->addArg(type_snd_seq_t, "seqp");
        f->addArg(type_int, "queueId");
        f->addArg(type_snd_seq_event_t, "event");
+
+    f = mod->addFunc(type_snd_seq_port_subscribe_t, "snd_seq_port_subscribe_malloc",
+                     (void *)crk_snd_seq_port_subscribe_malloc
+                     );
+
+    f = mod->addFunc(type_void, "snd_seq_port_subscribe_free",
+                     (void *)snd_seq_port_subscribe_free
+                     );
+       f->addArg(type_snd_seq_port_subscribe_t, "ptr");
+
+    f = mod->addFunc(type_snd_seq_port_info_t, "snd_seq_port_info_malloc",
+                     (void *)crk_snd_seq_port_info_malloc
+                     );
+
+    f = mod->addFunc(type_void, "snd_seq_port_info_free",
+                     (void *)snd_seq_port_info_free
+                     );
+       f->addArg(type_snd_seq_port_info_t, "ptr");
+
+    f = mod->addFunc(type_snd_seq_client_info_t, "snd_seq_client_info_malloc",
+                     (void *)crk_snd_seq_client_info_malloc
+                     );
+
+    f = mod->addFunc(type_int, "snd_seq_client_info_free",
+                     (void *)snd_seq_client_info_free
+                     );
+       f->addArg(type_snd_seq_client_info_t, "ptr");
+
+    f = mod->addFunc(type_int, "snd_seq_client_info_set_client",
+                     (void *)snd_seq_client_info_set_client
+                     );
+       f->addArg(type_snd_seq_client_info_t, "ptr");
+       f->addArg(type_int, "client");
+
+    f = mod->addFunc(type_int, "snd_seq_query_next_client",
+                     (void *)snd_seq_query_next_client
+                     );
+       f->addArg(type_snd_seq_t, "seq");
+       f->addArg(type_snd_seq_client_info_t, "client");
+
+    f = mod->addFunc(type_int, "snd_seq_client_info_get_client",
+                     (void *)snd_seq_client_info_get_client
+                     );
+       f->addArg(type_snd_seq_client_info_t, "clientInfo");
+
+    f = mod->addFunc(type_int, "snd_seq_port_info_set_client",
+                     (void *)snd_seq_port_info_set_client
+                     );
+       f->addArg(type_snd_seq_port_info_t, "portInfo");
+       f->addArg(type_int, "client");
+
+    f = mod->addFunc(type_int, "snd_seq_port_info_set_port",
+                     (void *)snd_seq_port_info_set_port
+                     );
+       f->addArg(type_snd_seq_port_info_t, "portInfo");
+       f->addArg(type_int, "port");
+
+    f = mod->addFunc(type_int, "snd_seq_port_info_get_port",
+                     (void *)snd_seq_port_info_get_port
+                     );
+       f->addArg(type_snd_seq_port_info_t, "portInfo");
+
+    f = mod->addFunc(type_byteptr, "snd_seq_port_info_get_name",
+                     (void *)snd_seq_port_info_get_name
+                     );
+       f->addArg(type_snd_seq_port_info_t, "portInfo");
+
+    f = mod->addFunc(type_int, "snd_seq_query_next_port",
+                     (void *)snd_seq_query_next_port
+                     );
+       f->addArg(type_snd_seq_t, "seq");
+       f->addArg(type_snd_seq_port_info_t, "portInfo");
+
+    f = mod->addFunc(type_int, "snd_seq_client_info_get_client",
+                     (void *)snd_seq_client_info_get_client
+                     );
+       f->addArg(type_snd_seq_client_info_t, "clientInfo");
+
+    f = mod->addFunc(type_byteptr, "snd_seq_client_info_get_name",
+                     (void *)snd_seq_client_info_get_name
+                     );
+       f->addArg(type_snd_seq_client_info_t, "clientInfo");
 
 
     mod->addConstant(type_int, "SND_SEQ_OPEN_INPUT",

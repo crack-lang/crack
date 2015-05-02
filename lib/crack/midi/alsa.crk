@@ -6,16 +6,23 @@
 ## 
 ## Classes to wrap the ALSA sequencer API.
 
+import crack.cont.array Array;
 import crack.io cout, FStr;
 import crack.lang AssertionError, CString, Exception;
 import crack.runtime free;
-import crack.ext._alsa_midi snd_seq_t, snd_seq_event_t, 
-    snd_seq_alloc_named_queue, snd_seq_open, snd_seq_create_simple_port,
-    snd_seq_connect_to, snd_seq_drain_output, snd_seq_event_output,
-    snd_seq_event_input, snd_seq_event_input_pending, 
-    SndSeqQueue_setTempo, SndSeqQueue_start, SndSeqQueue_stop, 
-    SND_SEQ_OPEN_INPUT, SND_SEQ_OPEN_OUTPUT, SND_SEQ_PORT_CAP_WRITE, 
-    SND_SEQ_PORT_CAP_SUBS_WRITE, SND_SEQ_PORT_CAP_READ, 
+import crack.ext._alsa_midi snd_seq_t, snd_seq_client_info_get_client, 
+    snd_seq_client_info_get_name,
+    snd_seq_client_info_malloc, snd_seq_client_info_free, 
+    snd_seq_client_info_set_client, 
+    snd_seq_client_info_t, snd_seq_event_t, 
+    snd_seq_port_info_free, snd_seq_port_info_get_name, snd_seq_port_info_malloc, 
+    snd_seq_port_info_get_port, snd_seq_port_info_set_client, snd_seq_port_info_set_port, snd_seq_port_info_t,
+    snd_seq_query_next_client, snd_seq_query_next_port, 
+    snd_seq_alloc_named_queue, snd_seq_open, snd_seq_create_simple_port, 
+    snd_seq_connect_to, snd_seq_drain_output, snd_seq_event_output, 
+    snd_seq_event_input, snd_seq_event_input_pending, SndSeqQueue_setTempo, 
+    SndSeqQueue_start, SndSeqQueue_stop, SND_SEQ_OPEN_INPUT, SND_SEQ_OPEN_OUTPUT, 
+    SND_SEQ_PORT_CAP_WRITE, SND_SEQ_PORT_CAP_SUBS_WRITE, SND_SEQ_PORT_CAP_READ, 
     SND_SEQ_PORT_CAP_SUBS_READ, SND_SEQ_PORT_TYPE_MIDI_GENERIC, 
     SND_SEQ_EVENT_NOTEON, SND_SEQ_EVENT_NOTEOFF, SND_SEQ_EVENT_PGMCHANGE, 
     SND_SEQ_EVENT_PITCHBEND, SND_SEQ_EVENT_CONTROLLER, SND_SEQ_EVENT_SYSEX;
@@ -50,6 +57,77 @@ class Sequencer;
 class Queue;
 Port _makePort(Sequencer client, int port);
 Queue _makeQueue(Sequencer client, int queueId);
+
+class PortInfo {
+    snd_seq_port_info_t __info;
+    
+    oper init() : __info = snd_seq_port_info_malloc() {}
+    oper init(int clientId, int portId) : __info = snd_seq_port_info_malloc() {
+        snd_seq_port_info_set_client(__info, clientId);
+        snd_seq_port_info_set_port(__info, portId);
+    }
+    
+    oper del() { snd_seq_port_info_free(__info); }
+    
+    @final void setClient(int clientId) {
+        snd_seq_port_info_set_client(__info, clientId);
+    }
+    
+    @final void setId(int portId) {
+        snd_seq_port_info_set_port(__info, portId);
+    }
+    
+    @final int getId() {
+        return snd_seq_port_info_get_port(__info);
+    }
+    
+    @final String getName() {
+        return String(snd_seq_port_info_get_name(__info));
+    }
+    
+    # Returns >= zero if there is another port, fills the port info 
+    # with the info for that port.
+    @final int queryNextPort(snd_seq_t seq) {
+        return snd_seq_query_next_port(seq, __info);
+    }
+}
+
+class ClientInfo {
+    snd_seq_client_info_t __info;
+    oper init() : __info = snd_seq_client_info_malloc() {}
+    oper init(int id) : __info = snd_seq_client_info_malloc() {
+        snd_seq_client_info_set_client(__info, id);
+    }
+    oper del() {
+        snd_seq_client_info_free(__info);
+    }
+    @final int getId() {
+        return snd_seq_client_info_get_client(__info);
+    }
+    
+    @final String getName() {
+        return String(snd_seq_client_info_get_name(__info));
+    }
+    
+    @final Array[PortInfo] getAllPorts(snd_seq_t seq) {
+        Array[PortInfo] result = {};
+        clientId := getId();
+        portInfo := PortInfo(clientId, -1);
+        
+        while (portInfo.queryNextPort(seq) >= 0) {
+            result.append(portInfo);
+            portInfo = PortInfo(clientId, portInfo.getId());
+        }
+        
+        return result;
+    }
+    
+    ## Returns >= 0 if there is another port, fills the receiver with the 
+    ## information on that port.
+    @final int queryNextClient(snd_seq_t seq) {
+        return snd_seq_query_next_client(seq, __info);
+    }
+}
 
 ## Wrapper around the sequencer interface.
 class Sequencer {
@@ -127,6 +205,19 @@ class Sequencer {
     ## returns true if there is an event pending.
     bool hasEvent() {
         return snd_seq_event_input_pending(seq, 1);
+    }
+
+    ## Get information on all of the clients.
+    Array[ClientInfo] getAllClients() {
+        Array[ClientInfo] result = {};
+        clientInfo := ClientInfo(-1);
+        
+        while (clientInfo.queryNextClient(seq) >= 0) {
+            result.append(clientInfo);
+            clientInfo = ClientInfo(clientInfo.getId());
+        }
+    
+        return result;
     }
 }
 

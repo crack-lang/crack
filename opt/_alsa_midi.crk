@@ -69,6 +69,27 @@
         snd_seq_ev_ext_t *snd_seq_event_getExt(snd_seq_event_t *event) {
             return &event->data.ext;
         }
+        
+        snd_seq_port_subscribe_t *crk_snd_seq_port_subscribe_malloc() {
+            snd_seq_port_subscribe_t *result;
+            if (!snd_seq_port_subscribe_malloc(&result))
+                return result;
+            return NULL;
+        }
+        
+        snd_seq_port_info_t *crk_snd_seq_port_info_malloc() {
+            snd_seq_port_info_t *result;
+            if (!snd_seq_port_info_malloc(&result))
+                return result;
+            return NULL;
+        }
+        
+        snd_seq_client_info_t *crk_snd_seq_client_info_malloc() {
+            snd_seq_client_info_t *result;
+            if (!snd_seq_client_info_malloc(&result))
+                return result;
+            return NULL;
+        }
     ';
 
     const int
@@ -183,6 +204,20 @@
         uint len;
         byteptr ptr;
     }
+    
+    class snd_seq_addr_t {
+        byte client;
+        byte port;
+    }
+    
+    @cname Undef
+    class snd_seq_port_subscribe_t {}
+    
+    @cname Undef
+    class snd_seq_port_info_t {}
+
+    @cname Undef
+    class snd_seq_client_info_t {}
 
     class snd_seq_event_t {
         @cname snd_seq_event_alloc
@@ -234,4 +269,28 @@
     
     void SndSeqQueue_start(snd_seq_t seqp, int queueId, snd_seq_event_t event);
     void SndSeqQueue_stop(snd_seq_t seqp, int queueId, snd_seq_event_t event);
+
+    @cname crk_snd_seq_port_subscribe_malloc
+    snd_seq_port_subscribe_t snd_seq_port_subscribe_malloc();
+    void snd_seq_port_subscribe_free(snd_seq_port_subscribe_t ptr);
+
+    @cname crk_snd_seq_port_info_malloc
+    snd_seq_port_info_t snd_seq_port_info_malloc();
+    void snd_seq_port_info_free(snd_seq_port_info_t ptr);
+    
+    @cname crk_snd_seq_client_info_malloc
+    snd_seq_client_info_t snd_seq_client_info_malloc();
+    int snd_seq_client_info_free(snd_seq_client_info_t ptr);    
+    int snd_seq_client_info_set_client(snd_seq_client_info_t ptr, int client);
+    int snd_seq_query_next_client(snd_seq_t seq, snd_seq_client_info_t client);
+    int snd_seq_client_info_get_client(snd_seq_client_info_t clientInfo);
+    
+    int snd_seq_port_info_set_client(snd_seq_port_info_t portInfo, int client);
+    int snd_seq_port_info_set_port(snd_seq_port_info_t portInfo, int port);
+    int snd_seq_port_info_get_port(snd_seq_port_info_t portInfo);
+    byteptr snd_seq_port_info_get_name(snd_seq_port_info_t portInfo);
+    int snd_seq_query_next_port(snd_seq_t seq, snd_seq_port_info_t portInfo);
+    
+    int snd_seq_client_info_get_client(snd_seq_client_info_t clientInfo);
+    byteptr snd_seq_client_info_get_name(snd_seq_client_info_t clientInfo);
 }
