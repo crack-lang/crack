@@ -16,8 +16,8 @@ AC_DEFUN([AM_PATH_JACK], [dnl
         #include <jack/jack.h>
         
         int main(int argc, const char **argv) {
-            int major, minor, micro, proto;
-            jack_get_version(&major, &minor, &micro, &proto);
+            int result;
+            jack_get_time();
             return 0;
         }
     ], [
