@@ -43,6 +43,11 @@ TypeDefPtr VarRef::getType(Context &context) const {
 }
 
 ResultExprPtr VarRef::emit(Context &context) {
+    if (OverloadDefPtr::rcast(def) && !def->impl)
+        context.error(SPUG_FSTR("Cannot obtain value of builtin function " <<
+                                 def->getDisplayName()
+                                )
+                      );
     assert(def->impl);
     return def->impl->emitRef(context, this);
 }
