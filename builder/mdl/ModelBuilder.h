@@ -32,6 +32,15 @@ namespace builder { namespace mdl {
 SPUG_RCPTR(ModelBuilder);
 
 class ModelBuilder : public builder::Builder {
+    protected:
+        /**
+         * Returns the function specialization for the given function.
+         */
+        model::TypeDefPtr getFuncType(model::Context &context,
+                                      model::TypeDef *returnType,
+                                      const std::vector<model::ArgDefPtr> &args
+                                      );
+
     public:
         struct ModelResultExpr : public model::ResultExpr {
             ModelResultExpr(model::Expr *expr) : ResultExpr(expr) {}
@@ -181,6 +190,8 @@ class ModelBuilder : public builder::Builder {
                 new ModelFuncDef(flags, name, args.size());
             result->returnType = returnType;
             result->args = args;
+            result->type = getFuncType(context, returnType, args);
+            return result;
         }
 
         virtual model::TypeDefPtr createClassForward(model::Context &context,
@@ -199,15 +210,7 @@ class ModelBuilder : public builder::Builder {
             model::TypeDef *returnType,
             const std::vector<model::ArgDefPtr> &args,
             model::FuncDef *existing
-        ) {
-            if (existing)
-                return existing;
-
-            model::FuncDefPtr func = new ModelFuncDef(flags, name, args.size());
-            func->args = args;
-            func->returnType = returnType;
-            return func;
-        }
+        );
 
         virtual void emitEndFunc(model::Context &context,
                                  model::FuncDef *funcDef) {

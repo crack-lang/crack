@@ -202,6 +202,12 @@ noinst_HEADERS = \
     builder/llvm/Utils.h \
     builder/llvm/VarDefs.h \
     builder/llvm/VTableBuilder.h \
+    builder/mdl/ArrayTypeDef.h \
+    builder/mdl/FunctionTypeDef.h \
+    builder/mdl/ModelBuilder.h \
+    builder/mdl/ModelFuncDef.h \
+    builder/mdl/ModelModuleDef.h \
+    builder/mdl/Utils.h \
     compiler/init.h \
     config.h \
     Crack.h \

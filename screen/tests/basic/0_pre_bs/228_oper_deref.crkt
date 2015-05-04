@@ -1,0 +1,13 @@
+%%TEST%%
+oper dereferencing
+%%ARGS%%
+%%FILE%%
+class A {
+    int oper *(A other) { puts('ok'); return 0; }
+    int oper *(int i) { puts('fail'); return 0; }
+}
+function[int, A, A] f = A.oper *;
+f(A(), A());
+%%EXPECT%%
+ok
+%%STDIN%%

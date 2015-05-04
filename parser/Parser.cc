@@ -3474,19 +3474,21 @@ void Parser::parsePostDot(ExprPtr &expr, TypeDefPtr &type) {
    // If we didn't get a def and the current target is a type, see if we 
    // can resolve the name by treating the dot as the scoping operator.
    if (!def && type) {
-      def = type->lookUp(tok.getData());
-      if (!def->isUsableFrom(*context))
-         error(tok, 
-               SPUG_FSTR("Instance member " << name << 
-                          " is not usable from this context."
-                         )
-               );
-               
-      // If we got an overload, convert it into an ExplicitlyScopedDef
-      if (OverloadDef *ovld = OverloadDefPtr::rcast(def))
-         def = new ExplicitlyScopedDef(ovld);
+      def = type->lookUp(name);
+      if (def) {
+         if (!def->isUsableFrom(*context))
+            error(tok,
+                  SPUG_FSTR("Instance member " << name <<
+                           " is not usable from this context."
+                           )
+                  );
 
-      expr = context->createVarRef(def.get());
+         // If we got an overload, convert it into an ExplicitlyScopedDef
+         if (OverloadDef *ovld = OverloadDefPtr::rcast(def))
+            def = new ExplicitlyScopedDef(ovld);
+
+         expr = context->createVarRef(def.get());
+      }
    } else if (def) {
       expr = new Deref(expr.get(), def.get());
    }
@@ -3499,14 +3501,14 @@ void Parser::parsePostDot(ExprPtr &expr, TypeDefPtr &type) {
       if (type)
          error(tok, SPUG_FSTR("Type object " << type->getDisplayName()
                                << " has no member named "
-                               << tok.getData()
+                               << name
                                << ", nor does the type itself."
                                )
                );
       else
          error(tok,
                SPUG_FSTR("Instance of " << expr->type->getDisplayName() 
-                          << " has no member " << tok.getData()
+                          << " has no member " << name
                          )
                );
    }
