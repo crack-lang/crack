@@ -322,6 +322,7 @@ extern "C" void crack_runtime_cinit(Module *mod) {
     mod->addConstant(intType, "O_APPEND", O_APPEND);
     mod->addConstant(intType, "O_ASYNC", O_ASYNC);
     mod->addConstant(intType, "O_CREAT", O_CREAT);
+    mod->addConstant(intType, "O_EXCL", O_EXCL);
     mod->addConstant(intType, "O_TRUNC", O_TRUNC);
     mod->addConstant(intType, "O_NONBLOCK", O_NONBLOCK);
 
