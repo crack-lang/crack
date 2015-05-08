@@ -143,7 +143,8 @@ bool TypeDef::hasGenerics() const {
 }
 
 FuncDefPtr TypeDef::getFuncDef(Context &context, 
-                               std::vector<ExprPtr> &args
+                               std::vector<ExprPtr> &args,
+                               bool allowOverrides
                                ) const {
     // Fixing "const" in lookup is a can of worms, so we just cast away const 
     // for now.  Lookups don't mutate.

@@ -186,7 +186,8 @@ class OverloadDef : public VarDef {
         /** @} */
 
         virtual FuncDefPtr getFuncDef(Context &context, 
-                                      std::vector<ExprPtr> &args
+                                      std::vector<ExprPtr> &args,
+                                      bool allowOverrides
                                       ) const;
         virtual bool hasInstSlot() const;
         virtual bool isStatic() const;

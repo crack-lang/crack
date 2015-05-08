@@ -72,7 +72,8 @@ class VarDef : public virtual spug::RCBase {
          * definition is called with the given arguments.
          */
         virtual FuncDefPtr getFuncDef(Context &context, 
-                                      std::vector<ExprPtr> &args
+                                      std::vector<ExprPtr> &args,
+                                      bool allowOverrides = false
                                       ) const;
         
         /**

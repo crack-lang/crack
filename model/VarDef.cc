@@ -49,7 +49,8 @@ ResultExprPtr VarDef::emitAssignment(Context &context, Expr *expr) {
 }
 
 FuncDefPtr VarDef::getFuncDef(Context &context,
-                              std::vector<ExprPtr> &args
+                              std::vector<ExprPtr> &args,
+                              bool allowOverrides
                               ) const {
     OverloadDefPtr ovld = context.lookUp("oper call", type.get());
     if (!ovld)

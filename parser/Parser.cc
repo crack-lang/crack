@@ -213,9 +213,12 @@ namespace {
          }
          
          virtual FuncDefPtr getFuncDef(Context &context, 
-                                       FuncCall::ExprVec &args
+                                       FuncCall::ExprVec &args,
+                                       bool allowOverrides
                                        ) const {
-            return rep->getFuncDef(context, args);
+            // Force allowOverrides to true because we're explicitly scoped
+            // and we want _the most specific_ override.
+            return rep->getFuncDef(context, args, /* allowOverrides */ true);
          }
          
          virtual bool isUsableFrom(const Context &context) const {

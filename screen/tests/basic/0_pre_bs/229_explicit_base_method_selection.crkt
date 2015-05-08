@@ -1,0 +1,13 @@
+%%TEST%%
+explicit base method selection
+%%ARGS%%
+%%FILE%%
+# Test for a bug we had in explicit method selection (code was ignoring
+# virtual overrides).
+class A : VTableBase { int f() { puts('FAIL'); return 0; } }
+class B : A { int f() { puts('ok'); return 1; } }
+class C : B { int f() { return B.f(); } }
+C().f();
+%%EXPECT%%
+ok
+%%STDIN%%

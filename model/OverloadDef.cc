@@ -259,9 +259,10 @@ bool OverloadDef::hasParent(OverloadDef *parent) {
 }
 
 FuncDefPtr OverloadDef::getFuncDef(Context &context, 
-                                   std::vector<ExprPtr> &args
+                                   std::vector<ExprPtr> &args,
+                                   bool allowOverrides
                                    ) const {
-    FuncDefPtr result = getMatch(context, args, false);
+    FuncDefPtr result = getMatch(context, args, allowOverrides);
     if (!result) {
         ostringstream msg;
         msg << "No method exists matching " << name <<  "(" << args << ")";
