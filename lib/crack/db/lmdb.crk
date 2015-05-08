@@ -11,7 +11,7 @@ import crack.cont.hashmap HashMap;
 import crack.fs makePath;
 import crack.io cout, Formatter, FStr;
 import crack.lang CString, Buffer, Exception, InvalidArgumentError, KeyError;
-import crack.runtime errno, free, usecs, EINVAL, EACCESS;
+import crack.runtime errno, free, usecs, EINVAL, EACCES;
 import crack.sys exit;
 
 import crack.ext._lmdb

@@ -217,7 +217,7 @@ extern "C" void crack_runtime_cinit(Module *mod) {
     f->addArg(byteptrType, "path");
     f->addArg(intType, "mode");
 
-    mod->addConstant(intType, "EACCESS", EACCES);
+    mod->addConstant(intType, "EACCES", EACCES);
     mod->addConstant(intType, "EBADF", EBADF);
     mod->addConstant(intType, "EEXIST", EEXIST);
     mod->addConstant(intType, "EFAULT", EFAULT);
