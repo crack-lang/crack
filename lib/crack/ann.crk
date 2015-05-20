@@ -819,14 +819,24 @@ void readIStr(CrackContext ctx, NodeList nodes) {
 ## TOK_RPAREN this function would read the following sequence:
 ##    ( 1 + 2 + (3 + 4) )
 ##   ^                   ^
-NodeList readDelimited(CrackContext ctx, int left, int right) {
+##
+## if storeDelimiters is true, parses and processes the beginning and ending
+## delimiter and adds them to the returned node list, otherwise the next
+## available token should be the one immediately following the opening
+## delimiter and the last token will be put back.
+NodeList readDelimited(CrackContext ctx, int left, int right,
+                       bool storeDelimiters
+                       ) {
     NodeListImpl result = {};
 
     # get the opening delimiter.
-    tok := ctx.getToken();
-    if (tok.getType() != left)
-        ctx.error(tok, 'Opening delimiter expected.'.buffer);
-    result.pushHead(Tok(tok));
+    Token tok;
+    if (storeDelimiters) {
+        tok = ctx.getToken();
+        if (tok.getType() != left)
+            ctx.error(tok, 'Opening delimiter expected.'.buffer);
+        result.pushHead(Tok(tok));
+    }
 
     depth := 1;
     while (depth) {
@@ -837,7 +847,13 @@ NodeList readDelimited(CrackContext ctx, int left, int right) {
             ++depth;
         else if (tok.getType() == right)
             --depth;
-        result.pushHead(Tok(tok));
+
+        if (depth || storeDelimiters)
+            result.pushHead(Tok(tok));
+        else if (!depth)
+            # If we're not storing the delimiters, put the last token back.
+            ctx.putBack(tok);
+
         if (tok.isIstrBegin())
             readIStr(ctx, result);
     }
@@ -847,7 +863,7 @@ NodeList readDelimited(CrackContext ctx, int left, int right) {
 
 ## Read a curly-bracket delimited block.  See readDelimited() for details
 NodeList readBlock(CrackContext ctx) {
-    return readDelimited(ctx, TOK_LCURLY, TOK_RCURLY);
+    return readDelimited(ctx, TOK_LCURLY, TOK_RCURLY, true);
 }
 
 void _parseGenericArgs(CrackContext ctx, NodeList tokens) {
@@ -1100,7 +1116,7 @@ void struct(CrackContext ctx) {
 }
 
 void assert(CrackContext ctx) {
-    expr := readDelimited(ctx, TOK_LPAREN, TOK_RPAREN);
+    expr := readDelimited(ctx, TOK_LPAREN, TOK_RPAREN, true);
     loc := expr.getFirst().getLocation();
     message := expr.toString(null);
     ctx.inject(@FILE.buffer, @LINE, 
@@ -1138,7 +1154,7 @@ void property(CrackContext ctx) {
     if (readonlyAttr.isLParen()) {
         readonlyAttr = null;
 
-        NodeList attrList = readDelimited(ctx, TOK_LPAREN, TOK_RPAREN);
+        NodeList attrList = readDelimited(ctx, TOK_LPAREN, TOK_RPAREN, true);
 
         for (node :in attrList) {
             tok := Tok.cast(node);
@@ -1241,6 +1257,12 @@ void interface(CrackContext ctx) {
     # for injecting the bind(), release() and get*Object() methods
     StringFormatter f = {};
 
+    # True if we have explicit base classes.
+    bool hasBaseClasses;
+
+    # We'll use this to store the location of the initial curly bracket.
+    Location loc;
+
     # check for base interfaces
     NodeListImpl interfaces = {};
     tok = ctx.getToken();
@@ -1256,10 +1278,10 @@ void interface(CrackContext ctx) {
                 firstTok = tok;
 
             if (tok.isLCurly()) {
-                ctx.putBack(tok);
+                loc = tok.getLocation();
                 break;
 
-            # store identifiers in an array so we can generate the get*Object()
+            # store types in an array so we can generate the "oper from *()"
             # methods.
             } else if (tok.isIdent()) {
                 ctx.putBack(tok);
@@ -1269,16 +1291,19 @@ void interface(CrackContext ctx) {
             interfaces.pushHead(Tok(tok));
         }
 
-        f `@abstract Object oper from $(nameTok.getText())();\n`;
+        f `{ @abstract Object oper from $(nameTok.getText())();\n`;
         for (iface :in ifaces)
             f I`    Object oper from $(iface) () {
-                        return this.oper from $(nameTok.getText())(); }\n`;
-        f `}\0`;
+                        return this.oper from $(nameTok.getText())();
+                    }\n`;
+
+        hasBaseClasses = true;
 
     } else {
-        ctx.putBack(tok);
+        # Store the location of the left curly.
+        loc = tok.getLocation();
 
-        f `
+        f `{
         @abstract Object oper from $(nameTok.getText())();
         @final oper bind() {
             if (!(this is null))
@@ -1298,20 +1323,20 @@ void interface(CrackContext ctx) {
             return !(this is null) &&
                 this.oper from $(nameTok.getText())().isTrue();
         }
-    }\0`;
-
+        `;
     }
 
-    # read the body
-    body := readBlock(ctx);
+    # read the body, excluding the delimiters.
+    body := readDelimited(ctx, TOK_LCURLY, TOK_RCURLY, false);
 
-    # remove the closing bracket, store the location for error reporting
-    loc := body.popHead().getLocation();
+    # Expand the rewritten class (backwards, as always).
 
-    ctx.inject(loc.getName(), loc.getLineNumber(), f.string().buffer);
-
-    # expand the body and opening bracket
+    # We don't need to inject the closing bracket, readDelimited() has left
+    # that on the token queue.  We can just expand the body.
     body.expand(ctx, null);
+
+    # Emit the special functions up front.
+    ctx.inject(loc.getName(), loc.getLineNumber(), f.cString().buffer);
 
     # expand the base interface list
     interfaces.expand(ctx, null);
@@ -1321,7 +1346,7 @@ void interface(CrackContext ctx) {
     f = StringFormatter();
     f `@abstract class $(nameTok.getText())$(TokenWriter(genericArgs)) :
         $(interfaces ? String() : "VTableBase")\0`;
-    ctx.inject(loc.getName(), loc.getLineNumber(), f.string().buffer);
+    ctx.inject(loc.getName(), loc.getLineNumber(), f.cString().buffer);
 }
 
 void _implements(CrackContext ctx, bool emitObject) {

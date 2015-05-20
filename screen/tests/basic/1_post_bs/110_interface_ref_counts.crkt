@@ -1,0 +1,21 @@
+%%TEST%%
+interface reference count safety
+%%ARGS%%
+%%FILE%%
+@import crack.ann interface, impl;
+@interface Foo {
+    Foo f() { return this; }
+}
+
+class Bar @impl Foo {
+    oper del() {
+        print('deleted');
+    }
+}
+
+b := Bar().f();
+print('done');
+%%EXPECT%%
+done
+deleted
+%%STDIN%%
