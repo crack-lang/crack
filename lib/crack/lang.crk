@@ -1044,10 +1044,15 @@ bool exceptionMatchFunc(Class classObj, Object obj) {
 }
 
 void badClassFunc(Class curType, Class newType) {
-    throw BadCastError(String('Unable to cast object of type ') + 
-                        curType.name + 
-                        ' to ' + newType.name
-                       );
+    if (curType is null)
+        throw BadCastError(String("Unable to cast null object to ") +
+                           newType.name
+                           );
+    else
+        throw BadCastError(String('Unable to cast object of type ') +
+                            curType.name +
+                            ' to ' + newType.name
+                           );
 }
 
 void exceptionReleaseFunc(Object ex) {

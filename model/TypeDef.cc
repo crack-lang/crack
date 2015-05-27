@@ -486,6 +486,28 @@ void TypeDef::createNewFunc(Context &classContext, FuncDef *initFunc) {
     classContext.addDef(newFunc.get());
 }
 
+namespace {
+    // Returns the expression "!(var is null)"
+    FuncCallPtr createVarIsNotNull(Context &funcCtx, VarRef *varRef) {
+        // var is null
+        vector<ExprPtr> parms;
+        parms.push_back(varRef);
+        parms.push_back(new NullConst(varRef->type.get()));
+        FuncDefPtr f = funcCtx.construct->rootContext->lookUp("oper is", parms);
+        FuncCallPtr isNotNullCall = funcCtx.builder.createFuncCall(f.get());
+        isNotNullCall->args = parms;
+
+        // !(var is null)
+        parms.clear();
+        parms.push_back(isNotNullCall);
+        f = funcCtx.construct->rootContext->lookUp("oper !", parms);
+        isNotNullCall = funcCtx.builder.createFuncCall(f.get());
+        isNotNullCall->args = parms;
+
+        return isNotNullCall;
+    }
+}
+
 void TypeDef::createCast(Context &outer, bool throws) {
     assert(hasVTable && "Attempt to createCast() on a non-virtual class");
     ContextPtr funcCtx = outer.createSubContext(Context::local);
@@ -515,13 +537,38 @@ void TypeDef::createCast(Context &outer, bool throws) {
                                                       );
     
     // function body is:
-    //  if (val.class.isSubclass(ThisClass);
+    //  Class valClass;
+    //  if (!(val is null))
+    //      valClass = val.class;
+    //  if (!(valClass is null) && valClass.isSubclass(ThisClass))
     //      return ThisClass.unsafeCast(val);
     //  else
-    //      __CrackBadCast(val.class, ThisClass);
-    
-    // val.class
+    //      __CrackBadCast(valClass, ThisClass);
+    //
+    // When there is a defaultValue, the last line is:
+    //      return defaultValue;
+
+    Context *rootContext = outer.construct->rootContext.get();
+
+    // Class valClass;
+    funcCtx->createCleanupFrame();
+    VarDefPtr valClassVar =
+        rootContext->construct->classType->emitVarDef(
+            *funcCtx,
+            "valClass",
+            0
+        );
+
     VarRefPtr valRef = funcCtx->builder.createVarRef(args[0].get());
+
+    // !(val is null)
+    FuncCallPtr isNotNullCall = createVarIsNotNull(*funcCtx, valRef.get());
+
+    // if (!(val is null))
+    BranchpointPtr branchpoint =
+        funcCtx->builder.emitIf(*funcCtx, isNotNullCall.get());
+
+    //     val.class
     FuncDefPtr f = funcCtx->lookUpNoArgs("oper class", false);
     assert(f && "oper class missing");
 //  XXX this was trace code that mysteriously seg-faults: since I think there 
@@ -532,7 +579,24 @@ void TypeDef::createCast(Context &outer, bool throws) {
     FuncCallPtr call = funcCtx->builder.createFuncCall(f.get());
     call->receiver = valRef;
     ExprPtr valClass = call;
-    valClass = valClass->emit(*funcCtx);
+
+    //     valClass = val.class
+    funcCtx->createCleanupFrame();
+    ExprPtr expr =
+        AssignExpr::create(*funcCtx, valClassVar.get(), valClass.get());
+    expr->emit(*funcCtx)->handleTransient(*funcCtx);
+    funcCtx->closeCleanupFrame();
+
+    funcCtx->builder.emitEndIf(*funcCtx, branchpoint.get(),
+                               /* terminal */ false
+                               );
+
+    // reference to valClass.
+    VarRefPtr valClassVarRef =
+        funcCtx->builder.createVarRef(valClassVar.get());
+
+    // valClass is null
+    isNotNullCall = createVarIsNotNull(*funcCtx, valClassVarRef.get());
     
     // $.isSubclass(ThisClass)
     FuncCall::ExprVec isSubclassArgs(1);
@@ -541,10 +605,19 @@ void TypeDef::createCast(Context &outer, bool throws) {
     assert(f && "isSubclass missing");
     call = funcCtx->builder.createFuncCall(f.get());
     call->args = isSubclassArgs;
-    call->receiver = valClass;
+    call->receiver = valClassVarRef;
+
+    // !(valClass is null) && val.class.isSubclass(ThisClass)
+    vector<ExprPtr> parms;
+    parms.clear();
+    parms.push_back(isNotNullCall.get());
+    parms.push_back(call.get());
+    f = outer.construct->rootContext->lookUp("oper &&", parms);
+    call = funcCtx->builder.createFuncCall(f.get());
+    call->args = parms;
 
     // if ($)
-    BranchpointPtr branchpoint = funcCtx->builder.emitIf(*funcCtx, call.get());
+    branchpoint = funcCtx->builder.emitIf(*funcCtx, call.get());
     
     // return ThisClass.unsafeCast(val);
     FuncCall::ExprVec unsafeCastArgs(1);
@@ -561,7 +634,7 @@ void TypeDef::createCast(Context &outer, bool throws) {
     if (throws) {
         // __CrackBadCast(val.class, ThisClass);
         FuncCall::ExprVec badCastArgs(2);
-        badCastArgs[0] = valClass;
+        badCastArgs[0] = valClassVarRef;
         badCastArgs[1] = funcCtx->builder.createVarRef(this);
         f = outer.getParent()->lookUp("__CrackBadCast", badCastArgs);
         assert(f && "__CrackBadCast missing");

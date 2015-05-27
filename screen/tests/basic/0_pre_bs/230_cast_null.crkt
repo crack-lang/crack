@@ -1,0 +1,20 @@
+%%TEST%%
+casting null
+%%ARGS%%
+%%FILE%%
+import crack.lang BadCastError;
+
+class A : VTableBase {}
+if (!(A.cast(null, null) is null))
+    puts('FAILED on conversion with default');
+
+try {
+    A.cast(null);
+    puts('FAILED to get exception casting null');
+} catch (BadCastError ex) {
+}
+
+puts('ok');
+%%EXPECT%%
+ok
+%%STDIN%%
