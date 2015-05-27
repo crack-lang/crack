@@ -2564,7 +2564,7 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
                                                  "byteptr",
                                                  llvmBytePtrType
                                                  );
-    byteptrType->defaultInitializer = createStrConst(context, "");
+    byteptrType->defaultInitializer = new NullConst(byteptrType);
     byteptrType->complete = true;
     context.addDef(
         new VoidPtrOpDef(context.construct->voidptrType.get()),
@@ -3313,11 +3313,15 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
                      true
                      );
     vtableBaseType->hasVTable = true;
+    vtableBaseType->defaultInitializer = new NullConst(vtableBaseType);
     createClassImpl(context, vtableBaseType);
     metaType->meta = vtableBaseType;
     context.addDef(vtableBaseType);
     context.construct->registerDef(vtableBaseType);
     createOperClassFunc(context, vtableBaseType);
+
+    // Add an "oper to .builtin.voidptr" method.
+    context.addDef(new VoidPtrOpDef(voidptrType), vtableBaseType);
 
     // build VTableBase's vtable
     VTableBuilder vtableBuilder(this, vtableBaseType);

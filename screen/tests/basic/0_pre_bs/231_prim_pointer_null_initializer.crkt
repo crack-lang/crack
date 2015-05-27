@@ -1,0 +1,18 @@
+%%TEST%%
+primitive pointer classes initialize to null
+%%ARGS%%
+%%FILE%%
+VTableBase v;
+if (!(v is null)) puts('FAILED VTableBase');
+Class c;
+if (!(c is null)) puts('FAILED Class');
+byteptr b;
+if (!(b is null)) puts('FAILED byteptr');
+array[int] a;
+if (!(a is null)) puts('FAILED array');
+function[int] f;
+if (!(f is null)) puts('FAILED function');
+puts('ok');
+%%EXPECT%%
+ok
+%%STDIN%%
