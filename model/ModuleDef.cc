@@ -154,7 +154,7 @@ string ModuleDef::joinName(const ModuleDef::StringVec &parts) {
     return result.str();
 }
 
-#define CRACK_METADATA_V1 2271218416
+#define CRACK_METADATA_V1 471296823
 
 void ModuleDef::serialize(Serializer &serializer) {
     int id = serializer.registerObject(this);
@@ -169,6 +169,7 @@ void ModuleDef::serialize(Serializer &serializer) {
     ModuleDefPtr master = getMaster();
     if (master.get() != this) {
         serializer.write(master->getFullName(), "master");
+        serializer.write(0, "optional");
         return;
     } else {
         serializer.write("", "master");
@@ -190,7 +191,12 @@ void ModuleDef::serialize(Serializer &serializer) {
                    );
         serializer.write(iter->first, "canonicalName");
         serializer.write(iter->second->metaDigest.asHex(), "metaDigest");
+        serializer.write(0, "optional");
     }
+
+    serializer.write(0, "optional");
+
+    // end of Header
 
     // write all of the symbols
     serializer.digestEnabled = true;
@@ -222,6 +228,9 @@ void ModuleDef::serialize(Serializer &serializer) {
          )
         serializer.write(iter->first, "exports");
 
+    // Write optional data.
+    serializer.write(0, "optional");
+
     // sign the metadata
     metaDigest = serializer.hasher.getDigest();
 }
@@ -240,6 +249,10 @@ ModuleDefPtr ModuleDef::deserialize(Deserializer &deser,
         // slave without having referenced the master.
         Construct &construct = *deser.context->construct;
         construct.getModule(master);
+
+        // Optional fields for Header, reading it now prior to leaving this
+        // function.
+        deser.readString(64, "optional");
 
         // Now we should be able to load the slave, or it doesn't exist as a
         // slave any more.
@@ -304,6 +317,8 @@ ModuleDefPtr ModuleDef::deserialize(Deserializer &deser,
         SourceDigest moduleDigest =
             SourceDigest::fromHex(deser.readString(64, "metaDigest"));
 
+        deser.readString(64, "optional");
+
         // if the dependency isn't finished, don't do a depdendency check.
         if (!mod || !mod->finished)
             continue;
@@ -323,6 +338,8 @@ ModuleDefPtr ModuleDef::deserialize(Deserializer &deser,
             return 0;
         }
     }
+
+    deser.readString(64, "optional");
 
     // The cached meta-data is up-to-date.
 
@@ -360,6 +377,9 @@ ModuleDefPtr ModuleDef::deserialize(Deserializer &deser,
         mod->exports[deser.readString(Serializer::varNameSize, "exports")] =
             true;
 
+    // Read optional data.
+    deser.readString(64, "optional");
+
     mod->metaDigest = deser.hasher.getDigest();
     mod->sourcePath = sourcePath;
     mod->sourceDigest = recordedSourceDigest;
@@ -370,8 +390,10 @@ ModuleDefPtr ModuleDef::deserialize(Deserializer &deser,
 }
 
 void ModuleDef::serializeSlaveRef(Serializer &serializer) {
-    if (serializer.writeObject(this, "owner"))
+    if (serializer.writeObject(this, "owner")) {
         serializer.write(canonicalName, "canonicalName");
+        serializer.write(0, "optional");
+    }
 }
 
 namespace {
@@ -382,6 +404,7 @@ namespace {
             string name = deser.readString(Serializer::modNameSize,
                                            "canonicalName"
                                            );
+            deser.readString(64, "optional");
             ModuleDefPtr mod = deser.context->builder.materializeModule(
                 *deser.context,
                 deser.context->builder.getCacheFile(*deser.context,

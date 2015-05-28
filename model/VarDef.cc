@@ -276,6 +276,7 @@ void VarDef::serializeAlias(Serializer &serializer, const string &alias) const {
     serializer.write(Serializer::aliasId, "kind");
     serializer.write(alias, "alias");
     serializeExternRef(serializer, 0);
+    serializer.write(0, "optional");
 }
 
 namespace {
@@ -473,11 +474,13 @@ namespace {
     };
 }
 
-VarDefPtr VarDef::deserializeAlias(Deserializer &serializer) {
-    return VarDefPtr::rcast(serializer.readObject(AliasReader(),
-                                                  "ext"
-                                                  ).object
-                            );
+VarDefPtr VarDef::deserializeAlias(Deserializer &deser) {
+    VarDefPtr result = VarDefPtr::rcast(deser.readObject(AliasReader(),
+                                                         "ext"
+                                                         ).object
+                                        );
+    deser.readString(64, "optional");
+    return result;
 }
 
 void VarDef::serialize(Serializer &serializer, bool writeKind,

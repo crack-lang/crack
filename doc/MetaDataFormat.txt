@@ -84,6 +84,9 @@ So given this, our meta-data format is:
         # symbols imported from other modules that can be imported from this
         # module (second-order imports)
         array[blob] exports
+
+        # reserved for future optional data
+        blob optional
     }
 
     Header {
@@ -106,6 +109,9 @@ So given this, our meta-data format is:
             # directly depends on (does not include .builtin)
             array[Dependency] deps
         }
+
+        # reserved for future optional data
+        blob optional
     }
 
     # identifies a dependency module by its canonical name and the hash of its
@@ -113,11 +119,17 @@ So given this, our meta-data format is:
     Dependency {
         blob canonicalName
         blob metaDigest
+
+        # reserved for future optional data
+        blob optional
     }
 
     SlaveModule {
         # The fully qualified canonical name of the module.
         blob canonicalName
+
+        # reserved for future optional data
+        blob optional
     }
 
     TypeDecl {
@@ -153,6 +165,9 @@ So given this, our meta-data format is:
         # a generic.
         # These are not included when constructing or verifying the metaDigest.
         array[Def] privateDefs
+
+        # reserved for future optional data
+        blob optional
     }
 
     Def {
@@ -187,6 +202,9 @@ So given this, our meta-data format is:
     AliasDef {
         blob alias
         ref[Extern] ext
+
+        # reserved for future optional data
+        blob optional
     }
 
     Extern {
@@ -236,6 +254,9 @@ So given this, our meta-data format is:
     Import {
         array[blob] moduleName
         array[ImportDef] importedSym
+
+        # reserved for future optional data
+        blob optional
     }
 
     TypeDef {
@@ -248,6 +269,9 @@ So given this, our meta-data format is:
             array[ref[Import]] importedAnnotations
             array[blob] parms
             array[Token] tokens
+
+            # reserved for future optional data
+            blob optional
         } else {
             array[ref[Type]] bases
             optional ref[Type] templateType = 1
@@ -265,6 +289,7 @@ So given this, our meta-data format is:
         optional ref[SlaveModule] owner
     }
 
+    // This appears to be unused.
     FuncEntry {
         uint isAlias
         switch (isAlias) {
@@ -275,12 +300,18 @@ So given this, our meta-data format is:
 
     FuncAlias {
         Extern ext
-        array[VarDef] args
+        array[ArgDef] args
+
+        # reserved for future optional data
+        blob optional
     }
 
     ArgDef {
         blob name
         ref[Type] type
+
+        # reserved for future optional data
+        blob optional
     }
 
     FuncDefBody {

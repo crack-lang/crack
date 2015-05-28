@@ -23,12 +23,14 @@ void ArgDef::serialize(Serializer &serializer, bool writeKind,
     SPUG_CHECK(!writeKind, "?? writing 'kind' for arg variable " << name);
     serializer.write(name, "name");
     type->serialize(serializer, false, 0);
+    serializer.write(0, "optional");
 }
 
 
 ArgDefPtr ArgDef::deserialize(Deserializer &deser) {
     string name = deser.readString(16, "name");
     TypeDefPtr type = TypeDef::deserializeRef(deser);
+    deser.readString(64, "optional");
     return deser.context->builder.materializeArg(*deser.context, name,
                                                  type.get()
                                                  );

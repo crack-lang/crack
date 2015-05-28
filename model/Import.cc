@@ -20,6 +20,8 @@ void Import::serialize(Serializer &serializer) const {
          ++iter
          )
         iter->serialize(serializer);
+
+    serializer.write(0, "optional");
 }
 
 ImportPtr Import::deserialize(Deserializer &deser) {
@@ -38,5 +40,6 @@ ImportPtr Import::deserialize(Deserializer &deser) {
     while (count--)
         syms.push_back(ImportedDef::deserialize(deser));
 
+    deser.readString(64, "optional");
     return new Import(moduleName, syms);
 }

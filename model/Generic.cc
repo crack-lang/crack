@@ -203,6 +203,8 @@ void Generic::serialize(Serializer &out) const {
          ++iter
          )
         serializeToken(out, *iter);
+
+    out.write(0, "optional");
 }
 
 namespace {
@@ -233,5 +235,7 @@ Generic *Generic::deserialize(Deserializer &src) {
     result->body.reserve(tokCount);
     for (int i = 0; i < tokCount; ++i)
         result->body.push_back(deserializeToken(src));
+
+    src.readString(64, "optional");
     return result;
 }

@@ -311,6 +311,7 @@ void FuncDef::serializeAlias(Serializer &serializer) const {
     serializer.write(1, "isAlias");
     serializeExtern(serializer);
     serializeArgs(serializer);
+    serializer.write(0, "optional");
 }
 
 void FuncDef::serialize(Serializer &serializer, bool writeKind,
@@ -334,7 +335,9 @@ FuncDefPtr FuncDef::deserialize(Deserializer &deser, const string &name) {
     bool alias = deser.readUInt("isAlias");
     if (alias) {
         OverloadDefPtr ovld = deserializeOverloadAliasBody(deser);
-        return ovld->getSigMatch(deserializeArgs(deser), true);
+        FuncDef::ArgVec args = deserializeArgs(deser);
+        deser.readString(64, "optional");
+        return ovld->getSigMatch(args, true);
     }
     Spec spec;
     spec.deserialize(deser);

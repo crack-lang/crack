@@ -474,18 +474,22 @@ void Namespace::serializeNonTypeDefs(const vector<const Namespace *>& namespaces
         i->second->serializeAlias(serializer, i->first);
     
     // now do the privates
-    Serializer::StackFrame<Serializer> digestState(serializer, false);
-    serializer.write(privateAliases.size() + otherPrivates.size(),
-                     "#privateDefs"
-                     );
-    
-    // vars and functions
-    SPUG_FOR(vector<VarDef *>, i, otherPrivates)
-        (*i)->serialize(serializer, true, this);
+    {
+        Serializer::StackFrame<Serializer> digestState(serializer, false);
+        serializer.write(privateAliases.size() + otherPrivates.size(),
+                        "#privateDefs"
+                        );
 
-    // aliases
-    SPUG_FOR(VarDefVec, i, privateAliases)
-        i->second->serializeAlias(serializer, i->first);
+        // vars and functions
+        SPUG_FOR(vector<VarDef *>, i, otherPrivates)
+            (*i)->serialize(serializer, true, this);
+    
+        // aliases
+        SPUG_FOR(VarDefVec, i, privateAliases)
+            i->second->serializeAlias(serializer, i->first);
+    }
+
+    serializer.write(0, "optional");
 }
 
 void Namespace::deserializeTypeDecls(Deserializer &deser) {
@@ -498,6 +502,9 @@ void Namespace::deserializeTypeDecls(Deserializer &deser) {
 
 void Namespace::deserializeDefs(Deserializer &deser) {
     deserializeDefs(deser, "#defs", true);
-    Serializer::StackFrame<Deserializer> digestState(deser, false);
-    deserializeDefs(deser, "#privateDefs", false);
+    {
+        Serializer::StackFrame<Deserializer> digestState(deser, false);
+        deserializeDefs(deser, "#privateDefs", false);
+    }
+    deser.readString(64, "optional");
 }
