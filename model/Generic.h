@@ -74,7 +74,10 @@ class Generic {
         /** Token serialization (public for testability) */
         /** @{ */
         static void serializeToken(Serializer &out, const parser::Token &tok);
-        static parser::Token deserializeToken(Deserializer &src);
+        static parser::Token deserializeToken(Deserializer &src,
+                                              std::string &fileName,
+                                              int &lineNum
+                                              );
         /** @} */
 };
 

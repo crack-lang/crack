@@ -154,7 +154,7 @@ string ModuleDef::joinName(const ModuleDef::StringVec &parts) {
     return result.str();
 }
 
-#define CRACK_METADATA_V1 471296823
+#define CRACK_METADATA_V1 471296820
 
 void ModuleDef::serialize(Serializer &serializer) {
     int id = serializer.registerObject(this);

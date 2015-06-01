@@ -51,10 +51,16 @@ class Token {
                      slash, string, tilde, istrBegin, istrEnd, logicAnd, 
                      logicOr, floatLit, octalLit, hexLit, binLit, scoping,
                      
-                     // these tokens are special - they are used to 
-                     // communicate actions that need to be performed in the 
+                     // these tokens are special - they are used to
+                     // communicate actions that need to be performed in the
                      // token stream.
                      popErrCtx, // pop error context
+
+                     // More special tokens, these are used for persisting
+                     // filename and line number information in cache
+                     // meta-data.
+                     fileName = 125,
+                     lineNumber = 126,
       } Type;
 
    private:

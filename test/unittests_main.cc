@@ -283,7 +283,9 @@ bool operatorSerialization() {
     istringstream deserStr(serStr.str());
     Deserializer deser(deserStr, 0);
     for (int i = 0; i < tokens.size(); ++i) {
-        Token tok = Generic::deserializeToken(deser);
+        string fileName;
+        int lineNum;
+        Token tok = Generic::deserializeToken(deser, fileName, lineNum);
         if (tok.getData() != tokens[i].getData()) {
             cerr << "mismatch reading back " << tokens[i].getData() <<
                 " got " << tok.getData() << endl;

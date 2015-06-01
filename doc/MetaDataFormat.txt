@@ -362,6 +362,10 @@ So given this, our meta-data format is:
             blob tokenData
         }
 
-        ref[Location] loc
+        switch (tokenType) {
+            case Token::fileName: blob fileName
+            case Token:lineNum: uint lineNum
+            default: uint column
+        }
     }
 }}

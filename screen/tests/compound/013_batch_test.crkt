@@ -312,7 +312,7 @@ out: enslaving generics
 terminated: success
 out: generic dependencies
 terminated: success
-err: ParseError: ./mod2.crk:3:1: Instance of mod1.A has no member f
+err: ParseError: ./mod2.crk:3:19: Instance of mod1.A has no member f
 err:   in generic instantiation at .*/main.crk:4:4
 err:\s*
 terminated, rc = 2049

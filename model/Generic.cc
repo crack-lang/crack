@@ -8,6 +8,7 @@
 #include "Generic.h"
 
 #include <string.h>
+#include "spug/check.h"
 #include "CompositeNamespace.h"
 #include "Context.h"
 #include "Import.h"
@@ -89,31 +90,16 @@ void Generic::serializeToken(Serializer &out, const Token &tok) {
         case Token::binLit:
             out.write(tok.getData(), "tokenData");
     }
-    const Location &loc = tok.getLocation();
-    if (out.writeObject(loc.get(), "loc")) {
-        const char *name = loc.getName();
-        out.write(strlen(name), name, "sourceName");
-        out.write(loc.getLineNumber(), "lineNum");
-    }
-}
-
-namespace {
-    struct LocReader : public Deserializer::ObjectReader {
-        virtual spug::RCBasePtr read(Deserializer &src) const {
-            string name = src.readString(256, "sourceName");
-            int lineNum = src.readUInt("lineNum");
-
-            // we don't need to use LocationMap for this: the deserializer's object
-            // map serves the same function.
-            return new LocationImpl(name.c_str(), lineNum);
-        }
-    };
+    out.write(tok.getLocation().getStartCol(), "column");
 }
 
 #define TOKTXT(type, txt) case Token::type: tokText = txt; break;
-Token Generic::deserializeToken(Deserializer &src) {
+Token Generic::deserializeToken(Deserializer &src, string &fileName,
+                                int &lineNum
+                                ) {
     Token::Type tokType = static_cast<Token::Type>(src.readUInt("tokenType"));
     string tokText;
+
     switch (tokType) {
         case Token::integer:
         case Token::string:
@@ -124,6 +110,15 @@ Token Generic::deserializeToken(Deserializer &src) {
         case Token::binLit:
             tokText = src.readString(32, "tokenData");
             break;
+
+        // Deal with file name/line number tokens.
+        case Token::fileName:
+            fileName = src.readString(Serializer::modNameSize, "fileName");
+            return Token(tokType, "", Location());
+        case Token::lineNumber:
+            lineNum = src.readUInt("lineNum");
+            return Token(tokType, "", Location());
+
         TOKTXT(ann, "@");
         TOKTXT(bitAnd, "&");
         TOKTXT(bitLSh, "<<");
@@ -174,8 +169,10 @@ Token Generic::deserializeToken(Deserializer &src) {
         TOKTXT(scoping, "::");
         TOKTXT(isKw, "is");
     }
-    Location loc =
-        LocationImplPtr::rcast(src.readObject(LocReader(), "loc").object);
+    int column = src.readUInt("column");
+    Location loc = new LocationImpl(fileName.c_str(), lineNum, column,
+                                    column + tokText.size()
+                                    );
     return Token(tokType, tokText, loc);
 }
 
@@ -197,12 +194,55 @@ void Generic::serialize(Serializer &out) const {
          )
         out.write((*iter)->name, "parms");
 
-    out.write(body.size(), "#tokens");
+    // count the number of tokens, including line number changes which are
+    // stored as special tokens.  We support multiple filenames because
+    // annotations let us rewrite the token stream and could inject tokens
+    // from another source file.
+    string fileName;
+    int lineNum = -1;
+    int numTokens = body.size();
+    for (TokenVec::const_iterator iter = body.begin(); iter != body.end();
+         ++iter
+         ) {
+        const Location &loc = iter->getLocation();
+        if (loc.getName() != fileName) {
+            ++numTokens;
+            fileName = loc.getName();
+        }
+        if (loc.getLineNumber() != lineNum) {
+            ++numTokens;
+            lineNum = loc.getLineNumber();
+        }
+    }
+
+    out.write(numTokens, "#tokens");
+    int recount = 0;
+    lineNum = -1;
+    fileName = "";
     for (TokenVec::const_iterator iter = body.begin();
          iter != body.end();
          ++iter
-         )
+         ) {
+        const Location &loc = iter->getLocation();
+        if (loc.getName() != fileName) {
+            fileName = loc.getName();
+            out.write(Token::fileName, "tokenType");
+            out.write(fileName, "fileName");
+            ++recount;
+        }
+        if (loc.getLineNumber() != lineNum) {
+            lineNum = loc.getLineNumber();
+            out.write(Token::lineNumber, "tokenType");
+            out.write(lineNum, "lineNum");
+            ++recount;
+        }
         serializeToken(out, *iter);
+        ++recount;
+    }
+    SPUG_CHECK(recount == numTokens,
+               "Token count mismatch: expected = " << numTokens <<
+                " recount =" << recount
+               );
 
     out.write(0, "optional");
 }
@@ -233,8 +273,13 @@ Generic *Generic::deserialize(Deserializer &src) {
 
     int tokCount = src.readUInt("#tokens");
     result->body.reserve(tokCount);
-    for (int i = 0; i < tokCount; ++i)
-        result->body.push_back(deserializeToken(src));
+    string fileName;
+    int lineNum;
+    for (int i = 0; i < tokCount; ++i) {
+        Token tok = deserializeToken(src, fileName, lineNum);
+        if (tok.getType() < Token::fileName)
+            result->body.push_back(tok);
+    }
 
     src.readString(64, "optional");
     return result;
