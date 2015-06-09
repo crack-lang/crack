@@ -10,22 +10,16 @@ import crack.cont.array Array;
 import crack.io cout, FStr;
 import crack.lang AssertionError, CString, Exception;
 import crack.runtime free;
-import crack.ext._alsa_midi snd_seq_t, snd_seq_client_info_get_client, 
-    snd_seq_client_info_get_name,
-    snd_seq_client_info_malloc, snd_seq_client_info_free, 
-    snd_seq_client_info_set_client, 
-    snd_seq_client_info_t, snd_seq_event_t, 
-    snd_seq_port_info_free, snd_seq_port_info_get_name, snd_seq_port_info_malloc, 
-    snd_seq_port_info_get_port, snd_seq_port_info_set_client, snd_seq_port_info_set_port, snd_seq_port_info_t,
-    snd_seq_query_next_client, snd_seq_query_next_port, 
-    snd_seq_alloc_named_queue, snd_seq_open, snd_seq_create_simple_port, 
-    snd_seq_connect_to, snd_seq_drain_output, snd_seq_event_output, 
-    snd_seq_event_input, snd_seq_event_input_pending, SndSeqQueue_setTempo, 
-    SndSeqQueue_start, SndSeqQueue_stop, SND_SEQ_OPEN_INPUT, SND_SEQ_OPEN_OUTPUT, 
-    SND_SEQ_PORT_CAP_WRITE, SND_SEQ_PORT_CAP_SUBS_WRITE, SND_SEQ_PORT_CAP_READ, 
-    SND_SEQ_PORT_CAP_SUBS_READ, SND_SEQ_PORT_TYPE_MIDI_GENERIC, 
-    SND_SEQ_EVENT_NOTEON, SND_SEQ_EVENT_NOTEOFF, SND_SEQ_EVENT_PGMCHANGE, 
-    SND_SEQ_EVENT_PITCHBEND, SND_SEQ_EVENT_CONTROLLER, SND_SEQ_EVENT_SYSEX;
+import crack.ext._alsa_midi snd_seq_t, snd_seq_client_info_t, 
+    snd_seq_client_info_malloc, snd_seq_event_t,
+    snd_seq_port_info_t, snd_seq_port_info_malloc, snd_seq_port_subscribe_t, 
+    snd_seq_port_subscribe_malloc,
+    snd_seq_open, SND_SEQ_OPEN_INPUT, SND_SEQ_OPEN_OUTPUT, 
+    SND_SEQ_PORT_CAP_WRITE, SND_SEQ_PORT_CAP_SUBS_WRITE, 
+    SND_SEQ_PORT_CAP_READ, SND_SEQ_PORT_CAP_SUBS_READ, 
+    SND_SEQ_PORT_TYPE_MIDI_GENERIC, SND_SEQ_EVENT_NOTEON, 
+    SND_SEQ_EVENT_NOTEOFF, SND_SEQ_EVENT_PGMCHANGE, SND_SEQ_EVENT_PITCHBEND, 
+    SND_SEQ_EVENT_CONTROLLER, SND_SEQ_EVENT_SYSEX;
 import crack.net Poller;
 import crack.time TimeDelta;
 import crack.midi.event ControlChange, Event, NoteOn, NoteOff, ProgramChange, 
@@ -57,38 +51,48 @@ class Sequencer;
 class Queue;
 Port _makePort(Sequencer client, int port);
 Queue _makeQueue(Sequencer client, int queueId);
+int _subscribePort(Sequencer client, snd_seq_port_subscribe_t sub);
 
 class PortInfo {
     snd_seq_port_info_t __info;
     
     oper init() : __info = snd_seq_port_info_malloc() {}
     oper init(int clientId, int portId) : __info = snd_seq_port_info_malloc() {
-        snd_seq_port_info_set_client(__info, clientId);
-        snd_seq_port_info_set_port(__info, portId);
+        __info.set_client(clientId);
+        __info.set_port(portId);
     }
     
-    oper del() { snd_seq_port_info_free(__info); }
+    oper del() { __info.free(); }
     
     @final void setClient(int clientId) {
-        snd_seq_port_info_set_client(__info, clientId);
+        __info.set_client(clientId);
     }
     
     @final void setId(int portId) {
-        snd_seq_port_info_set_port(__info, portId);
+        __info.set_port(portId);
     }
     
     @final int getId() {
-        return snd_seq_port_info_get_port(__info);
+        return __info.get_port();
     }
     
     @final String getName() {
-        return String(snd_seq_port_info_get_name(__info));
+        return String(__info.get_name());
     }
     
     # Returns >= zero if there is another port, fills the port info 
     # with the info for that port.
     @final int queryNextPort(snd_seq_t seq) {
-        return snd_seq_query_next_port(seq, __info);
+        return seq.query_next_port(__info);
+    }
+    
+    int connect(Sequencer seq, PortInfo other) {
+        sub := snd_seq_port_subscribe_malloc();
+        sub.set_sender(__info.get_addr());
+        sub.set_dest(other.__info.get_addr());
+        rc := _subscribePort(seq, sub);
+        sub.free();
+        return rc;
     }
 }
 
@@ -96,17 +100,17 @@ class ClientInfo {
     snd_seq_client_info_t __info;
     oper init() : __info = snd_seq_client_info_malloc() {}
     oper init(int id) : __info = snd_seq_client_info_malloc() {
-        snd_seq_client_info_set_client(__info, id);
+        __info.set_client(id);
     }
     oper del() {
-        snd_seq_client_info_free(__info);
+        __info.free();
     }
     @final int getId() {
-        return snd_seq_client_info_get_client(__info);
+        return __info.get_client();
     }
     
     @final String getName() {
-        return String(snd_seq_client_info_get_name(__info));
+        return String(__info.get_name());
     }
     
     @final Array[PortInfo] getAllPorts(snd_seq_t seq) {
@@ -125,7 +129,7 @@ class ClientInfo {
     ## Returns >= 0 if there is another port, fills the receiver with the 
     ## information on that port.
     @final int queryNextClient(snd_seq_t seq) {
-        return snd_seq_query_next_client(seq, __info);
+        return seq.query_next_client(__info);
     }
 }
 
@@ -146,36 +150,34 @@ class Sequencer {
     ## Creates a new write port with the specified name.
     Port makeWritePort(CString portName) {
         return _makePort(this, 
-                         snd_seq_create_simple_port(seq, portName.buffer, 
-                                                 SND_SEQ_PORT_CAP_WRITE |
-                                                 SND_SEQ_PORT_CAP_SUBS_WRITE,
-                                                 SND_SEQ_PORT_TYPE_MIDI_GENERIC
-                                                 )
+                         seq.create_simple_port(portName.buffer, 
+                                                SND_SEQ_PORT_CAP_WRITE |
+                                                SND_SEQ_PORT_CAP_SUBS_WRITE,
+                                                SND_SEQ_PORT_TYPE_MIDI_GENERIC
+                                                )
                          );
     }
 
     Port makeReadPort(CString portName) {
-        return _makePort(this, 
-                         snd_seq_create_simple_port(
-                            seq, 
+        return _makePort(this,
+                         seq.create_simple_port(
                             portName.buffer, 
                             SND_SEQ_PORT_CAP_READ |
                             SND_SEQ_PORT_CAP_SUBS_READ,
                             SND_SEQ_PORT_TYPE_MIDI_GENERIC
-                          )
-                         );
+                         ));
     }
     
     Queue makeQueue(CString queueName) {
         return _makeQueue(this,
-                          snd_seq_alloc_named_queue(seq, queueName.buffer)
+                          seq.alloc_named_queue(queueName.buffer)
                           );
     }
     
     ## Gets the next midi event from the sequencer.
     Event getEvent() {
         array[snd_seq_event_t] evt = {1};
-        snd_seq_event_input(seq, evt);
+        seq.event_input(evt);
         Event result;
         if (evt[0].type == SND_SEQ_EVENT_NOTEON) {
             note := evt[0].getNote();
@@ -204,7 +206,7 @@ class Sequencer {
     
     ## returns true if there is an event pending.
     bool hasEvent() {
-        return snd_seq_event_input_pending(seq, 1);
+        return seq.event_input_pending(1);
     }
 
     ## Get information on all of the clients.
@@ -219,6 +221,14 @@ class Sequencer {
     
         return result;
     }
+    
+    int subscribePort(snd_seq_port_subscribe_t sub) {
+        return seq.subscribe_port(sub);
+    }
+}
+
+int _subscribePort(Sequencer client, snd_seq_port_subscribe_t sub) {
+    return client.subscribePort(sub);
 }
 
 ## An alsa midi Port.  Ports in alsa are communication endpoints.  Like 
@@ -233,7 +243,7 @@ class Port {
     
     ## Connect to another port.
     void connectTo(int otherClient, int otherPort) {
-        snd_seq_connect_to(client.seq, port, otherClient, otherPort);
+        client.seq.connect_to(port, otherClient, otherPort);
     }
     
     ## Sends a "direct" event.  Direct events are sent immediately to the 
@@ -246,8 +256,8 @@ class Port {
         
         e.setMidiEvent(event);
         
-        snd_seq_event_output(client.seq, e);
-        snd_seq_drain_output(client.seq);
+        client.seq.event_output(e);
+        client.seq.drain_output();
     }
 }
 
@@ -266,7 +276,7 @@ class Queue {
         client = client,
         queueId = queueId {
         
-        SndSeqQueue_setTempo(client.seq, queueId, __tempo, __ppq);
+        client.seq.setTempo(queueId, __tempo, __ppq);
     }
     
     ## Adds an event for the given port to the queue.
@@ -277,24 +287,24 @@ class Queue {
         e.scheduleTick(queueId, 0, event.time);
         cout `event is $(event.time) $event\n`;
         e.setMidiEvent(event);
-        snd_seq_event_output(client.seq, e);
-        snd_seq_drain_output(client.seq);
+        client.seq.event_output(e);
+        client.seq.drain_output();
     }
     
     ## Sets the tempo as beats-per-minute.  A "beat" is one quarter note.
     void setTempo(int bpm) {
         __tempo = 60000000 / bpm;
-        SndSeqQueue_setTempo(client.seq, queueId, __tempo, __ppq);
+        client.seq.setTempo(queueId, __tempo, __ppq);
     }
     
     ## Set the number of pulses (midi ticks) per quarter note.
     void setPPQ(int ppq) {
         __ppq = ppq;
-        SndSeqQueue_setTempo(client.seq, queueId, __tempo, __ppq);
+        client.seq.setTempo(queueId, __tempo, __ppq);
     }
     
-    void start() { SndSeqQueue_start(client.seq, queueId, null); }
-    void stop() { SndSeqQueue_stop(client.seq, queueId, null); }
+    void start() { client.seq.start(queueId, null); }
+    void stop() { client.seq.stop(queueId, null); }
 }
 
 Queue _makeQueue(Sequencer client, int queueId) {

@@ -79,19 +79,6 @@ void crack_ext__alsa_midi_cinit(crack::ext::Module *mod) {
     crack::ext::Type *type_float64 = mod->getFloat64Type();
     crack::ext::Type *type_float = mod->getFloatType();
 
-    crack::ext::Type *type_snd_seq_t = mod->addType("snd_seq_t", sizeof(Undef));
-    type_snd_seq_t->finish();
-
-
-    crack::ext::Type *array = mod->getType("array");
-
-    crack::ext::Type *array_psnd__seq__t_q;
-    {
-        std::vector<crack::ext::Type *> params(1);
-        params[0] = type_snd_seq_t;
-        array_psnd__seq__t_q = array->getSpecialization(params);
-    }
-
     crack::ext::Type *type_snd_seq_ev_note_t = mod->addType("snd_seq_ev_note_t", sizeof(snd_seq_ev_note_t));
         type_snd_seq_ev_note_t->addInstVar(type_byte, "channel",
                                 CRACK_OFFSET(snd_seq_ev_note_t, channel));
@@ -130,18 +117,6 @@ void crack_ext__alsa_midi_cinit(crack::ext::Module *mod) {
         type_snd_seq_addr_t->addInstVar(type_byte, "port",
                                 CRACK_OFFSET(snd_seq_addr_t, port));
     type_snd_seq_addr_t->finish();
-
-
-    crack::ext::Type *type_snd_seq_port_subscribe_t = mod->addType("snd_seq_port_subscribe_t", sizeof(Undef));
-    type_snd_seq_port_subscribe_t->finish();
-
-
-    crack::ext::Type *type_snd_seq_port_info_t = mod->addType("snd_seq_port_info_t", sizeof(Undef));
-    type_snd_seq_port_info_t->finish();
-
-
-    crack::ext::Type *type_snd_seq_client_info_t = mod->addType("snd_seq_client_info_t", sizeof(Undef));
-    type_snd_seq_client_info_t->finish();
 
 
     crack::ext::Type *type_snd_seq_event_t = mod->addType("snd_seq_event_t", sizeof(snd_seq_event_t));
@@ -266,12 +241,359 @@ void crack_ext__alsa_midi_cinit(crack::ext::Module *mod) {
     type_snd_seq_event_t->finish();
 
 
+    crack::ext::Type *type_snd_seq_port_subscribe_t = mod->addType("snd_seq_port_subscribe_t", sizeof(Undef));
+
+
+    f = type_snd_seq_port_subscribe_t->addMethod(
+        type_void, 
+        "free",
+        (void *)snd_seq_port_subscribe_free
+    );
+
+
+    f = type_snd_seq_port_subscribe_t->addMethod(
+        type_void, 
+        "set_sender",
+        (void *)snd_seq_port_subscribe_set_sender
+    );
+    f->addArg(type_snd_seq_addr_t, 
+              "addr"
+              );
+
+
+    f = type_snd_seq_port_subscribe_t->addMethod(
+        type_void, 
+        "set_dest",
+        (void *)snd_seq_port_subscribe_set_dest
+    );
+    f->addArg(type_snd_seq_addr_t, 
+              "addr"
+              );
+
+
+    f = type_snd_seq_port_subscribe_t->addMethod(
+        type_void, 
+        "set_queue",
+        (void *)snd_seq_port_subscribe_set_queue
+    );
+    f->addArg(type_int, 
+              "queue"
+              );
+
+
+    f = type_snd_seq_port_subscribe_t->addMethod(
+        type_void, 
+        "set_exclusive",
+        (void *)snd_seq_port_subscribe_set_exclusive
+    );
+    f->addArg(type_int, 
+              "val"
+              );
+
+
+    f = type_snd_seq_port_subscribe_t->addMethod(
+        type_void, 
+        "set_time_update",
+        (void *)snd_seq_port_subscribe_set_time_update
+    );
+    f->addArg(type_int, 
+              "val"
+              );
+
+
+    f = type_snd_seq_port_subscribe_t->addMethod(
+        type_void, 
+        "set_time_real",
+        (void *)snd_seq_port_subscribe_set_time_real
+    );
+    f->addArg(type_int, 
+              "val"
+              );
+
+    type_snd_seq_port_subscribe_t->finish();
+
+
+    crack::ext::Type *type_snd_seq_port_info_t = mod->addType("snd_seq_port_info_t", sizeof(Undef));
+
+
+    f = type_snd_seq_port_info_t->addMethod(
+        type_void, 
+        "free",
+        (void *)snd_seq_port_info_free
+    );
+
+
+    f = type_snd_seq_port_info_t->addMethod(
+        type_int, 
+        "set_client",
+        (void *)snd_seq_port_info_set_client
+    );
+    f->addArg(type_int, 
+              "client"
+              );
+
+
+    f = type_snd_seq_port_info_t->addMethod(
+        type_int, 
+        "set_port",
+        (void *)snd_seq_port_info_set_port
+    );
+    f->addArg(type_int, 
+              "port"
+              );
+
+
+    f = type_snd_seq_port_info_t->addMethod(
+        type_int, 
+        "get_port",
+        (void *)snd_seq_port_info_get_port
+    );
+
+
+    f = type_snd_seq_port_info_t->addMethod(
+        type_byteptr, 
+        "get_name",
+        (void *)snd_seq_port_info_get_name
+    );
+
+
+    f = type_snd_seq_port_info_t->addMethod(
+        type_snd_seq_addr_t, 
+        "get_addr",
+        (void *)snd_seq_port_info_get_addr
+    );
+
+    type_snd_seq_port_info_t->finish();
+
+
+    crack::ext::Type *type_snd_seq_client_info_t = mod->addType("snd_seq_client_info_t", sizeof(Undef));
+
+
+    f = type_snd_seq_client_info_t->addMethod(
+        type_int, 
+        "free",
+        (void *)snd_seq_client_info_free
+    );
+
+
+    f = type_snd_seq_client_info_t->addMethod(
+        type_int, 
+        "set_client",
+        (void *)snd_seq_client_info_set_client
+    );
+    f->addArg(type_int, 
+              "client"
+              );
+
+
+    f = type_snd_seq_client_info_t->addMethod(
+        type_int, 
+        "get_client",
+        (void *)snd_seq_client_info_get_client
+    );
+
+
+    f = type_snd_seq_client_info_t->addMethod(
+        type_byteptr, 
+        "get_name",
+        (void *)snd_seq_client_info_get_name
+    );
+
+    type_snd_seq_client_info_t->finish();
+
+
+    crack::ext::Type *array = mod->getType("array");
+
     crack::ext::Type *array_psnd__seq__event__t_q;
     {
         std::vector<crack::ext::Type *> params(1);
         params[0] = type_snd_seq_event_t;
         array_psnd__seq__event__t_q = array->getSpecialization(params);
     }
+
+    crack::ext::Type *type_snd_seq_t = mod->addType("snd_seq_t", sizeof(Undef));
+
+    f = type_snd_seq_t->addMethod(
+        type_int, 
+        "set_client_name",
+        (void *)snd_seq_set_client_name
+    );
+    f->addArg(type_byteptr, 
+              "name"
+              );
+
+
+    f = type_snd_seq_t->addMethod(
+        type_int, 
+        "create_simple_port",
+        (void *)snd_seq_create_simple_port
+    );
+    f->addArg(type_byteptr, 
+              "name"
+              );
+    f->addArg(type_int, 
+              "caps"
+              );
+    f->addArg(type_int, 
+              "type"
+              );
+
+
+    f = type_snd_seq_t->addMethod(
+        type_int, 
+        "connect_to",
+        (void *)snd_seq_connect_to
+    );
+    f->addArg(type_int, 
+              "myport"
+              );
+    f->addArg(type_int, 
+              "dest_client"
+              );
+    f->addArg(type_int, 
+              "dest_port"
+              );
+
+
+    f = type_snd_seq_t->addMethod(
+        type_int, 
+        "query_next_client",
+        (void *)snd_seq_query_next_client
+    );
+    f->addArg(type_snd_seq_client_info_t, 
+              "client"
+              );
+
+
+    f = type_snd_seq_t->addMethod(
+        type_int, 
+        "query_next_port",
+        (void *)snd_seq_query_next_port
+    );
+    f->addArg(type_snd_seq_port_info_t, 
+              "portInfo"
+              );
+
+
+    f = type_snd_seq_t->addMethod(
+        type_int, 
+        "event_output",
+        (void *)snd_seq_event_output
+    );
+    f->addArg(type_snd_seq_event_t, 
+              "event"
+              );
+
+
+    f = type_snd_seq_t->addMethod(
+        type_int, 
+        "drain_output",
+        (void *)snd_seq_drain_output
+    );
+
+
+    f = type_snd_seq_t->addMethod(
+        type_int, 
+        "event_input",
+        (void *)snd_seq_event_input
+    );
+    f->addArg(array_psnd__seq__event__t_q, 
+              "event"
+              );
+
+
+    f = type_snd_seq_t->addMethod(
+        type_int, 
+        "event_input_pending",
+        (void *)snd_seq_event_input_pending
+    );
+    f->addArg(type_int, 
+              "fetch_sequencer"
+              );
+
+
+    f = type_snd_seq_t->addMethod(
+        type_int, 
+        "alloc_named_queue",
+        (void *)snd_seq_alloc_named_queue
+    );
+    f->addArg(type_byteptr, 
+              "name"
+              );
+
+
+    f = type_snd_seq_t->addMethod(
+        type_int, 
+        "setTempo",
+        (void *)SndSeqQueue_setTempo
+    );
+    f->addArg(type_int, 
+              "queueId"
+              );
+    f->addArg(type_int, 
+              "tempo"
+              );
+    f->addArg(type_int, 
+              "ppq"
+              );
+
+
+    f = type_snd_seq_t->addMethod(
+        type_void, 
+        "start",
+        (void *)SndSeqQueue_start
+    );
+    f->addArg(type_int, 
+              "queueId"
+              );
+    f->addArg(type_snd_seq_event_t, 
+              "event"
+              );
+
+
+    f = type_snd_seq_t->addMethod(
+        type_void, 
+        "stop",
+        (void *)SndSeqQueue_stop
+    );
+    f->addArg(type_int, 
+              "queueId"
+              );
+    f->addArg(type_snd_seq_event_t, 
+              "event"
+              );
+
+
+    f = type_snd_seq_t->addMethod(
+        type_int, 
+        "subscribe_port",
+        (void *)snd_seq_subscribe_port
+    );
+    f->addArg(type_snd_seq_port_subscribe_t, 
+              "sub"
+              );
+
+    type_snd_seq_t->finish();
+
+
+    crack::ext::Type *array_psnd__seq__t_q;
+    {
+        std::vector<crack::ext::Type *> params(1);
+        params[0] = type_snd_seq_t;
+        array_psnd__seq__t_q = array->getSpecialization(params);
+    }
+    f = mod->addFunc(type_snd_seq_port_subscribe_t, "snd_seq_port_subscribe_malloc",
+                     (void *)crk_snd_seq_port_subscribe_malloc
+                     );
+
+    f = mod->addFunc(type_snd_seq_port_info_t, "snd_seq_port_info_malloc",
+                     (void *)crk_snd_seq_port_info_malloc
+                     );
+
+    f = mod->addFunc(type_snd_seq_client_info_t, "snd_seq_client_info_malloc",
+                     (void *)crk_snd_seq_client_info_malloc
+                     );
+
     f = mod->addFunc(type_int, "snd_seq_open",
                      (void *)snd_seq_open
                      );
@@ -279,161 +601,6 @@ void crack_ext__alsa_midi_cinit(crack::ext::Module *mod) {
        f->addArg(type_byteptr, "name");
        f->addArg(type_int, "streams");
        f->addArg(type_int, "mode");
-
-    f = mod->addFunc(type_int, "snd_seq_set_client_name",
-                     (void *)snd_seq_set_client_name
-                     );
-       f->addArg(type_snd_seq_t, "seqp");
-       f->addArg(type_byteptr, "name");
-
-    f = mod->addFunc(type_int, "snd_seq_create_simple_port",
-                     (void *)snd_seq_create_simple_port
-                     );
-       f->addArg(type_snd_seq_t, "handle");
-       f->addArg(type_byteptr, "name");
-       f->addArg(type_int, "caps");
-       f->addArg(type_int, "type");
-
-    f = mod->addFunc(type_int, "snd_seq_connect_to",
-                     (void *)snd_seq_connect_to
-                     );
-       f->addArg(type_snd_seq_t, "seq");
-       f->addArg(type_int, "myport");
-       f->addArg(type_int, "dest_client");
-       f->addArg(type_int, "dest_port");
-
-    f = mod->addFunc(type_int, "snd_seq_event_output",
-                     (void *)snd_seq_event_output
-                     );
-       f->addArg(type_snd_seq_t, "seqp");
-       f->addArg(type_snd_seq_event_t, "event");
-
-    f = mod->addFunc(type_int, "snd_seq_drain_output",
-                     (void *)snd_seq_drain_output
-                     );
-       f->addArg(type_snd_seq_t, "seqp");
-
-    f = mod->addFunc(type_int, "snd_seq_event_input",
-                     (void *)snd_seq_event_input
-                     );
-       f->addArg(type_snd_seq_t, "seqp");
-       f->addArg(array_psnd__seq__event__t_q, "event");
-
-    f = mod->addFunc(type_int, "snd_seq_event_input_pending",
-                     (void *)snd_seq_event_input_pending
-                     );
-       f->addArg(type_snd_seq_t, "seqp");
-       f->addArg(type_int, "fetch_sequencer");
-
-    f = mod->addFunc(type_int, "snd_seq_alloc_named_queue",
-                     (void *)snd_seq_alloc_named_queue
-                     );
-       f->addArg(type_snd_seq_t, "seqp");
-       f->addArg(type_byteptr, "name");
-
-    f = mod->addFunc(type_int, "SndSeqQueue_setTempo",
-                     (void *)SndSeqQueue_setTempo
-                     );
-       f->addArg(type_snd_seq_t, "seqp");
-       f->addArg(type_int, "queueId");
-       f->addArg(type_int, "tempo");
-       f->addArg(type_int, "ppq");
-
-    f = mod->addFunc(type_void, "SndSeqQueue_start",
-                     (void *)SndSeqQueue_start
-                     );
-       f->addArg(type_snd_seq_t, "seqp");
-       f->addArg(type_int, "queueId");
-       f->addArg(type_snd_seq_event_t, "event");
-
-    f = mod->addFunc(type_void, "SndSeqQueue_stop",
-                     (void *)SndSeqQueue_stop
-                     );
-       f->addArg(type_snd_seq_t, "seqp");
-       f->addArg(type_int, "queueId");
-       f->addArg(type_snd_seq_event_t, "event");
-
-    f = mod->addFunc(type_snd_seq_port_subscribe_t, "snd_seq_port_subscribe_malloc",
-                     (void *)crk_snd_seq_port_subscribe_malloc
-                     );
-
-    f = mod->addFunc(type_void, "snd_seq_port_subscribe_free",
-                     (void *)snd_seq_port_subscribe_free
-                     );
-       f->addArg(type_snd_seq_port_subscribe_t, "ptr");
-
-    f = mod->addFunc(type_snd_seq_port_info_t, "snd_seq_port_info_malloc",
-                     (void *)crk_snd_seq_port_info_malloc
-                     );
-
-    f = mod->addFunc(type_void, "snd_seq_port_info_free",
-                     (void *)snd_seq_port_info_free
-                     );
-       f->addArg(type_snd_seq_port_info_t, "ptr");
-
-    f = mod->addFunc(type_snd_seq_client_info_t, "snd_seq_client_info_malloc",
-                     (void *)crk_snd_seq_client_info_malloc
-                     );
-
-    f = mod->addFunc(type_int, "snd_seq_client_info_free",
-                     (void *)snd_seq_client_info_free
-                     );
-       f->addArg(type_snd_seq_client_info_t, "ptr");
-
-    f = mod->addFunc(type_int, "snd_seq_client_info_set_client",
-                     (void *)snd_seq_client_info_set_client
-                     );
-       f->addArg(type_snd_seq_client_info_t, "ptr");
-       f->addArg(type_int, "client");
-
-    f = mod->addFunc(type_int, "snd_seq_query_next_client",
-                     (void *)snd_seq_query_next_client
-                     );
-       f->addArg(type_snd_seq_t, "seq");
-       f->addArg(type_snd_seq_client_info_t, "client");
-
-    f = mod->addFunc(type_int, "snd_seq_client_info_get_client",
-                     (void *)snd_seq_client_info_get_client
-                     );
-       f->addArg(type_snd_seq_client_info_t, "clientInfo");
-
-    f = mod->addFunc(type_int, "snd_seq_port_info_set_client",
-                     (void *)snd_seq_port_info_set_client
-                     );
-       f->addArg(type_snd_seq_port_info_t, "portInfo");
-       f->addArg(type_int, "client");
-
-    f = mod->addFunc(type_int, "snd_seq_port_info_set_port",
-                     (void *)snd_seq_port_info_set_port
-                     );
-       f->addArg(type_snd_seq_port_info_t, "portInfo");
-       f->addArg(type_int, "port");
-
-    f = mod->addFunc(type_int, "snd_seq_port_info_get_port",
-                     (void *)snd_seq_port_info_get_port
-                     );
-       f->addArg(type_snd_seq_port_info_t, "portInfo");
-
-    f = mod->addFunc(type_byteptr, "snd_seq_port_info_get_name",
-                     (void *)snd_seq_port_info_get_name
-                     );
-       f->addArg(type_snd_seq_port_info_t, "portInfo");
-
-    f = mod->addFunc(type_int, "snd_seq_query_next_port",
-                     (void *)snd_seq_query_next_port
-                     );
-       f->addArg(type_snd_seq_t, "seq");
-       f->addArg(type_snd_seq_port_info_t, "portInfo");
-
-    f = mod->addFunc(type_int, "snd_seq_client_info_get_client",
-                     (void *)snd_seq_client_info_get_client
-                     );
-       f->addArg(type_snd_seq_client_info_t, "clientInfo");
-
-    f = mod->addFunc(type_byteptr, "snd_seq_client_info_get_name",
-                     (void *)snd_seq_client_info_get_name
-                     );
-       f->addArg(type_snd_seq_client_info_t, "clientInfo");
 
 
     mod->addConstant(type_int, "SND_SEQ_OPEN_INPUT",
