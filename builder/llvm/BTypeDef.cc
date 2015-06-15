@@ -6,14 +6,15 @@
 //   file, You can obtain one at http://mozilla.org/MPL/2.0/.
 // 
 
-#include "BFuncDef.h"
 #include "BTypeDef.h"
 
 #include <llvm/ExecutionEngine/ExecutionEngine.h>
 #include <llvm/IR/GlobalVariable.h>
 #include <llvm/IR/Module.h>
+#include "spug/stlutil.h"
 #include "model/Context.h"
 #include "model/OverloadDef.h"
+#include "BFuncDef.h"
 #include "PlaceholderInstruction.h"
 #include "VTableBuilder.h"
 
@@ -227,33 +228,35 @@ void BTypeDef::createEmptyOffsetsInitializer(Context &context) {
                            );
 }
 
+Constant *BTypeDef::getParentOffset(const LLVMBuilder &builder, int parentIndex) const {
+    // get the pointer to the inner "Class" object of "Class[BaseName]"
+    BTypeDefPtr base = BTypeDefPtr::arcast(parents[parentIndex]);
+
+    // calculate the offset from the beginning of the new classes
+    // instance space to that of the base.
+    Type *int32Type = Type::getInt32Ty(getGlobalContext());
+    Constant *index0n[] = {
+        ConstantInt::get(int32Type, 0),
+        ConstantInt::get(int32Type, parentIndex)
+    };
+    return
+        ConstantExpr::getPtrToInt(
+            ConstantExpr::getGetElementPtr(
+                Constant::getNullValue(cast<PointerType>(rep)),
+                ArrayRef<Constant *>(index0n, 2)
+            ),
+            builder.intzLLVM
+        );
+}
+
 void BTypeDef::createBaseOffsets(Context &context) const {
     // generate the offsets array (containing offsets to base classes)
-    PointerType *pointerType = cast<PointerType>(rep);
     vector<Constant *> offsetsVal(parents.size());
     Type *int32Type = Type::getInt32Ty(getGlobalContext());
-    Constant *zero = ConstantInt::get(int32Type, 0);
     LLVMBuilderPtr builder = LLVMBuilderPtr::cast(&context.builder);
     Type *intzType = builder->intzLLVM;
-    for (int i = 0; i < parents.size(); ++i) {
-        // get the pointer to the inner "Class" object of "Class[BaseName]"
-        BTypeDefPtr base = BTypeDefPtr::arcast(parents[i]);
-
-        // calculate the offset from the beginning of the new classes 
-        // instance space to that of the base.
-        Constant *index0n[] = {
-            zero,
-            ConstantInt::get(int32Type, i)
-        };
-        offsetsVal[i] =
-            ConstantExpr::getPtrToInt(
-                ConstantExpr::getGetElementPtr(
-                    Constant::getNullValue(pointerType),
-                    ArrayRef<Constant *>(index0n, 2)
-                ),
-                intzType
-            );
-    }
+    for (int i = 0; i < parents.size(); ++i)
+        offsetsVal[i] = getParentOffset(*builder, i);
     GlobalVariable *offsetsVar;
     ArrayType *offsetsArrayType = 
         ArrayType::get(intzType, parents.size());
@@ -293,7 +296,7 @@ void BTypeDef::fixIncompletes(Context &context) {
     }
 
     createBaseOffsets(context);
-        
+
     // fix-up all of the placeholder instructions
     for (vector<PlaceholderInstruction *>::iterator iter = 
             placeholders.begin();
@@ -330,4 +333,13 @@ void BTypeDef::setClassInst(llvm::GlobalVariable *classInst) {
                );
     this->classInst = classInst;
     this->classInstType = classInst->getType()->getElementType();
+}
+
+int BTypeDef::countAncestors() const {
+    int result = 0;
+    SPUG_FOR(TypeVec, iter, parents) {
+        ++result;
+        result += BTypeDefPtr::rcast(*iter)->countAncestors();
+    }
+    return result;
 }

@@ -1,5 +1,60 @@
 %%TEST%%
+exotic casts
 %%ARGS%%
 %%FILE%%
+# Tests casting to classes that are not aligned with the instance root.
+
+if (1) {
+    class A : VTableBase {}
+    class B : VTableBase {}
+    class C : A, B {}
+    C c;
+    B b = c;
+    if (!(C.vtables[0] is array[voidptr](C())[0])) puts('Failed vtable entry');
+    if (uintz(C.vtables[1])) puts('Failed zero offset of first vtable');
+    if (uintz(C.vtables[3]) != uintz(b)) puts('Failed pointer width offset of second vtable');
+}
+
+class Caster[T] {
+    @static T cast(VTableBase b) {
+        return T.unsafeCast(T.rehome(b));
+    }
+}
+
+if (1) {
+    class XX : VTableBase {
+        int data;
+    }
+    class X : XX {
+        byte xval = b'X';
+    }
+    class A : VTableBase {
+        byte aval = b'A';
+        void f() {}
+    }
+    class Z : VTableBase {
+        byte zval = b'Z';
+        void g() {}
+    }
+
+    class B : A, Z {
+        byte bval = b'B';
+    }
+
+    class C : X,  B {
+        byte cval = b'C';
+    }
+
+    Z z = C();
+
+    if (Caster[X]::cast(z).xval != b'X') puts('Failed cast to X');
+    if (Caster[A]::cast(z).aval != b'A') puts('Failed cast to A');
+    if (Caster[Z]::cast(z).zval != b'Z') puts('Failed cast to Z');
+    if (Caster[B]::cast(z).bval != b'B') puts('Failed cast to B');
+    if (Caster[C]::cast(z).cval != b'C') puts('Failed cast to C');
+    if (!(Caster[X]::cast(null) is null)) puts('Failed casting null.');
+    puts('ok');
+}
 %%EXPECT%%
+ok
 %%STDIN%%

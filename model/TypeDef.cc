@@ -1457,6 +1457,23 @@ TypeDefPtr TypeDef::deserializeTypeDef(Deserializer &deser, const char *name) {
     return type;
 }
 
+int TypeDef::countRootAncestors(bool skipFirst) const {
+    bool skip = skipFirst;
+    int result = 0;
+    SPUG_FOR(TypeVec, iter, parents) {
+
+        if (skip) {
+            skip = false;
+            continue;
+        }
+
+        ++result;
+        result += (*iter)->countRootAncestors(true);
+    }
+
+    return result;
+}
+
 namespace {
     struct TypeDeclReader : Deserializer::ObjectReader {
         spug::RCBasePtr read(Deserializer &deser) const {

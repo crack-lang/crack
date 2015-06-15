@@ -30,6 +30,7 @@ namespace builder {
 namespace mvll {
 
 class BModuleDef;
+class LLVMBuilder;
 class PlaceholderInstruction;
 class VTableBuilder;
 
@@ -53,7 +54,8 @@ public:
     IncompleteChildVec incompleteChildren;
 
     // mapping from base types to their vtables.
-    std::map<BTypeDef *, llvm::Constant *> vtables;
+    typedef std::map<BTypeDef *, llvm::Constant *> VTableMap;
+    VTableMap vtables;
     llvm::Type *firstVTableType;
 
     BTypeDef(TypeDef *metaType, const std::string &name,
@@ -128,6 +130,13 @@ public:
     void addDependent(BTypeDef *type, model::Context *context);
 
     /**
+     * Returns a constant containing the offset to the parent's instance body.
+     */
+    llvm::Constant *getParentOffset(const LLVMBuilder &builder,
+                                    int parentIndex
+                                    ) const;
+
+    /**
      * Generate the base class offsets array global variable used for
      * offsetting during type casts.
      */
@@ -152,6 +161,12 @@ public:
      * Used for setting the class instance type during materialization.
      */
     void setClassInst(llvm::GlobalVariable *classInst);
+
+    /**
+     * Returns the total number of ancestors.  VTableBase is counted as many
+     * times as it is inherited from.
+     */
+    int countAncestors() const;
 };
 
 } // end namespace builder::vmll

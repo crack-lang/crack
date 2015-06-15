@@ -16,6 +16,7 @@
 #include <string>
 #include <vector>
 
+#include "BTypeDef.h"
 #include "LLVMBuilder.h"  // need this because we are accessing its methods
 
 namespace llvm {
@@ -26,7 +27,6 @@ namespace llvm {
 namespace builder {
 namespace mvll {
 
-class BTypeDef;
 class BFuncDef;
 
 SPUG_RCPTR(VTableInfo);
@@ -65,6 +65,14 @@ private:
     // used to get correct Function* for the builder's Module*
     LLVMBuilder *builder;
 
+    // Fills the initializer array for the class' vtables variable.
+    int fillVTablesVar(std::vector<llvm::Constant *> &vtablesArrayInit,
+                        int outputStart,
+                        const BTypeDef::VTableMap &vtabMap,
+                        BTypeDef *type,
+                        int start,
+                        llvm::Constant *initOffset
+                        );
 public:
     BTypeDef *vtableBaseType;
 

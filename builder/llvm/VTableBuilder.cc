@@ -8,6 +8,8 @@
 
 #include "VTableBuilder.h"
 
+#include "spug/check.h"
+#include "spug/stlutil.h"
 #include "BTypeDef.h"
 #include "BFuncDef.h"
 #include "model/Context.h"
@@ -41,6 +43,93 @@ void VTableInfo::dump() {
         else
             std::cerr << "null entry!" << std::endl;
     }
+}
+
+int VTableBuilder::fillVTablesVar(vector<Constant *> &vtablesArrayInit,
+                                   int outputStart,
+                                   const BTypeDef::VTableMap &vtabMap,
+                                   BTypeDef *type,
+                                   int start,
+                                   Constant *instOffset
+                                   ) {
+    if (type == vtableBaseType) {
+        vtablesArrayInit[outputStart * 2] =
+            ConstantExpr::getBitCast(vtabMap.find(type)->second,
+                                     builder->llvmVoidPtrType
+                                     );
+        vtablesArrayInit[outputStart * 2 + 1] =
+            ConstantExpr::getIntToPtr(instOffset, builder->llvmVoidPtrType);
+        return outputStart + 1;
+    }
+
+    // Get the offsets initializer.
+    GlobalVariable *offsetsGVar =
+        builder->module->getGlobalVariable(type->getFullName() + ":offsets");
+
+    // We'll need this.
+    Constant *zero = ConstantInt::get(builder->intzLLVM, 0);
+
+    // Store the calculated offsets for the base classes here.
+    vector<Constant *> baseOffsets(type->parents.size());
+
+    for (int i = start; i < type->parents.size(); ++i, ++outputStart) {
+        BTypeDef *base = BTypeDefPtr::arcast(type->parents[i]);
+        if (base == vtableBaseType) {
+            // If the class is directly derived from VTableBase, VTableBase
+            // must be the first parent and we want to use the vtable defined
+            // for the new type.
+            SPUG_CHECK(i == 0,
+                       "VTableBase ancestor is not the first parent of " <<
+                       type->getDisplayName()
+                       );
+            vtablesArrayInit[outputStart * 2] = ConstantExpr::getBitCast(
+                vtabMap.find(type)->second,
+                builder->llvmVoidPtrType
+            );
+
+        } else if (base->hasVTable) {
+            BTypeDef *root = base->findFirstVTable(vtableBaseType);
+            map<BTypeDef *, llvm::Constant *>::const_iterator vti =
+                vtabMap.find(root);
+            SPUG_CHECK(vti != vtabMap.end(),
+                       "VTable base " << root->getDisplayName() << " of type " <<
+                       type->getDisplayName() <<
+                       " does not have a vtable entry.");
+            vtablesArrayInit[outputStart * 2] = ConstantExpr::getBitCast(
+                vti->second,
+                builder->llvmVoidPtrType
+            );
+        } else {
+            vtablesArrayInit[outputStart * 2] =
+                Constant::getNullValue(builder->llvmVoidPtrType);
+        }
+
+        // Add the offset.  We calculate the offset from the current
+        // instOffset (passed in) and add the offset from the instance body of
+        // the current type to the instance body of the parent.
+        Constant *offset = ConstantExpr::getAdd(
+            instOffset,
+            type->getParentOffset(*builder, i)
+        );
+        vtablesArrayInit[outputStart * 2 + 1] =
+            ConstantExpr::getIntToPtr(offset, builder->llvmVoidPtrType);
+        baseOffsets[i] = offset;
+    }
+
+    // Fill the rest of the array with the vtable pointers of the parents.
+    for (int i = start; i < type->parents.size(); ++i) {
+        BTypeDef *base = BTypeDefPtr::arcast(type->parents[i]);
+        if (base != vtableBaseType)
+            outputStart = fillVTablesVar(vtablesArrayInit,
+                                         outputStart,
+                                         vtabMap,
+                                         base,
+                                         1,
+                                         baseOffsets[i]
+                                         );
+    }
+
+    return outputStart;
 }
 
 void VTableBuilder::dump() {
@@ -178,6 +267,30 @@ void VTableBuilder::emit(BTypeDef *type) {
                     PointerType::getUnqual(vtableStructType)
                 );
     }
+
+    // Build the initlializer for the "vtables" array in the class.  We
+    // recurse over the ancestors in a post-order traversal.
+    vector<Constant *> vtablesArrayInit(
+        type == vtableBaseType ? 2 : type->countRootAncestors() * 2
+    );
+    SPUG_CHECK(fillVTablesVar(vtablesArrayInit, 0, type->vtables, type, 0,
+                              ConstantInt::get(builder->intzLLVM, 0)) ==
+                vtablesArrayInit.size() / 2,
+               "VTable fill mismatch for type " << type->getDisplayName()
+               );
+
+    // Create the "vtables" array for the class.
+    Constant *vtablesArrayConst =
+        ConstantArray::get(ArrayType::get(builder->llvmVoidPtrType,
+                                          vtablesArrayInit.size()
+                                          ),
+                           vtablesArrayInit
+                           );
+
+    // Fill in the class' vtables array.
+    GlobalVariable *vtablesGVar =
+        builder->module->getGlobalVariable(type->getFullName() + ":vtables");
+    vtablesGVar->setInitializer(vtablesArrayConst);
 
     assert(type->firstVTableType);
 }

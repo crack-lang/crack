@@ -421,6 +421,22 @@ class TypeDef : public VarDef, public Namespace {
          * loading the class.
          */
         virtual void materializeVTable(Context &context) {}
+
+        /**
+         * Returns the number of "root ancestors" of a type.  These are the
+         * ancestors that might possibly have a VTable for the type.  This is a
+         * weird calculation best described by example.  If this is our inheritence
+         * hierarchy (F is the derived class):
+         *    F
+         *        E
+         *            D
+         *        C
+         *            A
+         *            B
+         * The count of F is 3 (E, C, and B).  We ignore the primary classes below
+         * the first level (D and A).
+         */
+        int countRootAncestors(bool skipFirst = false) const;
 };
 
 } // namespace model

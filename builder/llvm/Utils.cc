@@ -158,7 +158,7 @@ void createClassImpl(Context &context, BTypeDef *type) {
         cast<StructType>(classPtrType->getElementType());
 
     // create a global variable holding the class object.
-    vector<Constant *> classStructVals(4);
+    vector<Constant *> classStructVals(6);
 
     Constant *zero = ConstantInt::get(int32Type, 0);
     Constant *index00[] = { zero, zero };
@@ -245,6 +245,36 @@ void createClassImpl(Context &context, BTypeDef *type) {
                                );
     classStructVals[3] =
         ConstantExpr::getGetElementPtr(offsetsGVar, index00, 2);
+
+    // Create numVTables.
+    classStructVals[4] =
+        ConstantInt::get(uintType, type->countRootAncestors() * 2);
+
+    // Create the vtables array.  This is an array of vtable address, offset
+    // from the beginning of the instances.
+    Type *intPtrType =
+        Type::getInt8Ty(getGlobalContext())->getPointerTo();
+    Type *voidptrArrayType =
+        ArrayType::get(intPtrType,
+                       type == context.construct->vtableBaseType.get() ? 2 :
+                         type->countRootAncestors() * 2
+                       );
+    if (type->hasVTable) {
+        GlobalVariable *vtablesGVar =
+            new GlobalVariable(*llvmBuilder.module,
+                               voidptrArrayType,
+                               true, // is constant
+                               GlobalValue::ExternalLinkage,
+                               NULL, // initializer, filled in later.
+                               canonicalName + ":vtables"
+                               );
+        classStructVals[5] =
+            ConstantExpr::getGetElementPtr(vtablesGVar, index00, 2);
+    } else {
+        // If there are no vtables, just initialize the vtables array to null.
+        classStructVals[5] =
+            Constant::getNullValue(intPtrType->getPointerTo());
+    }
     
     // build the instance of Class
     Constant *classStruct =
