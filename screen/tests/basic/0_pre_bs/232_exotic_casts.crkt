@@ -23,7 +23,7 @@ class Caster[T] {
 
 if (1) {
     class XX : VTableBase {
-        int data;
+        byte xxval = b'x';
     }
     class X : XX {
         byte xval = b'X';
@@ -45,14 +45,56 @@ if (1) {
         byte cval = b'C';
     }
 
-    Z z = C();
 
-    if (Caster[X]::cast(z).xval != b'X') puts('Failed cast to X');
-    if (Caster[A]::cast(z).aval != b'A') puts('Failed cast to A');
-    if (Caster[Z]::cast(z).zval != b'Z') puts('Failed cast to Z');
-    if (Caster[B]::cast(z).bval != b'B') puts('Failed cast to B');
-    if (Caster[C]::cast(z).cval != b'C') puts('Failed cast to C');
-    if (!(Caster[X]::cast(null) is null)) puts('Failed casting null.');
+    XX xx = C();
+    if (XX.cast(xx).xxval != b'x') puts('Failed cast of XX to XX');
+    if (X.cast(xx).xval != b'X') puts('Failed cast of XX to X');
+    if (A.cast(xx).aval != b'A') puts('Failed cast of XX to A');
+    if (Z.cast(xx).zval != b'Z') puts('Failed cast of XX to Z');
+    if (B.cast(xx).bval != b'B') puts('Failed cast of XX to B');
+    if (C.cast(xx).cval != b'C') puts('Failed cast of XX to C');
+
+    X x = C();
+    if (XX.cast(x).xxval != b'x') puts('Failed cast of X to XX');
+    if (X.cast(x).xval != b'X') puts('Failed cast of X to X');
+    if (A.cast(x).aval != b'A') puts('Failed cast of X to A');
+    if (Z.cast(x).zval != b'Z') puts('Failed cast of X to Z');
+    if (B.cast(x).bval != b'B') puts('Failed cast of X to B');
+    if (C.cast(x).cval != b'C') puts('Failed cast of X to C');
+
+    A a = C();
+    if (XX.cast(a).xxval != b'x') puts('Failed cast of A to XX');
+    if (X.cast(a).xval != b'X') puts('Failed cast of A to X');
+    if (A.cast(a).aval != b'A') puts('Failed cast of A to A');
+    if (Z.cast(a).zval != b'Z') puts('Failed cast of A to Z');
+    if (B.cast(a).bval != b'B') puts('Failed cast of A to B');
+    if (C.cast(a).cval != b'C') puts('Failed cast of A to C');
+
+    Z z = C();
+    if (XX.cast(z).xxval != b'x') puts('Failed cast of Z to XX');
+    if (X.cast(z).xval != b'X') puts('Failed cast of Z to X');
+    if (A.cast(z).aval != b'A') puts('Failed cast of Z to A');
+    if (Z.cast(z).zval != b'Z') puts('Failed cast of Z to Z');
+    if (B.cast(z).bval != b'B') puts('Failed cast of Z to B');
+    if (C.cast(z).cval != b'C') puts('Failed cast of Z to C');
+
+    B b = C();
+    if (XX.cast(b).xxval != b'x') puts('Failed cast of B to XX');
+    if (X.cast(b).xval != b'X') puts('Failed cast of B to X');
+    if (A.cast(b).aval != b'A') puts('Failed cast of B to A');
+    if (Z.cast(b).zval != b'Z') puts('Failed cast of B to Z');
+    if (B.cast(b).bval != b'B') puts('Failed cast of B to B');
+    if (C.cast(b).cval != b'C') puts('Failed cast of B to C');
+
+    C c = C();
+    if (XX.cast(c).xxval != b'x') puts('Failed cast of C to XX');
+    if (X.cast(c).xval != b'X') puts('Failed cast of C to X');
+    if (A.cast(c).aval != b'A') puts('Failed cast of C to A');
+    if (Z.cast(c).zval != b'Z') puts('Failed cast of C to Z');
+    if (B.cast(c).bval != b'B') puts('Failed cast of C to B');
+    if (C.cast(c).cval != b'C') puts('Failed cast of C to C');
+
+    if (!(X.cast(null, null) is null)) puts('Failed casting null.');
     puts('ok');
 }
 %%EXPECT%%
