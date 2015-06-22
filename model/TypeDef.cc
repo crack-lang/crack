@@ -404,8 +404,11 @@ void TypeDef::createDefaultDestructor(Context &classContext) {
         FuncDef::method | 
         (hasVTable ? FuncDef::virtualized : FuncDef::noFlags);
     
-    // check for an override
+    // check for an override, if this is a virtual destructor but the function
+    // we're overriding _isn't_ virtual, ignore it.
     FuncDefPtr override = classContext.lookUpNoArgs("oper del", true, this);
+    if (override && hasVTable && !(override->flags & FuncDef::virtualized))
+        override = 0;
     
     ArgVec args(0);
     TypeDef *voidType = classContext.construct->voidType.get();

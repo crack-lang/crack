@@ -3104,6 +3104,14 @@ TypeDefPtr Parser::parseClassDef() {
                               )
                      );
 
+            // If we inherit from VTableBase, make sure it's the first parent.
+            if (baseClass == context->construct->vtableBaseType &&
+                ancestors.size())
+               error(identLoc,
+                     "If you directly inherit from VTableBase, it must be the "
+                     "first class specified in the base class list."
+                     );
+
             // make sure it's safe to add this as a base class given the 
             // existing set, and add it to the list.
             baseClass->addToAncestors(*context, ancestors);
@@ -3390,6 +3398,10 @@ FuncDefPtr Parser::checkForOverride(VarDef *existingDef,
         !curClass->isDerivedFrom(overrideOwner.get())
         )
        )
+      return 0;
+
+   // non-virtual overloads are allowed for "oper del".
+   if (name == "oper del")
       return 0;
 
    // otherwise this is an illegal override

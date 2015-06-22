@@ -1,0 +1,34 @@
+%%TEST%%
+Non-virtual destructor overrides.
+%%ARGS%%
+%%FILE%%
+# Test case for two bugs in overriding non-virtual destructors, verifies that:
+# - non-virtual destructors can be overriden.
+# - a virtual destructor can override a non-virtual destructor
+if (1) {
+    class B {
+        oper del() {
+            puts('in B');
+        }
+    }
+
+    class C : VTableBase, B {
+        oper del() {
+            puts('in C');
+        }
+    }
+
+    class D : C {
+        oper del() {
+            puts('in D');
+        }
+    }
+
+    D d = {};
+    d.oper del();
+}
+%%EXPECT%%
+in D
+in C
+in B
+%%STDIN%%
