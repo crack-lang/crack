@@ -1,14 +1,34 @@
 ## Tools for working with protocol buffers.
 
-import crack.io Reader, Writer;
+import crack.io Reader, StringReader, StringWriter, Writer;
 import crack.lang Exception;
 import crack.serial SerialReader, SerialWriter, END;
+
+@import crack.ann interface;
 
 ## Thrown when we encounter a feature of the protocol that we haven't
 ## implemented yet.
 class UnsupportedOperation : Exception {
     oper init(String message) : Exception(message) {}
 }
+
+class Field;
+class Message;
+class ProtoReader;
+class ProtoWriter;
+void _deserialize(ProtoReader src, Message message);
+
+@interface Message {
+    @abstract void serialize(ProtoWriter dst);
+    @abstract void addField(Field field);
+
+    @final void deserialize(ProtoReader src) {
+        _deserialize(src, this);
+    }
+}
+
+String _serializeToString(Message message);
+Message _readMessage(String buffer, Message message);
 
 class Field {
     uint id;
@@ -64,6 +84,11 @@ class Field {
             throw Exception();
     }
 
+    ## Reads the messsage 'inst' out of a string field's value.
+    void readMessage(Message inst) {
+        _readMessage(getString(), inst);
+    }
+
     void write(SerialWriter dst) {
         dst.write((id << 3) | type);
         if (type == 0)
@@ -81,6 +106,10 @@ class Field {
         dst.write(id << 3);
         dst.write(value);
     }
+
+    @static void write(SerialWriter dst, uint id, Message message) {
+        write(dst, id, _serializeToString(message));
+    }
 }
 
 class ProtoWriter {
@@ -97,6 +126,10 @@ class ProtoWriter {
         Field.write(__dst, id, value);
     }
 
+    @final void write(uint id, Message msg) {
+        Field.write(__dst, id, msg);
+    }
+
     @final void write(Field field) {
         field.write(__dst);
     }
@@ -111,4 +144,25 @@ class ProtoReader {
     Field readField() {
         return Field.readFrom(__src);
     }
+}
+
+void _deserialize(ProtoReader src, Message message) {
+    while (true) {
+        field := src.readField();
+        if (field is null)
+            return;
+        message.addField(field);
+    }
+}
+
+String _serializeToString(Message message) {
+    StringWriter backing = {};
+    ProtoWriter pw = {backing};
+    message.serialize(pw);
+    return backing.string();
+}
+
+Message _readMessage(String buffer, Message message) {
+    message.deserialize(ProtoReader(StringReader(buffer)));
+    return message;
 }

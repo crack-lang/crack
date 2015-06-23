@@ -1,8 +1,8 @@
 
 import crack.io cout, StringReader, StringWriter;
-import crack.protobuf Field, ProtoReader, ProtoWriter;
+import crack.protobuf Field, Message, ProtoReader, ProtoWriter;
 
-@import crack.ann assert;
+@import crack.ann assert, impl;
 
 if (true) {
     StringWriter tmp = {};
@@ -23,6 +23,43 @@ if (true) {
     @assert(field.id == 3 && field.getString() == 'field written');
     field = src.readField();
     @assert(field is null);
+}
+
+if (true) {
+    class TestMsg @impl Message {
+        String a;
+        int b;
+
+        oper init() {}
+        oper init(String a, int b) : a = a, b = b {}
+
+        void serialize(ProtoWriter dst) {
+            dst.write(1, a);
+            dst.write(2, b);
+        }
+
+        void addField(Field field) {
+            if (field.id == 1)
+                # Real code should verify the type first.
+                a = field.getString();
+            else if (field.id == 2)
+                b = field.getUInt();
+        }
+    }
+
+    StringWriter tmp = {};
+    ProtoWriter dst = {tmp};
+    TestMsg m = {'first', 100};
+    dst.write(99, m);
+
+    ProtoReader src = {StringReader(tmp.string())};
+    field := src.readField();
+    @assert(field.id == 99);
+
+    TestMsg msg = {};
+    field.readMessage(msg);
+    @assert(msg.a == 'first');
+    @assert(msg.b == 100);
 }
 
 cout `ok\n`;
