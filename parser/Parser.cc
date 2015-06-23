@@ -1792,7 +1792,16 @@ int Parser::parseFuncDef(TypeDef *returnType, const Token &nameTok,
          // the context into which it was imported, which we're not tracking.
          context->getDefContext()->ns->addAlias(ovld.get());
       } else if (override) {
-         // forward declarations of overrides don't make any sense.
+         // Check for a duplicate forward declaration.
+         if (override->flags & FuncDef::forward) {
+            error(tok3,
+                  SPUG_FSTR("Duplicate forward declaration of " << 
+                             override->getDisplayName()
+                            )
+                  );
+         }
+
+         // Assume this is a forward declaration of a base class override.
          TypeDef *base = TypeDefPtr::acast(override->getOwner());
          warn(nameTok,
               SPUG_FSTR("Unnecessary forward declaration for overriden "

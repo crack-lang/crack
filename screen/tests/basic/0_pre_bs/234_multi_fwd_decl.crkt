@@ -1,0 +1,9 @@
+%%TEST%%
+multiple forward declarations
+%%ARGS%%
+%%FILE%%
+void f();
+void f();
+%%EXPECT%%
+ParseError: %SCRIPTNAME%:2:9: Duplicate forward declaration of void f()
+%%STDIN%%
