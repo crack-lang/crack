@@ -153,6 +153,12 @@ class OverloadDef : public VarDef {
         bool hasParent(OverloadDef *parent);
         
         /**
+         * Returns true if 'parent' is the overload or an ancestor of the
+         * overload
+         */
+        bool hasAncestor(OverloadDef *parent);
+
+        /**
          * Create an alias overload - an alias overload is comprised of all 
          * of the functions in the overload and its ancestors flattened.  It 
          * has no ancestors of its own.

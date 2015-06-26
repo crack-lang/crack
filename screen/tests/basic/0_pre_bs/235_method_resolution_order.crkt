@@ -1,0 +1,23 @@
+%%TEST%%
+%%ARGS%%
+%%FILE%%
+# This verifies that method resolution order is correct for xxxx finish
+class A : VTableBase {
+    int f(A other) { puts('in A'); return 0; }
+}
+
+class B : A {
+    int f(B other) { puts('in B.f(B)'); return 0; }
+    int f(A other) {
+        puts('in B.f(A)');
+        if (!((o := B.cast(other, null)) is null)) return f(o);
+        return 0;
+    }
+}
+
+A a = B();
+B().f(a);
+%%EXPECT%%
+in B.f(A)
+in B.f(B)
+%%STDIN%%

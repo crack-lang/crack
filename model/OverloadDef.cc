@@ -29,25 +29,15 @@ void OverloadDef::setImpl(FuncDef *func) {
 
 void OverloadDef::flatten(OverloadDef::FuncList &flatFuncs) const {
     
-    // first do all of the local functions
+    // first do all of the local functions.  It's ok to have multiple
+    // functions with the same signature in this list, when we do lookups we
+    // will traverse the list in the normal order and do the right thing with
+    // respect to overrides.
     for (FuncList::const_iterator iter = funcs.begin();
          iter != funcs.end();
          ++iter
-         ) {
-        bool gotMatch = false;
-        for (FuncList::const_iterator inner = flatFuncs.begin();
-             inner != flatFuncs.end();
-             ++inner
-             )
-            if ( (*inner)->matches((*iter)->args) ) {
-                gotMatch = true;
-                break;
-            }
- 
-        // if the signature is not already in flatFuncs, add it.       
-        if (!gotMatch)
-            flatFuncs.push_back(iter->get());
-    }
+         )
+        flatFuncs.push_back(iter->get());
     
     // now flatten all of the parents
     for (ParentVec::const_iterator parent = parents.begin();
@@ -224,6 +214,17 @@ void OverloadDef::addFunc(FuncDef *func) {
 }
 
 void OverloadDef::addParent(OverloadDef *parent) {
+    // Remove any parents that overload derives from (to preserve the
+    // correct lookup order, we should be discovering those parents through
+    // the overload)
+    for(ParentVec::iterator iter = parents.begin(); iter != parents.end(); ) {
+        if (parent->hasAncestor(iter->get())) {
+            iter = parents.erase(iter);
+        } else {
+            ++iter;
+        }
+    }
+
     parents.push_back(parent);
 }
 
@@ -255,6 +256,20 @@ bool OverloadDef::hasParent(OverloadDef *parent) {
          )
         if (iter->get() == parent)
             return true;
+    return false;
+}
+
+bool OverloadDef::hasAncestor(OverloadDef *parent) {
+    if (this == parent)
+        return true;
+
+    for (ParentVec::iterator iter = parents.begin(); iter != parents.end();
+         ++iter
+         ) {
+        if ((*iter)->hasAncestor(parent))
+            return true;
+    }
+
     return false;
 }
 
