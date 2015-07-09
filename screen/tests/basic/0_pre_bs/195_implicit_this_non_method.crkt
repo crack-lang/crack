@@ -2,6 +2,8 @@
 use of implicit this on a method of an incorrect class
 %%ARGS%%
 %%FILE%%
+# This is very much like 084_nonbase_call_error except that it is in a nested
+# class.
 class A {
     void f() {}
     class B {
@@ -11,5 +13,5 @@ class A {
     }
 }
 %%EXPECT%%
-ParseError: %SCRIPTNAME%:5:15: 'this' variable is not an instance of A
+ParseError: %SCRIPTNAME%:7:15: 'this' variable is not an instance of A for call to method f
 %%STDIN%%

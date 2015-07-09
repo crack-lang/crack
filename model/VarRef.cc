@@ -101,7 +101,8 @@ ExprPtr VarRef::makeCall(Context &context,
             if (!funcCall->receiver->type->isDerivedFrom(owner.get()))
                 context.error(
                     SPUG_FSTR("'this' variable is not an instance of " <<
-                               owner->name
+                               owner->name << " for call to method " <<
+                               func->name
                               )
                 );
         }

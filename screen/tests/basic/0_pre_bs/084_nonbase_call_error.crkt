@@ -4,9 +4,9 @@ error on explicit call to non-base class
 
 %%FILE%%
 class A : VTableBase { void f() { puts("ok"); } }
-     class B { void f() { (A.f()); } }
-     B b; b.f()
+class B { void f() { (A.f()); } }
+B b; b.f()
 %%EXPECT%%
-ParseError: %OUTDIR%084_nonbase_call_error.crk:2:32: 'this' variable is not an instance of A
+ParseError: %SCRIPTNAME%:2:27: 'this' variable is not an instance of A for call to method f
 %%STDIN%%
 
