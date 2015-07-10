@@ -1,0 +1,90 @@
+
+# Requirements for @protobuf:
+#
+# import crack.cont.array Array;
+# import crack.lang cmp;
+# import crack.protobuf Field, Message, ProtoWriter;
+# @import crack.ann impl;
+
+import crack.cont.array Array;
+import crack.io cerr, StringReader, StringWriter;
+import crack.lang cmp, makeHashVal;
+import crack.protobuf Field, Message, ProtoReader, ProtoWriter;
+import crack.strutil StringArray;
+
+@import crack.ann assert, impl;
+@import crack.protobuf.ann protobuf;
+
+@protobuf {
+    # Uncomment "debug" to emit the generated code to standard output with
+    # line numbers.
+    #debug
+
+    message Bar {
+        repeated string name = 1;
+    }
+
+    message Foo {
+        optional Bar bar = 1;
+        required int32 field = 100;
+    }
+}
+
+class RoundTripTest[T] {
+    T old = {}, new = {};
+
+    void test() {
+        StringWriter out = {};
+        pw := ProtoWriter(out);
+
+        old.serialize(pw);
+        new.deserialize(ProtoReader(StringReader(out.string())));
+        if (old != new) {
+            cerr I`FAILED round trip for $(T.name)
+                     old: $old
+                     new: $new\n`;
+        }
+    }
+}
+
+# test comparisons
+if (true) {
+    bar1 := Bar();
+    bar2 := Bar();
+    bar1.name = StringArray!['first'];
+    @assert(bar1 != bar2);
+    @assert(bar1.makeHashVal() != bar2.makeHashVal());
+
+    bar2.name.append('first');
+    @assert(bar1 == bar2);
+    @assert(bar1.makeHashVal() == bar2.makeHashVal());
+
+    foo1 := Foo();
+    foo2 := Foo();
+    foo1.field = 123;
+    @assert(foo1 != foo2);
+    @assert(foo1.makeHashVal() != foo2.makeHashVal());
+    foo2.field = 123;
+    @assert(foo1 == foo2);
+    foo2.bar = Bar();
+    @assert(foo1 != foo2);
+    foo1.bar = Bar();
+    @assert(foo1 == foo2);
+}
+
+if (true) {
+    barTest := RoundTripTest[Bar]();
+    barTest.old.name = StringArray!['bar name'];
+    barTest.test();
+
+    fooTest := RoundTripTest[Foo]();
+    fooTest.old.bar = barTest.new;
+    fooTest.old.field = 123;
+    fooTest.test();
+
+    fooTest = RoundTripTest[Foo]();
+    fooTest.old.field = 456;
+    fooTest.test();
+}
+
+cerr `ok\n`;

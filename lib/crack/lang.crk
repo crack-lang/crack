@@ -1246,9 +1246,12 @@ int cmp(bool a, bool b) {
 @heavycmp float
 
 # hash functions (helpful for generics)
-# we don't define float hashes yet because there is no cheap way to implement 
-# them in Crack and they're not very useful anyway.
-uint makeHashVal(Object obj) { return obj.makeHashVal(); }
+uint makeHashVal(Object obj) {
+    if (obj is null)
+        return 0;
+    else
+        return obj.makeHashVal();
+}
 
 @define lighthash 1 uint makeHashVal($1 val) {
     return uint(val);
@@ -1260,6 +1263,11 @@ $$
 @lighthash uint16
 @lighthash int32
 @lighthash uint32
+
+# These don't really work very well, they end up just converting the floats to 
+# int.
+@lighthash float32
+@lighthash float64
 
 # all other PDNT types should convert to this
 @lighthash uint

@@ -10,7 +10,7 @@
 
 import crack.algorithm QuickSort;
 import crack.io cout, FStr, StandardFormatter, Writer;
-import crack.lang cmp, free, AssertionError, Formatter, IndexError,
+import crack.lang cmp, free, makeHashVal, AssertionError, Formatter, IndexError,
     InvalidArgumentError;
 
 # we use poormac here because the standard macro mechanism depends on this 
@@ -164,6 +164,13 @@ class Array[Elem] {
         else
             # we're the same length and all elements are equal
             return 0;
+    }
+    
+    uint makeHashVal() {
+        uintz result;
+        for (int i = 0; i < __size; ++i)
+            result ^= makeHashVal(this.__rep[i]);
+        return result;
     }
 
     ## The iterator class.

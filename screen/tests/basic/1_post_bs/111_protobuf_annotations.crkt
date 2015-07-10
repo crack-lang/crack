@@ -1,0 +1,8 @@
+%%TEST%%
+protobuf annotations
+%%ARGS%%
+%%FILE%%
+import test.protobuf_ann;
+%%EXPECT%%
+ok
+%%STDIN%%
