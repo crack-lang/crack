@@ -66,10 +66,13 @@ if (true) {
     @assert(foo1.makeHashVal() != foo2.makeHashVal());
     foo2.field = 123;
     @assert(foo1 == foo2);
+    @assert(foo1.makeHashVal() == foo2.makeHashVal());
     foo2.bar = Bar();
     @assert(foo1 != foo2);
+    @assert(foo1.makeHashVal() != foo2.makeHashVal());
     foo1.bar = Bar();
     @assert(foo1 == foo2);
+    @assert(foo1.makeHashVal() == foo2.makeHashVal());
 }
 
 if (true) {

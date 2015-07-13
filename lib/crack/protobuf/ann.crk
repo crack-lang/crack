@@ -1,0 +1,406 @@
+## Protobuf annotations parser.  Generates class for protocol buffer messages
+##
+## Example usage:
+##
+##   # These imports are all necessary for the generated code.
+##   import crack.cont.array Array;
+##   import crack.lang cmp, makeHashVal;
+##   import crack.protobuf Field, Message, ProtoWriter;
+##
+##   @import crack.ann impl;
+##
+##   @protobuf {
+##       # This line enables debugging.  Specifically, it dumps the generated code
+##       # with line numbers to standard error, which is essential for identifying
+##       # errors in the generated code.
+##       debug
+##
+##       message Bar {
+##           repeated string name = 1;
+##       }
+##
+##       message Foo {
+##           optional Bar bar = 1;
+##           required int32 field = 100;
+##       }
+##   }
+##
+## The code above generates classes Foo and Bar, including methods for
+## serialization, deserialization and comparison.
+##
+## This doesn't support the full set of protouf syntax.  It only includes
+## support for the int32, int64, string and bytes types, and doesn't support
+## options, extensions, packages or anything beyond the minimal level of usable
+## functionality.
+
+import crack.ascii parseInt, radix;
+import crack.compiler CrackContext;
+import crack.cont.array Array;
+import crack.cont.hashmap HashMap;
+import crack.io cerr, Formatter, FStr, StandardFormatter, StringWriter, Writer;
+import crack.lang AppendBuffer, Buffer;
+import crack.runtime memcmp;
+
+@import crack.ann impl;
+
+bool oper ==(byteptr a, String b) {
+    return String(a) == b;
+}
+
+const REQUIRED := 1;
+const OPTIONAL := 2;
+const REPEATED := 3;
+
+## A kind of kludgy indenter: when you send it a '\t' it increases the indent
+## level (adding more indentation after a newline), when you send it a '\b' it
+## decreases it.  The 'numbered' flag can be used to generate line numbers.
+## Tabs should be specified at the beginning of a line (they emit an
+## indentation) and backspaces should be specified before the newline.
+class Indenter @impl Writer {
+    int indent, lineNum = 1;
+    bool numbered;
+    Writer dst;
+    AppendBuffer __tmp = {64};
+    oper init(Writer dst, bool numbered) : numbered = numbered, dst = dst {}
+
+    void write(Buffer data) {
+        for (int i = 0; i < data.size; ++i) {
+            byte ch = data[i];
+            if (ch == b'\t') {
+                ++indent;
+                __tmp.extend('    ');
+            } else if (ch == b'\b') {
+                --indent;
+            } else if (ch == b'\n') {
+                __tmp.append(b'\n');
+                if (numbered) {
+                    ++lineNum;
+                    __tmp.extend(radix(lineNum, 10));
+                    __tmp.extend(': ');
+                }
+                for (int j = 0; j < indent; ++j)
+                    __tmp.extend('    ');
+            } else {
+                __tmp.append(ch);
+            }
+        }
+
+        dst.write(__tmp);
+        __tmp.size = 0;
+    }
+
+    void flush() { dst.flush(); }
+}
+
+@abstract class Type {
+    String name;
+
+    oper init(String name) : name = name {}
+
+    ## Returns the reader for the type.  This should be an expression that
+    ## returns an instance of the type suitable for assignment to the field
+    ## variable.
+    @abstract String getReader();
+
+    ## Get the generated name - this is the name that will be used for the
+    ## type in generated code.
+    String getGenName() { return name; }
+}
+
+class BuiltinType : Type {
+    String genName, reader;
+
+    oper init(String name, String genName, String reader) :
+        Type(name),
+        genName = genName,
+        reader = reader {
+    }
+
+    String getReader() { return reader; }
+    String getGenName() {
+        if (genName)
+            return genName;
+        else
+            return name;
+    }
+}
+
+class Field {
+    uint cardinality;  # Required, optional, repeated.
+    uint tag;
+    Type type;
+    String name;
+
+    void formatTo(Formatter out) {
+        if (cardinality == REQUIRED)
+            out `required `;
+        else if (cardinality == OPTIONAL)
+            out `optional `;
+        else if (cardinality == REPEATED)
+            out `repeated `;
+        else
+            out `<no-cardinality> `;
+
+        out `$(type.getGenName()) $name = $tag;\n`;
+    }
+
+    void emitDef(Formatter out) {
+        if (cardinality == REPEATED)
+            out `Array[$(type.getGenName())] $name = {};\n`;
+        else
+            out `$(type.getGenName()) $name;\n`;
+    }
+
+    void emitFieldAdder(Formatter out) {
+        if (cardinality == REPEATED)
+            out I`this.$name.append($(type.getReader()));\n`;
+        else
+            out `this.$name = $(type.getReader());\n`;
+    }
+}
+
+class Message : Type {
+    HashMap[String, Field] fields = {};
+    Array[Field] ordered = {};
+
+    oper init(String name) : Type(name) {}
+
+    void addField(Field field) {
+        fields[field.name] = field;
+        ordered.append(field);
+    }
+
+    void formatTo(Formatter out) {
+        out `message $name {\n`;
+        for (field :in ordered)
+            out `  $field`;
+        out `}\n`;
+    }
+
+    void emitDef(Formatter out) {
+        out `class $name @impl Message {\n\t`;
+
+        # emit field definitions
+        for (field :in ordered)
+            field.emitDef(out);
+
+        # Emit a default constructor.
+        out `oper init() {}\n`;
+
+        # Emit serialization methods.
+        out `void serialize(ProtoWriter dst) {\n\t`;
+        for (field :in ordered) {
+            if (field.cardinality == OPTIONAL) {
+                out `if (this.$(field.name))\n\t`;
+                out `dst.write($(field.tag), this.$(field.name));\b\n`;
+            } else if (field.cardinality == REPEATED) {
+                out `for (item :in this.$(field.name))\n\t`;
+                out `dst.write($(field.tag), item);\b\n`;
+            } else {
+                out `dst.write($(field.tag), this.$(field.name));\n`;
+            }
+        }
+        out `\b\n}\n`;
+
+        out `void addField(Field field) {\t\n`;
+        bool notFirst;
+        for (field :in ordered) {
+            if (notFirst)
+                out `} else if (field.id == $(field.tag)) {\n\t`;
+            else
+                out `if (field.id == $(field.tag)) {\n\t`;
+
+            field.emitFieldAdder(out);
+            out `\b\n`;
+            notFirst = true;
+        }
+        if (ordered)
+            out `}\n`;
+        out `\b\n}\n`;
+
+        # Emit comparison and hash methods.
+        out `int cmp($name other) {\t\n`;
+        out     `int rc;\n`;
+        out     `(`;
+        bool first = true;
+        for (field :in ordered) {
+            if (first) {
+                first = false;
+            } else {
+                out ` ||\n `;
+            }
+            out `(rc = cmp(this.$(field.name), other.$(field.name)))`;
+        }
+        out `\n );\nreturn rc;\b\n}\n`;
+        out I`\
+            int cmp(Object other) {
+                if (o := $name.cast(other))
+                    return cmp(o);
+                else
+                    return Object.cmp(other);
+            }
+            `;
+
+        # Emit makeHashVal().  The hash is the xor of the class address and
+        # those of the fields.  We mix in the class address so that a null
+        # object ends up with a different hash from an object with empty
+        # fields.
+        out `uint makeHashVal() {\t\nreturn uintz(this.class)`;
+        for (field :in ordered)
+            out ` ^ makeHashVal(this.$(field.name))`;
+        out `;\b\n}\n`;
+
+        # emit factory method
+        out `@static $name makeFromField(Field field) {\n\t`;
+        out     `$name inst = {};\n`;
+        out     `field.readMessage(inst);\n`;
+        out     `return inst;\b\n`;
+        out `}\n`;
+
+        out `\b\n}\n`;
+    }
+
+    String getReader() {
+        return FStr() `$name.makeFromField(field)`;
+    }
+}
+
+class Schema {
+    Array[Message] messages = {};
+    HashMap[String, Type] types = {};
+    bool debug;
+
+    oper init() {
+        types['int32'] = BuiltinType('int32', null, 'int32(field.getUInt())');
+        types['int64'] = BuiltinType('int64', null, 'int64(field.getUInt())');
+        types['string'] = BuiltinType('string', 'String', 'field.getString()');
+        types['bytes'] = BuiltinType('bytes', 'String', 'field.getString()');
+    }
+
+    Field parseField(CrackContext ctx) {
+        tok := ctx.getToken();
+        field := Field();
+
+        # Parse cardinality.
+        if (tok.isIdent()) {
+            cardinality := String(tok.getText());
+            if (cardinality == 'required')
+                field.cardinality = REQUIRED;
+            else if (cardinality == 'optional')
+                field.cardinality = OPTIONAL;
+            else if (cardinality == 'repeated')
+                field.cardinality = REPEATED;
+        }
+        if (!field.cardinality)
+            ctx.error(tok, 'Expected required, optional or repeated.'.buffer);
+
+        # Parse the type.
+        tok = ctx.getToken();
+        if (!tok.isIdent())
+            ctx.error(tok, 'Field type expected.'.buffer);
+
+        # Just create unique types for now, we'll fix them later.
+        type := types.get(String(tok.getText()));
+        if (!type)
+            ctx.error(tok, 'Unknown type.'.buffer);
+        field.type = type;
+
+        # parse the name.
+        tok = ctx.getToken();
+        if (!tok.isIdent())
+            ctx.error(tok, 'Field name expected.'.buffer);
+        field.name = String(tok.getText());
+
+        # parse the tag.
+        tok = ctx.getToken();
+        if (!tok.isAssign())
+            ctx.error(tok, 'Expected assignment operator.'.buffer);
+
+        tok = ctx.getToken();
+        if (!tok.isInteger())
+            ctx.error(tok, 'Integer tag expected.'.buffer);
+        field.tag = parseInt(String(tok.getText()));
+
+        # parse closing semicolon
+        tok = ctx.getToken();
+        if (!tok.isSemi())
+            ctx.error(tok, 'Expected semicolon after field definition'.buffer);
+
+        return field;
+    }
+
+    Message parseMessage(CrackContext ctx) {
+        tok := ctx.getToken();
+
+        if (!tok.isIdent())
+            ctx.error(tok, 'Message name expceted.'.buffer);
+        Message msg = {String(tok.getText())};
+        types[msg.name] = msg;
+
+        tok = ctx.getToken();
+        if (!tok.isLCurly())
+            ctx.error(tok, 'Opening bracket expected.'.buffer);
+
+        while (true) {
+            tok = ctx.getToken();
+            if (tok.isRCurly())
+                break;
+            ctx.putBack(tok);
+            msg.addField(parseField(ctx));
+        }
+
+        return msg;
+    }
+
+    void parse(CrackContext ctx) {
+
+        # Parse the opening curly brace.
+        tok := ctx.getToken();
+        if (!tok.isLCurly())
+            ctx.error(tok, 'Curly brace expected.'.buffer);
+
+        while (true) {
+            tok = ctx.getToken();
+            if (tok.isIdent() && tok.getText() == 'message') {
+                messages.append(parseMessage(ctx));
+            } else if (tok.isRCurly()) {
+                break;
+            } else if (tok.isIdent() && tok.getText() == 'debug') {
+                debug = true;
+            } else {
+                ctx.error(tok,
+                          'message definition or right curly bracket '
+                          'expected.'.buffer
+                          );
+            }
+        }
+    }
+
+    void emit(Formatter out) {
+        for (message :in messages)
+            message.emitDef(out);
+    }
+
+    void dump() {
+        emit(StandardFormatter(Indenter(cerr, true)));
+    }
+
+    void emit(CrackContext ctx) {
+        StringWriter strWriter = {};
+        StandardFormatter out = {Indenter(strWriter, false)};
+        emit(out);
+        out `\0`;
+        ctx.inject('<generated>'.buffer, 1, strWriter.string().buffer);
+    }
+}
+
+## The main entrypoint.  This expects to be followed by a block containing
+## protobuf message definition.
+void protobuf(CrackContext ctx) {
+    Schema schema = {};
+    schema.parse(ctx);
+    if (schema.debug)
+        schema.dump();
+    schema.emit(ctx);
+}
+
