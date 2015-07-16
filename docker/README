@@ -1,0 +1,8 @@
+Dockerfile for a basic crack docker image.  This creates the image published
+as crack/simple-stripped on docker hub.  It does most of the work in a shell
+script so as not to clutter the image with unused temporary files.
+
+The crack binary is installed in /usr/local/bin/crack on the image.  You can
+use this as a base image or run it directly to experiment ("docker run -ti
+crack/simple-stripped" runs the shell, you can run crack programs from there).
+
