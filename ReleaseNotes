@@ -1,3 +1,15 @@
+0.11
+    -   Allow importing crack.compiler outside of an annotation.
+    -   Fixed casting so we can now correctly cast from secondary bases and 
+        even cast across bases.
+    -   Added crack.protobuf.ann, which provides an annotation to allow you to 
+        expand inline protobuf messages into generated code.
+    -   Streamline generic serialization (only serialize file name and line 
+        number when they change).
+    _   Enhancements to jack and alsa modules, made alsa extension more OO.
+    -   Added a protobuf annotation module (crack.protobuf.ann) to allow
+        generating protobuf code.
+    -   Lots of smaller fixes and enhancements.
 0.10
     -   Fixed all known caching bugs and made caching the default. (Completed 
         redid cyclic dependencies)
