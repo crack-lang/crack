@@ -263,6 +263,27 @@ test.run();
 test.rmCacheFiles('.main.*');
 test.run();
 
+# Verify that we record a dependency when a generic is already present in the
+# specialization cache.
+test.mod('generic', 'class A[T] {}');
+test.mod('dependent', "
+    import generic A;
+    A[int] _ai = {};
+    void f() { puts('preloaded dependencies'); }
+    ");
+test.main("
+    import generic A;
+    A[int] ai = {};
+    import dependent f;
+    f()
+    ");
+test.run();
+test.main("
+    import dependent f;
+    f()
+    ");
+test.run();
+
 %%REXPECT%%
 out: alias
 terminated: success
@@ -326,5 +347,9 @@ terminated: success
 out: cached alias of base func
 terminated: success
 out: cached alias of base func
+terminated: success
+out: preloaded dependencies
+terminated: success
+out: preloaded dependencies
 terminated: success
 %%STDIN%%

@@ -995,12 +995,18 @@ TypeDefPtr TypeDef::getSpecialization(Context &context,
                                       TypeDef::TypeVecObj *types
                                       ) {
     assert(genericInfo);
+
+    ModuleDefPtr currentModule = context.ns->getModule();
+    ModuleDefPtr currentMaster = currentModule->getMaster();
     
     // check the type's specialization cache
     TypeDef *result = findSpecialization(types);
     if (result) {
-        // record a dependency on the owner's module and return the result.
-        context.recordDependency(result->getOwner()->getModule().get());
+        // If the specialization isn't copersistent with the current module,
+        // record a dependency.
+        ModuleDefPtr module = result->getOwner()->getModule();
+        if (currentMaster != module->getMaster())
+            currentModule->addDependency(module.get());
         return result;
     }
     
@@ -1015,8 +1021,6 @@ TypeDefPtr TypeDef::getSpecialization(Context &context,
 
     // see if the new type needs to be in a copersistent module.
     bool copersistent = false;
-    ModuleDefPtr currentModule = context.ns->getModule();
-    ModuleDefPtr currentMaster = currentModule->getMaster();
     SPUG_FOR(TypeVec, typeIter, *types) {
         if ((*typeIter)->getModule()->getMaster() == currentMaster)
             copersistent = true;
