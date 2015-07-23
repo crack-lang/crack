@@ -1,0 +1,17 @@
+%%TEST%%
+aliases and generics
+%%ARGS%%
+%%FILE%%
+# Test for a bug where importing an alias to a generic specialization causes
+# the specialization to be aliased as the generic's name in a dependent
+# generic definition.
+import test.testmod_generic GInt, G;
+
+class A[T] : G[int] {
+    void oper call(int i) { puts('ok'); }
+}
+A[int] a = {};
+a(100);
+%%EXPECT%%
+ok
+%%STDIN%%

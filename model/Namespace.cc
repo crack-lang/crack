@@ -312,7 +312,7 @@ void Namespace::aliasAll(Namespace *other) {
          ++iter
          )
         if (!lookUp(iter->first))
-            addAlias(iter->second.get());
+            addAlias(iter->first, iter->second.get());
     
     // do parents afterwards - since we don't clobber existing aliases, we 
     // want to do the innermost names first.
