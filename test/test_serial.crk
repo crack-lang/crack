@@ -5,9 +5,13 @@
 #   file, You can obtain one at http://mozilla.org/MPL/2.0/.
 # 
 
-import crack.io cout, StringWriter, StringReader;
-import crack.lang Buffer;
-import crack.serial BufferDeserializer, SerialWriter, SerialReader, BUFSIZE;
+import crack.io cout, Reader, StringWriter, StringReader;
+import crack.lang Buffer, WriteBuffer;
+import crack.serial BufferDeserializer, SerialWriter, SerialReader, BUFSIZE,
+    END;
+import crack.strutil StringArray;
+
+@import crack.ann assert, impl;
 
 if (true) {
     StringWriter sw = {};
@@ -153,6 +157,52 @@ if (true) {
     for (int i = 0; i < BUFSIZE; ++i)
         if (int(deser.readFloat64()) != i)
             cout `FAILED (big array of float64s) reading value $i\n`;
+}
+
+# Mkae sure "no error on underflow" works for the leading varint in a string.
+if (true) {
+    class TestReader @impl Reader {
+        StringArray data;
+        oper init(StringArray data) : data = data {}
+        uint read(WriteBuffer buf) {
+            if (!data) {
+                buf.size = 0;
+                return 0;
+            }
+            elem := data[0];
+            data.delete(0);
+            @assert(buf.cap >= elem.size);
+            buf.move(0, elem.buffer, elem.size);
+            return elem.size;
+        }
+
+        @final void add(String elem) {
+            data.append(elem);
+        }
+    }
+    TestReader tr = {StringArray!['\x81']};
+    SerialReader r = {tr};
+    if (r.readUInt(false) != END)
+        cout I`FAILED no error on underflow for incomplete integer.\n`;
+
+    tr.add('\x01');
+    if (r.readUInt(false) != 129)
+        cout I`FAILED resuming a varint read\n`;
+
+    tr.add('\x80');
+    if (r.readString(false))
+        cout I`FAILED no error on underflow for incomplete string length \
+               varint\n`;
+
+    tr.add('\x01' + 'abcd' * 16);
+    if (res := r.readString(false)) {
+        cout I`FAILED no error on underflow for incomplete string body\n`;
+        cout `  got $(res.getRepr())\n`;
+    }
+
+    tr.add('abcd' * 16);
+    if (r.readString(false) != 'abcd' * 32)
+        cout I`FAILED string chunking\n`;
 }
 
 cout `ok\n`;

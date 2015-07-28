@@ -142,26 +142,37 @@ class SerialReader {
         throw Exception('Ran out of data.');
     }
 
-    ## Returns the next integer, if we run out of data returns END or raises an 
-    ## exception if errorOnUnderflow is true.  
+    ## Returns the next integer, if we run out of data returns END or raises
+    ## an exception if errorOnUnderflow is true.
     @final uint readUInt(bool errorOnUnderflow) {
         byte b = 0x80;
         uint val;
         uint offset;
+        uint startPos = pos;
         while (b & 0x80) {
             # make sure we've got data
             if (pos == buf.size) {
-                buf.size = BUFSIZE;
-                if (!__src.read(buf)) {
+                if (startPos)
+                    buf.compact(startPos);
+                pos -= startPos;
+                startPos = 0;
+                subbuf := WriteBuffer(buf.buffer + pos, 0,
+                                      buf.cap - pos);
+                if (!__src.read(subbuf)) {
                     
-                    # If we're erroring on underflow or we've already started 
-                    # reading a value, raise an exception.
-                    if (errorOnUnderflow || val)
+                    # Reset the position to the start of the buffer so if we
+                    # come back here we'll start from the beginning of the
+                    # varint.
+                    pos = 0;
+
+                    # Raise an exception or return 'END'
+                    if (errorOnUnderflow)
                         underflow();
                     else
                         return END;
+                } else {
+                    buf.size += subbuf.size;
                 }
-                pos = 0;
             }
 
             # see if we've got the last byte
@@ -177,8 +188,8 @@ class SerialReader {
     @final uint readUInt() { return readUInt(true); }
 
     ## Reads a string of size 'size' from the buffer.
-    @final CString readFixedString(uint size) {
-        # see if we've got enough space in the buffer, if so just copy the
+    @final CString readFixedString(uint size, bool errorOnUnderflow) {
+        # see if we've got enough data in the buffer, if so just copy the
         # string.
         if (buf.size - pos >= size) {
             result := CString(buf.buffer + pos, size, false);
@@ -186,37 +197,44 @@ class SerialReader {
             return result;
         }
         
-        # create a new managed buffer, copy the rest of the existing buffer 
-        # into it.
-        ManagedBuffer mbuf = {size + 1};
-        mpos := buf.size - pos;
-        mbuf.move(0, buf.buffer + pos, mpos);
+        # Grow the buffer so that it's big enough to accommodate the
+        # remainder of the string in addition to what it already contains.
+        requiredCap := pos + size + 1;
+        if (buf.cap < requiredCap)
+            buf.grow(requiredCap);
         
         # read the rest of the string
-        while (mpos < size) {
-            amtRead := __src.read(WriteBuffer(mbuf.buffer + mpos,
-                                              size - mpos
+        while (buf.size - pos < size) {
+            amtRead := __src.read(WriteBuffer(buf.buffer + buf.size,
+                                              buf.cap - buf.size
                                               )
                                   );
             if (!amtRead)
-                underflow();
-            mpos += amtRead;
+                if (errorOnUnderflow)
+                    underflow();
+                else
+                    return null;
+
+            buf.size += amtRead;
         }
         
         # add null terminator
-        mbuf.buffer[mbuf.cap - 1] = 0;
+        buf.buffer[pos + size] = 0;
 
-        # indicate that we've depleted the buffer
-        pos = buf.size;
+        result := CString(buf.buffer + pos, size, false);
 
-        size = mbuf.cap - 1;
-        return CString(mbuf.orphan(), size, true);
+        # Clear out the buffer.
+        pos = 0;
+        buf.compact(pos + size);
+
+        return result;
     }
 
     ## If errorOnUnderflow is false, returns null if we run out of data 
     ## during read.
     @final CString readString(bool errorOnUnderflow) {
-        size := readUInt();
+        startPos := pos;
+        size := readUInt(errorOnUnderflow);
         if (size == END) {
             if (errorOnUnderflow)
                 underflow();
@@ -224,7 +242,13 @@ class SerialReader {
                 return null;
         }
         
-        return readFixedString(size);
+        result := readFixedString(size, errorOnUnderflow);
+
+        # Restore the start position if we underflowed.
+        if (result is null)
+            pos = startPos;
+
+        return result;
     }
 
     ## Reads a string, throws an exception if there is not enough data.    
