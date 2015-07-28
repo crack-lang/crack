@@ -17,6 +17,7 @@ class Message;
 class ProtoReader;
 class ProtoWriter;
 void _deserialize(ProtoReader src, Message message);
+String _serializeToString(Message message);
 
 @interface Message {
     @abstract void serialize(ProtoWriter dst);
@@ -25,9 +26,13 @@ void _deserialize(ProtoReader src, Message message);
     @final void deserialize(ProtoReader src) {
         _deserialize(src, this);
     }
+
+    ## Return the message serialized to a string.
+    @final String toString() {
+        return _serializeToString(this);
+    }
 }
 
-String _serializeToString(Message message);
 Message _readMessage(String buffer, Message message);
 
 class Field {
