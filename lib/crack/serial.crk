@@ -9,8 +9,8 @@
 
 import crack.runtime free;
 import crack.lang AppendBuffer, Buffer, CString, Exception, ManagedBuffer, 
-    WriteBuffer, Formatter;
-import crack.io cout, Reader, Writer, StandardFormatter;
+    WriteBuffer;
+import crack.io cerr, Formatter, Reader, Writer, StandardFormatter;
 
 const BUFSIZE := uint(1024);
 const uint END = ~0;
@@ -160,9 +160,8 @@ class SerialReader {
                                       buf.cap - pos);
                 if (!__src.read(subbuf)) {
                     
-                    # Reset the position to the start of the buffer so if we
-                    # come back here we'll start from the beginning of the
-                    # varint.
+                    # Reset the position so if we come back here we'll start
+                    # from the beginning of the varint.
                     pos = 0;
 
                     # Raise an exception or return 'END'
@@ -218,14 +217,11 @@ class SerialReader {
             buf.size += amtRead;
         }
         
-        # add null terminator
-        buf.buffer[pos + size] = 0;
-
         result := CString(buf.buffer + pos, size, false);
 
         # Clear out the buffer.
-        pos = 0;
         buf.compact(pos + size);
+        pos = 0;
 
         return result;
     }

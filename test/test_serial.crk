@@ -203,6 +203,28 @@ if (true) {
     tr.add('abcd' * 16);
     if (r.readString(false) != 'abcd' * 32)
         cout I`FAILED string chunking\n`;
+
+    # Verify that compacting works.  Start with a fresh buffer.
+    tr = TestReader(StringArray!['\x0a1234567890' '\x0a123456']);
+    r = SerialReader(tr);
+    if (r.readString(false) != '1234567890')
+        cout `FAILED initial read in compacting test.\n`;
+    if (r.readString(false))
+        cout `FAILED partial read in compacting test\n`;
+    tr.add('7890');
+    if (r.readString(false) != '1234567890')
+        cout `FAILED post-compaction read\n`;
+
+    # Verify that we can read a partial integer from after startPos.
+    tr = TestReader(StringArray!['\x04abcd' '\x80']);
+    r = SerialReader(tr);
+    if (r.readString(false) != 'abcd')
+        cout `FAILED initial read in offset partial int test.\n`;
+    if (r.readUInt(false) != END)
+        cout `FAILED to return end after offset partial int read\n`;
+    tr.add('\x01');
+    if (r.readUInt(false) != 0x80)
+        cout `FAILED to read int after offset partial read\n`;
 }
 
 cout `ok\n`;
