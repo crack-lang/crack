@@ -1,0 +1,156 @@
+
+@import crack.extgen generateExtension;
+
+@generateExtension crack.ext._fuse {
+    @filename 'opt/_fuse.cc'
+    @crack_internal
+    @inject I'\
+        #define FUSE_USE_VERSION 26
+        #include <fuse.h>
+
+        struct DoubleTimeSpec {
+            timespec first, second;
+        };
+
+        typedef struct statvfs StatVFS;
+
+        struct Undef {};
+
+        void crk_fuse_operations_init(struct fuse_operations *ops) {
+        }
+
+        int crk_fuse_main(int argc, char *argv[],
+                          const struct fuse_operations *op,
+                          void *user_data
+                          ) {
+            return fuse_main(argc, argv, op, user_data);
+        }
+        '
+
+    @crack 'import crack.runtime Stat;'
+    @extern Stat;
+
+    @cname fuse_file_info
+    class FuseFileInfo {
+        int flags;
+        uint64 fh_old;
+
+        int writepage;
+
+        // This is likely a set of flags. direct_io, keep_cache, flush,
+        // nonseekable, flock_release.  These are each defined as one bit, so
+        // we need to use a method for them.
+//        uint direct_io, keep_cache, flush, nonseekable, flock_release;
+
+        uint64 fh;
+        uint64 lock_owner;
+    }
+
+    class StatVFS {
+        uint64 f_bsize;
+        uint64 f_frsize;
+
+        # XXX These actually need to be either 64 or 32 bit depending on the
+        # size of file offsets for the system.
+        uint f_blocks,
+            f_bfree,
+            f_bavail,
+            f_files,
+            f_ffree,
+            f_favail;
+
+        uint64 f_flag, f_namemax;
+    }
+
+    @cname fuse_conn_info
+    class FuseConnInfo {
+    }
+
+    class DoubleTimeSpec {}
+
+    @cname Undef
+    class FusePollHandle {}
+
+    @cname fuse_bufvec
+    class FuseBufVec {}
+
+    @cname flock
+    class Flock {
+        uint16 l_type, l_whence;
+        uintz l_start, l_len, l_pid;
+    }
+
+    @cname fuse_operations
+    class FuseOperations {
+//        uint32 flags;   // NOPATH = 1
+
+        function[int, byteptr, Stat] getattr;
+        function[int, byteptr, byteptr, intz] readlink;
+        function[int, byteptr, int, int] mknod;
+        function[int, byteptr, int] mkdir;
+        function[int, byteptr] unlink;
+        function[int, byteptr] rmdir;
+        function[int, byteptr, byteptr] symlink;
+        function[int, byteptr, byteptr] rename;
+        function[int, byteptr, byteptr] link;
+        function[int, byteptr, int] chmod;
+        function[int, byteptr, int, int] chown;
+        function[int, byteptr, uintz] truncate;
+        function[int, byteptr, FuseFileInfo] open;
+        function[int, byteptr, byteptr, uintz, uintz, FuseFileInfo] read;
+        function[int, byteptr, byteptr, uintz, uintz, FuseFileInfo] write;
+        function[int, byteptr, StatVFS] statfs;
+        function[int, byteptr, FuseFileInfo] flush;
+        function[int, byteptr, FuseFileInfo] release;
+        function[int, byteptr, int, FuseFileInfo] fsync;
+        function[int, byteptr, byteptr, byteptr, uintz, int] setxattr;
+        function[int, byteptr, byteptr, byteptr, uintz] getxattr;
+        function[int, byteptr, byteptr, uintz] listxattr;
+        function[int, byteptr, byteptr] removexattr;
+        function[int, byteptr, FuseFileInfo] opendir;
+        function[int, byteptr, voidptr,
+                 function[int, voidptr, byteptr, Stat, uintz], uintz,
+                 FuseFileInfo
+                 ] readdir;
+        function[int, byteptr, FuseFileInfo] releasedir;
+        function[int, byteptr, int, FuseFileInfo] fsyncdir;
+        function[voidptr,  FuseConnInfo] init;
+        function[void, voidptr] destroy;
+        function[int, byteptr, int] access;
+        function[int, byteptr, int, FuseFileInfo] create;
+        function[int, byteptr, uintz, FuseFileInfo] ftruncate;
+        function[int, byteptr, Stat, FuseFileInfo] fgetattr;
+        function[int, byteptr, FuseFileInfo, int, Flock] lock;
+        function[int, byteptr, DoubleTimeSpec] utimens;
+        function[int, byteptr, uintz, array[uint64]] bmap;
+        function[int, byteptr, int, voidptr, FuseFileInfo, uint, voidptr]
+            ioctl;
+        function[int, byteptr, FuseFileInfo, FusePollHandle, array[uint]] poll;
+        function[int, byteptr, FuseBufVec, uintz, FuseFileInfo] write_buf;
+        function[int, byteptr, array[FuseBufVec], uintz, uintz, FuseFileInfo]
+            read_buf;
+        function[int, byteptr, FuseFileInfo, int] flock;
+        function[int, byteptr, int, uintz, uintz, FuseFileInfo] fallocate;
+
+        @cname crk_fuse_operations_init
+        oper init();
+    }
+
+    @cname crk_fuse_main
+    int main(int argc, array[byteptr] argv, FuseOperations ops,
+             voidptr userData
+             );
+
+    @cname fuse_context
+    class FuseContext {
+        int uid, gid, pid;
+        voidptr private_data;
+        int umask;
+    }
+
+    @cname fuse_get_context
+    FuseContext get_context();
+}
+
+
+import crack.io cout;

@@ -1,0 +1,13 @@
+## This program implements a minimal FUSE filesystem.
+
+import crack.io StandardFormatter;
+import crack.fs makePath;
+import crack.sys argv;
+import crack.exp.fuse log, main, DirNode, FileNode, LockedFilesystem;
+import crack.runtime S_IFREG;
+import crack.io cout;
+
+log = StandardFormatter(makePath('fusetest2.log').writer());
+root := DirNode();
+root.contents['foo'] = FileNode('/foo', S_IFREG | 0644, 1, 'this is foo!');
+main(argv, LockedFilesystem(root));

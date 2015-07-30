@@ -17,7 +17,7 @@ lib_LTLIBRARIES = libCrackDebugTools.la libCrackLang.la \
     libCrackNativeRuntime.la
 libCrackLang_la_SOURCES = %libCrackSources%
 libCrackLang_la_CPPFLAGS = $(AM_CPPFLAGS)
-libCrackLang_la_LDFLAGS = -version-info 8:0:0 @LLVM_LDFLAGS@ @LLVM_LIBS@ \
+libCrackLang_la_LDFLAGS = -version-info 7:0:0 @LLVM_LDFLAGS@ @LLVM_LIBS@ \
     $(AM_LDFLAGS)
 libCrackLang_la_LIBADD = libCrackDebugTools.la
 
@@ -52,7 +52,7 @@ testext_la_LDFLAGS = -avoid-version -module $(AM_LDFLAGS)
 testext_la_SOURCES = test/testext.cc
 
 EXTENSIONS = _cairo _gl _gtk _pcre _sdl _sdl_mixer _alsa_midi _sdlgfx \
-             _fluidsynth _cairosdl _xs _ssl _png _curl _jack _pthread
+             _fluidsynth _cairosdl _xs _ssl _png _curl _jack _pthread _fuse
 
 if HAVE_GTK
 extlib_LTLIBRARIES += _gtk.la
@@ -166,6 +166,13 @@ extlib_LTLIBRARIES += _pthread.la
 _pthread_la_LDFLAGS = -avoid-version -module @PTHREAD_LIBS@ $(AM_LDFLAGS)
 _pthread_la_CPPFLAGS = @PTHREAD_CPPFLAGS@
 _pthread_la_SOURCES = opt/_pthread.cc
+endif
+
+if HAVE_FUSE
+extlib_LTLIBRARIES += _fuse.la
+_fuse_la_LDFLAGS = -avoid-version -module @FUSE_LIBS@ $(AM_LDFLAGS)
+_fuse_la_CPPFLAGS = @FUSE_CPPFLAGS@
+_fuse_la_SOURCES = opt/_fuse.cc
 endif
 
 noinst_HEADERS = \

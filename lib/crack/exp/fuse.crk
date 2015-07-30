@@ -1,0 +1,510 @@
+## Tools for implementing fuse filesystems.
+
+import crack.io Formatter;
+import crack.cont.treemap TreeMap;
+import crack.ext._fuse fuse_main = main, get_context, FuseOperations,
+    FuseFileInfo;
+import crack.runtime free, memcpy, Stat, EACCES, EEXIST, EINVAL, ENOENT,
+    ENOTDIR, O_CREAT, O_RDONLY, S_IFDIR, S_IFREG;
+import crack.lang AppendBuffer;
+import crack.strutil split, StringArray;
+import crack.threads Mutex, MutexLock;
+
+@import crack.ann interface, impl;
+
+const int
+    EISDIR = 21,
+    ENOSYS = 38;
+
+## Log global.  Users can change this to add logging.
+Formatter log;
+
+class Context;
+
+## The interface for a filesystem object.
+@interface Node {
+    int getattr(Context ctx, Stat stbuf) { return -ENOSYS; }
+    int readdir(Context ctx, voidptr buf,
+                function[int, voidptr, byteptr, Stat, uintz] filler,
+                uintz offset,
+                FuseFileInfo fi
+                )  {
+        return -ENOSYS;
+    }
+    int open(Context ctx, FuseFileInfo fi) { return -ENOSYS; }
+    int read(Context ctx, byteptr buf, uintz size, uintz offset,
+             FuseFileInfo fi
+             )  {
+        return -ENOSYS;
+    }
+    int write(Context ctx, byteptr buf, uintz size, uintz offset,
+              FuseFileInfo fi
+              ) {
+        return -ENOSYS;
+    }
+    int flush(Context ctx, FuseFileInfo fi)  { return -ENOSYS; }
+    int readlink(Context ctx, byteptr buffer, intz size)  {
+        return -ENOSYS;
+    }
+    int truncate(Context ctx, uintz size)  { return -ENOSYS; }
+    int ftruncate(Context ctx, uintz size, FuseFileInfo fi)  {
+        return -ENOSYS;
+    }
+    int mknod(Context ctx, int major, int minor)  { return -ENOSYS; }
+    int create(Context ctx, int mode, FuseFileInfo fi)  {
+        return -ENOSYS;
+    }
+    int mkdir(Context ctx, int mode)  { return -ENOSYS; }
+    int chmod(Context ctx, int mode)  { return -ENOSYS; }
+    int rename(Context ctx, String path) { return -ENOSYS; }
+    int chown(Context ctx, int uid, int gid) { return -ENOSYS; }
+
+    ## Returns the node referenced from parsed 'path' starting at 'start' and
+    ## ending at 'end'.
+    ## For example, if passed in a path of ['foo', 'bar', 'baz', 'bat'] and a
+    ## start of 1 and an end of 3, this would return the node at relative
+    ## path 'bar/baz'.
+    ##
+    ## Returns null if the node does not exist.  Base implementation always
+    ## returns null.
+    Node lookUp(StringArray parsedPath, int start, int end) {
+        if (start == end)
+            return this;
+        else
+            return null;
+    }
+
+    @final bool oper >=(Node other) { return uintz(this) >= uintz(other); }
+    @final bool oper <=(Node other) { return uintz(this) >= uintz(other); }
+}
+
+## A globally-locked filesystem.
+class LockedFilesystem {
+    Node root;
+    Mutex mutex = {};
+
+    oper init(Node root) : root = root {}
+
+}
+
+## Encapsulates information to be passed to node filesystem methods.
+class Context {
+
+    ## The original path.
+    String path;
+
+    ## The path parsed into components, e.g. '/foo/bar' -> ['foo', 'bar']
+    StringArray parsedPath;
+
+    ## The root of the filesystem.
+    Node root;
+
+    MutexLock __lock;
+
+    @static StringArray splitPath(String path) {
+        StringArray result = {};
+        for (elem :in split(path, b'/')) {
+            if (elem)
+                result.append(elem);
+        }
+        return result;
+    }
+
+    oper init(String path, Node root) : path = path, root = root {
+        parsedPath = splitPath(path);
+    }
+
+    @static Context get(byteptr path) {
+        fs := LockedFilesystem.unsafeCast(get_context().private_data);
+        context := Context(String(path), fs.root);
+        context.__lock = MutexLock(fs.mutex);
+        return context;
+    }
+
+    Node lookUp() {
+        return root.lookUp(parsedPath, 0, parsedPath.count());
+    }
+
+    Node lookUpParent() {
+        return root.lookUp(parsedPath, 0, parsedPath.count() - 1);
+    }
+}
+
+int _rename(Context ctx, String path);
+
+## Basic node implementation, stores node state internally.
+class NodeImpl @impl Node {
+    int mode, nlink, uid, gid;
+
+    oper init(int mode, int nlink) : mode = mode, nlink = nlink {}
+
+    int getattr(Context ctx, Stat stbuf) {
+        stbuf.st_mode = mode;
+        stbuf.st_nlink = nlink;
+        stbuf.st_uid = uid;
+        stbuf.st_gid = gid;
+        return 0;
+    }
+
+    int chmod(Context ctx, int mode) {
+        this.mode &= ~07777;
+        this.mode |= (mode & 07777);
+        return 0;
+    }
+
+    int rename(Context ctx, String path) {
+        return _rename(ctx, path);
+    }
+
+    int chown(Context ctx, int uid, int gid) {
+        if (uid != -1) this.uid = uid;
+        if (gid != -1) this.gid = gid;
+        return 0;
+    }
+}
+
+class FileNode : NodeImpl {
+    String path;
+    String contents;
+
+    oper init(String path, int mode, int nlink, String contents) :
+        NodeImpl(mode, nlink),
+        path = path,
+        contents = contents {
+    }
+
+    int getattr(Context ctx, Stat stbuf) {
+        stbuf.st_mode = mode;
+        stbuf.st_nlink = nlink;
+        stbuf.st_uid = uid;
+        stbuf.st_gid = gid;
+        stbuf.st_size = contents.size;
+        return 0;
+    }
+
+    int readdir(Context ctx, voidptr buf,
+                function[int, voidptr, byteptr, Stat, uintz] filler,
+                uintz offset,
+                FuseFileInfo fi
+                ) {
+        return -ENOTDIR;
+    }
+
+    int open(Context ctx, FuseFileInfo fi) {
+        return 0;
+    }
+
+    int read(Context ctx, byteptr buf, uintz size, uintz offset,
+             FuseFileInfo fi
+             )  {
+        len := contents.size;
+        if (offset < len) {
+            if (offset + size > len)
+                size = len - offset;
+            memcpy(buf, contents.buffer + offset, size);
+        } else {
+            size = 0;
+        }
+
+        return size;
+    }
+
+    int write(Context ctx, byteptr buf, uintz size, uintz offset,
+              FuseFileInfo fi
+              ) {
+        # Create a writable buffer from the current contents.
+        AppendBuffer writeBuf = {contents.size};
+        writeBuf.extend(contents);
+
+        # Resize to fit, if necessary.
+        end := size + offset;
+        if (end > writeBuf.cap)
+            writeBuf.grow(end);
+
+        # And copy the new buffer into place.
+        writeBuf.move(offset, buf, size);
+        contents = String(writeBuf, true);
+
+        return size;
+    }
+
+    int flush(Context ctx, FuseFileInfo fi)  { return 0; }
+    int readlink(Context ctx, byteptr buffer, intz size)  {
+        return -EINVAL;
+    }
+    int truncate(Context ctx, uintz size)  {
+        contents = contents.substr(0, size);
+        return 0;
+    }
+    int ftruncate(Context ctx, uintz size, FuseFileInfo fi)  {
+        return truncate(ctx, size);
+    }
+    int mknod(Context ctx, int major, int minor)  { return -ENOTDIR; }
+    int create(Context ctx, int mode, FuseFileInfo fi)  {
+        return -ENOTDIR;
+    }
+    int mkdir(Context ctx, int mode)  { return -ENOTDIR; }
+}
+
+class DirNode : NodeImpl {
+
+    TreeMap[String, Node] contents = {};
+
+    oper init() : NodeImpl(S_IFDIR | 0755, 2) {}
+
+    int readdir(Context ctx, voidptr buf,
+                function[int, voidptr, byteptr, Stat, uintz] filler,
+                uintz offset,
+                FuseFileInfo fi
+                ) {
+        Stat stat = {};
+        filler(buf, ".".buffer, null, 0);
+        filler(buf, "..".buffer, null, 0);
+
+        for (item :in contents) {
+            item.val.getattr(ctx, stat);
+            filler(buf, item.key.buffer, stat, 0);
+        }
+
+        free(stat);
+        return 0;
+    }
+    int open(Context ctx, FuseFileInfo fi) { return -EISDIR; }
+    int read(Context ctx, byteptr buf, uintz size, uintz offset,
+             FuseFileInfo fi
+             )  {
+        return -EISDIR;
+    }
+    int write(Context ctx, byteptr buf, uintz size, uintz offset,
+              FuseFileInfo fi
+              ) {
+        return -EISDIR;
+    }
+    int flush(Context ctx, FuseFileInfo fi)  { return -EISDIR; }
+    int readlink(Context ctx, byteptr buffer, intz size)  {
+        return -EINVAL;
+    }
+    int truncate(Context ctx, uintz size)  { return -EISDIR; }
+    int ftruncate(Context ctx, uintz size, FuseFileInfo fi)  {
+        return -EISDIR;
+    }
+
+    # IMPLEMENT THIS
+    int mknod(Context ctx, int major, int minor)  { return -ENOSYS; }
+
+    int create(Context ctx, int mode, FuseFileInfo fi)  {
+        contents[ctx.parsedPath[-1]] =
+            p := FileNode(ctx.path, S_IFREG | mode, 1, '');
+        return 0;
+    }
+
+    int mkdir(Context ctx, int mode)  {
+        contents[ctx.parsedPath[-1]] = DirNode();
+        return 0;
+    }
+
+    Node lookUp(StringArray parsedPath, int start, int end) {
+        log `  doing lookup on $parsedPath, contents = $(uintz(contents))\n`;
+        if (start == end)
+            return this;
+
+        child := contents.get(parsedPath[start]);
+        if (!child)
+            return null;
+        return child.lookUp(parsedPath, start + 1, end);
+    }
+
+    void formatTo(Formatter out) {
+        out `DirNode@$(uintz(this))`;
+    }
+}
+
+int _rename(Context ctx, String path) {
+    log `getting parents\n`;
+    srcParent := DirNode.cast(ctx.lookUpParent(), null);
+    parsedDst := Context.splitPath(path);
+    dstParent := DirNode.cast(
+        ctx.root.lookUp(parsedDst, 0, parsedDst.count() - 1),
+        null
+    );
+    if (srcParent is null || dstParent is null) {
+        log `  returning\n`;
+        return -ENOENT;
+    }
+    log `parsed path = $(ctx.parsedPath)\n`;
+    srcName := ctx.parsedPath[-1];
+    log `srcname = $srcName\n`;
+    log `ok: $(uintz(dstParent.contents)), $(uintz(srcParent.contents)) <-- modes\n`;
+    dstParent.contents[parsedDst[-1]] = srcParent.contents[srcName];
+    srcParent.contents.delete(srcName);
+    return 0;
+}
+
+int _getattr(byteptr path, Stat stbuf)
+{
+    ctx := Context.get(path);
+    if (node := ctx.lookUp()) {
+        result := node.getattr(ctx, stbuf);
+        node = null;
+        return result;
+    } else {
+        return -ENOENT;
+    }
+}
+
+int _readdir(byteptr path, voidptr buf,
+             function[int, voidptr, byteptr, Stat, uintz] filler,
+             uintz offset,
+             FuseFileInfo fi
+             ) {
+    log `in readdir($path, buf, filler, $offset, $fi)\n`;
+    ctx := Context.get(path);
+    if (node := ctx.lookUp())
+        return node.readdir(ctx, buf, filler, offset, fi);
+    else
+        return -ENOENT;
+}
+
+int _open(byteptr path, FuseFileInfo fi) {
+    log `in open($path, $fi)\n`;
+    # This should never be called for create/truncate.
+    ctx := Context.get(path);
+    if (node := ctx.lookUp())
+        return node.open(ctx, fi);
+    else
+        return -ENOENT;
+}
+
+int _read(byteptr path, byteptr buf, uintz size, uintz offset,
+          FuseFileInfo fi
+          ) {
+    log `in read($path, buf, $size, $offset, $fi)\n`;
+    ctx := Context.get(path);
+    if (node := ctx.lookUp())
+        return node.read(ctx, buf, size, offset, fi);
+    else
+        return -ENOENT;
+}
+
+int _write(byteptr path, byteptr buf, uintz size, uintz offset,
+           FuseFileInfo fi
+           ) {
+    log `in write($path, buf, $size, $offset, $fi)\n`;
+    ctx := Context.get(path);
+    if (node := ctx.lookUp())
+        return node.write(ctx, buf, size, offset, fi);
+    else
+        return -ENOENT;
+}
+
+int _flush(byteptr path, FuseFileInfo fi) {
+    log `in flush($path, $fi)\n`;
+    ctx := Context.get(path);
+    if (node := ctx.lookUp())
+        return node.flush(ctx, fi);
+    else
+        return -ENOENT;
+}
+
+int _readlink(byteptr path, byteptr buffer, intz size) {
+    log `readlink not implemented\n`;
+    return 0;
+}
+
+int _truncate(byteptr path, uintz size) {
+    log `in truncate($path, $size)\n`;
+    ctx := Context.get(path);
+    if (node := ctx.lookUp())
+        return node.truncate(ctx, size);
+    else
+        return -ENOENT;
+}
+
+int _ftruncate(byteptr path, uintz size, FuseFileInfo fi) {
+    log `in ftruncate($path, $size)\n`;
+    ctx := Context.get(path);
+    if (node := ctx.lookUp())
+        return node.ftruncate(ctx, size, fi);
+    else
+        return -ENOENT;
+}
+
+int _mknod(byteptr path, int major, int minor) {
+    log `mknod not implemented\n`;
+    return 0;
+}
+
+int _create(byteptr path, int mode, FuseFileInfo fi) {
+    log `in create($path, mode, $fi)\n`;
+    ctx := Context.get(path);
+    if (node := ctx.lookUpParent())
+        return node.create(ctx, mode, fi);
+    else
+        return -ENOENT;
+}
+
+int _mkdir(byteptr path, int mode) {
+    log `in mkdir($path, $mode)\n`;
+    ctx := Context.get(path);
+    if (node := ctx.lookUpParent())
+        return node.mkdir(ctx, mode);
+    else
+        return -ENOENT;
+}
+
+int _chmod(byteptr path, int mode) {
+    log `in chmod($path, $mode)\n`;
+    ctx := Context.get(path);
+    if (node := ctx.lookUp())
+        return node.chmod(ctx, mode);
+    else
+        return -ENOENT;
+}
+
+int _access(byteptr path, int uid) {
+    log `in access($path, $uid)\n`;
+    return 0;
+}
+
+int _rename(byteptr path, byteptr newPath) {
+    log `in rename($path, $newPath)\n`;
+    ctx := Context.get(path);
+    if (node := ctx.lookUp())
+        return node.rename(ctx, String(newPath));
+    else
+        return -ENOENT;
+}
+
+int _chown(byteptr path, int uid, int gid) {
+    log `in chown($path, $uid, $gid)\n `;
+    ctx := Context.get(path);
+    if (node := ctx.lookUp())
+        return node.chown(ctx, uid, gid);
+    else
+        return -ENOENT;
+}
+
+## Does fuse_main().  Do this if you're implementing a simple
+## filesystem-per-process.
+int main(StringArray argv, LockedFilesystem fs) {
+    ops := FuseOperations();
+    ops.getattr = _getattr;
+    ops.readdir = _readdir;
+    ops.open = _open;
+    ops.read = _read;
+    ops.write = _write;
+    ops.flush = _flush;
+    ops.truncate = _truncate;
+    ops.ftruncate = _ftruncate;
+    ops.readlink = _readlink;
+    ops.mknod = _mknod;
+    ops.create = _create;
+    ops.mkdir = _mkdir;
+    ops.chmod = _chmod;
+    ops.rename = _rename;
+    ops.chown = _chown;
+
+    # Create another link to the root object so we can safely exit.
+    fs.root.oper bind();
+    return fuse_main(argv.count(), argv.makePrimArray(), ops, fs);
+}

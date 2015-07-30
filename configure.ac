@@ -7,7 +7,7 @@
 #   file, You can obtain one at http://mozilla.org/MPL/2.0/.
 # 
 
-AC_INIT(crack, 0.11)
+AC_INIT(crack, 0.10)
 AM_INIT_AUTOMAKE
 AC_CONFIG_SRCDIR([parser/Token.h])
 AC_CONFIG_MACRO_DIR([m4])
@@ -92,5 +92,8 @@ AM_CONDITIONAL(HAVE_JACK, [test "x$got_jack" = xyes])
 
 AM_PATH_PTHREAD
 AM_CONDITIONAL(HAVE_PTHREAD, [test "x$got_pthread" = xyes])
+
+AM_PATH_FUSE
+AM_CONDITIONAL(HAVE_FUSE, [test "x$got_fuse" = xyes])
 
 AC_OUTPUT
