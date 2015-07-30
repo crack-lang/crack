@@ -124,7 +124,7 @@ void crack_ext__xs_cinit(crack::ext::Module *mod) {
                                 CRACK_OFFSET(xs_version_info, minor));
         type_xs_version_info->addInstVar(type_int, "patch",
                                 CRACK_OFFSET(xs_version_info, patch));
-        f = type_xs_version_info->addConstructor("init",
+        f = type_xs_version_info->addConstructor("oper init",
                             (void *)get_xs_version
                         );
 
@@ -136,7 +136,7 @@ void crack_ext__xs_cinit(crack::ext::Module *mod) {
 
 
     crack::ext::Type *type_xs_msg_t = mod->addType("xs_msg_t", sizeof(xs_msg_t));
-        f = type_xs_msg_t->addConstructor("init",
+        f = type_xs_msg_t->addConstructor("oper init",
                             (void *)crk_xs_msg_new
                         );
 

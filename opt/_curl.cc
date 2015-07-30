@@ -108,7 +108,7 @@ void crack_ext__curl_cinit(crack::ext::Module *mod) {
                                 CRACK_OFFSET(CURLinfoWrapper, resultDouble));
         type_CURLinfo->addInstVar(type_voidptr, "resultPtr",
                                 CRACK_OFFSET(CURLinfoWrapper, resultPtr));
-        f = type_CURLinfo->addConstructor("init",
+        f = type_CURLinfo->addConstructor("oper init",
                             (void *)easy_info_new
                         );
     f->addArg(type_int, 
@@ -125,7 +125,7 @@ void crack_ext__curl_cinit(crack::ext::Module *mod) {
                                 CRACK_OFFSET(crack_slist, data));
         type_slist->addInstVar(type_slist, "next",
                                 CRACK_OFFSET(crack_slist, next));
-        f = type_slist->addConstructor("init",
+        f = type_slist->addConstructor("oper init",
                             (void *)curl_slist_new
                         );
     f->addArg(type_byteptr, 

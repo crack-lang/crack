@@ -305,7 +305,7 @@ class TypeImpl : Type {
 
                 if (method.isOper) {
                     if (method.name == "init")
-                        out `        f = $typeVar->addConstructor("init",
+                        out `        f = $typeVar->addConstructor("oper init",
                             (void *)$(method.cname)
                         );\n`;
                 } else {
