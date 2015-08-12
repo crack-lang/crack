@@ -1,21 +1,25 @@
 // Copyright 2012 Conrad Steenberg <conrad.steenberg@gmail.com>
-// 
+//
 //   This Source Code Form is subject to the terms of the Mozilla Public
 //   License, v. 2.0. If a copy of the MPL was not distributed with this
 //   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-// 
+//
 import crack.net Pipe;
 import crack.io cout;
 import crack.io.readers LineReader;
 
 pipe := Pipe();
 pipe.setNonBlocking(true);
-pipe.setReader();
 lineReader := LineReader(pipe);
+pipe.write('first line\n');
+if (lineReader.readLine() != 'first line\n')
+    cout `FAILED line reader read.\n`;
 
 pipe = Pipe();
 pipe.setNonBlocking(true);
-pipe.setWriter();
+pipe.write('test data');
+if (pipe.read(100) != 'test data')
+    cout `FAILED pipe write.\n`;
 cout `ok\n`;
 
 

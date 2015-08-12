@@ -9,7 +9,7 @@
 
 import crack.lang Buffer, CString, Exception, FreeBase, InvalidArgumentError,
     InvalidStateError, ManagedBuffer, WriteBuffer, Formatter;
-import crack.io FileHandle, FStr, Reader, Writer, FDReader, FDWriter;
+import crack.io cerr, FileHandle, FStr, Reader, Writer, FDReader, FDWriter;
 import crack.sys strerror;
 import crack.cont.array Array;
 import crack.cont.hashmap HashMap;
@@ -289,22 +289,32 @@ class Socket : FileHandle @implements Reader, Writer {
 }
 
 ## Wrapper around a Pipe.
+##
+## The file descriptor of the pipe is the file descriptor of the read end, so 
+## you can use a pipe for communication to a poller thread.
 class Pipe : FileHandle @implements Reader, Writer {
     PipeAddr __addr;
     FDReader __reader = null;
     FDWriter __writer = null;
 
-    oper init() : FileHandle(-1), __addr(0) {
+    @final void __init() {
         if (__addr is null) throw Exception('Unable to create PipeAddr');
+        fd = __addr.readfd;
+    }
+
+    oper init() : FileHandle(-1), __addr(0) {
+        __init();
     }
 
     oper init(int32 flags) : FileHandle(-1), __addr(flags) {
-        if (__addr is null) throw Exception('Unable to create PipeAddr');
+        __init();
     }
 
-    oper init(int32 flags, int32 readfd, int32 writefd) : FileHandle(-1),
-            __addr(flags, readfd, writefd) {
-        if (__addr is null) throw Exception('Unable to create PipeAddr');
+    oper init(int32 flags, int32 readfd, int32 writefd) :
+        FileHandle(-1),
+        __addr(flags, readfd, writefd) {
+
+        __init();
     }
 
     PipeAddr getAddr(){
@@ -335,24 +345,6 @@ class Pipe : FileHandle @implements Reader, Writer {
         }
     }
 
-    bool setReader(){
-        if ((__reader is null) && (__writer is null) && __addr.readfd != -1) {
-            __reader = FDReader(__addr.readfd);
-            fd = __addr.readfd;
-            return true;
-        }
-        return false;
-    }
-
-    bool setWriter(){
-        if ((__reader is null) && (__writer is null) && __addr.writefd != -1) {
-            __writer = FDWriter(__addr.writefd);
-            fd = __addr.writefd;
-            return true;
-        }
-        return false;
-    }
-
     oper del() {
         close();
     }
@@ -374,18 +366,21 @@ class Pipe : FileHandle @implements Reader, Writer {
 
     # Reader interface
     uint read(WriteBuffer buffer) {
-        if (__reader is null) return 0;
+        if (!__reader)
+            __reader = FDReader(__addr.readfd);
         return __reader.read(buffer);
     }
 
     # Writer interface
     void write(Buffer data) {
-        if (__writer is null) return;
+        if (!__writer)
+            __writer = FDWriter(__addr.writefd);
         __writer.write(data);
     }
 
     void write(byteptr data) {
-        if (__writer is null) return;
+        if (!__writer)
+            __writer = FDWriter(__addr.writefd);
         __writer.write(data);
     }
 }
@@ -546,6 +541,14 @@ class Poller {
                           );
     }
     
+    @final void __callCallback(int descriptorIndex, PollEvent pollEvent) {
+        if (__callbacks && (cbw := __callbacks.get(pollEvent.pollable))) {
+            events := cbw.callback(this, pollEvent);
+            if (events != pollEvent.events)
+                __fds.set(descriptorIndex, pollEvent.pollable.fd, events, 0);
+        }
+    }
+
     PollEvent nx() {
         if (__iter == -1)
             return null;
@@ -560,11 +563,7 @@ class Poller {
         result.pollable = __pollables[__iter];
         
         # if there is a handler, call it and reset the event mask.
-        if (__callbacks && (cbw := __callbacks.get(result.pollable))) {
-            events := cbw.callback(this, result);
-            if (events != result.events)
-                __fds.set(__iter, result.pollable.fd, events, 0);
-        }
+        __callCallback(__iter, result);
         
         # increment the iterator
         ++__iter;
@@ -578,6 +577,15 @@ class Poller {
     void waitAndProcess(TimeDelta timeout) {
         wait(timeout);
         while (nx()) ;
+
+        ## Invoke callbacks with no event just so we can get their next events.
+        PollEvent temp = {};
+        for (int i = 0; i < __nextIndex; ++i) {
+            __fds.get(i, temp);
+            temp.pollable = __pollables[i];
+            temp.revents = 0;
+            __callCallback(i, temp);
+        }
     }
 
     ## A poller is true if it contains pollables.
