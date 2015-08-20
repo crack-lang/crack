@@ -81,7 +81,7 @@ SourceDigest SourceDigest::fromHex(const std::string &d) {
 
 string SourceDigest::asHex() const {
 
-    char buf[SourceDigest::digest_size*2];
+    char buf[SourceDigest::digest_size * 2 + 1];
     for (int di = 0; di < SourceDigest::digest_size; ++di)
         sprintf(buf + di * 2, "%02x", digest[di]);
 
