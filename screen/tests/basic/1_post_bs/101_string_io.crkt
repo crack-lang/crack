@@ -2,12 +2,26 @@
 String IO
 %%ARGS%%
 %%FILE%%
-import crack.io cout, StringReader;
-import crack.lang ManagedBuffer;
+import crack.io cout, BufferReader, StringReader;
+import crack.lang Buffer, ManagedBuffer;
 @import crack.ann assert;
 
 if (1) {
     StringReader src = {'first test'};
+    ManagedBuffer buf = {6};
+    src.read(buf);
+    @assert(buf == 'first ');
+    src.read(buf);
+    @assert(buf == 'test');
+    src.read(buf);
+    @assert(buf == '');
+}
+
+# Just verify that this works with an arbitrary buffer (StringReader is just
+# an alias for BufferReader)
+if (1) {
+    Buffer srcBuf = {'first test'.buffer, 10};
+    BufferReader src = {srcBuf};
     ManagedBuffer buf = {6};
     src.read(buf);
     @assert(buf == 'first ');

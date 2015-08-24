@@ -390,14 +390,13 @@ class AppendBufferWriter : Object, Writer {
     Object oper from Writer() { return this; }
 }
 
-
-## Allows you to read from a string.
-class StringReader : Object, Reader {
+## Allows you to read from a buffer.
+class BufferReader : Object, Reader {
 
     uint __pos;
-    String __src;
+    Buffer __src;
 
-    oper init(String src) : __src = src {}
+    oper init(Buffer src) : __src = src {}
 
     uint read(WriteBuffer buf) {
         if (__pos >= __src.size) {
@@ -415,6 +414,11 @@ class StringReader : Object, Reader {
 
     Object oper from Reader() { return this; }
 }
+
+# Given that we have a StringWriter, it's reasonable for users to expect a
+# StringReader, so we alias BufferReader.  It is safe to use either
+# StringReader or BufferReader.
+alias StringReader = BufferReader;
 
 ## Convenience wrapper, equivalent to StandardFormatter(StringWriter())
 class StringFormatter : StandardFormatter {
