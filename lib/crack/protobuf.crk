@@ -33,7 +33,7 @@ String _serializeToString(Message message);
     }
 }
 
-Message _readMessage(String buffer, Message message);
+Message readMessageFromString(Message message, String buffer);
 
 class Field {
     uint id;
@@ -91,7 +91,7 @@ class Field {
 
     ## Reads the messsage 'inst' out of a string field's value.
     void readMessage(Message inst) {
-        _readMessage(getString(), inst);
+        readMessageFromString(inst, getString());
     }
 
     void write(SerialWriter dst) {
@@ -167,7 +167,7 @@ String _serializeToString(Message message) {
     return backing.string();
 }
 
-Message _readMessage(String buffer, Message message) {
+Message readMessageFromString(Message message, String buffer) {
     message.deserialize(ProtoReader(StringReader(buffer)));
     return message;
 }
