@@ -529,3 +529,32 @@ begin with a single underscore:
 
     int _moduleVar;
 }}
+
+Interface Conventions
+'''''''''''''''''''''
+
+In general, when a derived class constructor accepts arguments that are passed
+to the base class, specify the base class arguments first and name them the
+same as the base class arguments:
+
+{{
+    class MyError : Exception {
+        int code;
+        oper init(String message, int code) :
+            Exception(message),
+            code = code {
+        }
+    }
+}}
+
+When defining a function that mutates one of its arguments in a manner
+analogous to assignment, specify the argument to be mutated as the first
+parameter:
+
+{{
+    ## Concatenate 'a' and 'b' and place the result into 'target'.
+    void concat(WriteBuffer target, Buffer a, Buffer b) { ... }
+
+    ## Deserialize input from 'src' into 'obj'.
+    void deserialize(Serializable obj, Reader src) { ... }
+}}
