@@ -326,7 +326,7 @@ class SerialWriter {
         buf.size = 0;
     }
     
-    void write(String val) {
+    void write(Buffer val) {
         write(uint32(val.size));
         __dst.write(val);
     }
