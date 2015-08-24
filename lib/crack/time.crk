@@ -55,6 +55,10 @@ class TimeDelta : Object, TimeVal {
 }
 
 ## An absolute point in time (seconds since the epoch).
+##
+## Public variables (from TimeVal):
+##   int32 secs;   // Seconds since the epoch.
+##   int32 nsecs;  // nanoseconds since the last whole second.
 class Time : Object, TimeVal {
 
     oper init() : TimeVal(0, 0) {}
