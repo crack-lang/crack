@@ -32,5 +32,7 @@ void CleanupFrame::addCleanup(VarDef *varDef, Expr *aggregate) {
             context->builder.createFuncCall(releaseFunc.get());
         funcCall->receiver = varRef;
         addCleanup(funcCall.get());
+    } else if (!varDef->type->noReleaseInferred) {
+        varDef->type->noReleaseInferred = context->getLocation();
     }
 }

@@ -25,8 +25,10 @@ void ResultExpr::handleAssignment(Context &context) {
     // the expression is non-productive: check for a bind function
     FuncCall::ExprVec args;
     FuncDefPtr bindFunc = context.lookUpNoArgs("oper bind", false, type.get());
-    if (!bindFunc)
+    if (!bindFunc) {
+        if (!type->noBindInferred) type->noBindInferred = context.getLocation();
         return;
+    }
     
     // got a bind function: create a bind call and emit it.  (emit should 
     // return a ResultExpr for a void object, so we don't need to do anything 
@@ -51,8 +53,10 @@ void ResultExpr::forceCleanup(Context &context) {
     FuncDefPtr releaseFunc = context.lookUpNoArgs("oper release", false, 
                                                   type.get()
                                                   );
-    if (!releaseFunc)
+    if (!releaseFunc) {
+        if (!type->noReleaseInferred) type->noReleaseInferred = context.getLocation();
         return;
+    }
     
     // got a release function: create a release call and store it in the 
     // cleanups.

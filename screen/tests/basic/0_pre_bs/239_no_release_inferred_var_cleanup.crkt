@@ -1,0 +1,15 @@
+%%TEST%%
+release declared after "no release" inferred (variable cleanup)
+%%ARGS%%
+%%FILE%%
+# We test expression cleanup in test 238, we should also be testing
+# assignment cleanup (cleanup of the old value of a variable after
+# assignment) but there's no way to do that without defining a variable of the
+# type and triggering the variable cleanup.
+class A : VTableBase {
+    void f() { A a; }
+    oper release() {}
+}
+%%EXPECT%%
+ParseError: %SCRIPTNAME%:7:10: oper release() must be defined before all uses that trigger a release.  (First use at %SCRIPTNAME%:6:18)
+%%STDIN%%

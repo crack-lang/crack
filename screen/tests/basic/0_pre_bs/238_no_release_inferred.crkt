@@ -1,0 +1,12 @@
+%%TEST%%
+release declared after "no release" inferred (expression)
+%%ARGS%%
+%%FILE%%
+class A : VTableBase {
+    oper init() {}
+    void f() { A(); }
+    oper release() {}
+}
+%%EXPECT%%
+ParseError: %SCRIPTNAME%:4:10: oper release() must be defined before all uses that trigger a release.  (First use at %SCRIPTNAME%:3:19)
+%%STDIN%%

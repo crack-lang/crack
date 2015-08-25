@@ -1,0 +1,11 @@
+%%TEST%%
+bind declared after 'no bind' inferred
+%%ARGS%%
+%%FILE%%
+class A : VTableBase {
+    oper init() {}
+    oper bind() { }
+}
+%%EXPECT%%
+ParseError: %SCRIPTNAME%:3:10: oper bind() must be defined before all uses that trigger a bind.  (First use at %SCRIPTNAME%:2:10)
+%%STDIN%%

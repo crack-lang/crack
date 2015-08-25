@@ -1867,8 +1867,11 @@ int Parser::parseFuncDef(TypeDef *returnType, const Token &nameTok,
          // constructor now.
          if (funcFlags & hasMemberInits && !classTypeDef->abstract &&
              !classTypeDef->gotExplicitOperNew
-             )
+             ) {
+            // Associate errors with the oper init func.
+            classCtx->setLocation(nameTok.getLocation());
             classTypeDef->createNewFunc(*classCtx, funcDef.get());
+         }
       }
       return argDefs.size();
    } else if (funcFlags == hasMemberInits) {
@@ -1970,8 +1973,11 @@ int Parser::parseFuncDef(TypeDef *returnType, const Token &nameTok,
    if (inits && !classTypeDef->gotExplicitOperNew &&
        !classTypeDef->abstract &&
        (!override || !(override->flags & FuncDef::forward))
-       )
+       ) {
+      // Associate errors with the oper init func.
+      classCtx->setLocation(nameTok.getLocation());
       classTypeDef->createNewFunc(*classCtx, funcDef.get());
+   }
    
    return argDefs.size();
 }         
@@ -2797,6 +2803,7 @@ void Parser::parsePostOper(TypeDef *returnType) {
    Token tok = getToken();
    if (tok.isIdent()) {
       const string &ident = tok.getData();
+      context->setLocation(tok.getLocation());
       bool isInit = ident == "init";
       if (isInit || ident == "release" || ident == "bind" || ident == "del") {
          
@@ -2806,7 +2813,7 @@ void Parser::parsePostOper(TypeDef *returnType) {
                   SPUG_FSTR("oper " << ident << 
                              " can only be defined in a class scope."
                             )
-                  ); 
+                  );
         
          // these opers must be of type "void"
          if (!returnType)
@@ -2820,6 +2827,23 @@ void Parser::parsePostOper(TypeDef *returnType) {
                   );
          expectToken(Token::lparen, "expected argument list");
          
+         TypeDefPtr enclosingType = context->parent->ns;
+         if (ident == "bind" && enclosingType->noBindInferred)
+            error(tok,
+                  SPUG_FSTR("oper bind() must be defined before all uses that "
+                             "trigger a bind.  (First use at " <<
+                             *enclosingType->noBindInferred << ")"
+                             )
+                  );
+
+         if (ident == "release" && enclosingType->noReleaseInferred)
+            error(tok,
+                  SPUG_FSTR("oper release() must be defined before all uses that "
+                             "trigger a release.  (First use at " <<
+                             *enclosingType->noReleaseInferred << ")"
+                             )
+                  );
+
          // the operators other than "init" require an empty args list.
          int expectedArgCount;
          if (!isInit)

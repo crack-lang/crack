@@ -13,6 +13,8 @@
 #include <map>
 #include <spug/RCPtr.h>
 
+#include "parser/Location.h"
+
 #include "ArgDef.h"
 #include "VarDef.h"
 #include "Namespace.h"
@@ -159,6 +161,13 @@ class TypeDef : public VarDef, public Namespace {
         // so don't generate them for any more of the init methods.
         bool gotExplicitOperNew;
         
+        // If an instance of a class is used in a way that would have made
+        // use of "oper bind" or "oper release", this is the location where
+        // the first such use occurred.  We store this so that we can generate
+        // an error if "oper bind" or "oper release" is defined after such
+        // usage.
+        parser::Location noBindInferred, noReleaseInferred;
+
         TypeDef(TypeDef *metaType, const std::string &name, 
                 bool pointer = false
                 ) :

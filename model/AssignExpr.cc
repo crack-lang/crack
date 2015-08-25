@@ -54,6 +54,9 @@ ResultExprPtr AssignExpr::emit(Context &context) {
                                                );
     ResultExprPtr assnResult, oldVal;
 
+    if (!gotReleaseFunc && !var->type->noReleaseInferred)
+        var->type->noReleaseInferred = context.getLocation();
+
     if (aggregate) {
 
         ExprPtr agg = aggregate;
