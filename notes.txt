@@ -178,7 +178,7 @@ Other philosophical stances:
     4) We do not try to restrict the coder to a set of acceptible patterns: the 
        coder is assumed to be responsible and we consider the role of a 
        language to be to facilitate the desires of the coder, not to restrict 
-       them.  That said, we choosed to promote certain patterns 
+       them.  That said, we chose to promote certain patterns 
        (e.g. reference counting") and we will not invest in providing special 
        support for features that we regard as anti-patterns.  For example, we 
        regard cyclic dependencies as ultimately a bad thing, so we will not 
@@ -560,6 +560,13 @@ Ugliness:
     
     -   Parser could use a re-write.  We need to come up with a normalized
         grammar that deals with the class-as-class/class-as-object ambiguity.
+
+    -   When a class derives directly from VTableBase, we currently require
+        that VTableBase be the first base class in the list.  Likewise, when a
+        derives (directly or indirectly) from Object, the Object lineage must
+        be the first base.  I can't think of a good reason for this, and we
+        should probably relax these restrictions unless we encounter a good
+        reason.
 
 Parsing Oddities:
     
