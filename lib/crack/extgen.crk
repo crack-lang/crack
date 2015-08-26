@@ -28,6 +28,10 @@ CLOSEBRACE:=false;
 
 class Func;
 
+class AlreadyExists : Exception {
+    oper init(String message) : Exception(message) {}
+}
+
 @abstract class Type {
     String name, cname;
     String __emitName;
@@ -234,6 +238,7 @@ class TypeImpl : Type {
     String emitted;
     Array[Func] methods;
     Array[Arg] members;
+    TreeMap[String, Object] __names = {};
     uint numDecls;
     uint numEmitted;
 
@@ -257,11 +262,16 @@ class TypeImpl : Type {
 
     // class members
     void addMember(Arg member) {
-       members.append(member);
+        if (__names.hasKey(member.name))
+            throw AlreadyExists(FStr() `Name $(member.name) redefined`);
+        __names[member.name] = member;
+        members.append(member);
     }
 
    // class methods, emit not implemented
     void addMethod(Func method) {
+        if ((m := __names.get(method.name)) && !m.isa(Func))
+            throw AlreadyExists(FStr() `Name $(method.name) redefined`);
         methods.append(method);
     }
 
@@ -845,7 +855,11 @@ $(generic.getParamCount()) parameters.`;
             if (!ident.isIdent())
                 error(ctx, ident) `Identifier expected after oper, got $ident`;
             _parseLParen(ctx);
-            type.addMethod(_parseFuncTail(ctx, type, ident, true));
+            try {
+                type.addMethod(_parseFuncTail(ctx, type, ident, true));
+            } catch (AlreadyExists ex) {
+                error(ctx, tok) `$(ex.text)`;
+            }
             return;
         } else {
             ctx.putBack(tok);
@@ -861,22 +875,30 @@ $(generic.getParamCount()) parameters.`;
         tok = ctx.getToken();
         if (tok.isLParen()) {
             # it's a function.  parse the rest of it
-            type.addMethod(_parseFuncTail(ctx, retType, ident, false));
+            try {
+                type.addMethod(_parseFuncTail(ctx, retType, ident, false));
+            } catch (AlreadyExists ex) {
+                error(ctx, tok) `$(ex.text)`;
+            }
         } else {
             # it's a variable definition.
-            ctx.putBack(tok);
-            type.addMember(Arg(retType, String(ident.getText())));
-            tok = ctx.getToken();
-
-            while (tok.isComma()){
+            try {
+                ctx.putBack(tok);
+                type.addMember(Arg(retType, String(ident.getText())));
                 tok = ctx.getToken();
-                if (!tok.isIdent())
-                    error(ctx, tok) `argument name expected`;
 
-                type.addMember(Arg(retType, String(tok.getText())));
-                tok = ctx.getToken();
-                if (!tok.isSemi() && !tok.isComma())
-                    error(ctx, tok) `Semicolon or comma expected`;
+                while (tok.isComma()){
+                    tok = ctx.getToken();
+                    if (!tok.isIdent())
+                        error(ctx, tok) `argument name expected`;
+
+                    type.addMember(Arg(retType, String(tok.getText())));
+                    tok = ctx.getToken();
+                    if (!tok.isSemi() && !tok.isComma())
+                        error(ctx, tok) `Semicolon or comma expected`;
+                }
+            } catch (AlreadyExists ex) {
+                error(ctx, tok) `$(ex.text)`;
             }
             
             # put back the semicolon.
