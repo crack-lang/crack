@@ -320,14 +320,16 @@ extinc_HEADERS = \
     ext/util.h \
     ext/Var.h
 
-EXTRA_DIST = doc lib $(srcdir)/test/*.crk $(srcdir)/test/bad_extension.so \
+EXTRA_DIST = $(srcdir)/test/*.crk $(srcdir)/test/bad_extension.so \
     $(srcdir)/test/screen $(srcdir)/test/test*.crt $(srcdir)/test/test*.key \
-    $(srcdir)/test/*.cc Credits tools CMakeLists.txt opt/CMakeLists.txt \
-    sourceModules.txt runtimeModules.txt cmake COPYING doc/license \
-    screen/builders.crk screen/config.crk screen/screen.crk screen/stats.crk \
-    screen/testdata.crk screen/planB screen/tests screen/systest.crk \
-    $(srcdir)/opt/*.crk
-    
+    $(srcdir)/test/*.cc $(srcdir)/Credits $(srcdir)/tools/*.crk \
+    $(srcdir)/tools/fixlicense $(srcdir)/CMakeLists.txt $(srcdir)/opt/CMakeLists.txt \
+    $(srcdir)/sourceModules.txt $(srcdir)/runtimeModules.txt $(srcdir)/cmake \
+    $(srcdir)/COPYING $(srcdir)/doc/license $(srcdir)/screen/builders.crk \
+    $(srcdir)/screen/config.crk $(srcdir)/screen/screen.crk $(srcdir)/screen/stats.crk \
+    $(srcdir)/screen/testdata.crk $(srcdir)/screen/planB \
+    $(srcdir)/screen/tests $(srcdir)/screen/systest.crk $(srcdir)/opt/*.crk \
+    $(srcdir)/doc $(srcdir)/lib
 
 bin_PROGRAMS = crack
 
@@ -402,3 +404,7 @@ check: testbed
 	BUILD_ROOT=`pwd` $(srcdir)/test/screen -d screen/tests/caching
 	BUILD_ROOT=`pwd` $(srcdir)/test/screen -d screen/tests/caching
 	BUILD_ROOT=`pwd` $(srcdir)/test/screen -d screen/tests/compound
+
+# Remove everything that's not a .crk file from lib
+dist-hook:
+	rm -f `find $(distdir)/lib -type f -a ! -name '*.crk'`
