@@ -284,6 +284,17 @@ test.main("
     ");
 test.run();
 
+# Verify that function types get deserialized.
+test.mod('mod', 'void f() {}');
+test.main("import mod f; puts('function types deserialized');");
+test.run();
+test.main("
+    import mod f;
+    alias T = typeof(f);
+    puts('function types deserialized');
+    ");
+test.run();
+
 %%REXPECT%%
 out: alias
 terminated: success
@@ -351,5 +362,9 @@ terminated: success
 out: preloaded dependencies
 terminated: success
 out: preloaded dependencies
+terminated: success
+out: function types deserialized
+terminated: success
+out: function types deserialized
 terminated: success
 %%STDIN%%

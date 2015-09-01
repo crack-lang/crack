@@ -2501,6 +2501,10 @@ FuncDefPtr LLVMBuilder::materializeFunc(Context &context, FuncDef::Flags flags,
                        moduleDef->repId
                        );
     }
+
+    // Set the type, we have to do this after setting the rep because that's
+    // where the LLVM type is assigned.
+    result->type = getFuncType(context, result.get(), result->getLLVMFuncType());
     return result;
 }
 
