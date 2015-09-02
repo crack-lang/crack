@@ -2463,16 +2463,16 @@ TypeDefPtr LLVMBuilder::materializeType(Context &context, const string &name,
     return result;
 }
 
-FuncDefPtr LLVMBuilder::materializeFunc(Context &context, FuncDef::Flags flags,
-                                        const string &name,
-                                        TypeDef *returnType,
-                                        const ArgVec &args
+FuncDefPtr LLVMBuilder::materializeFunc(Context &context, const string &name,
+                                        const FuncDef::Spec &spec
                                         ) {
-    BFuncDefPtr result = new BFuncDef(flags, name, args.size());
-    result->args = args;
-    result->returnType = returnType;
+    BFuncDefPtr result = new BFuncDef(spec.flags, name, spec.args.size());
+    result->args = spec.args;
+    result->returnType = spec.returnType;
+    result->receiverType = spec.receiverType;
+    result->vtableSlot = spec.vtableSlot;
 
-    if (!(flags & FuncDef::abstract)) {
+    if (!(spec.flags & FuncDef::abstract)) {
         string fullName = result->getUniqueId(context.ns.get());
         Function *func = module->getFunction(fullName);
         SPUG_CHECK(func,
@@ -2483,15 +2483,15 @@ FuncDefPtr LLVMBuilder::materializeFunc(Context &context, FuncDef::Flags flags,
     } else {
         // Create a null constant.  First we have to construct a type.
         vector<Type *> argTypes;
-        argTypes.reserve(args.size());
-        for (ArgVec::const_iterator iter = args.begin();
-             iter != args.end();
+        argTypes.reserve(spec.args.size());
+        for (ArgVec::const_iterator iter = spec.args.begin();
+             iter != spec.args.end();
              ++iter
              )
             argTypes.push_back(BTypeDefPtr::arcast((*iter)->type)->rep);
 
         FunctionType *funcType =
-            FunctionType::get(BTypeDefPtr::acast(returnType)->rep,
+            FunctionType::get(BTypeDefPtr::arcast(spec.returnType)->rep,
                               argTypes,
                               false
                               );

@@ -40,7 +40,7 @@ void FuncDef::Spec::deserialize(Deserializer &deser) {
         CRACK_PB_FIELD(2, varInt)
             vtableSlot = optionalDeser.readUInt("vtableSlot");
             break;
-    CRACK_PB_END    
+    CRACK_PB_END
 }
 
 FuncDef::FuncDef(Flags flags, const std::string &name, size_t argCount) :
@@ -344,14 +344,9 @@ FuncDefPtr FuncDef::deserialize(Deserializer &deser, const string &name) {
     
     FuncDefPtr result = deser.context->builder.materializeFunc(
         *deser.context,
-        spec.flags,
         name,
-        spec.returnType.get(),
-        spec.args
+        spec
     );
     
-    result->receiverType = spec.receiverType;
-    result->vtableSlot = spec.vtableSlot;
-
     return result;
 }

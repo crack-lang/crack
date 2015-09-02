@@ -285,13 +285,17 @@ test.main("
 test.run();
 
 # Verify that function types get deserialized.
-test.mod('mod', 'void f() {}');
+test.mod('mod', "
+    void f() {}
+    class A { void f() {} }
+    ");
 test.main("import mod f; puts('function types deserialized');");
 test.run();
 test.main("
-    import mod f;
+    import mod f, A;
     alias T = typeof(f);
     function[void] g = f;
+    function[void, A] h = A.f;
     puts('function types deserialized');
     ");
 test.run();

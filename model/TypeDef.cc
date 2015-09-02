@@ -1382,12 +1382,13 @@ namespace {
     void materializeOneCastFunc(Context &metaClassContext, TypeDef *type,
                                 const ArgVec &args
                                 ) {
+        FuncDef::Spec spec;
+        spec.returnType = type;
+        spec.args = args;
         FuncDefPtr func = metaClassContext.builder.materializeFunc(
             metaClassContext, 
-            FuncDef::noFlags, 
             "cast", 
-            type, 
-            args
+            spec
         );
         metaClassContext.addDef(func.get());
     }

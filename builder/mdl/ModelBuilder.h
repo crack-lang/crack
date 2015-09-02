@@ -377,15 +377,15 @@ class ModelBuilder : public builder::Builder {
 
         virtual model::FuncDefPtr materializeFunc(
             model::Context &context,
-            model::FuncDef::Flags flags,
             const std::string &name,
-            model::TypeDef *returnType,
-            const model::ArgVec &args
+            const model::FuncDef::Spec &spec
         ) {
             model::FuncDefPtr result =
-                new ModelFuncDef(flags, name, args.size());
-            result->args = args;
-            result->returnType = returnType;
+                new ModelFuncDef(spec.flags, name, spec.args.size());
+            result->args = spec.args;
+            result->returnType = spec.returnType;
+            result->receiverType = spec.receiverType;
+            result->vtableSlot = spec.vtableSlot;
             return result;
         }
 
