@@ -291,6 +291,7 @@ test.run();
 test.main("
     import mod f;
     alias T = typeof(f);
+    function[void] g = f;
     puts('function types deserialized');
     ");
 test.run();

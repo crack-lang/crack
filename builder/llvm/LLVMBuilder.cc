@@ -2463,7 +2463,6 @@ TypeDefPtr LLVMBuilder::materializeType(Context &context, const string &name,
     return result;
 }
 
-
 FuncDefPtr LLVMBuilder::materializeFunc(Context &context, FuncDef::Flags flags,
                                         const string &name,
                                         TypeDef *returnType,
@@ -2502,9 +2501,10 @@ FuncDefPtr LLVMBuilder::materializeFunc(Context &context, FuncDef::Flags flags,
                        );
     }
 
-    // Set the type, we have to do this after setting the rep because that's
+    // Set the type and impl, we have to do this after setting the rep because that's
     // where the LLVM type is assigned.
     result->type = getFuncType(context, result.get(), result->getLLVMFuncType());
+    result->impl = new BConstDefImpl(result.get(), result->getFuncRep(*this));
     return result;
 }
 
