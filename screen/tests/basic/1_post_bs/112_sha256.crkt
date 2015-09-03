@@ -1,0 +1,8 @@
+%%TEST%%
+SHA-256 hashing
+%%ARGS%%
+%%FILE%%
+import test.test_sha256;
+%%EXPECT%%
+ok
+%%STDIN%%

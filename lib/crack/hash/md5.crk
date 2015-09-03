@@ -1,10 +1,10 @@
 // MD5 hash algorithm wrapper class
 // Copyright 2012 Conrad Steenberg <conrad.steenberg@gmail.com>
-// 
+//
 //   This Source Code Form is subject to the terms of the Mozilla Public
 //   License, v. 2.0. If a copy of the MPL was not distributed with this
 //   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-// 
+//
 // 6/22/2012
 
 import crack.lang Buffer, ManagedBuffer;
@@ -31,11 +31,10 @@ class MD5 : Hash {
     }
 
     ## Return raw digest as a buffer of 16 bytes
-    Buffer digest() {
-        b := ManagedBuffer(16);
-        b.size = 16;
-        md5_finish(_state, b.buffer);
-        return b;
+    String digest() {
+        buffer := byteptr(16);
+        md5_finish(_state, buffer);
+        return String(buffer, 16, true);
     }
 
     oper del() {

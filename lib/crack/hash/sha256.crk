@@ -1,0 +1,195 @@
+
+import crack.cont.array Array;
+import crack.hash Hash;
+import crack.lang AppendBuffer, Buffer, InvalidStateError;
+import crack.runtime free;
+
+@import crack.ann assert;
+
+# Round constants. (first 32 bits of the fractional parts of the cube
+# roots of the first 64 primes 2..311).  We end up leaking this.
+array[uint32] _k = [
+    0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1,
+    0x923f82a4, 0xab1c5ed5, 0xd807aa98, 0x12835b01, 0x243185be, 0x550c7dc3,
+    0x72be5d74, 0x80deb1fe, 0x9bdc06a7, 0xc19bf174, 0xe49b69c1, 0xefbe4786,
+    0x0fc19dc6, 0x240ca1cc, 0x2de92c6f, 0x4a7484aa, 0x5cb0a9dc, 0x76f988da,
+    0x983e5152, 0xa831c66d, 0xb00327c8, 0xbf597fc7, 0xc6e00bf3, 0xd5a79147,
+    0x06ca6351, 0x14292967, 0x27b70a85, 0x2e1b2138, 0x4d2c6dfc, 0x53380d13,
+    0x650a7354, 0x766a0abb, 0x81c2c92e, 0x92722c85, 0xa2bfe8a1, 0xa81a664b,
+    0xc24b8b70, 0xc76c51a3, 0xd192e819, 0xd6990624, 0xf40e3585, 0x106aa070,
+    0x19a4c116, 0x1e376c08, 0x2748774c, 0x34b0bcb5, 0x391c0cb3, 0x4ed8aa4a,
+    0x5b9cca4f, 0x682e6ff3, 0x748f82ee, 0x78a5636f, 0x84c87814, 0x8cc70208,
+    0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2
+];
+
+## Use this class to construct sha256 hashes of binary data.  Use the update()
+## method to provide the data, use the getDigest() method to get the
+## resulting digest.
+##
+## You cannot reuse this object.  After a digest is collected from it, it is
+## no longer valid and will raise an InvalidStateError if update() is called
+## again.  You can, however, call digest() again to retrieve the digest
+## (though it may create another copy).
+class SHA256 : Hash {
+
+    # The current hash. (first 32 bits of the fractional parts of the square
+    # roots of the first 8 primes 2..19)
+    array[uint32] __hash = [
+        0x6a09e667, 0xbb67ae85, 0x3c6ef372, 0xa54ff53a, 0x510e527f, 0x9b05688c,
+        0x1f83d9ab, 0x5be0cd19
+    ];
+
+    # The message schedule array.
+    array[uint32] __msa = {64};
+
+    # Buffer where we can accumulate 64 byte blocks.
+    AppendBuffer __accum = {1024};
+
+    # Total size of the data processed in bytes.
+    uint64 __totalSize;
+
+    oper init() {
+        _size = 32;
+    }
+
+    oper del() {
+        free(__msa);
+        free(__hash)
+    }
+
+    @static uint32 __rrot(uint32 val, uint32 shift) {
+        return val >> shift | val << (32 - shift);
+    }
+
+    @final void __processChunk(Buffer chunk) {
+        @assert(chunk.size = 64);
+
+        # Copy the 64 byte buffer into the first 16 words of the message
+        # schedule array.
+        for (int i; i < 16; ++i)
+            __msa[i] = uint32(chunk[i * 4]) << 24 | uint32(chunk[i * 4 + 1]) << 16 |
+                   uint32(chunk[i * 4 + 2]) << 8 | uint32(chunk[i * 4 + 3]);
+
+        # Extend the first 16 words into the remaining 48 words of the array.
+        for (int i = 16; i < 64; ++i) {
+            s0 := __rrot(__msa[i - 15], 7) ^ __rrot(__msa[i - 15], 18) ^
+                __msa[i-15] >> 3;
+            s1 := __rrot(__msa[i - 2], 17) ^ __rrot(__msa[i - 2], 19) ^ __msa[i - 2] >> 10;
+            __msa[i] = __msa[i - 16] + s0 + __msa[i - 7] + s1;
+        }
+
+        # Initialize working variables to current hash value.
+        a := __hash[0];
+        b := __hash[1];
+        c := __hash[2];
+        d := __hash[3];
+        e := __hash[4];
+        f := __hash[5];
+        g := __hash[6];
+        h := __hash[7];
+
+        # Do the compression.
+        for (int i = 0; i < 64; ++i) {
+            S1 := __rrot(e, 6) ^ __rrot(e, 11) ^ __rrot(e, 25);
+            ch := (e & f) ^ (~e & g);
+            temp1 := h + S1 + ch + _k[i] + __msa[i];
+            S0 := __rrot(a, 2) ^ __rrot(a, 13) ^ __rrot(a, 22);
+            maj := (a & b) ^ (a & c) ^ (b & c);
+            temp2 := S0 + maj;
+
+            h = g;
+            g = f;
+            f = e;
+            e = d + temp1;
+            d = c;
+            c = b;
+            b = a;
+            a = temp1 + temp2;
+        }
+
+        # Add the compressed chunk to the current hash value.
+        __hash[0] = __hash[0] + a;
+        __hash[1] = __hash[1] + b;
+        __hash[2] = __hash[2] + c;
+        __hash[3] = __hash[3] + d;
+        __hash[4] = __hash[4] + e;
+        __hash[5] = __hash[5] + f;
+        __hash[6] = __hash[6] + g;
+        __hash[7] = __hash[7] + h;
+    }
+
+    ## Add the buffer to the data to be hashed.
+    ##
+    ## Throws an InvalidStateError if called after the digest has been
+    ## collected.
+    void update(Buffer buf) {
+        if (__accum is null)
+            throw InvalidStateError(I'Digest has already been collected for \
+                                    SHA256 object.'
+                                    );
+        __totalSize += buf.size;
+        __accum.extend(buf);
+        while (__accum.size >= 64) {
+            Buffer temp = {__accum.buffer, 64};
+            __processChunk(temp);
+            __accum.compact(64);
+        }
+    }
+
+    @final void __finish() {
+        # Hash data must end with a 64 byte block consisting of:
+        # - a bit set to 1 (we can use 0x80 because we don't hash units of
+        #   lower than a byte)
+        # - zero padding.
+        # - a 64-bit bit count.
+        # We add these here.
+
+        # The 1 bit (and 7 bits of padding).
+        __accum.append(0x80);
+
+        # Zero bytes until we have just enough space for the size.
+        while ((__accum.size % 64) < 56)
+            __accum.append(0);
+
+        # The size in bytes.
+        numBits := __totalSize * 8;
+        __accum.append(byte(numBits >> 56));
+        __accum.append(byte(numBits >> 48));
+        __accum.append(byte(numBits >> 40));
+        __accum.append(byte(numBits >> 32));
+        __accum.append(byte(numBits >> 24));
+        __accum.append(byte(numBits >> 16));
+        __accum.append(byte(numBits >> 8));
+        __accum.append(byte(numBits));
+
+        # Flush all the remaining contents of the buffer.  This shouldn't need
+        # to be a "while" loop, there should only ever be exactly 64 bytes in
+        # the buffer when we get here, but there's no reason for us to be
+        # bound by that assumption.
+        while (__accum.size) {
+            Buffer buf = {__accum.buffer, 64};
+            __processChunk(__accum);
+            __accum.compact(64);
+        }
+
+        # Null out the accumulator, indicating that the hasher is closed for
+        # further updates.
+        __accum = null;
+    }
+
+    String digest() {
+        # Finish if we haven't already.
+        if (!(__accum is null))
+            __finish();
+
+        AppendBuffer result = {32};
+        for (int i; i < 8; ++i) {
+            result.append(byte(__hash[i] >> 24));
+            result.append(byte(__hash[i] >> 16));
+            result.append(byte(__hash[i] >> 8));
+            result.append(byte(__hash[i]));
+        }
+
+        return String(result, true);
+    }
+}

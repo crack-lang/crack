@@ -96,12 +96,8 @@ class Murmur3_32 : Hash {
 
 
     ## Return raw digest as a buffer of 4 bytes
-    Buffer digest() {
-        b := ManagedBuffer(4);
-        ib := array[uint32](b.buffer);
-        ib[0] = _state;
-        b.size = 4;
-        return b;
+    String digest() {
+        return String(byteptr(array[uint32]![_state]), 4, true);
     }
 
     ## Return the digest as a uint32

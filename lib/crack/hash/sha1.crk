@@ -211,8 +211,8 @@ class SHA1 : Hash {
     }
 
     // Return raw digest as a buffer of 20 bytes
-    Buffer digest() {
-        return hash;
+    String digest() {
+        return String(hash, false);
     }
 
 }

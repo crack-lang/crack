@@ -1,0 +1,57 @@
+
+import crack.io cerr;
+import crack.ascii hex;
+import crack.cont.array Array;
+import crack.hash.sha256 SHA256;
+import crack.lang InvalidStateError;
+
+@import crack.ann assert;
+
+class D {
+    String val, hash;
+    oper init(String val, String hash) : val = val, hash = hash {}
+}
+
+const LONG_DATA :=
+    'Longer than 64 bytes --> e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b93'
+    '4ca495991b7852b8555968cf9a72e5ff0f0e03caad838010adc4369e29afa91b6a8a60d'
+    'a6c2040b51b';
+const LONG_DATA_HASH :=
+    'a173edf97b73250ce5d2dc733b84b2c310eda49a9ec283a63da8d646892ea5ec';
+
+Array[D] testData = [
+    D('', 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'),
+    D('simple test string',
+      '5968cf9a72e5ff0f0e03caad838010adc4369e29afa91b6a8a60da6c2040b51b'),
+    D(LONG_DATA, LONG_DATA_HASH)
+];
+
+for (entry :in testData) {
+    hasher := SHA256();
+    hasher.update(entry.val);
+    @assert(hex(hasher.digest()) == entry.hash);
+}
+
+# Try breaking the big one up into lots of buffer sizes to try to flush out
+# any boundary conditions.
+for (int i; i < LONG_DATA.size; ++i) {
+    hasher := SHA256();
+    hasher.update(LONG_DATA.slice(0, i));
+    hasher.update(LONG_DATA.slice(i));
+    @assert(hex(hasher.digest()) == LONG_DATA_HASH);
+}
+
+# Test reusability.
+if (true) {
+    hasher := SHA256();
+    hasher.update(LONG_DATA);
+    dig := hasher.digest();
+    @assert(dig == hasher.digest());
+    try {
+        hasher.update('moar!');
+        @assert(false);
+    } catch (InvalidStateError ex) {
+    }
+}
+
+cerr `ok\n`;

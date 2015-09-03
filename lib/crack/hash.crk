@@ -1,14 +1,20 @@
 // Abstract hash class
 // Copyright 2012 Conrad Steenberg <conrad.steenberg@gmail.com>
-// 
+//
 //   This Source Code Form is subject to the terms of the Mozilla Public
 //   License, v. 2.0. If a copy of the MPL was not distributed with this
 //   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-// 
+//
 // 6/22/2012
 
 import crack.lang Buffer;
 
+## Base class for all hashers.  These compute hash values for data using
+## various well known algorithms.
+##
+## Not all hashers can be reused, so if given a Hash object, the appropriate
+## thing to do is collect the digest and then discard the hasher and create a new
+## one if further hash evaluation is necessary.
 @abstract class Hash {
     uint _size;
 
@@ -21,6 +27,6 @@ import crack.lang Buffer;
     @abstract void update(Buffer buf);
 
     ## Return raw digest
-    @abstract Buffer digest();
+    @abstract String digest();
 
 }
