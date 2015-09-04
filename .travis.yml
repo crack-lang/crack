@@ -6,5 +6,5 @@ install:
     - cd llvm-3.3.src
     - ./configure
     - make REQUIRES_RTTI=1
-    - make install
+    - sudo make install
 script: ./configure && make && make check
