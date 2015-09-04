@@ -1,0 +1,10 @@
+language: cpp
+compiler: gcc
+install:
+    - wget http://llvm.org/releases/3.3/llvm-3.3.src.tar.gz
+    - tar -xvzf llvm-3.3.src.tar.gz
+    - cd llvm-3.3.src
+    - ./configure
+    - make REQUIRES_RTTI=1
+    - make install
+script: ./configure && make && make check
