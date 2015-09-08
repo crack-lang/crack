@@ -238,6 +238,12 @@ class Parser {
        */
       model::ExprPtr parseTernary(model::Expr *cond);
 
+      /**
+       * Used in the contexts where we use the define operator to check that
+       * 'val' is not an imported overload.  Generates an error if it is.
+       */
+      void checkForExternalOverload(model::Expr *val);
+
       struct Primary {
          model::ExprPtr expr;
          model::TypeDefPtr type;

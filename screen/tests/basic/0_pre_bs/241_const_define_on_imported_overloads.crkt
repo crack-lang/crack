@@ -1,0 +1,10 @@
+%%TEST%%
+const with define operator used with imported overload value.
+%%ARGS%%
+%%FILE%%
+# See 240_define_on_imported_overloads.crkt, const uses a different code path.
+import test.testmod func;
+const g := func;
+%%EXPECT%%
+ParseError: %SCRIPTNAME%:3:16: You can not use the ':=' operator on a value that is an imported overload.
+%%STDIN%%

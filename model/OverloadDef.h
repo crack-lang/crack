@@ -208,6 +208,12 @@ class OverloadDef : public VarDef {
         virtual bool isSerializable() const;
         
         /**
+         * Returns true if the overload was imported from another module in
+         * the specified context.
+         */
+        virtual bool isImportedIn(const Context &context) const;
+
+        /**
          * Returns true if the overload consists of only one function.
          */
         bool isSingleFunction() const;

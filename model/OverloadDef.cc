@@ -10,6 +10,7 @@
 
 #include "spug/stlutil.h"
 #include "spug/StringFmt.h"
+#include "spug/check.h"
 
 #include "Context.h"
 #include "Deserializer.h"
@@ -368,6 +369,31 @@ bool OverloadDef::isSerializable() const {
     else {
         return hasSerializableFuncs();
     }
+}
+
+bool OverloadDef::isImportedIn(const Context &context) const {
+    // Functions in an overload should either be all imported or all local, so
+    // as soon as we find a function we can make this determination.
+    SPUG_FOR(FuncList, iter, funcs) {
+        ModuleDefPtr realModule = context.ns->getRealModule();
+        if ((*iter)->getOwner()->getRealModule() == realModule)
+            return false;
+        else
+            return true;
+    }
+
+    SPUG_FOR(ParentVec, iter, parents) {
+        if ((*iter)->isImportedIn(context))
+            return true;
+        else
+            return false;
+    }
+
+    // No parents and no functions - we should never get here.
+    SPUG_CHECK(false,
+               "isImportedIn() called on overload " << name <<
+                " which has no parents and no functions."
+               );
 }
 
 bool OverloadDef::isSingleFunction() const {

@@ -1,0 +1,14 @@
+%%TEST%%
+define operator on imported overload value
+%%ARGS%%
+%%FILE%%
+# This verifies that we get an error when defining a variable that is an
+# imported overload.  This usage is disallowed because it constrains the
+# author of the module from which the overload is imported from making changes
+# to the order of the function definitions for the overload since, for
+# example, "g := f" creates a variable referencing the first defined overload.
+import test.testmod func;
+g := func;
+%%EXPECT%%
+ParseError: %SCRIPTNAME%:7:10: You can not use the ':=' operator on a value that is an imported overload.
+%%STDIN%%

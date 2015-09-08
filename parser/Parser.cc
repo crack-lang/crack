@@ -224,6 +224,10 @@ namespace {
          virtual bool isUsableFrom(const Context &context) const {
             return rep->isUsableFrom(context);
          }
+
+         virtual bool isImportedIn(const Context &context) const {
+            return rep->isImportedIn(context);
+         }
    };
 }
 
@@ -846,19 +850,36 @@ ExprPtr Parser::parseTernary(Expr *cond) {
    return context->createTernary(cond, trueVal.get(), falseVal.get());
 }
 
+void Parser::checkForExternalOverload(Expr *val) {
+   VarRef *varRef = VarRefPtr::cast(val);
+   if (!varRef)
+      return;
+
+   OverloadDef *ovld = OverloadDefPtr::rcast(varRef->def);
+   if (!ovld)
+      return;
+
+   if (ovld->isImportedIn(*context))
+      error(context->getLocation(),
+            "You can not use the ':=' operator on a value that is an "
+            "imported overload."
+            );
+}
+
 // ident := expr
 //      ^       ^
 ExprPtr Parser::parseDefine(const Token &ident) {
-      ExprPtr val = parseExpression();
+   ExprPtr val = parseExpression();
+   checkForExternalOverload(val.get());
 
-      // XXX We have to do this weird, inefficient two-step process of 
-      // defining the variable and then assigning it.  For some reason, if we 
-      // don't we end up breaking definitions in a 'while' condition: the 
-      // variable seems to get initialized with the value the expression had 
-      // upon entry into the loop and the rvalue doesn't seem to get
-      // re-evaluated.
-      VarDefPtr var = context->emitVarDef(val->type.get(), ident, 0);
-      return createAssign(0, ident, var.get(), val.get());
+   // XXX We have to do this weird, inefficient two-step process of
+   // defining the variable and then assigning it.  For some reason, if we
+   // don't we end up breaking definitions in a 'while' condition: the
+   // variable seems to get initialized with the value the expression had
+   // upon entry into the loop and the rvalue doesn't seem to get
+   // re-evaluated.
+   VarDefPtr var = context->emitVarDef(val->type.get(), ident, 0);
+   return createAssign(0, ident, var.get(), val.get());
 }
 
 ExprPtr Parser::makeAssign(Expr *lvalue, const Token &tok, Expr *rvalue) {
@@ -2252,9 +2273,15 @@ void Parser::parseConstDef() {
       if (!tok2.isDefine())
          unexpected(tok2, "':=' operator expected in const definition");
    }
+
+   // If we get here, this is "const var := val" syntax (explicitly typed
+   // constants return in the body of the loop above).
       
    // parse the initializer
    ExprPtr expr = parseExpression();
+
+   // Make sure the value isn't an external override.
+   checkForExternalOverload(expr.get());
    
    context->emitVarDef(expr->type.get(), tok, expr.get(), true);
 }
