@@ -3,7 +3,7 @@ Error on creating an instance of an abstract class
 %%ARGS%%
 
 %%FILE%%
-@abstract class Foo { @abstract void f(); }
+@abstract class Foo : VTableBase { @abstract void f(); }
      Foo foo = {};
 %%EXPECT%%
 ParseError: %OUTDIR%148_abstract_constructors.crk:2:17: You can not create an instance of abstract class Foo without an explicit 'oper new'.

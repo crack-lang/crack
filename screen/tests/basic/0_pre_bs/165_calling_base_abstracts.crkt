@@ -2,7 +2,7 @@
 error calling abstract methods in a base class
 %%ARGS%%
 %%FILE%%
-@abstract class A {
+@abstract class A : VTableBase {
     @abstract void f();
 }
 

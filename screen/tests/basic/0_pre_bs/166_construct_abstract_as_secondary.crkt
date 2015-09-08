@@ -2,7 +2,7 @@
 error when constructing an abstract type through a secondary expression
 %%ARGS%%
 %%FILE%%
-@abstract class A { @abstract void f(); }
+@abstract class A : VTableBase { @abstract void f(); }
 A();
 %%EXPECT%%
 ParseError: %OUTDIR%166_construct_abstract_as_secondary.crk:2:3: You can not create an instance of abstract class A without an explicit 'oper new'.

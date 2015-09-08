@@ -2,7 +2,7 @@
 abstract function defined after multiple nested derived class
 %%ARGS%%
 %%FILE%%
-@abstract class A {
+@abstract class A : VTableBase {
     oper init() {}
     class B : A {}
     class C : A {}

@@ -1,0 +1,8 @@
+%%TEST%%
+error on abstract class without a vtable
+%%ARGS%%
+%%FILE%%
+@abstract class A { @abstract void f() {} }
+%%EXPECT%%
+ParseError: %SCRIPTNAME%:1:19: Abstract class A must be derived from VTableBase.
+%%STDIN%%

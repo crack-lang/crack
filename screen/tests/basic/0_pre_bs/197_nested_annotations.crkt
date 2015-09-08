@@ -2,7 +2,7 @@
 nested annotations
 %%ARGS%%
 %%FILE%%
-@abstract class A[T] {
+@abstract class A[T] : VTableBase {
     @abstract void f();
 }
 

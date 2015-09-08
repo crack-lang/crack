@@ -3243,6 +3243,13 @@ TypeDefPtr Parser::parseClassDef() {
       type->createCast(*classContext, true);
       type->createCast(*classContext, false);
    }
+   
+   if (type->abstract && !type->hasVTable)
+      error(tok, 
+            SPUG_FSTR("Abstract class " << className << 
+                       " must be derived from VTableBase."
+                      )
+            );
 
    // create a lexical context which delegates to both the class context and 
    // the parent context.

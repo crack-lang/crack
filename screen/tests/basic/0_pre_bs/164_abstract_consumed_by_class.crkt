@@ -2,7 +2,7 @@
 abstract annotation consumed by class
 %%ARGS%%
 %%FILE%%
-@abstract class Foo { @abstract void f(); }
+@abstract class Foo : VTableBase { @abstract void f(); }
 void g();
 void g() {}
 puts('ok');
