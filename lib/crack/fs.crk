@@ -9,8 +9,9 @@
 
 import crack.runtime basename, chdir, closedir, dirname, errno, fileExists,
     free, fileRemove, getcwd, getDirEntry, malloc, mkdir, open, opendir,
-    readdir, rename, stat, strcpy, strlen, Dir, DirEntry, Stat, EEXIST, O_CREAT,
-    O_TRUNC, O_RDONLY, O_WRONLY, O_APPEND, PATH_MAX, S_IFDIR, S_IFLNK;
+    readdir, rename, stat, strcpy, strlen, truncate, Dir, DirEntry, Stat,
+    EEXIST, O_CREAT, O_TRUNC, O_RDONLY, O_WRONLY, O_APPEND, PATH_MAX,
+    S_IFDIR, S_IFLNK;
 import crack.sys strerror;
 import crack.io cout, FStr, OwningFDReader, OwningFDWriter, Reader, Writer;
 import crack.lang AssertionError, Buffer, CString, Exception,
@@ -51,6 +52,9 @@ class Path;
     ## Returns a writer for the path.  The path must be writable.
     @abstract Writer writer();
     alias makeWriter = writer;
+
+    ## Truncate the file to the specified size.
+    @abstract void truncate(uint64 newSize);
 
     ## Make a directory corresponding to the path.
     ## errorOnExists: throw an error if the directory already exists and is a
@@ -260,6 +264,12 @@ class RealPath : Path {
         return OwningFDWriter(fd);
     }
 
+    void truncate(uint64 size) {
+        rc := truncate(__path.buffer, size);
+        if (rc)
+            throw SystemError(FStr() `truncating $__path`);
+    }
+
     Writer makeAppender() {
         fd := open(__path.buffer, O_APPEND | O_WRONLY, 0777);
         if (fd == -1)
@@ -355,6 +365,7 @@ class _CWD : Path {
 
     Reader reader() { return __path.reader(); }
     Writer writer() { return __path.writer(); }
+    void truncate(uint64 size) { __path.truncate(size); }
     void makeDir(bool errorOnExists) { __path.makeDir(errorOnExists); }
     Path oper [](String child) { return __path[child]; }
     Path _createNode(String path) { return __path._createNode(path); }

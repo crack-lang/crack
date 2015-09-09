@@ -83,6 +83,13 @@ if (!(cwd/'tempdir').exists())
 if (foo.getSize() != 11)
     cout `FAILED file size() method\n`;
 
+resized := (tempDir/'resized');
+resized.writer().write('file to be resized');
+resized.truncate(10);
+if (resized.getSize() != 10)
+    cout `FAILED truncate() method\n`;
+resized.delete();
+
 StringArray children = {2};
 for (child :in tempDir.children())
     children.append(child.getName());

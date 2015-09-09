@@ -81,6 +81,7 @@ extern "C" void crack_runtime_cinit(Module *mod) {
     Type *int16Type = mod->getInt16Type();
     Type *int32Type = mod->getInt32Type();
     Type *int64Type = mod->getInt64Type();
+    Type *uint64Type = mod->getUint64Type();
     Type *uintType = mod->getUintType();
     Type *byteType = mod->getByteType();
     Type *voidType = mod->getVoidType();
@@ -217,6 +218,10 @@ extern "C" void crack_runtime_cinit(Module *mod) {
     f->addArg(byteptrType, "path");
     f->addArg(intType, "mode");
 
+    f = mod->addFunc(intType, "truncate", (void *)truncate);
+    f->addArg(byteptrType, "path");
+    f->addArg(uint64Type, "length");
+
     mod->addConstant(intType, "EACCES", EACCES);
     mod->addConstant(intType, "EBADF", EBADF);
     mod->addConstant(intType, "EEXIST", EEXIST);
@@ -292,7 +297,7 @@ extern "C" void crack_runtime_cinit(Module *mod) {
     f = mod->addFunc(byteptrType, "printuint64",
                      (void *)crack::runtime::printint64
                      );
-    f->addArg(mod->getUint64Type(), "val");
+    f->addArg(uint64Type, "val");
 
     // normal file open and close.
 
