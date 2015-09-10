@@ -24,6 +24,7 @@
 #include "ConstVarDef.h"
 #include "ConstSequenceExpr.h"
 #include "Deserializer.h"
+#include "DeserializationError.h"
 #include "FuncAnnotation.h"
 #include "StatState.h"
 #include "ArgDef.h"
@@ -263,11 +264,20 @@ ModuleDefPtr Context::materializeModule(const string &canonicalName,
     ifstream src(metaDataPath.c_str());
     Deserializer deser(src, this);
 
-    // try to read the module
-    ModuleDefPtr result = ModuleDef::deserialize(deser, canonicalName);
-    if (result)
-        ns = result;
-    return result;
+    try {
+        // try to read the module
+        ModuleDefPtr result = ModuleDef::deserialize(deser, canonicalName);
+        if (result)
+            ns = result;
+        return result;
+    } catch (const DeserializationError &ex) {
+        cerr << "Found corrupted cache file for module " <<
+            canonicalName << ".  Deleting cache file for this "
+            "module.  If this problem appears in multiple files "
+            "you may wish to delete your cache directory." << endl;
+        remove(metaDataPath.c_str());
+        throw;
+    }
 }
 
 void Context::cacheModule(ModuleDef *mod) {

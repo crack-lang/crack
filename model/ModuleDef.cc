@@ -350,6 +350,8 @@ ModuleDefPtr ModuleDef::deserialize(Deserializer &deser,
                                                  canonicalName,
                                                  0 // owner
                                                  );
+    if (!mod)
+        return 0;
 
     // storing the module in the construct cache - this is actually also done
     // later within construct, but we need the module to be present while

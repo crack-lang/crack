@@ -2,7 +2,7 @@
 Batch of persistence tests.
 %%ARGS%%
 %%FILE%%
-import crack.io FStr;
+import crack.io cerr, FStr;
 import systest test;
 test.preBootstrap = true;
 
@@ -300,6 +300,29 @@ test.main("
     ");
 test.run();
 
+void removeCacheFile(String ext) {
+    for (child :in test.cacheDir.children()) {
+        name := child.getName();
+        if (name.slice(0, 6) == '.main.' && name.endsWith(ext)) {
+            child.truncate(child.getSize() - 3);
+        }
+    }
+}
+
+# Verify that we recover sanely when a cache meta file is corrupt.
+test.main("puts('corrupted meta files');");
+test.run();
+removeCacheFile('.crkmeta');
+# Subsequent run should error and remove the cache file, third run should
+# succeed.
+test.run();
+test.run();
+
+test.main("puts('corrupted bitcode files');");
+test.run();
+removeCacheFile('.bc');
+test.run();
+
 %%REXPECT%%
 out: alias
 terminated: success
@@ -371,5 +394,16 @@ terminated: success
 out: function types deserialized
 terminated: success
 out: function types deserialized
+terminated: success
+out: corrupted meta files
+terminated: success
+err: Found corrupted cache file for module .main.*main_2ecrk.  Deleting cache file for this module.  If this problem appears in multiple files you may wish to delete your cache directory.
+err: model::DeserializationError: EOF deserializing meta-data
+terminated, rc = 2049
+out: corrupted meta files
+terminated: success
+out: corrupted bitcode files
+terminated: success
+out: corrupted bitcode files
 terminated: success
 %%STDIN%%
