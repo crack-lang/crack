@@ -524,6 +524,8 @@ ModuleDefPtr Construct::getCachedModule(const string &canonicalName) {
 
     ModuleDefPtr modDef = context->materializeModule(canonicalName);
     if (modDef) {
+        if (traceCaching)
+            cerr << "Reusing cached module " << canonicalName << endl;
         if (rootBuilder->options->statsMode)
             stats->incCached();
         moduleCache[canonicalName] = modDef;
