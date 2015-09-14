@@ -1,9 +1,14 @@
 %%TEST%%
-byteptr array offsets
+byteptr array offsets and bool conversion
 %%ARGS%%
 
 %%FILE%%
-puts("not ok" + 4)
+byteptr b;
+if (!((b + 10) - 10 is null))
+    puts('FAILED byteptr subtraction');
+if (!'test value')
+    puts('FAILED byteptr to boolean');
+puts("not ok" + 4);
 %%EXPECT%%
 ok
 %%STDIN%%

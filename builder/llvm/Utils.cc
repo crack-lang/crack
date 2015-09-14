@@ -39,6 +39,18 @@ void addArrayMethods(Context &context, TypeDef *arrayType,
                      BTypeDef *elemType
                      ) {
     Construct *gd = context.construct;
+
+    // Add conversion to voidptr and to bool.
+    context.addDef(new VoidPtrOpDef(gd->voidptrType.get()),
+                   arrayType
+                   );
+    context.addDef(
+        new BoolOpDef(gd->boolType.get(),
+                      "oper to .builtin.bool"
+                      ),
+        arrayType
+    );
+
     FuncDefPtr arrayGetItem =
             new GeneralOpDef<ArrayGetItemCall>(elemType, FuncDef::method,
                                                "oper []",
@@ -86,6 +98,22 @@ void addArrayMethods(Context &context, TypeDef *arrayType,
                                               "oper +",
                                               1
                                               );
+    arrayOffset->args[0] = new ArgDef(gd->intType.get(), "offset");
+    context.addDef(arrayOffset.get(), arrayType);
+
+    arrayOffset =
+            new GeneralOpDef<ArrayNegOffsetCall>(arrayType, FuncDef::method,
+                                                 "oper -",
+                                                 1
+                                                 );
+    arrayOffset->args[0] = new ArgDef(gd->uintType.get(), "offset");
+    context.addDef(arrayOffset.get(), arrayType);
+
+    arrayOffset =
+            new GeneralOpDef<ArrayNegOffsetCall>(arrayType, FuncDef::method,
+                                                 "oper -",
+                                                 1
+                                                 );
     arrayOffset->args[0] = new ArgDef(gd->intType.get(), "offset");
     context.addDef(arrayOffset.get(), arrayType);
 

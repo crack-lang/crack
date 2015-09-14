@@ -612,6 +612,22 @@ ResultExprPtr ArrayOffsetCall::emit(Context &context) {
     return new BResultExpr(this, builder.lastValue);
 }
 
+// ArrayNegOffsetCall
+ResultExprPtr ArrayNegOffsetCall::emit(Context &context) {
+    LLVMBuilder &builder =
+            dynamic_cast<LLVMBuilder &>(context.builder);
+
+    receiver->emit(context)->handleTransient(context);
+    Value *base = builder.lastValue;
+
+    args[0]->emit(context)->handleTransient(context);
+    builder.lastValue = builder.builder.CreateNeg(builder.lastValue);
+    builder.lastValue =
+            builder.builder.CreateGEP(base, builder.lastValue);
+
+    return new BResultExpr(this, builder.lastValue);
+}
+
 // BoolOpCall
 ResultExprPtr BoolOpCall::emit(Context &context) {
     // emit the receiver

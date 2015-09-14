@@ -253,6 +253,14 @@ public:
     virtual model::ResultExprPtr emit(model::Context &context);
 };
 
+// implements pointer arithmetic
+class ArrayNegOffsetCall : public model::FuncCall {
+public:
+    ArrayNegOffsetCall(model::FuncDef *def) : FuncCall(def) {}
+
+    virtual model::ResultExprPtr emit(model::Context &context);
+};
+
 /** Operator to convert simple types to booleans. */
 class BoolOpCall : public model::FuncCall {
 public:
