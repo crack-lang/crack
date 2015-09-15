@@ -323,6 +323,21 @@ test.run();
 removeCacheFile('.bc');
 test.run();
 
+# Cached mixed imports.
+test.mod('mod1', "
+    void f() {}
+    ");
+test.mod('mod2', "
+    import mod1 f;
+    void f(int i) {}
+    ");
+test.main("
+    import mod2 f;
+    ");
+test.run();
+test.rmCacheFiles('.main.*');
+test.run();
+
 %%REXPECT%%
 out: alias
 terminated: success
@@ -406,4 +421,16 @@ out: corrupted bitcode files
 terminated: success
 out: corrupted bitcode files
 terminated: success
+err: ParseError: .*/main.crk:2:17: Name f does not entirely belong to module mod2.  The following functions are second-order imports, which may not be imported:
+err:   .builtin.void mod1.f\(\)
+err:     from mod1
+err:\s*
+err:\s*
+terminated, rc = 2049
+err: ParseError: .*/main.crk:2:17: Name f does not entirely belong to module mod2.  The following functions are second-order imports, which may not be imported:
+err:   .builtin.void mod1.f\(\)
+err:     from mod1
+err:\s*
+err:\s*
+terminated, rc = 2049
 %%STDIN%%

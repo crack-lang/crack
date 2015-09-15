@@ -9,3 +9,5 @@ int _protected;
 int public;
 class A { int _val; }
 void publicFunc() {}
+
+void f() {}

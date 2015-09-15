@@ -1,0 +1,10 @@
+%%TEST%%
+mixed second-order and first-order overload imports
+%%ARGS%%
+%%FILE%%
+import test.testmod6 f;
+%%EXPECT%%
+ParseError: %SCRIPTNAME%:1:22: Name f does not entirely belong to module test.testmod6.  The following functions are second-order imports, which may not be imported:
+  .builtin.void test.testmod5.f()
+    from test.testmod5
+%%STDIN%%

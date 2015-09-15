@@ -6,3 +6,7 @@
 #
 
 import test.testmod5 public, publicFunc;
+import test.testmod5 f;
+
+void f(int i) {}
+

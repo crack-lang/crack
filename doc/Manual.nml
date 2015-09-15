@@ -2869,6 +2869,23 @@ disallowed to avoid the problem of "leaky imports," where a programmer
 subjecting their code to breakage if the implementation of the higher level
 module changes and it no longer imports the low-level symbol.
 
+Second order imports are also disallowed in the case of overloaded functions
+where some of the overloads are implemented locally.  For example, if your
+module does this:
+
+{{
+    import mod func;  # 'func' is an overloaded function.
+
+    void func() {}
+}}
+
+An error will be generated if you import #func# from this module because the
+symbol #func# includes overloads from #mod#.  This is even true in the
+pathological case where all overloads in the second order module are
+overriden in the imported module.  If not, the owner of that module could
+introduce another overload (which should be backwards compatible) and break
+compatibility.
+
 There are times when you want to allow other modules to import a second-order
 symbol.  For example, sometimes you want to set up a "convenience module" that
 consolidates a group of entities from a disparate collection of other modules.

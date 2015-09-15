@@ -11,6 +11,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <spug/StringFmt.h>
+#include <spug/stlutil.h>
 #include <fstream>
 #include "builder/Builder.h"
 #include "parser/Token.h"
@@ -687,14 +688,39 @@ ModuleDefPtr Context::emitImport(Namespace *ns,
         // make sure the symbol either belongs to the module or was 
         // explicitly exported by the module (no implicit second-order 
         // imports).
-        if (!symVal->isImportableFrom(mod.get(), iter->source))
-            error(symLocs ? (*symLocs)[st] : loc, 
+        if (!symVal->isImportableFrom(mod.get(), iter->source)) {
+            if (OverloadDef *ovld = OverloadDefPtr::rcast(symVal)) {
+
+                // If the function contains a mix of legal and second-order
+                // imports, show a more elaborate error message.
+                OverloadDef::FuncList funcs;
+                if (ovld->getSecondOrderImports(funcs, mod.get())) {
+                    ostringstream tmp;
+                    SPUG_FOR(OverloadDef::FuncList, func, funcs) {
+                        string modName =
+                            (*func)->getOwner()->getModule()->getNamespaceName();
+                        tmp << "  " << **func << "    from " << modName <<
+                            "\n";
+                    }
+                    error(symLocs ? (*symLocs)[st] : loc,
+                          SPUG_FSTR("Name " << iter->source <<
+                                     " does not entirely belong to module " <<
+                                     canonicalName << ".  The following "
+                                     "functions are second-order imports, "
+                                     "which may not be imported:\n" <<
+                                     tmp.str()
+                                    )
+                        );
+                }
+            }
+            error(symLocs ? (*symLocs)[st] : loc,
                   SPUG_FSTR("Name " << iter->source <<
                              " does not belong to module " <<
-                             canonicalName << ".  Second-order imports " 
+                             canonicalName << ".  Second-order imports "
                              "are not allowed."
                             )
                   );
+        }
         
         {
             StatState s1(this, ConstructStats::builder);

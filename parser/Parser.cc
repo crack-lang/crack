@@ -228,6 +228,12 @@ namespace {
          virtual bool isImportedIn(const Context &context) const {
             return rep->isImportedIn(context);
          }
+
+         virtual bool getSecondOrderImports(OverloadDef::FuncList &funcs,
+                                            ModuleDef *module
+                                            ) const {
+            return rep->getSecondOrderImports(funcs, module);
+         }
    };
 }
 

@@ -187,6 +187,23 @@ OverloadDefPtr OverloadDef::createAlias(bool exposeAll) {
     return alias;
 }
 
+bool OverloadDef::getSecondOrderImports(OverloadDef::FuncList &results,
+                                        ModuleDef *module
+                                        ) const {
+    bool gotMix = false;
+    SPUG_FOR(FuncList, iter, funcs) {
+        if ((*iter)->getOwner() != module)
+            results.push_back(*iter);
+        else
+            gotMix = true;
+    }
+
+    SPUG_FOR(ParentVec, parent, parents)
+        gotMix |= (*parent)->getSecondOrderImports(results, module);
+
+    return gotMix;
+}
+
 pair<bool, bool> OverloadDef::hasAliasesAndNonAliases() const {
     bool gotAliases = false, gotNonAliases = false;
     SPUG_FOR(FuncList, iter, funcs) {
@@ -317,15 +334,15 @@ bool OverloadDef::isImportableFrom(ModuleDef *module,
     if (module->exports.find(impName) != module->exports.end())
         return true;
     
-    // the overload is importable if any of its functions are importable.
+    // the overload is importable if all of its functions are importable.
     for (FuncList::const_iterator iter = funcs.begin();
          iter != funcs.end();
          ++iter
          )
-        if ((*iter)->getOwner() == module)
-            return true;
+        if ((*iter)->getOwner() != module)
+            return false;
 
-    return false;
+    return true;
 }
 
 bool OverloadDef::isImportable(const Namespace *ns, 

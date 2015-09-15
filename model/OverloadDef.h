@@ -168,6 +168,18 @@ class OverloadDef : public VarDef {
         OverloadDefPtr createAlias(bool exposeAll);
 
         /**
+         * Fills 'results' with the list of all second order imports of the
+         * overload (functions that don't come from 'module').
+         *
+         * Returns true if the overload contains a combination of functions
+         * legitimately imported from 'module' and second-order imports
+         * obtained through 'module'.
+         */
+        virtual bool getSecondOrderImports(OverloadDef::FuncList &results,
+                                           ModuleDef *module
+                                           ) const;
+
+        /**
          * Returns information on whether the overload contains aliases and 
          * non-aliased overloads.  The first boolean in the pair is true if 
          * there are aliases, the second is true if there are non-aliased 
