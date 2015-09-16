@@ -1915,74 +1915,6 @@ FuncDefPtr LLVMBuilder::createExternFuncCommon(Context &context,
     return f.funcDef;
 }
 
-namespace {
-    void createOperClassFunc(Context &context,
-                             BTypeDef *objClass
-                             ) {
-
-        // build a local context to hold the "this"
-        Context localCtx(context.builder, Context::local, &context,
-                         new LocalNamespace(objClass, objClass->name),
-                         context.compileNS.get()
-                         );
-        localCtx.incref();
-        localCtx.addDef(new ArgDef(objClass, "this"));
-
-        BTypeDef *classType =
-            BTypeDefPtr::arcast(context.construct->classType);
-        FuncBuilder funcBuilder(localCtx,
-                                FuncDef::method | FuncDef::virtualized,
-                                classType,
-                                "oper class",
-                                0
-                                );
-
-        // ensure canonicalized symbol names for link.  We have to construct
-        // this name because at the point where we get called the class hasn't
-        // yet been assigned a context.
-        funcBuilder.setSymbolName(
-            SPUG_FSTR(context.parent->ns->getNamespaceName() << '.' <<
-                      objClass->name <<
-                      ".oper class()"
-                      )
-        );
-
-        // if this is an override, do the wrapping.
-        FuncDefPtr override = context.lookUpNoArgs("oper class", true,
-                                                   objClass
-                                                   );
-        if (override) {
-            wrapOverride(objClass, BFuncDefPtr::arcast(override), funcBuilder);
-        } else {
-            // everything must have an override except for VTableBase::oper
-            // class.
-            assert(objClass == context.construct->vtableBaseType);
-            funcBuilder.funcDef->vtableSlot = objClass->nextVTableSlot++;
-            funcBuilder.setReceiverType(objClass);
-        }
-
-        funcBuilder.finish(false);
-        context.addDef(funcBuilder.funcDef.get(), objClass);
-
-        LLVMBuilder &lb = dynamic_cast<LLVMBuilder &>(context.builder);
-        BasicBlock *block = BasicBlock::Create(
-            getGlobalContext(),
-            "oper class",
-            funcBuilder.funcDef->getFuncRep(lb)
-        );
-
-        // body of the function: load the class instance global variable
-        IRBuilder<> builder(block);
-        BGlobalVarDefImpl *impl =
-            BGlobalVarDefImplPtr::arcast(objClass->impl);
-        Value *val = builder.CreateLoad(impl->getRep(lb));
-
-        // extract the Class instance from it and return it.
-        val = builder.CreateConstGEP2_32(val, 0, 0);
-        builder.CreateRet(val);
-    }
-}
-
 TypeDefPtr LLVMBuilder::emitBeginClass(Context &context,
                                        const string &name,
                                        const vector<TypeDefPtr> &bases,
@@ -2032,11 +1964,6 @@ TypeDefPtr LLVMBuilder::emitBeginClass(Context &context,
 
     // make the type the namespace of the context
     context.ns = type;
-
-    // create the "oper class" function - currently returns voidptr, but
-    // that's good enough for now.
-    if (baseWithVTable)
-        createOperClassFunc(context, type.get());
 
     return type.get();
 }
@@ -3385,7 +3312,8 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
     metaType->meta = vtableBaseType;
     context.addDef(vtableBaseType);
     context.construct->registerDef(vtableBaseType);
-    createOperClassFunc(context, vtableBaseType);
+    classCtx = context.createSubContext(Context::instance, vtableBaseType);
+    vtableBaseType->createOperClass(*classCtx);
 
     // Add an "oper to .builtin.voidptr" method.
     context.addDef(new VoidPtrOpDef(voidptrType), vtableBaseType);

@@ -515,6 +515,34 @@ void TypeDef::createNewFunc(Context &classContext, FuncDef *initFunc) {
     classContext.addDef(newFunc.get());
 }
 
+void TypeDef::createOperClass(Context &classContext) {
+    ContextPtr funcContext = classContext.createSubContext(Context::local);
+    funcContext->toplevel = true;
+    funcContext->returnType = funcContext->construct->classType;
+
+    // Emit the "this" arg.
+    ArgDefPtr thisDef = classContext.builder.createArgDef(this, "this");
+    funcContext->addDef(thisDef.get());
+
+    FuncDefPtr override = classContext.lookUpNoArgs("oper class", true, this);
+
+    FuncDefPtr operClassFunc = classContext.builder.emitBeginFunc(
+        *funcContext,
+        FuncDef::method | FuncDef::virtualized,
+        "oper class",
+        funcContext->construct->classType.get(),
+        ArgVec(),
+        override.get()
+    );
+
+    VarRefPtr classVarRef = new VarRef(this);
+    classContext.builder.emitReturn(*funcContext, classVarRef.get());
+    classContext.builder.emitEndFunc(*funcContext, operClassFunc.get());
+
+    // Register it.
+    classContext.addDef(operClassFunc.get());
+}
+
 namespace {
     // Returns the expression "!(var is null)"
     FuncCallPtr createExprIsNotNull(Context &funcCtx, Expr *expr) {

@@ -145,6 +145,9 @@ class VTableType : public Type {
             ctx->ns->addDef(td.get());
             td->aliasBaseMetaTypes();
 
+            // Emit "oper class".
+            td->createOperClass(*clsCtx);
+
             // wrap all of the constructors
             propagateConstructors(*clsCtx, typeDef, td.get());
             

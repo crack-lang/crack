@@ -3244,8 +3244,10 @@ TypeDefPtr Parser::parseClassDef() {
    if (flags & TypeDef::abstractClass)
       type->abstract = true;
    
-   // add the "cast" methods
+   // add the "oper class" and "cast" methods
    if (type->hasVTable) {
+      // "oper class" _must_ come first!
+      type->createOperClass(*classContext);
       type->createCast(*classContext, true);
       type->createCast(*classContext, false);
    }

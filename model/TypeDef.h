@@ -283,6 +283,11 @@ class TypeDef : public VarDef, public Namespace {
         void createNewFunc(Context &classContext, FuncDef *initFunc);
         
         /**
+         * Create an "oper class" method for the type.
+         */
+        void createOperClass(Context &classContext);
+
+        /**
          * Return a function to convert to the specified type, if such a 
          * function exists.
          */
