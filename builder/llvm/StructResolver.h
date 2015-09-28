@@ -15,7 +15,10 @@
 #include <llvm/Transforms/Utils/ValueMapper.h>
 
 namespace llvm {
+    class ArrayType;
+    class FunctionType;
     class Module;
+    class PointerType;
     class StructType;
     class Type;
     class User;
@@ -30,29 +33,22 @@ class StructResolver : public llvm::ValueMapTypeRemapper {
 
 public:
     typedef std::map<llvm::Type*, llvm::Type*> StructMapType;
-    typedef std::map<std::string, llvm::Type*> StructListType;
     static bool trace;
 
 protected:
     llvm::Module *module;
     StructMapType typeMap;
-    StructMapType reverseMap;
-    std::map<llvm::Value *, bool> visited;
-    std::map<llvm::Type *, int> visitedStructs;
-    typedef std::map<llvm::Value *, llvm::Type *> ValueTypeMap;
-    ValueTypeMap originalTypes;
+    std::map<llvm::Type *, bool> traversed;
 
-    llvm::Type *maybeGetMappedType(llvm::Type *t);
-    void mapValue(llvm::Value &val);
-    void mapUser(llvm::User &val);
-    void mapFunction(llvm::Function &fun);
-
-    void mapGlobals();
-    void mapFunctions();
-    void mapMetadata();
-    bool buildElementVec(llvm::StructType *type,
-                         std::vector<llvm::Type *> &elems
-                         );
+    llvm::Type *mapStructTypeByElements(llvm::StructType *type);
+    llvm::Type *mapStructType(llvm::StructType *structTy);
+    void traceMapping(llvm::Type *type, llvm::Type *newType,
+                      const char *designator
+                      );
+    llvm::Type *mapArrayType(llvm::ArrayType *type);
+    llvm::Type *mapPointerType(llvm::PointerType *type);
+    llvm::Type *mapFunctionType(llvm::FunctionType *type);
+    llvm::Type *mapType(llvm::Type *type);
 
 public:
     StructResolver(llvm::Module *mod0): module(mod0) {}
@@ -61,12 +57,6 @@ public:
     // duplicated struct types (with numeric suffixes in their names) to
     // the actual types.
     void buildTypeMap();
-
-    void run();
-
-    // Restores the original types of constants.  This is necessary because
-    // LLVM looks up the constant based on its type during destruction.
-    void restoreOriginalTypes();
 
     // Implements ValueMapTypeRemapper interface.
     virtual llvm::Type *remapType(llvm::Type *srcType);
