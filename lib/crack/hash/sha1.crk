@@ -40,19 +40,19 @@
 import crack.cont.array Array;
 import crack.ascii radix;
 import crack.hash Hash;
-import crack.lang Buffer, ManagedBuffer;
-import crack.runtime INT_SIZE;
+import crack.lang AppendBuffer, Buffer, ManagedBuffer, InvalidStateError;
+import crack.runtime free, INT_SIZE;
 @import crack.ann define;
 
 
 // Rotate an integer value to left.
-uint _rol(uint value, uint steps) {
+uint32 _rol(uint32 value, uint32 steps) {
     return ((value << steps) | (value >> (32 - steps)));
 }
 
 // Sets the first 16 integers in the buffert to zero.
 // Used for clearing the W buffert.
-void _clearWBuffert(array[uint] buffert)
+void _clearWBuffert(array[uint32] buffert)
 {
     for (uint pos = 0; pos < 16; pos++)
     {
@@ -62,7 +62,7 @@ void _clearWBuffert(array[uint] buffert)
 
 @define sha1macro(func, val) {
     if (true) {
-        uint t = _rol(a, 5) + (func) + e + val + w[round];
+        uint32 t = _rol(a, 5) + (func) + e + val + w[round];
         e = d;
         d = c;
         c = _rol(b, 30);
@@ -71,14 +71,14 @@ void _clearWBuffert(array[uint] buffert)
     }
 }
 
-void innerHash(array[uint] result, array[uint] w) {
-    uint a = result[0];
-    uint b = result[1];
-    uint c = result[2];
-    uint d = result[3];
-    uint e = result[4];
+void innerHash(array[uint32] result, array[uint32] w) {
+    uint32 a = result[0];
+    uint32 b = result[1];
+    uint32 c = result[2];
+    uint32 d = result[3];
+    uint32 e = result[4];
 
-    uint round = 0;
+    uint32 round = 0;
 
     while (round < 16) {
         @sha1macro((b & c) | (~b & d), 0x5a827999)
@@ -117,80 +117,97 @@ void innerHash(array[uint] result, array[uint] w) {
 }
 
 
-void _calc(Buffer src, Buffer hash) {
-    // Init the result array.
-    Array[uint] Result = [0x67452301, 0xefcdab89, 0x98badcfe, 0x10325476, 0xc3d2e1f0];
-    result := Result.data();
-
-    // Cast the src pointer to be the byte array we can work with.
-    sarray := src.buffer;
-    bytelength := src.size;
-
-    // The reusable round buffer
-    Array[uint] W = {80};
-    w := W.data();
-
-    // Loop through all complete 64byte blocks.
-    int endOfFullBlocks = bytelength - 64;
-    int endCurrentBlock;
-    int currentBlock = 0;
-
-    while (currentBlock <= endOfFullBlocks) {
-        endCurrentBlock = currentBlock + 64;
-
-        // Init the round buffer with the 64 byte block data.
-        for (uint roundPos = 0; currentBlock < endCurrentBlock; currentBlock += 4) {
-            // This line will swap endian on big endian and keep endian on little endian.
-            w[roundPos++] = uint(sarray[currentBlock + 3])
-                    | (uint(sarray[currentBlock + 2]) << 8)
-                    | (uint(sarray[currentBlock + 1]) << 16)
-                    | (uint(sarray[currentBlock]) << 24);
-        }
-        innerHash(result, w);
-    }
-
-    // Handle the last and not full 64 byte block if existing.
-    endCurrentBlock = bytelength - currentBlock;
-    _clearWBuffert(w);
-
-    uint lastBlockBytes = 0, wi;
-    
-    while (lastBlockBytes < endCurrentBlock)  {
-        wi = lastBlockBytes >> 2;
-        w[wi] = w[wi] | (uint(sarray[lastBlockBytes + currentBlock]) <<
-                                       ((3 - (lastBlockBytes & 3)) << 3));
-        ++lastBlockBytes
-    }
-
-    wi = lastBlockBytes >> 2;
-    w[wi] = w[wi] | 0x80 << ((3 - (lastBlockBytes & 3)) << 3);
-
-    if (endCurrentBlock >= 56) {
-        innerHash(result, w);
-        _clearWBuffert(w);
-    }
-    
-    w[15] = bytelength << 3;
-    innerHash(result, w);
-
-    h := hash.buffer;
-
-    // Store hash in result pointer, and make sure we get in in the correct order on both endian models.
-    for (uint hashByte = 0; hashByte < 20; hashByte++) {
-        h[hashByte] = byte((result[hashByte >> 2] >> (((3 - hashByte) & 0x3) << 3)) & 0xff);
-    }
-}
-
 // SHA1 class implements a Hash
 class SHA1 : Hash {
     ManagedBuffer hash;
+    array[uint32] result = [0x67452301, 0xefcdab89, 0x98badcfe, 0x10325476, 
+                            0xc3d2e1f0];
+    array[uint32] w = {80};
+    AppendBuffer src = {1024};
+    uint32 totalSize;
+
+    oper del() {
+        free(w);
+        free(result);
+    }
 
     void _clear() {
         h := hash.buffer;
         if (!(h is null) && hash.size >= 20) {
-            for (uint i=0; i < 20; i++)
+            for (uint32 i=0; i < 20; i++)
                 h[i] = 0;
         }
+    }
+
+    void __processBuffer() {
+        // Cast the src pointer to be the byte array we can work with.
+        sarray := src.buffer;
+        bytelength := src.size;
+
+        // Loop through all complete 64byte blocks.
+        int endOfFullBlocks = bytelength & ~0x3F;
+        int endCurrentBlock;
+        int currentBlock = 0;
+
+        while (currentBlock < endOfFullBlocks) {
+            endCurrentBlock = currentBlock + 64;
+
+            // Init the round buffer with the 64 byte block data.
+            for (uint32 roundPos = 0; currentBlock < endCurrentBlock;
+                 currentBlock += 4) {
+                // This line will swap endian on big endian and keep endian on
+                // little endian.
+                w[roundPos++] = uint32(sarray[currentBlock + 3])
+                        | (uint32(sarray[currentBlock + 2]) << 8)
+                        | (uint32(sarray[currentBlock + 1]) << 16)
+                        | (uint32(sarray[currentBlock]) << 24);
+            }
+            innerHash(result, w);
+        }
+
+        src.compact(endOfFullBlocks);
+        totalSize += uint32(endOfFullBlocks);
+    }
+
+    void __finish() {
+        totalSize += uint32(src.size);
+        sarray := src.buffer;
+
+        // The reusable round buffer
+        _clearWBuffert(w);
+
+        uint32 lastBlockBytes, wi;
+        while (lastBlockBytes < src.size)  {
+            wi = lastBlockBytes >> 2;
+            w[wi] = w[wi] | (uint32(sarray[lastBlockBytes]) <<
+                             ((3 - (lastBlockBytes & 3)) << 3));
+            ++lastBlockBytes
+        }
+
+        wi = lastBlockBytes >> 2;
+        w[wi] = w[wi] | 0x80 << ((3 - (lastBlockBytes & 3)) << 3);
+
+        if (src.size >= 56) {
+            innerHash(result, w);
+            _clearWBuffert(w);
+        }
+
+        w[15] = totalSize << 3;
+        h := hash.buffer;
+        innerHash(result, w);
+
+        // Store hash in result pointer, and make sure we get in in the
+        // correct order on both endian models.
+        for (uint32 hashByte = 0; hashByte < 20; hashByte++) {
+            h[hashByte] = byte((result[hashByte >> 2] >>
+                                (((3 - hashByte) & 0x3) << 3)) &
+                            0xff
+                            );
+        }
+
+        // Remove the source buffer so we know that we've processed the final
+        // block.
+        src = null;
     }
 
     oper init() : hash(20) {
@@ -200,7 +217,10 @@ class SHA1 : Hash {
 
     // Add more data
     void update(Buffer buf) {
-        _calc(buf, hash);
+        if (src is null)
+            throw InvalidStateError('Last block has already been processsed.');
+        src.extend(buf);
+        __processBuffer();
     }
 
     // Alternative constructor taking a buffer argument
@@ -212,7 +232,8 @@ class SHA1 : Hash {
 
     // Return raw digest as a buffer of 20 bytes
     String digest() {
+        if (!(src is null))
+            __finish();
         return String(hash, false);
     }
-
 }
