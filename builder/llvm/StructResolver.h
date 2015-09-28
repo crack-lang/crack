@@ -12,6 +12,8 @@
 #include <string>
 #include <vector>
 
+#include <llvm/Transforms/Utils/ValueMapper.h>
+
 namespace llvm {
     class Module;
     class StructType;
@@ -24,7 +26,7 @@ namespace llvm {
 namespace builder {
 namespace mvll {
 
-class StructResolver {
+class StructResolver : public llvm::ValueMapTypeRemapper {
 
 public:
     typedef std::map<llvm::Type*, llvm::Type*> StructMapType;
@@ -58,13 +60,16 @@ public:
     // Build the type map for the module - this is the mapping from the
     // duplicated struct types (with numeric suffixes in their names) to
     // the actual types.
-    StructListType buildTypeMap();
+    void buildTypeMap();
 
     void run();
 
     // Restores the original types of constants.  This is necessary because
     // LLVM looks up the constant based on its type during destruction.
     void restoreOriginalTypes();
+
+    // Implements ValueMapTypeRemapper interface.
+    virtual llvm::Type *remapType(llvm::Type *srcType);
 };
 
 }} // namespace builder::mvll

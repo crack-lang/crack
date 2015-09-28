@@ -18,6 +18,8 @@
 #include <llvm/IR/Module.h>
 #include <llvm/Transforms/Utils/Cloning.h>
 
+#include "StructResolver.h"
+
 using namespace builder::mvll;
 using namespace llvm;
 using namespace std;
@@ -57,7 +59,9 @@ void ModuleMerger::copyGlobalAttrs(GlobalValue *dst, GlobalValue *src) {
     }
 }
 
-void ModuleMerger::addGlobalDeclaration(GlobalVariable *gvar) {
+void ModuleMerger::addGlobalDeclaration(GlobalVariable *gvar,
+                                        StructResolver *resolver
+                                        ) {
     if (defined(gvar))
         return;
 
@@ -65,8 +69,16 @@ void ModuleMerger::addGlobalDeclaration(GlobalVariable *gvar) {
         cerr << "Adding global definition for " << gvar->getName().str() <<
             " @" << gvar << endl;
 
+    Type *type = gvar->getType()->getElementType();
+    if (resolver) {
+        type = resolver->remapType(type);
+        if (trace) {
+            cerr << "mapped type:" << endl;
+            type->dump();
+        }
+    }
     GlobalVariable *newGVar =
-        new GlobalVariable(*target, gvar->getType()->getElementType(),
+        new GlobalVariable(*target, type,
                            gvar->isConstant(),
                            gvar->getLinkage(),
                            0, // init
@@ -80,14 +92,19 @@ void ModuleMerger::addGlobalDeclaration(GlobalVariable *gvar) {
     valueMap[gvar] = newGVar;
 }
 
-void ModuleMerger::addFunctionDeclaration(Function *func) {
+void ModuleMerger::addFunctionDeclaration(Function *func,
+                                          StructResolver *resolver
+                                          ) {
     if (defined(func))
         return;
 
     if (trace)
         cerr << "adding function declaration for " << func->getName().str() <<
             " @" << func << endl;
-    Function *newFunc = Function::Create(func->getFunctionType(),
+    FunctionType *type = func->getFunctionType();
+    if (resolver)
+        type = cast<FunctionType>(resolver->remapType(type));
+    Function *newFunc = Function::Create(type,
                                          func->getLinkage(),
                                          func->getName(),
                                          target
@@ -96,9 +113,21 @@ void ModuleMerger::addFunctionDeclaration(Function *func) {
     valueMap[func] = newFunc;
 }
 
-void ModuleMerger::addInitializer(GlobalVariable *gvar) {
+void ModuleMerger::addInitializer(GlobalVariable *gvar,
+                                  StructResolver *resolver
+                                  ) {
+    if (trace) {
+        cerr << "copying global:" << endl;
+        gvar->dump();
+    }
     GlobalVariable *dest = cast<GlobalVariable>(valueMap[gvar]);
-    Constant *mapped = MapValue(gvar->getInitializer(), valueMap, RF_None);
+    if (trace) {
+        cerr << "destination is:" << endl;
+        dest->dump();
+    }
+    Constant *mapped = MapValue(gvar->getInitializer(), valueMap, RF_None,
+                                resolver
+                                );
     if (trace) {
         cerr << "Adding global initializer for " << gvar->getName().str() <<
             " @" << gvar << endl;
@@ -120,7 +149,7 @@ void ModuleMerger::addInitializer(GlobalVariable *gvar) {
     dest->setInitializer(mapped);
 }
 
-void ModuleMerger::addFunctionBody(Function *func) {
+void ModuleMerger::addFunctionBody(Function *func, StructResolver *resolver) {
     string errorMsg;
 
     if (trace)
@@ -148,7 +177,9 @@ void ModuleMerger::addFunctionBody(Function *func) {
     }
 
     SmallVector<ReturnInst *, 8> returns;
-    CloneFunctionInto(dest, func, valueMap, false, returns, "");
+    CloneFunctionInto(dest, func, valueMap, false, returns, "", 0,
+                      resolver
+                      );
 }
 
 ModuleMerger::ModuleMerger(const string &name, int mergedModuleRepId,
@@ -161,7 +192,7 @@ ModuleMerger::ModuleMerger(const string &name, int mergedModuleRepId,
     target = new llvm::Module(name, lctx);
 }
 
-void ModuleMerger::merge(Module *module) {
+void ModuleMerger::merge(Module *module, StructResolver *resolver) {
     if (trace)
         cerr << ">>> running merge on " << module->getModuleIdentifier() <<
             endl;
@@ -169,10 +200,10 @@ void ModuleMerger::merge(Module *module) {
          i != module->global_end();
          ++i
          )
-        addGlobalDeclaration(i);
+        addGlobalDeclaration(i, resolver);
 
     for (Module::iterator i = module->begin(); i != module->end(); ++i)
-        addFunctionDeclaration(i);
+        addFunctionDeclaration(i, resolver);
 
     // update the global initializers.
     for (Module::global_iterator i = module->global_begin();
@@ -180,12 +211,12 @@ void ModuleMerger::merge(Module *module) {
          ++i
          ) {
         if (i->hasInitializer())
-            addInitializer(i);
+            addInitializer(i, resolver);
     }
 
     // copy the function bodies.
     for (Module::iterator i = module->begin(); i != module->end(); ++i)
-        addFunctionBody(i);
+        addFunctionBody(i, resolver);
     if (trace)
         cerr << ">>> done with merge on " << module->getModuleIdentifier() <<
             endl;

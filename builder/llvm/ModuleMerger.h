@@ -26,6 +26,8 @@ namespace llvm {
 
 namespace builder { namespace mvll {
 
+class StructResolver;
+
 // This is a lightweight version of the LLVM linker tailored for Crack's very
 // specific needs.  The most important difference is that it doesn't do type
 // translation because Crack relies on globally unique type objects.
@@ -58,10 +60,18 @@ class ModuleMerger {
 
         // Functions called from the top-level to add different kinds of
         // entitiies to the target.
-        void addGlobalDeclaration(llvm::GlobalVariable *gvar);
-        void addFunctionDeclaration(llvm::Function *func);
-        void addInitializer(llvm::GlobalVariable *gvar);
-        void addFunctionBody(llvm::Function *func);
+        void addGlobalDeclaration(llvm::GlobalVariable *gvar,
+                                  StructResolver *resolver
+                                  );
+        void addFunctionDeclaration(llvm::Function *func,
+                                    StructResolver *resolver
+                                    );
+        void addInitializer(llvm::GlobalVariable *gvar,
+                            StructResolver *resolver
+                            );
+        void addFunctionBody(llvm::Function *func,
+                             StructResolver *resolver
+                             );
 
     public:
         static bool trace;
@@ -72,7 +82,7 @@ class ModuleMerger {
                      );
 
         // Merge 'module' into the target.
-        void merge(llvm::Module *module);
+        void merge(llvm::Module *module, StructResolver *resolver = 0);
 
         // Returns the target module (that we've merged all of the other
         // modules into).

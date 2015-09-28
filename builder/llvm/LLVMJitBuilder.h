@@ -23,6 +23,7 @@ namespace mvll {
 
 SPUG_RCPTR(BModuleDef);
 SPUG_RCPTR(LLVMJitBuilder);
+class StructResolver;
 
 class LLVMJitBuilder : public LLVMBuilder {
     private:
@@ -74,7 +75,9 @@ class LLVMJitBuilder : public LLVMBuilder {
         // Merge the module into the global main module, replace all of the 
         // old pointers into the original module (including the builder's) and 
         // delete it.
-        void mergeModule(model::ModuleDef *moduleDef);
+        void mergeModule(model::ModuleDef *moduleDef,
+                         StructResolver *resolver = 0
+                         );
 
         virtual void engineFinishModule(model::Context &context,
                                         BModuleDef *moduleDef

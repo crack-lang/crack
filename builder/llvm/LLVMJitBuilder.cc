@@ -89,7 +89,7 @@ void LLVMJitBuilder::engineBindModule(BModuleDef *moduleDef) {
 void LLVMJitBuilder::setupCleanup(BModuleDef *moduleDef) {
     Function *delFunc = moduleDef->rep->getFunction(moduleDef->name + ":cleanup");
     if (delFunc) {
-        void *addr = execEng->getPointerToFunction(delFunc);
+        void *addr = getExecEng()->getPointerToFunction(delFunc);
         SPUG_CHECK(addr, "Unable to resolve cleanup function");
         moduleDef->cleanup = reinterpret_cast<void (*)()>(addr);
     }
@@ -148,9 +148,11 @@ void LLVMJitBuilder::engineFinishModule(Context &context,
     module = 0;
 }
 
-void LLVMJitBuilder::mergeModule(ModuleDef *moduleDef) {
+void LLVMJitBuilder::mergeModule(ModuleDef *moduleDef,
+                                 StructResolver *resolver
+                                 ) {
     ModuleMerger *merger = getModuleMerger();
-    merger->merge(module);
+    merger->merge(module, resolver);
     BModuleDefPtr::acast(moduleDef)->repId = merger->getRepId();
     BModuleDefPtr::acast(moduleDef)->rep = merger->getTarget();
     fixupAfterMerge(moduleDef, merger->getTarget());
@@ -481,25 +483,12 @@ model::ModuleDefPtr LLVMJitBuilder::materializeModule(
         // instances
         StructResolver structResolver(module);
         structResolver.buildTypeMap();
-        structResolver.run();
 
-        engineBindModule(bmod.get());
         doRunOrDump(context);
 
-        mergeModule(bmod.get());
-
-        // This is where we would like to delete the source module.
-        // Unfortunately, this is problematic after type mutation because
-        // constants are cached in the module keyed off of their original
-        // type.  Restoring the original type didn't fix it in all cases, and
-        // I got tired of debugging it so we currently just leak the module.
-        // The original comment was:
-        //// Restore the original types prior to destroying the orignal module
-        //// so the module constant table (referenced during destruction) is
-        //// accurate.
-//        structResolver.restoreOriginalTypes();
-//        delete module;
-//        bmod->clearRepFromConstants();
+        mergeModule(bmod.get(), &structResolver);
+        delete module;
+        bmod->clearRepFromConstants();
 
         // In this case, we set the module to the merged module.
         ModuleMerger *merger = getModuleMerger();
