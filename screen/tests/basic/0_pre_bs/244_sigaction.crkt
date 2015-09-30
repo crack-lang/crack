@@ -1,0 +1,24 @@
+%%TEST%%
+sigaction signal handling
+%%ARGS%%
+%%FILE%%
+import crack.runtime abort, sigaction, SigAction, SigInfo, SA_SIGINFO, SIGILL;
+
+void handler(int signal, SigInfo info, voidptr context) {
+    puts('illegal instruction!');
+    abort();
+}
+
+sa := SigAction();
+sa.sa_sigaction = handler;
+sa.sa_flags = SA_SIGINFO;
+if (sigaction(SIGILL, sa, null))
+    puts('FAILED sigaction returned non-zero');
+
+class A { int x; }
+A a;
+a.x = 100;
+
+%%EXPECT%%
+illegal instruction!
+%%STDIN%%

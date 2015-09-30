@@ -12,6 +12,7 @@
 #include <sys/time.h>
 #include <fcntl.h>
 #include <libgen.h>
+#include <signal.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -68,6 +69,16 @@ extern "C" int crk_open(const char *pathname, mode_t mode) {
 
 extern "C" int crk_open2(const char *pathname, int flags, mode_t mode) {
     return open(pathname, flags, mode);
+}
+
+namespace crack { namespace runtime {
+    sigset_t *SigAction_getMask(struct sigaction *sa) {
+        return &sa->sa_mask;
+    }
+}}
+
+void sigaction_wrapper(int signal, struct sigaction *sa, struct sigaction *oldact) {
+    sigaction(signal, sa, oldact);
 }
 
 extern "C" void crack_runtime_cinit(Module *mod) {
@@ -927,6 +938,14 @@ extern "C" void crack_runtime_cinit(Module *mod) {
     mod->addConstant(intType, "SIGXCPU", SIGXCPU);
     mod->addConstant(intType, "SIGXFSZ", SIGXFSZ);
 
+    mod->addConstant(intType, "SA_NOCLDSTOP", SA_NOCLDSTOP);
+    mod->addConstant(intType, "SA_NOCLDWAIT", SA_NOCLDWAIT);
+    mod->addConstant(intType, "SA_NODEFER", SA_NODEFER);
+    mod->addConstant(intType, "SA_ONSTACK", SA_ONSTACK);
+    mod->addConstant(intType, "SA_RESETHAND", static_cast<int>(SA_RESETHAND));
+    mod->addConstant(intType, "SA_RESTART", SA_RESTART);
+    mod->addConstant(intType, "SA_SIGINFO", SA_SIGINFO);
+
     Type *cpipeType = mod->addType("PipeDesc", 
                                    sizeof(crack::runtime::PipeDesc)
                                    );
@@ -988,4 +1007,105 @@ extern "C" void crack_runtime_cinit(Module *mod) {
     f = mod->addFunc(voidptrType, "getStackFrame",
                      (void *)&crack::debug::getStackFrame
                      );
+
+    // Signal handling.
+
+    Type *siginfoType = mod->addType("SigInfo", sizeof(siginfo_t));
+    siginfoType->addInstVar(intType, "si_signo",
+                            CRACK_OFFSET(siginfo_t, si_signo)
+                            );
+    siginfoType->addInstVar(intType, "si_errno",
+                            CRACK_OFFSET(siginfo_t, si_errno)
+                            );
+    siginfoType->addInstVar(intType, "si_code",
+                            CRACK_OFFSET(siginfo_t, si_code)
+                            );
+    siginfoType->addInstVar(intType, "si_pid",
+                            CRACK_OFFSET(siginfo_t, si_pid)
+                            );
+    siginfoType->addInstVar(intType, "si_uid",
+                            CRACK_OFFSET(siginfo_t, si_uid)
+                            );
+    siginfoType->addInstVar(intType, "si_status",
+                            CRACK_OFFSET(siginfo_t, si_status)
+                            );
+    siginfoType->addInstVar(intType, "si_utime",
+                            CRACK_OFFSET(siginfo_t, si_utime)
+                            );
+    siginfoType->addInstVar(intType, "si_stime",
+                            CRACK_OFFSET(siginfo_t, si_stime)
+                            );
+    siginfoType->addInstVar(uintzType, "si_value",
+                            CRACK_OFFSET(siginfo_t, si_value)
+                            );
+    siginfoType->addInstVar(intType, "si_int",
+                            CRACK_OFFSET(siginfo_t, si_int)
+                            );
+    siginfoType->addInstVar(voidptrType, "si_ptr",
+                            CRACK_OFFSET(siginfo_t, si_ptr)
+                            );
+    siginfoType->addInstVar(intType, "si_overrun",
+                            CRACK_OFFSET(siginfo_t, si_overrun)
+                            );
+    siginfoType->addInstVar(intType, "si_timerid",
+                            CRACK_OFFSET(siginfo_t, si_timerid)
+                            );
+    siginfoType->addInstVar(voidptrType, "si_addr",
+                            CRACK_OFFSET(siginfo_t, si_addr)
+                            );
+    siginfoType->addInstVar(intType, "si_band",
+                            CRACK_OFFSET(siginfo_t, si_band)
+                            );
+    siginfoType->addInstVar(intType, "si_fd",
+                            CRACK_OFFSET(siginfo_t, si_fd)
+                            );
+    siginfoType->addInstVar(int16Type, "si_addr_lsb",
+                            CRACK_OFFSET(siginfo_t, si_addr_lsb)
+                            );
+    siginfoType->addConstructor();
+    siginfoType->finish();
+
+    Type *baseFuncType = mod->getType("function");
+    Type *handlerFuncType;
+    {
+        std::vector<Type *> params(2);
+        params[0] = voidType;
+        params[1] = intType;
+        handlerFuncType = baseFuncType->getSpecialization(params);
+    }
+
+    Type *sigactionFuncType;
+    {
+        std::vector<Type *> params(4);
+        params[0] = voidType;
+        params[1] = intType;
+        params[2] = siginfoType;
+        params[3] = voidptrType;
+        sigactionFuncType = baseFuncType->getSpecialization(params);
+    }
+
+    Type *sigactionType = mod->addType("SigAction",
+                                       sizeof(struct sigaction)
+                                       );
+    sigactionType->addInstVar(handlerFuncType, "sa_handler",
+                              CRACK_OFFSET(struct sigaction, sa_handler)
+                              );
+    sigactionType->addInstVar(sigactionFuncType, "sa_sigaction",
+                              CRACK_OFFSET(struct sigaction, sa_sigaction)
+                              );
+    // use getMask() below to access sa_mask.
+    sigactionType->addInstVar(intType, "sa_flags",
+                              CRACK_OFFSET(struct sigaction, sa_flags)
+                              );
+
+    sigactionType->addMethod(sigSetType, "getMask",
+                             (void *)&crack::runtime::SigAction_getMask
+                             );
+    sigactionType->addConstructor();
+    sigactionType->finish();
+
+    Func *sigactionFunc = mod->addFunc(intType, "sigaction", (void *)sigaction_wrapper);
+    sigactionFunc->addArg(intType, "signum");
+    sigactionFunc->addArg(sigactionType, "act");
+    sigactionFunc->addArg(sigactionType, "oldact");
 }
