@@ -1,0 +1,23 @@
+%%TEST%%
+SIGSEGV handling
+%%ARGS%%
+%%FILE%%
+class A { int x; }
+A a;
+void f() {
+    a.x = 1;
+}
+f();
+%%REXPECT%%
+Stack Trace:
+.*
+.*
+.*
+.*runScript.*
+.*runScript.*
+.*runMain.*
+.main.*:main
+.main.*f\(\)
+.*
+SIGSEGV received
+%%STDIN%%

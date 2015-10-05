@@ -1,0 +1,22 @@
+%%TEST%%
+SIGFPE handling
+%%ARGS%%
+%%FILE%%
+# We have to do some contortions to get around LLVM's optimizations.
+int f(int divisor) {
+   return 100 / divisor;
+}
+f(0);
+%%REXPECT%%
+Stack Trace:
+.*
+.*
+.*
+.*runScript.*
+.*runScript.*
+.*runMain.*
+.main.*:main
+.main.*.f\(.builtin.int\)
+.*
+SIGFPE received
+%%STDIN%%

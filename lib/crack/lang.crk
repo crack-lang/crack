@@ -7,10 +7,11 @@
 #   file, You can obtain one at http://mozilla.org/MPL/2.0/.
 # 
 
-import crack.runtime abort, c_strerror, errno, free, getLocation, strcpy, 
-    strlen, malloc, memcpy, memset, memcmp, memmove, registerHook, write, 
+import crack.runtime abort, backtrace, backtrace_symbols_fd, c_strerror, 
+    errno, free, getLocation, printuint64, sigaction, strcpy, strlen, malloc, 
+    memcpy, memset, memcmp, memmove, registerHook, write, SigAction, SigInfo, 
     BAD_CAST_FUNC, EXCEPTION_FRAME_FUNC, EXCEPTION_MATCH_FUNC, 
-    EXCEPTION_RELEASE_FUNC, EXCEPTION_UNCAUGHT_FUNC, printuint64;
+    EXCEPTION_RELEASE_FUNC, EXCEPTION_UNCAUGHT_FUNC, SA_SIGINFO, SIGFPE, SIGILL, SIGSEGV;
 @import crack._poormac define;
 
 @export_symbols free;
@@ -1165,6 +1166,50 @@ class SystemError : Exception {
     }
 
 }
+
+# Display stack traces for hardware signals.
+
+# Keep a global buffer around for the trap handler.
+const _ADDRS_SIZE := 100;
+const array[voidptr] _addrs = {_ADDRS_SIZE};
+const array[byteptr] _addrInfo = {3};
+
+void _trapHandler(int signal, SigInfo si, voidptr ucontext) {
+    write(2, "Stack Trace:\n", 13);
+    numFrames := backtrace(_addrs, _ADDRS_SIZE);
+    if (numFrames == _ADDRS_SIZE)
+        write(2, '[stack trace truncated]', 23);
+    for (int i = numFrames - 1; i; --i) {
+        getLocation(_addrs[i], _addrInfo);
+        if (strlen(_addrInfo[0]) == 7 && !memcmp(_addrInfo[0], 'unknown', 7)) {
+            # If we got an unknown address, let the C function deal with it.
+            backtrace_symbols_fd(_addrs + i, 1, 2);
+        } else {
+            write(2, _addrInfo[0], strlen(_addrInfo[0]));
+            write(2, '\n', 1);
+        }
+    }
+
+    if (signal == SIGSEGV)
+        write(2, 'SIGSEGV received\n', 17);
+    else if (signal == SIGILL)
+        write(2, 'SIGILL received\n', 16);
+    else if (signal == SIGFPE)
+        write(2, 'SIGFPE received\n', 16);
+    else
+        write(2, 'Unsxpected signal received\n', 27);
+
+    abort();
+}
+
+_sa := SigAction();
+_sa.sa_sigaction = _trapHandler;
+_sa.sa_flags = SA_SIGINFO;
+sigaction(SIGSEGV, _sa, null);
+sigaction(SIGILL, _sa, null);
+sigaction(SIGFPE, _sa, null);
+free(_sa);
+_sa = null;
 
 # misc functions
 

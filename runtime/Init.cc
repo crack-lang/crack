@@ -7,6 +7,7 @@
 //   License, v. 2.0. If a copy of the MPL was not distributed with this
 //   file, You can obtain one at http://mozilla.org/MPL/2.0/.
 // 
+#include <execinfo.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/time.h>
@@ -1073,6 +1074,7 @@ extern "C" void crack_runtime_cinit(Module *mod) {
         params[1] = intType;
         handlerFuncType = baseFuncType->getSpecialization(params);
     }
+    handlerFuncType->finish();
 
     Type *sigactionFuncType;
     {
@@ -1083,6 +1085,7 @@ extern "C" void crack_runtime_cinit(Module *mod) {
         params[3] = voidptrType;
         sigactionFuncType = baseFuncType->getSpecialization(params);
     }
+    sigactionFuncType->finish();
 
     Type *sigactionType = mod->addType("SigAction",
                                        sizeof(struct sigaction)
@@ -1108,4 +1111,29 @@ extern "C" void crack_runtime_cinit(Module *mod) {
     sigactionFunc->addArg(intType, "signum");
     sigactionFunc->addArg(sigactionType, "act");
     sigactionFunc->addArg(sigactionType, "oldact");
+
+    Type *voidptrArrayType;
+    {
+        std::vector<Type *> params(1);
+        params[0] = voidptrType;
+        voidptrArrayType = baseArrayType->getSpecialization(params);
+    }
+    voidptrArrayType->finish();
+
+    Func *func = mod->addFunc(intType, "backtrace", (void *)backtrace);
+    func->addArg(voidptrArrayType, "buffer");
+    func->addArg(intType, "size");
+
+    func = mod->addFunc(byteptrArrayType, "backtrace_symbols",
+                        (void *)backtrace_symbols
+                        );
+    func->addArg(voidptrArrayType, "buffer");
+    func->addArg(intType, "size");
+
+    func = mod->addFunc(byteptrArrayType, "backtrace_symbols_fd",
+                        (void *)backtrace_symbols_fd
+                        );
+    func->addArg(voidptrArrayType, "buffer");
+    func->addArg(intType, "size");
+    func->addArg(intType, "fd");
 }

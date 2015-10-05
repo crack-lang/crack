@@ -1,0 +1,27 @@
+%%TEST%%
+SIGILL handling
+%%ARGS%%
+%%FILE%%
+class A { void f() {} }
+A a;
+void g() {
+    a.f();
+}
+void main() {
+    g();
+}
+main();
+%%REXPECT%%
+Stack Trace:
+.*
+.*
+.*
+.*runScript.*
+.*runScript.*
+.*runMain.*
+.main.*:main
+.main.*main\(\)
+.main.*g\(\)
+.*
+SIGSEGV received
+%%STDIN%%
