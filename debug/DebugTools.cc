@@ -22,11 +22,15 @@ using namespace std;
 namespace {
     
     struct DebugInfo {
+        size_t size;
         const char *funcName;
         const char *filename;
         int lineNumber;
         
-        DebugInfo(const char *funcName, const char *filename, int lineNumber) :
+        DebugInfo(size_t size, const char *funcName, const char *filename,
+                  int lineNumber
+                  ) :
+            size(size),
             funcName(funcName),
             filename(filename),
             lineNumber(lineNumber) {
@@ -74,20 +78,21 @@ namespace {
 }
 
 void crack::debug::registerDebugInfo(void *address, 
+                                     size_t size,
                                      const string &funcName,
                                      const string &fileName,
                                      int lineNumber
                                      ) {
     const InternedString &name = lookUpString(funcName);
     const InternedString &file = lookUpString(fileName);
-    debugTable[address] = DebugInfo(name.val, file.val, lineNumber);
+    debugTable[address] = DebugInfo(size, name.val, file.val, lineNumber);
 }
 
 void crack::debug::registerFuncTable(const char **table) {
     while (table[0]) {
         const InternedString &name = lookUpString(InternedString(table[1]));
         debugTable[(void *)table[0]] = 
-            DebugInfo(name.val, "", 0);
+            DebugInfo(0, name.val, "", 0);
         table = table + 2;
     }
 }
@@ -101,7 +106,11 @@ void crack::debug::getLocation(void *address, const char *info[3]) {
     if (i == debugTable.end() || i->first != address)
         --i;
     
-    if (i == debugTable.end()) {
+    if (i == debugTable.end() ||
+        (i->second.size &&
+         address >= reinterpret_cast<char *>(i->first) + i->second.size
+         )
+        ) {
         info[0] = info[1] = "unknown";
         info[2] = 0;
     } else {

@@ -193,6 +193,21 @@ void LLVMLinkerBuilder::closeModule(Context &context, ModuleDef *moduleDef) {
 
     finishModule(context, moduleDef);
 
+    // Add a bogus "unknown" function so we know when we see an address
+    // outside of the modules function address space.  (This is a hack relying
+    // on the way LLVM lays out functions in a module)
+    Function *endMarker =
+        Function::Create(FunctionType::get(builder.getVoidTy(), false),
+                         Function::InternalLinkage,
+                         "unknown",
+                         module
+                         );
+    builder.SetInsertPoint(BasicBlock::Create(endMarker->getContext(),
+                                              "unknown", endMarker
+                                              )
+                           );
+    builder.CreateRetVoid();
+
     // emit a table of address/function for the module
     vector<Constant *> funcVals;
     Type *byteType = builder.getInt8Ty();

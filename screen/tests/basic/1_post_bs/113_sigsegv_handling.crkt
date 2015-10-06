@@ -10,14 +10,7 @@ void f() {
 f();
 %%REXPECT%%
 Stack Trace:
-.*
-.*
-.*
-.*runScript.*
-.*runScript.*
-.*runMain.*
-.main.*:main
-.main.*f\(\)
+.*.main.*f\(\)
 .*
 SIGSEGV received
 %%STDIN%%

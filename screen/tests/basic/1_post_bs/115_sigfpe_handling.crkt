@@ -6,17 +6,10 @@ SIGFPE handling
 int f(int divisor) {
    return 100 / divisor;
 }
-f(0);
+printint(f(0));
 %%REXPECT%%
 Stack Trace:
-.*
-.*
-.*
-.*runScript.*
-.*runScript.*
-.*runMain.*
-.main.*:main
-.main.*.f\(.builtin.int\)
+.*.main.*.f\(.builtin.int\)
 .*
 SIGFPE received
 %%STDIN%%

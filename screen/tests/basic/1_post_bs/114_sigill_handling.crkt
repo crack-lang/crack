@@ -14,11 +14,6 @@ main();
 %%REXPECT%%
 Stack Trace:
 .*
-.*
-.*
-.*runScript.*
-.*runScript.*
-.*runMain.*
 .main.*:main
 .main.*main\(\)
 .main.*g\(\)

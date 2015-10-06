@@ -181,7 +181,7 @@ namespace {
                                        size_t size,
                                        const EmittedFunctionDetails &details
                                        ) {
-                crack::debug::registerDebugInfo(ptr, func.getName(),
+                crack::debug::registerDebugInfo(ptr, size, func.getName(),
                                                 "", // filename
                                                 0 // line number
                                                 );
@@ -317,8 +317,6 @@ FuncDefPtr LLVMJitBuilder::createExternFunc(
                                       cfunc,
                                       symbolName
                                       );
-    if (context.construct->cacheMode)
-        crack::debug::registerDebugInfo(cfunc, name, "", 0);
     return result;
 }
 

@@ -18,7 +18,7 @@ import crack.process Process, ProcessHandlerImpl, CRK_PIPE_STDIN,
 import crack.cont.treemap TreeMap;
 import crack.cont.array Array;
 import crack.lang AppendBuffer, AssertionError, Buffer, SubString;
-import crack.regex Regex, PCRE_MULTILINE;
+import crack.regex Regex, PCRE_DOTALL, PCRE_MULTILINE;
 
 import config config, T_INIT, T_CRACK, T_BINARY, T_FINISHED;
 import testdata TestData;
@@ -131,7 +131,7 @@ class BuilderTestHarness {
 
     Result compareOutputRegex(String expectedRegex, String actual) {
 
-        rx := Regex(expectedRegex.rtrim(), PCRE_MULTILINE);
+        rx := Regex(expectedRegex.rtrim(), PCRE_MULTILINE | PCRE_DOTALL);
         m := rx.match(actual.rtrim());
 
         if (m is null) {
