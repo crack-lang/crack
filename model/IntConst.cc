@@ -11,6 +11,7 @@
 
 #include "builder/Builder.h"
 #include "parser/ParseError.h"
+#include "DivZeroError.h"
 #include "VarDefImpl.h"
 #include "Context.h"
 #include "ResultExpr.h"
@@ -184,6 +185,20 @@ TypeDef *IntConst::selectType(Context &context, int64_t val) {
         }                                                                   \
     }
 
+// folding for division operators (does division by zero check).
+#define FOLDDIV(name, sym, signed) \
+    ExprPtr IntConst::fold##name(Expr *other) {                             \
+        IntConstPtr o = IntConstPtr::cast(other);                           \
+        if (o) {                                                            \
+            if (!o->val.signed##val)                                        \
+                throw DivZeroError();                                       \
+            o = create(val.signed##val sym o->val.signed##val);             \
+            return o;                                                       \
+        } else {                                                            \
+            return 0;                                                       \
+        }                                                                   \
+    }
+
 // folding for arithmetic shift operations (result uneg is left-operand uneg)
 #define FOLDL(name, sym, signed) \
     ExprPtr IntConst::fold##name(Expr *other) {                             \
@@ -201,10 +216,10 @@ TypeDef *IntConst::selectType(Context &context, int64_t val) {
 FOLDA(Add, +, s)
 FOLDA(Sub, -, s)
 FOLDA(Mul, *, s)
-FOLDA(SDiv, /, s)
-FOLDA(UDiv, /, u)
-FOLDA(SRem, %, s)
-FOLDA(URem, %, u)
+FOLDDIV(SDiv, /, s)
+FOLDDIV(UDiv, /, u)
+FOLDDIV(SRem, %, s)
+FOLDDIV(URem, %, u)
 FOLDB(Or, |, u)
 FOLDB(And, &, u)
 FOLDB(Xor, ^, u)

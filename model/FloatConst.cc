@@ -1,16 +1,17 @@
 // Copyright 2010 Shannon Weyrick <weyrick@mozek.us>
 // Copyright 2011 Google Inc.
-// 
+//
 //   This Source Code Form is subject to the terms of the Mozilla Public
 //   License, v. 2.0. If a copy of the MPL was not distributed with this
 //   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-// 
+//
 
 #include "FloatConst.h"
 
 #include <math.h>
 #include "builder/Builder.h"
 #include "parser/ParseError.h"
+#include "DivZeroError.h"
 #include "VarDefImpl.h"
 #include "Context.h"
 #include "ResultExpr.h"
@@ -83,5 +84,14 @@ ExprPtr FloatConst::foldNeg() {
 FOLD(FAdd, +)
 FOLD(FSub, -)
 FOLD(FMul, *)
-FOLD(FDiv, /)
 
+ExprPtr FloatConst::foldFDiv(Expr *other) {
+    FloatConstPtr fo = FloatConstPtr::cast(other);
+    if (fo) {
+        if (fo->val == 0)
+            throw DivZeroError();
+        return create(val / fo->val);
+    }
+
+    return 0;
+}

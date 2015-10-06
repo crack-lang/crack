@@ -1,0 +1,12 @@
+%%TEST%%
+division by zero in const folding
+%%ARGS%%
+%%FILE%%
+void f() {
+    1 / 0;
+    1.0 / 0.0;
+}
+%%EXPECT%%
+%SCRIPTNAME%:2:7: Division by zero.
+%SCRIPTNAME%:3:9: Division by zero.
+%%STDIN%%

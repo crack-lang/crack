@@ -21,6 +21,7 @@
 #include "model/Branchpoint.h"
 #include "model/CompositeNamespace.h"
 #include "model/CleanupFrame.h"
+#include "model/DivZeroError.h"
 #include "model/Generic.h"
 #include "model/VarDefImpl.h"
 #include "model/Context.h"
@@ -1142,7 +1143,12 @@ ExprPtr Parser::parseSecondary(const Primary &primary, unsigned precedence) {
             funcCall->receiver =
                (func->flags & FuncDef::reverse) ? rhs : expr;
          expr = funcCall;
-         expr = expr->foldConstants();
+         try {
+            expr = expr->foldConstants();
+         } catch (DivZeroError &ex) {
+            warn(tok, "Division by zero.");
+            // expr should still be the func call.
+         }
       } else if (tok.isIstrBegin()) {
          expr = parseIString(expr.get());
       } else if (tok.isQuest()) {
