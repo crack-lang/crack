@@ -196,6 +196,8 @@ Token Toker::fixIdent(const string &data, const Location &loc) {
         return Token(Token::caseKw, data, loc);
     else if (data == "switch")
         return Token(Token::switchKw, data, loc);
+    else if (data == "do")
+        return Token(Token::doKw, data, loc);
     else
         return Token(Token::ident, data, 
                      getLocation()

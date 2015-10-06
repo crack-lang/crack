@@ -50,6 +50,7 @@ class Token {
                      percent, plus, quest, rbracket, rcurly, rparen, semi, 
                      slash, string, tilde, istrBegin, istrEnd, logicAnd, 
                      logicOr, floatLit, octalLit, hexLit, binLit, scoping,
+                     doKw,
                      
                      // these tokens are special - they are used to
                      // communicate actions that need to be performed in the
