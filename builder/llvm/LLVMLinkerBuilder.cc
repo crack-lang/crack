@@ -199,7 +199,7 @@ void LLVMLinkerBuilder::closeModule(Context &context, ModuleDef *moduleDef) {
     Function *endMarker =
         Function::Create(FunctionType::get(builder.getVoidTy(), false),
                          Function::InternalLinkage,
-                         "unknown",
+                         ":unknown." + moduleDef->getFullName(),
                          module
                          );
     builder.SetInsertPoint(BasicBlock::Create(endMarker->getContext(),

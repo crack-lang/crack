@@ -111,7 +111,7 @@ void crack::debug::getLocation(void *address, const char *info[3]) {
          address >= reinterpret_cast<char *>(i->first) + i->second.size
          )
         ) {
-        info[0] = info[1] = "unknown";
+        info[0] = info[1] = ":unknown";
         info[2] = 0;
     } else {
         info[0] = i->second.funcName;

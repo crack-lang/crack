@@ -1181,7 +1181,8 @@ void _trapHandler(int signal, SigInfo si, voidptr ucontext) {
         write(2, '[stack trace truncated]', 23);
     for (int i = numFrames - 1; i; --i) {
         getLocation(_addrs[i], _addrInfo);
-        if (strlen(_addrInfo[0]) == 7 && !memcmp(_addrInfo[0], 'unknown', 7)) {
+        if (strlen(_addrInfo[0]) >= 8 && 
+            !memcmp(_addrInfo[0], ':unknown', 8)) {
             # If we got an unknown address, let the C function deal with it.
             backtrace_symbols_fd(_addrs + i, 1, 2);
         } else {
