@@ -123,6 +123,7 @@ class Object : VTableBase {
         return this.class.isSubclass(cls);
     }
 
+    ## Format the object to 'f'.
     void formatTo(Formatter f) {
         _formatObject(f, this);
     }
@@ -130,6 +131,7 @@ class Object : VTableBase {
 
 class Buffer;
 
+## Interface for all classes implementing 'write()'.
 @abstract class Writer : VTableBase {
 
     ## Write the buffer to the writer.
@@ -146,6 +148,10 @@ class Buffer;
     }
 }
 
+## Interface for all classes implementing the format methods.  Formatters can 
+## be used with the interpolation operator, e.g.:
+##    MyFormatter f = {};
+##    f `this is your $value\n`;
 @abstract class Formatter : Object, Writer {
 
     @abstract Object oper from Formatter();
@@ -187,21 +193,29 @@ class Buffer : Object {
         return size;
     }
 
-    bool isEmpty() {
+    ## Returns true if the buffer is empty (has 
+    @final bool isEmpty() {
         return (size == 0);
+    }
+    
+    ## Returns the number of elements in the buffer.  This is the same as the 
+    ## 'size' attribute, it is included for consistency with other container 
+    ## types.
+    @final uint count() {
+        return size;
     }
 
     void formatTo(Formatter f) {
         f.write(this);
     }
 
-    byte oper [](uint index) {
+    @final byte oper [](uint index) {
         if (index >= size)
             _throwIndexError('string index out of bounds');
         return buffer[index];
     }
 
-    byte oper [](int index) {
+    @final byte oper [](int index) {
         if (index < 0)
             index = size + index;
         if (index < 0 || index >= size)
@@ -282,10 +296,10 @@ class Buffer : Object {
             return -1;
     $$        
     
-    ## Find the rightmost index of a byte in a string, starting at
-    ## index pos
+    ## Find the rightmost index of a byte in a the buffer, starting at
+    ## index 'pos'.
     ## returns -1 if not found
-    int rfind(byte c, uint pos) {
+    @final int rfind(byte c, uint pos) {
         @__findPosChecks
         @__rfind
     }
@@ -293,14 +307,14 @@ class Buffer : Object {
     ## Find the rightmost index of a byte in a string
     ## returns -1 if not found
     ## note this function is not safe for strings larger than INT_MAX
-    int rfind(byte c) {
+    @final int rfind(byte c) {
         int pos = size - 1;
         @__rfind
     }
     
     ## Find the rightmost index of the substring 'sub' in the string at or 
     ## before 'pos'.  Returns -1 if not found.
-    int rfind(Buffer sub, int pos) {
+    @final int rfind(Buffer sub, int pos) {
         @__findPosChecks
         c := sub.buffer[0];
         while (true) {
@@ -315,32 +329,30 @@ class Buffer : Object {
         return -1;
     }
     
-    ## Find the rightmost index of the substring 'sub' in the string.
-    int rfind(Buffer sub) {
+    ## Find the rightmost index of the sub-buffer 'sub' in the string.
+    @final int rfind(Buffer sub) {
         return rfind(sub, -1);
     }
     
-    ## Find the rightmost index of the substring '
-
-    ## Find the leftmost index of a byte in a string, starting at
+    ## Find the leftmost index of a byte in a buffer, starting at
     ## index pos
     ## returns -1 if not found
-    int lfind(byte c, int pos) {
+    @final int lfind(byte c, int pos) {
         @__findPosChecks
         @__lfind
     }
 
-    ## Find the leftmost index of a byte in a string
+    ## Find the leftmost index of a byte in a buffer
     ## returns -1 if not found
-    ## note this function is not safe for strings larger than INT_MAX
-    int lfind(byte c) {
+    ## note this function is not safe for buffers larger than INT_MAX
+    @final int lfind(byte c) {
         int pos = 0;
         @__lfind
     }
 
-    ## find the leftmost index after pos of the substring 'sub'.
+    ## find the leftmost index after pos of the sub-buffer 'sub'.
     ## Returns -1 if not found.
-    int lfind(Buffer sub, int pos) {
+    @final int lfind(Buffer sub, int pos) {
         @__findPosChecks
         
         c := sub.buffer[0];
@@ -358,8 +370,8 @@ class Buffer : Object {
         return -1;
     }
     
-    ## Find the leftmost index of the substring 'sub'.
-    int lfind(Buffer sub) { return lfind(sub, 0); }
+    ## Find the leftmost index of the sub-buffer 'sub'.
+    @final int lfind(Buffer sub) { return lfind(sub, 0); }
 
     ## Returns true if the buffer starts with 'prefix'.
     @final bool startsWith(Buffer prefix) {
@@ -379,7 +391,6 @@ class Buffer : Object {
         return _getRepr(this);
     }
 
-    
     ## Returns the buffer converted to the CString (or the object itself, if 
     ## it already is a CString).
     CString toCString() {
@@ -413,7 +424,7 @@ class WriteBuffer : Buffer {
     ## Move data from an arbitrary byteptr into the buffer.  The end of the 
     ## new data must not exceed buffer capacity, if it exceeds the current 
     ## size the size will be adjusted to fit it.
-    void move(uint start, byteptr ptr, uint count) {
+    @final void move(uint start, byteptr ptr, uint count) {
         if (start + count > cap)
             _throwIndexError('Move target out of bounds');
         memmove(buffer + start, ptr, count);
@@ -423,7 +434,7 @@ class WriteBuffer : Buffer {
 
     ## move data from one place in the buffer to another place in the buffer.  
     ## Rules concerning size and capacity in move(uint, byteptr, int) apply.
-    void move(uint newStart, uint oldStart, uint count) {
+    @final void move(uint newStart, uint oldStart, uint count) {
         if (oldStart + count > size)
             _throwIndexError('Move source out of bounds');
         move(newStart, buffer + oldStart, count);
@@ -433,7 +444,7 @@ class WriteBuffer : Buffer {
 
     ## move a buffer to a place in this buffer.
     ## Rules concerning size and capacity in move(uint, byteptr, int) apply.
-    void move(uint newStart, Buffer buf) {
+    @final void move(uint newStart, Buffer buf) {
         if (newStart + buf.size > cap)
             _throwIndexError('Move target out of bounds');
         move(newStart, buf.buffer, buf.size);
@@ -445,7 +456,7 @@ class WriteBuffer : Buffer {
     ## the buffer, and modify size accordingly (the new size is size - pos).
     ## This effectively truncates the beginning of the buffer without doing 
     ## any memory allocation/deallocation.
-    void compact(uint pos) {
+    @final void compact(uint pos) {
         if (pos > size)
             _throwIndexError('Compress argument out of bounds');
         move(0, pos, size - pos);
@@ -453,14 +464,15 @@ class WriteBuffer : Buffer {
     }
 }
 
-## A managed buffer.  Deletes the bytebuf when it goes out of scope.
+## A managed buffer.  Growable, and deletes the bytebuf when it goes out of 
+## scope.
 class ManagedBuffer : WriteBuffer {
 
     oper init(uint cap) : WriteBuffer(malloc(cap), 0, cap) {}
     
     ## Orphan's the byte buffer, returning it for use by the caller.  The
     ## caller is responsible for freeing it.
-    byteptr orphan() {
+    @final byteptr orphan() {
         temp := buffer;
         buffer = null;
         size = 0;
@@ -468,7 +480,7 @@ class ManagedBuffer : WriteBuffer {
     }
 
     ## Grow the buffer to the new capacity.
-    void grow(uint newCap) {
+    @final void grow(uint newCap) {
         # special case cap = 0 for initialization.
         if (!newCap) {
             newCap = 16;
@@ -498,7 +510,7 @@ class AppendBuffer : ManagedBuffer {
     oper init(uint cap) : ManagedBuffer(cap) {}
 
     ## Append a single byte to the buffer, growing if necessary.
-    void append(byte c) {
+    @final void append(byte c) {
         if (size >= cap)
             grow(cap * 2);
         buffer[size++] = c;
@@ -616,7 +628,6 @@ class String : Buffer {
         memset(buffer, c, size);
     }
 
-
     ## Initialize from a WriteBuffer and optionally take ownership of the
     ## buffer.
     oper init(ManagedBuffer buf, bool takeOwnership) :
@@ -680,7 +691,7 @@ class String : Buffer {
     }
 
     ## Concatenation
-    String oper +(String rhs) {
+    @final String oper +(String rhs) {
         uint newBufferSize = this.size + rhs.size;
         byteptr newRawBuffer = malloc(newBufferSize);
         memcpy(newRawBuffer, this.buffer, this.size);
@@ -688,7 +699,7 @@ class String : Buffer {
         return String(newRawBuffer, newBufferSize, true);
     }
 
-    String oper +(byte chr) {
+    @final String oper +(byte chr) {
         uint newBufferSize = this.size + 1;
         byteptr newRawBuffer = malloc(newBufferSize);
         memcpy(newRawBuffer, this.buffer, this.size);
@@ -696,8 +707,9 @@ class String : Buffer {
         return String(newRawBuffer, newBufferSize, true);
     }
 
-    # note, not binary safe
-    String oper +(byteptr rhs) {
+    ## Returns a new string that is the concatenation of the receiver and the 
+    ## null-terminated 'rhs'.
+    @final String oper +(byteptr rhs) {
         uint rhs_size = strlen(rhs);
         uint newBufferSize = size + rhs_size;
         byteptr newRawBuffer = malloc(newBufferSize);
@@ -706,7 +718,9 @@ class String : Buffer {
         return String(newRawBuffer, newBufferSize, true);
     }
     
-    String oper *(uint times){
+    ## Returns a new string consisting of 'times' instances of the receiver 
+    ## arranged sequentially.
+    @final String oper *(uint times) {
         String newString;
         
         if (size == 1)
@@ -743,7 +757,7 @@ class String : Buffer {
     SubString slice(int start) @slice1 this
 
     ## Remove trailing newline from the end of the string
-    String rtrim() { return rtrim(this); }
+    @final String rtrim() { return rtrim(this); }
 
     void formatTo(Formatter f) {
         f.write(this);
@@ -759,7 +773,7 @@ class String : Buffer {
     }
 };
 
-## Returns a legal source representation of the string.
+## Returns a legal source representation of the Buffer.
 String _getRepr(Buffer buffer) {
     AppendBuffer buf = {buffer.size + 2};
 
@@ -798,6 +812,8 @@ class SubString : String {
         _rep = target {
     }
 
+    ## Create a substring from a target string given a start 'buf' and length.
+    ## 'buf' must point to within 'target'.
     oper init(String target, byteptr buf, uint len) :
         String(buf, len, true),
         _rep = target {
@@ -991,8 +1007,10 @@ class Exception : Object {
             __stackTrace[i].oper release();
         free(__stackTrace);
     }
-    
-    void append(StackFrame frame) {
+
+    ## Append a new stack frame to the exception.  This is used when recording
+    ## the stack trace.
+    @final void append(StackFrame frame) {
         if (__stackTraceSize == __stackTraceCap) {
             
             # out of room, reallocate.
@@ -1010,7 +1028,7 @@ class Exception : Object {
         frame.oper bind();
     }
 
-    void _writeTo(Writer out) {
+    @final void _writeTo(Writer out) {
         for (int i = int(__stackTraceSize - 1); i >= 0; --i) {
             out.write(__stackTrace[i].func);
             out.write(StaticString('\n'));
