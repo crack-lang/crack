@@ -4630,64 +4630,6 @@ For aggregate types, sorting relies on the comparison functions of #Object#,
 which in turn rely on the overridable #cmp()# method.  For primitive types,
 the type must define the comparison operators.
 
-Legacy Error Handling
----------------------
-
-Crack 0.11 continues to provide an error handling module (#crack.exp.error#).
-However, this interface is deprecated in favor of exceptions.  This
-documentation should be regarded as purely of historical interest.
-
-The error module lets you record an error in a manner that can be controlled
-by the callers.  The default action is to abort.
-
-Here's an example of how we might use it to verify a parameter:
-
-{{
-    import crack.exp.error err;
-
-    Object checkForNull(String context, Object val) {
-        if (val is null)
-            err.do() `$context got a null argument`;
-        return val;
-    }
-}}
-
-#err.do()# returns a formatter that writes to a writer stored in the #err#
-object.  When this formatter is destroyed, it will call #err.finish()# which
-calls #abort()#, terminating the program, if #err.fatal# is true.  If
-#err.fatal# is false, #err.gotError# is set to true and the program continues.
-
-To prevent a function from aborting the program when an error occurs, we can
-use the #ErrorCatcher# class:
-
-{{
-    import crack.exp.error err, ErrorCatcher;
-
-    void myFunc(Object arg) {
-        catcher := ErrorCatcher();
-        checkForNull("myFunc", arg);
-        if (catcher.gotError())
-            cout `We got a null and don't want to die: $(catcher.getText())\n`;
-    }
-}}
-
-When you create an #ErrorCatcher#, it sets #error.fatal# to false and sets
-#error.writer# to an internal #StringWriter#, causing the error handler to
-have no visible effect.  The caller can then check to see if there was an
-error from the catcher, and obtain the error text from the catcher's
-#getText()# method.  When the catcher is destroyed, it restores the error
-handler to its previous state.
-
-It is not advisable to use this mechanism for errors that can conceivably
-indicate something other than a programming error.  For example, it would not
-be advisable for a file interface to call a fatal error for a file not found.
-Better to use a lightweight return code and let the caller decide whether this
-represents a programming error.
-
-As a convenience, the #crack.exp.error# module also provides a #strerror()#
-method. #strerror()# returns the error text of the last error that occurred
-in the C library.
-
 The strutil Module
 ------------------
 
@@ -5860,6 +5802,12 @@ you want to avoid code breakage when upgrading, we recommend two strategies:
 
 The remainder of this appendix describes the things you need to know when
 upgrading between versions.
+
+From 0.11 to 1.0
+----------------
+
+-   The "do" keyword has been reserved and can no longer be used for variables.
+-   the crack.exp.error module has been removed.
 
 From 0.10 to 0.11
 -----------------

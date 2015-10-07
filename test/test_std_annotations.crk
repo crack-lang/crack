@@ -65,13 +65,13 @@ if (@tm_stringify(boyng) != 'boyng')
     cout `failed to export a macro with stringification`;
 
 @interface Foo {
-    void do() { cout `Interface base function called\n`; }
+    void doIt() { cout `Interface base function called\n`; }
 }
 
 class Bar : Object @implements Foo {
     String y() { return 'nested parens work'; }
 
-    void do() {
+    void doIt() {
         x := 'interp vars work';
         result `interfaces work: $x, $(y())`;
     }
@@ -81,7 +81,7 @@ class Bar : Object @implements Foo {
 
 result = StringFormatter();
 Foo b = Bar();
-b.do();
+b.doIt();
 if (result.string() !=
     'interfaces work: interp vars work, nested parens work')
     cout `Failed to implement interface implementation\n`;
@@ -93,11 +93,11 @@ if (result.string() != 'Bar deleted')
 if (true) {
     result = StringFormatter();
     class Baz @impl Foo {
-        void do() { result `baz function called` }
+        void doIt() { result `baz function called` }
     }
 
     Foo f = Baz();
-    f.do();
+    f.doIt();
     if (result.string() != 'baz function called')
         cout `Failed @impl annotation.`;
 }
