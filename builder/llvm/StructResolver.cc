@@ -79,18 +79,17 @@ namespace {
 
 // 'type' should not be a duplicate.
 Type *StructResolver::mapStructTypeByElements(StructType *type) {
-    vector<Type *> elements;
+
+    // See if any of the element types must be mapped.
     bool mustMap = false;
     for (StructType::element_iterator iter = type->element_begin();
         iter != type->element_end();
         ++iter
         ) {
-        Type *elemType = *iter;
-        if (Type *newType = mapType(elemType)) {
-            elemType = newType;
+        if (mapType(*iter)) {
             mustMap = true;
+            break;
         }
-        elements.push_back(elemType);
     }
 
     if (mustMap) {
@@ -108,18 +107,32 @@ Type *StructResolver::mapStructTypeByElements(StructType *type) {
         type->setName(SPUG_FSTR(":::" << origName << "." << type));
 
         SR_DEBUG cerr << "Rebuilding struct type " << origName <<
-            " (depends on mapped types)" << endl;
-
-        // XXX this is lame, We add this to the map here to avoid
-        // iterating over a type we've already changed, but as it
-        // stands we'll end up adding the type twice.
-        StructType *newType =
-            StructType::create(elements, origName, type->isPacked());
-        typeMap[type] = newType;
+            " (depends on mapped types, old is now " <<
+            string(type->getName()) << ")" << endl;
 
         SPUG_CHECK(!LLVMBuilder::getLLVMType(origName),
                    "Renamed registered type " << origName
                    );
+
+        // Create a new type and add it to the map so that when we map the
+        // elements, we'll fix recursive references to the new type.
+        StructType *newType =
+            StructType::create(type->getContext(), origName);
+        typeMap[type] = newType;
+
+        // Map all elements.
+        vector<Type *> elements;
+        for (StructType::element_iterator iter = type->element_begin();
+             iter != type->element_end();
+             ++iter
+             ) {
+            Type *elemType = *iter;
+            if (Type *newType = mapType(*iter))
+                elemType = newType;
+            elements.push_back(elemType);
+        }
+
+        newType->setBody(elements, type->isPacked());
         LLVMBuilder::putLLVMType(origName, newType);
 
         return newType;
