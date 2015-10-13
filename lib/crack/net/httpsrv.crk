@@ -178,7 +178,7 @@ class Error : StringFormatter {
     oper init(HTTPRequest req, int code) : req = req, code = code {}
 
     void leave() {
-        result := createString();
+        result := string();
         cerr.write(result);
         req.sendReply(code, "text/plain", result);
     }

@@ -298,7 +298,7 @@ class TextBlock {
     String makeString() {
         StringFormatter out = {};
         formatTo(out);
-        return out.createString();
+        return out.string();
     }
     
     void flattenTo(Writer out) {

@@ -155,7 +155,7 @@ class Regex : _RegexBase {
             f `Error compiling regular expression: $(errorText[0])`;
             free(errorText);
             free(intReturns);
-            throw RegexError(f.createString());
+            throw RegexError(f.string());
         }
         free(errorText);
         

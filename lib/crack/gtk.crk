@@ -48,7 +48,7 @@ class List {
     GList _start = null;
     GList _end = null;
     
-    void append(voidptr elem) {
+    @final void append(voidptr elem) {
         _start = g_list_append(_start, elem);
         if (_end is null)
             _end = _start;
@@ -76,7 +76,7 @@ class GTKObject : Handlers {
     GtkObject _rep = null;
     Handlers __handlers = null;
     
-    void setHandlers(Handlers handlers) {
+    @final void setHandlers(Handlers handlers) {
         __handlers = handlers;
     }
 
@@ -126,7 +126,7 @@ class Widget : GTKObject {
         gtk_widget_show(GtkWidget.unsafeCast(_rep));
     }
     
-    void destroy() {
+    @final void destroy() {
         if (!(_rep is null))
             # _rep gets set to null in onDestroy()
             gtk_widget_destroy(GtkWidget.unsafeCast(_rep));
@@ -229,23 +229,23 @@ class Tooltips : GTKObject {
 class Entry : Widget {
     oper init() : Widget(gtk_entry_new()) {}
     
-    String getText() {
+    @final String getText() {
         return String(gtk_entry_get_text(GtkWidget.unsafeCast(_rep)));
     }
     
-    void setText(String text) {
+    @final void setText(String text) {
         gtk_entry_set_text(GtkWidget.unsafeCast(_rep), text.buffer);
     }
     
-    void setEditable(bool editable) {
+    @final void setEditable(bool editable) {
         gtk_editable_set_editable(GtkWidget.unsafeCast(_rep), editable);
     }
     
-    void setVisibility(bool visible) {
+    @final void setVisibility(bool visible) {
         gtk_entry_set_visibility(GtkWidget.unsafeCast(_rep), visible);
     }
     
-    void selectRegion(int start, int end) {
+    @final void selectRegion(int start, int end) {
         gtk_editable_select_region(GtkWidget.unsafeCast(_rep), start, end);
     }
 };
@@ -259,11 +259,11 @@ class App {
         free(argvWrapper);
     }
     
-    void main() {
+    @final void main() {
         gtk_main();
     }
     
-    void quit() {
+    @final void quit() {
         gtk_main_quit();
     }
 }

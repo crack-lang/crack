@@ -42,7 +42,7 @@ class DocParseError : Exception {
 $(block.sourceName):$(block.lineNumber) $text`;
         }
         
-        return out.createString();
+        return out.string();
     }
 }
 
@@ -54,7 +54,7 @@ Regex _makeSpecial(HashMap[byte, BlockType] types) {
         special `$(x.val.tag)|`;
 
     special `$(r'(\\.)')`;   
-    return Regex(special.createString());
+    return Regex(special.string());
 }
 
 bool isSpace(byte ch) {
@@ -825,7 +825,7 @@ Regex _makeSpecialChars() {
         tmp `$(first ? '' : '|')$(item.key)`;
         first = false;
     }
-    return Regex(tmp.createString());
+    return Regex(tmp.string());
 }
     
 _specialChars := _makeSpecialChars();

@@ -77,7 +77,7 @@ class OwningFDWriter : FDWriter {
     ## the buffer size to the number of bytes read.
     @abstract uint read(WriteBuffer buffer);
 
-    String read(uint size) {
+    @final String read(uint size) {
         b := ManagedBuffer(size);
         s := read(b);
 
@@ -336,39 +336,25 @@ class StringWriter : AppendBuffer, Writer {
     }
 
     ## Return a string containing everything that has been written so far.
-    ## Deprecated.  Use makeString() or string() instead.
-    String createString() {
+    @final String makeString() {
         return String(buffer, size, false);
     }
 
     ## Return a string containing everything that has been written so far.
-    String makeString() {
-        return String(buffer, size, false);
-    }
-
-    ## Return a string containing everything that has been written so far.
-    String string() {
+    @final String string() {
         return String(buffer, size, false);
     }
 
     ## Return a null terminated string containing everything that has been
     ## written so far.
-    ## Deprecated.  Use makeCString() or cString() instead.
-    CString createCString() {
+    @final CString makeCString() {
         append(0);
         return CString(buffer, size - 1, false);
     }
 
     ## Return a null terminated string containing everything that has been
     ## written so far.
-    CString makeCString() {
-        append(0);
-        return CString(buffer, size - 1, false);
-    }
-
-    ## Return a null terminated string containing everything that has been
-    ## written so far.
-    CString cString() {
+    @final CString cString() {
         append(0);
         return CString(buffer, size - 1, false);
     }
@@ -431,25 +417,17 @@ class StringFormatter : StandardFormatter {
 
     oper init() : StandardFormatter(null) { rep = _writer; }
 
-    ## see: StringWriter.createString()
-    ## Deprecated.  Use makeString() or string() instead.
-    String createString() { return _writer.createString(); }
-
     ## see: StringWriter.makeString()
-    String makeString() { return _writer.makeString(); }
+    @final String makeString() { return _writer.makeString(); }
 
     ## see: StringWriter.string()
-    String string() { return _writer.string(); }
-
-    ## see: StringWriter.createCString()
-    ## Deprecated.  Use makeCString() or cString() instead.
-    String createCString() { return _writer.createCString(); }
+    @final String string() { return _writer.string(); }
 
     ## see: StringWriter.makeCString()
-    String makeCString() { return _writer.makeCString(); }
+    @final String makeCString() { return _writer.makeCString(); }
 
     ## see: StringWriter.cString()
-    String cString() { return _writer.cString(); }
+    @final String cString() { return _writer.cString(); }
 };
 
 ## Instances of this class let you create a string from IString syntax.
@@ -458,16 +436,15 @@ class StringFormatter : StandardFormatter {
 class FStr : StringFormatter {
     oper init() {}
 
-    void enter() {
+    @final void enter() {
         if (!_writer)
             rep = _writer = StringWriter();
     }
 
-    String leave() {
-        result := _writer.createString();
+    @final String leave() {
+        result := _writer.string();
         _writer = null;
         rep = null;
         return result;
     }
 }
-

@@ -53,7 +53,7 @@ void headerToAnchor(Formatter out, Array[Object] words) {
 String headerToAnchor(Array[Object] words) {
     StringFormatter out = {};
     headerToAnchor(out, words);
-    return out.createString();
+    return out.string();
 }
 
 const int _NEWLINE = 0,
@@ -128,7 +128,7 @@ class HTMLFormatter : StdFormatter {
             block := TextBlock.cast(ref);
             StringWriter tmp = {};
             block.flattenTo(tmp);
-            return tmp.createString();
+            return tmp.string();
         }
     }
 

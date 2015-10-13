@@ -5806,6 +5806,9 @@ upgrading between versions.
 From 0.11 to 1.0
 ----------------
 
+-   Many methods that were unnecssarily virtual are now @final.
+-   The deprecated "createString()" and "createCString()" methods in 
+    StringWriter and StringFormatter have been removed.
 -   The "do" keyword has been reserved and can no longer be used for variables.
 -   the crack.exp.error module has been removed.
 

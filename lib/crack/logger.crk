@@ -303,7 +303,7 @@ class LogFormatter : StandardFormatter {
     }
 
     void leave() {
-        _logger.log(_level, _writer.createString());
+        _logger.log(_level, _writer.string());
         _writer = null;
         rep = null;
     }
