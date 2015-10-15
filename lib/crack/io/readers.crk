@@ -28,7 +28,7 @@ class LineReader {
     
     oper init(Reader reader) : r = reader {}
     
-    String readLine() {
+    @final String readLine() {
         while (true) {
             
             for (uint i = start; i < buffer.size; ++i) {
@@ -84,8 +84,8 @@ class LineIter {
     
     oper init(LineReader reader) : reader = reader, line = reader.readLine() {}
     bool isTrue() { return !(line is null); }
-    String elem() { return line; }
-    void next() { line = reader.readLine(); }
+    @final String elem() { return line; }
+    @final void next() { line = reader.readLine(); }
 }
 
 LineIter _createLineIter(LineReader reader) {
@@ -100,7 +100,7 @@ class FullReader : LineReader @implements Reader {
 
     ## Read the entire remaining contents of the underlying reader and return 
     ## it as a string.
-    String readAll() {
+    @final String readAll() {
         # start with the current contents of the buffer
         AppendBuffer result = {buffer.size - start};
         result.extend(buffer.buffer + start, buffer.size - start);
@@ -144,7 +144,7 @@ class PageBufferReader : PageBuffer {
     HashMap[uint, String] _pageMap;
     uint _pageSize, _firstPage, _currentPage, _pages;
 
-    void _readTo(uint i){
+    @final void _readTo(uint i){
         uint bi = i/_pageSize; // Buffer index
         
         if (_pages>0 && bi == _currentPage) // Already there
@@ -184,9 +184,9 @@ class PageBufferReader : PageBuffer {
     }
 
     ## Read a byte from "array"
-    byte oper[](uint i){
-        uint bi=i/_pageSize; // buffer index
-        if (_pages == 0 || bi >= _pages ) _readTo(i);
+    byte oper[](uint i) {
+        uint bi = i / _pageSize; // buffer index
+        if (_pages == 0 || bi >= _pages) _readTo(i);
         if (bi >= _pages)
             throw IndexError('buffer index out of bounds');
 
@@ -198,34 +198,38 @@ class PageBufferReader : PageBuffer {
                 throw IndexError('attempting to read from discarded page');
         }
 
-        return buffer[i%_pageSize];
+        return buffer[i % _pageSize];
     }
 
-    ## Purse page buffer of entry numbers lower than the one containing offset i
+    ## Purge page buffer of entry numbers lower than the one containing offset
+    ## i.
     uint vacuum(uint i) {
         uint j = 0;
-        for (uint bi = min(i/_pageSize, _pages);
+        for (uint bi = min(i / _pageSize, _pages);
              bi > 0 && _pageMap.hasKey(bi-1); 
              bi--
              ) {
-            _pageMap.delete(bi-1);
+            _pageMap.delete(bi - 1);
             j++;
         }
         return j;
     }
 
-    String substr(uint start, uint len){
+    ## Returns a substring of the buffer starting at 'start' and of length
+    ## 'len'.
+    ## Throws IndexError if any portion of the range is out of bounds.
+    String substr(uint start, uint len) {
         uint end = start + len;
-        uint si=start/_pageSize; // page index
-        uint ei=(start+len)/_pageSize;
-        if (_pages == 0 || si >= _pages ) _readTo(start);
-        if (_pages == 0 || ei >= _pages ) _readTo(end);
+        uint si = start / _pageSize; // page index
+        uint ei = (start + len) / _pageSize;
+        if (_pages == 0 || si >= _pages) _readTo(start);
+        if (_pages == 0 || ei >= _pages) _readTo(end);
         if (si >= _pages || ei >= _pages)
             throw IndexError('buffer index out of bounds');
 
         AppendBuffer retval = {len};
         String cb;
-        for (uint i = si; i<=ei; i++){
+        for (uint i = si; i<=ei; i++) {
             cb = _pageMap[i];
             retval.extend(
                 cb.buffer + (i == si ? start % _pageSize : 0),
@@ -241,7 +245,7 @@ class PageBufferReader : PageBuffer {
 ## Simple page buffer where we reference the underlying string directly
 class PageBufferString : PageBuffer {
 
-    oper init(Buffer b){
+    oper init(Buffer b) {
         if (b.isa(String))
             buffer = String.cast(b);
         else
@@ -252,6 +256,6 @@ class PageBufferString : PageBuffer {
 
     byte oper[](uint i) { return buffer[i] };
     uint vacuum(uint i) { return 0; }
-    String substr(uint start, uint len){ return buffer.substr(start, len);}
+    String substr(uint start, uint len) { return buffer.substr(start, len);}
 
 }
