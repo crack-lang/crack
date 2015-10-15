@@ -54,20 +54,10 @@
 ##  }
 
 import crack.cont.hashmap HashMap;
+import crack.lang FieldSet;
 
 @import crack.ann interface, impl;
-
-## Interface for objects that allow you to store and retrieve arbitrary fields.
-@interface FieldSet {
-    ## Returns the object associated with the specified key, null if the key
-    ## is undefined.
-    @abstract Object getFieldVal(uintz key);
-
-    ## Set the object associated with the specified key.  Setting a key to
-    ## null is equivalent to making a field undefined, and so null may be
-    ## special-cased to implement "delete."
-    @abstract void setFieldVal(uintz key, Object val);
-}
+@export_symbols FieldSet;
 
 ## Implements FieldSet as a HashMap.
 class HashMapFieldSet @impl FieldSet {

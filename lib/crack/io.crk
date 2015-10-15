@@ -8,7 +8,7 @@
 #
 # Basic input/output classes.
 
-import crack.lang die, AppendBuffer, Buffer, CString, WriteBuffer,
+import crack.lang die, AppendBuffer, Buffer, CString, FieldSet, WriteBuffer,
     ManagedBuffer, Writer, Exception, Formatter;
 import crack.runtime close, float_str, strlen, write, malloc, memcpy, free,
     read, c_strerror, setNonBlocking, errno, EAGAIN, EWOULDBLOCK;
@@ -204,10 +204,70 @@ uint _format(voidptr ptr, byteptr buf, uint size) {
     return i;
 }
 
+## A node in a _SimpleFieldSet linked-list.
+class _FieldSetNode : Object {
+    uintz key;
+    Object val;
+    _FieldSetNode next;
+
+    oper init(uintz key, Object val, _FieldSetNode next) :
+        key = key,
+        val = val,
+        next = next {
+    }
+
+    oper init() {}
+}
+
+## A simple field set implementation.
+class _SimpleFieldSet : _FieldSetNode, FieldSet {
+
+    ## Finds the node that "owns" the node of the specified key
+    ## (result.next.key == key) or returns null if it doesn't exist.
+    @final _FieldSetNode findOwner(uintz key) {
+        _FieldSetNode owner = this;
+        while (owner.next) {
+            if (owner.next.key == key)
+                return owner;
+            owner = owner.next;
+        }
+        return null;
+    }
+
+    void setFieldVal(uintz key, Object val) {
+        owner := findOwner(key);
+        if (!owner) {
+            # We don't currently have the key, create a new one.
+            if (!(val is null))
+                next = _FieldSetNode(key, val, next);
+            return;
+        }
+
+        if (val is null)
+            # Remove the node.
+            owner.next = owner.next.next;
+        else
+            owner.next.val = val;
+    }
+
+    Object getFieldVal(uintz key) {
+        owner := findOwner(key);
+        if (owner)
+            return owner.next.val;
+        else
+            return null;
+    }
+
+    Object oper from FieldSet() { return this; }
+}
+
 ## StandardFormatter class - got a format() method for anything.
 class StandardFormatter : Formatter {
 
     Writer rep;
+
+    # Underlying field set representation.
+    FieldSet __fieldSet;
 
     oper init(Writer rep) : rep = rep {}
 
@@ -313,8 +373,26 @@ class StandardFormatter : Formatter {
         write(Buffer(buffer.buffer + start, buffer.cap - start));
     }
 
+    Object getFieldVal(uintz key) {
+        if (__fieldSet is null)
+            return null;
+        else
+            return __fieldSet.getFieldVal(key);
+    }
+
+    void setFieldVal(uintz key, Object val) {
+        if (!__fieldSet) {
+            if (val is null)
+                return;
+            else
+                __fieldSet = _SimpleFieldSet();
+        }
+        __fieldSet.setFieldVal(key, val);
+    }
+
     Object oper from Writer() { return this; }
     Object oper from Formatter() { return this; }
+    Object oper from FieldSet() { return this; }
 }
 
 cout := StandardFormatter(FDWriter(1));

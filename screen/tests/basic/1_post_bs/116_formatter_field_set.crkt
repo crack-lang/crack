@@ -1,0 +1,40 @@
+%%TEST%%
+formatter field sets
+%%ARGS%%
+%%FILE%%
+import crack.io cout, StandardFormatter;
+
+@import crack.ann assert;
+
+fmt := StandardFormatter(null);
+@assert(fmt.getFieldVal(100) is null);
+
+fmt.setFieldVal(100, 'first');
+@assert(fmt.getFieldVal(100) == 'first');
+
+fmt.setFieldVal(200, 'second');
+@assert(fmt.getFieldVal(100) == 'first');
+@assert(fmt.getFieldVal(200) == 'second');
+
+fmt.setFieldVal(300, 'third');
+@assert(fmt.getFieldVal(100) == 'first');
+@assert(fmt.getFieldVal(200) == 'second');
+@assert(fmt.getFieldVal(300) == 'third');
+
+# Delete first item in the list.
+fmt.setFieldVal(300, null);
+@assert(fmt.getFieldVal(100) == 'first');
+@assert(fmt.getFieldVal(200) == 'second');
+@assert(fmt.getFieldVal(300) is null);
+
+# Delete last item in the list.
+fmt.setFieldVal(100, null);
+@assert(fmt.getFieldVal(100) == null);
+@assert(fmt.getFieldVal(200) == 'second');
+@assert(fmt.getFieldVal(300) is null);
+
+cout `ok\n`;
+
+%%EXPECT%%
+ok
+%%STDIN%%

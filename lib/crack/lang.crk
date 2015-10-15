@@ -148,11 +148,42 @@ class Buffer;
     }
 }
 
+## Interface for objects that allow you to store and retrieve arbitrary fields.
+##
+## This should generally be imported from crack.fieldset, it is defined in
+## crack.lang so that we can make Formatter derive from it.
+@abstract class FieldSet : VTableBase {
+    ## Returns the object associated with the specified key, null if the key
+    ## is undefined.
+    @abstract Object getFieldVal(uintz key);
+
+    ## Set the object associated with the specified key.  Setting a key to
+    ## null is equivalent to making a field undefined, and so null may be
+    ## special-cased to implement "delete."
+    @abstract void setFieldVal(uintz key, Object val);
+
+    @abstract Object oper from FieldSet();
+    @final oper bind() { if (!(this is null)) this.oper from FieldSet().oper bind(); }
+    @final oper release() {
+        if (!(this is null)) this.oper from FieldSet().oper release();
+    }
+    @final oper to Object() {
+        if (!(this is null))
+            return this.oper from FieldSet();
+        else
+            return null;
+    }
+    @final oper to bool() {
+        return !(this is null) &&
+               this.oper from FieldSet().isTrue();
+    }
+}
+
 ## Interface for all classes implementing the format methods.  Formatters can 
 ## be used with the interpolation operator, e.g.:
 ##    MyFormatter f = {};
 ##    f `this is your $value\n`;
-@abstract class Formatter : Object, Writer {
+@abstract class Formatter : Object, Writer, FieldSet {
 
     @abstract Object oper from Formatter();
     @abstract void format(StaticString data);
