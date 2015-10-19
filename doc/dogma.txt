@@ -23,3 +23,7 @@ Goals of Crack:
         problems in Crack, but also possible to do dangerous things if you
         make it explicit.
         [For 1.0, we've failed to make this distinction explicit]
+    6) No magic.  It should be possible to implement most of the advanced
+       runtime/compile-time functionality in the language itself.  e.g.
+       garbage collection, macros, builtin exceptions (BadCast), exception
+       tracebacks.
