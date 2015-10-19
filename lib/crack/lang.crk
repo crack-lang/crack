@@ -131,6 +131,28 @@ class Object : VTableBase {
 
 class Buffer;
 
+# We can't load annotations yet, so we have to implement interfaces by hand.
+# This macro defines the required methods.
+@define _iface_methods 1
+    @abstract Object oper from $1();
+    @final oper bind() {
+        if (!(this is null)) this.oper from $1().oper bind();
+    }
+    @final oper release() {
+        if (!(this is null)) this.oper from $1().oper release();
+    }
+    @final oper to Object() {
+        if (!(this is null))
+            return this.oper from $1();
+        else
+            return null;
+    }
+    @final oper to bool() {
+        return !(this is null) &&
+               this.oper from $1().isTrue();
+    }
+$$
+
 ## Interface for all classes implementing 'write()'.
 @abstract class Writer : VTableBase {
 
@@ -140,12 +162,7 @@ class Buffer;
     ## Flush the contents of the buffer.
     void flush() {}
 
-    # since we can't load annotations yet, implement an interface by hand
-    @abstract Object oper from Writer();
-    oper bind() { if (!(this is null)) this.oper from Writer().oper bind(); }
-    oper release() {
-        if (!(this is null)) this.oper from Writer().oper release();
-    }
+    @_iface_methods Writer
 }
 
 ## Interface for objects that allow you to store and retrieve arbitrary fields.
@@ -162,28 +179,17 @@ class Buffer;
     ## special-cased to implement "delete."
     @abstract void setFieldVal(uintz key, Object val);
 
-    @abstract Object oper from FieldSet();
-    @final oper bind() { if (!(this is null)) this.oper from FieldSet().oper bind(); }
-    @final oper release() {
-        if (!(this is null)) this.oper from FieldSet().oper release();
-    }
-    @final oper to Object() {
-        if (!(this is null))
-            return this.oper from FieldSet();
-        else
-            return null;
-    }
-    @final oper to bool() {
-        return !(this is null) &&
-               this.oper from FieldSet().isTrue();
-    }
+    @_iface_methods FieldSet
 }
 
 ## Interface for all classes implementing the format methods.  Formatters can 
 ## be used with the interpolation operator, e.g.:
 ##    MyFormatter f = {};
 ##    f `this is your $value\n`;
-@abstract class Formatter : Object, Writer, FieldSet {
+##
+## Formatters must also implement FieldSet, allowing users to inject
+## subsystem-specific state.
+@abstract class Formatter : Writer, FieldSet {
 
     @abstract Object oper from Formatter();
     @abstract void format(StaticString data);

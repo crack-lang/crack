@@ -262,7 +262,7 @@ class _SimpleFieldSet : _FieldSetNode, FieldSet {
 }
 
 ## StandardFormatter class - got a format() method for anything.
-class StandardFormatter : Formatter {
+class StandardFormatter : Object, Formatter {
 
     Writer rep;
 
