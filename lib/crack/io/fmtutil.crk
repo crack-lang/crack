@@ -1,0 +1,104 @@
+## Tools for use with formatters.
+
+import crack.lang Buffer;
+import crack.io cerr, Formatter, StandardFormatter, Writer;
+import crack.runtime strlen;
+
+## Indenter is a tool that allows you to easily apply indentation to the
+## output of any formatter.
+##
+## Usage:
+##
+##    void formatTo(Formatter out) {
+##        indent := Indenter.wrap(out);
+##        indent `test\n`;
+##        ++indent;  # only pre-increment/decrement are implemented.
+##        for (child :in children)
+##            # This works the same whether or not 'child' does its own
+##            # Indenter.wrap().
+##            indent `$child\n`;
+##        --indent;
+##    }
+##
+class Indenter : StandardFormatter {
+
+    # Indenter state, stored in the formatter.
+    class __State {
+        ## Level of indentation.
+        uint level;
+
+        ## Amount of indentation per level (4 chars is default).
+        uint indentAmount = 4;
+
+        # Flag to track whether we're at the beginning of a line.
+        bool bol;
+    }
+
+    __State __state;
+
+    oper init(Formatter wrapped, __State state) :
+        StandardFormatter(wrapped),
+        __state = state {
+    }
+
+    void write(byteptr data) {
+        write(Buffer(data, strlen(data)));
+    }
+
+    void write(Buffer data) {
+        uint pos, start;
+        while (start + pos < data.size) {
+            # Write indentation if we're currently at the beginning of a line
+            # (and not at the end of the next line).
+            if (__state.bol && data[pos] != b'\n') {
+                rep.write(String(__state.indentAmount * __state.level, b' '));
+                __state.bol = false;
+            }
+
+            # Write out through the next newline in the buffer.
+            for (; pos < data.size; ++pos) {
+                if (data[pos] == b'\n') {
+                    rep.write(Buffer(data.buffer + start, ++pos));
+                    __state.bol = true;
+                    break;
+                }
+            }
+            start += pos;
+            pos = 0;
+        }
+    }
+
+    ## Returns an indenter wrapping the formatter.  If 'fmt' is already a
+    ## formatter, simply returns 'fmt'.
+    @static Indenter wrap(Formatter fmt) {
+        if (cur := Indenter.cast(fmt, null))
+            return cur;
+
+        fieldVal := fmt.getFieldVal(uintz(__State));
+        if (fieldVal) {
+            return Indenter(fmt, __State.cast(fieldVal));
+        } else {
+            newState := __State();
+            fmt.setFieldVal(uintz(Indenter), newState);
+            return Indenter(fmt, newState);
+        }
+    }
+
+    ## Delete the formatter Indenter state field.  This generally shouldn't be
+    ## necessary, it's usually safe to let these live on with the formatter.
+    @static void deleteField(Formatter fmt) {
+        fmt.setFieldVal(uintz(Indenter), null);
+    }
+
+    Indenter oper ++x() { ++__state.level; return this; }
+    Indenter oper --x() { --__state.level; return this; }
+    Indenter oper -=(int amt) { __state.level -= amt; return this; }
+    Indenter oper +=(int amt) { __state.level += amt; return this; }
+
+    ## Set the indentation level to the specified value.
+    void setLevel(int level) { __state.level = level; }
+
+    ## Set the indentation amount (number of characters to indent at every
+    ## level).  This defaults to 4.
+    void setIndentAmount(int amt) { __state.indentAmount = amt; }
+}

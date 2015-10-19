@@ -1,0 +1,41 @@
+%%TEST%%
+indenter
+%%ARGS%%
+%%FILE%%
+
+import crack.io cout, Formatter;
+import crack.io.fmtutil Indenter;
+
+class A {
+    void formatTo(Formatter out) {
+        indent := Indenter.wrap(out);
+        indent `This is A\n`;
+    }
+}
+
+class B {
+
+    void formatTo(Formatter out) {
+        indent := Indenter.wrap(out);
+        indent `first line\nsecondline\n`;
+        (++indent) `indented line\n`;
+        indent `and here's A:\n`;
+        (++indent) `$(A())\n`;
+        indent -= 2;
+        indent `and this is the end\n`;
+    }
+}
+
+cout `$(B())\n`;
+Indenter.deleteField(cout);
+
+%%EXPECT%%
+first line
+secondline
+    indented line
+    and here's A:
+        This is A
+
+and this is the end
+
+%%STDIN%%
