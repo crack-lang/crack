@@ -2856,6 +2856,9 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
     context.addDef(new AtomicLoadOpDef(intzType, "oper to .builtin.intz"),
                    atomicType
                    );
+    context.addDef(new AtomicLoadOpDef(intzType, "oper to .builtin.uintz"),
+                   atomicType
+                   );
     if (ptrIs32Bit == intIs32Bit) {
         context.addDef(new AtomicLoadOpDef(intType, "oper to .builtin.int"),
                     atomicType

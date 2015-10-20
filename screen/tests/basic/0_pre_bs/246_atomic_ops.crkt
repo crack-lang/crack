@@ -1,0 +1,18 @@
+%%TEST%%
+atomic operations
+%%ARGS%%
+%%FILE%%
+atomic_int ai;
+ai += 100;
+if (int(ai) != 100)
+    puts('FAILED conversion to int');
+if (uint(ai) != 100)
+    puts('FAILED conversion to uint');
+if (intz(ai) != 100)
+    puts('FAILED conversion to intz');
+if (uintz(ai) != 100)
+    puts('FAILED conversion to uintz');
+puts('ok');
+%%EXPECT%%
+ok
+%%STDIN%%
