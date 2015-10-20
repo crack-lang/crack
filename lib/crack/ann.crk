@@ -1303,6 +1303,11 @@ void interface(CrackContext ctx) {
         # Store the location of the left curly.
         loc = tok.getLocation();
 
+        # The set of functions that an interface must provide to work with
+        # objects.  This is also defined as a macro in crack.lang to allow us
+        # to define some of the low-level types as interfaces before we can
+        # parse this module.  These definitions must be kept in sync with that
+        # file.
         f `{
         @abstract Object oper from $(nameTok.getText())();
         @final oper bind() {

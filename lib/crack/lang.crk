@@ -133,6 +133,9 @@ class Buffer;
 
 # We can't load annotations yet, so we have to implement interfaces by hand.
 # This macro defines the required methods.
+#
+# These methods are defined for general use in crack.ann.  They must be kept
+# in sync with the definitions in that module.
 @define _iface_methods 1
     @abstract Object oper from $1();
     @final oper bind() {
