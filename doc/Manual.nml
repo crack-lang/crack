@@ -3038,14 +3038,14 @@ create our own formatter that could be used in the expression above:
     # result is 2a + 1
 }}
 
-More often when doing this, you'll want to derive from #Formatter# and extend
-its functionality:
+More often when doing this, you'll want to derive from #StandardFormatter# 
+and extend its functionality:
 
 {{
-    import crack.io Formatter;
+    import crack.io StandardFormatter;
 
     ## Formatter that encloses strings in quotes.
-    class StrQuoter : Formatter {
+    class StrQuoter : StandardFormatter {
 
         oper init(Writer w) : Formatter(w) {}
 
@@ -3075,7 +3075,7 @@ like all string constants in crack.  If we had not defined
 methods: it will be changed in a future version of the language so that we
 don't have this problem).
 
-You can create your own #Formatter# objects given a #Writer# object.  There
+You can create your own #StandardFormatter# objects given a #Writer# object.  There
 are already a few specializations of this class in the #crack.io# module.
 
 #StringFormatter# allows you to construct a string using a formatter:
@@ -3108,6 +3108,119 @@ above with:
 {{
     if (foo > MAX_FOO)
         throw AssertionError(FStr() `Value of foo out of bounds: $foo`);
+}}
+
+\4{Using the Formatter FieldSet Interface}
+
+The #Formatter# interface derives from #FieldSet#, allowing users to inject
+and obtain state information from anything implementing it.  This can be used
+to implement special formatting functionality and to vary formatting behavior
+of specific classes.
+
+One utility that exploits this feature is #crack.io.fmtutil.Indenter#.  As its
+name suggests, the #Indenter# class provides indented output that can be used
+on any #Formatter# object.  As an example:
+
+{{
+    class Foo {
+        String name;
+        Array[Foo] children;
+
+        ...
+
+        void formatTo(Formatter out) {
+            indent := Indenter.wrap(out);
+            indent `this is $name:\n`;
+
+            ++indent;  # Indent one level.
+            for (child :in children)
+                indent `$child`;
+            --indent;  # dedent one level.
+        }
+    }
+}}
+
+#Indenter# works by intercepting newlines and injecting indentation after
+them.  If used as the formatter for nested elements, as in the example, it
+will apply indendation regardless of whether the nested elements use
+#Indenter.wrap()#.  If passed a formatter that is already an Indenter,
+#Indenter.wrap()# will cast the formatter to an indenter rather than creating
+one or trying to retrieve one from the formatter's #FieldSet#.
+
+The #Formatter# #FieldSet# can also be used to vary the behavior of object
+format methods.  The following example illustrates the use of a stored
+attribute to switch formatting between a debug representation and the normal
+output form:
+
+{{
+    import crack.io cout, Formatter;
+    import crack.io.fmtutil Indenter;
+    import crack.fieldset FieldSet;
+
+    @import crack.fieldset_ann fieldset_accessors;
+
+    class A;
+
+    # AFmt is a class that can be stored in a FieldSet.  It's purpose is to
+    # dispatch formatting to different methods depending on which specialization
+    # is active in the Formatter.
+    @abstract class AFmt {
+        @abstract void format(Formatter out, A inst);
+        @fieldset_accessors(AFmt);
+    }
+
+    AFmt _makeAPrettyFmt();
+
+    class A {
+
+        void formatTo(Formatter out) {
+
+            # Get the AFmt object for the Formatter, and invoke it's format method
+            # to do the formatting.
+            AFmt fmt;
+            if (!(fmt = AFmt.get(out))) {
+                fmt = _makeAPrettyFmt();
+                fmt.putIn(out);
+            }
+
+            fmt.format(out, this);
+        }
+
+        # Different veriations of the formatTo() method called by AFmt
+        # specializations.
+
+        void formatReprTo(Formatter out) {
+            out `repr A`;
+        }
+
+        void formatPrettyTo(Formatter out) {
+            out `pretty A`;
+        }
+    }
+
+    # When this is associated with a Formatter, we format "reprs" of A.
+    class AReprFmt : AFmt {
+        void format(Formatter out, A inst) {
+            inst.formatReprTo(out);
+        }
+    }
+
+    # When this is associated with a Formatter, we "pretty format" A.
+    class APrettyFmt : AFmt {
+        void format(Formatter out, A inst) {
+            inst.formatPrettyTo(out);
+        }
+    }
+
+    AFmt _makeAPrettyFmt() {
+        return APrettyFmt();
+    }
+
+    APrettyFmt().putIn(cout);
+    cout `$(A())\n`;  # Prints 'pretty A'
+
+    AReprFmt().putIn(cout);
+    cout `$(A())\n`;  # Prints 'repr A'
 }}
 
 The Sequence Constant Protocol
@@ -4713,6 +4826,72 @@ can also be used to change environment variables:
     env['PATH'] = path;
 }}
 
+Field Sets
+----------
+
+Field sets allow you to associate arbitrary subsystem specific data with a
+context object.  They are provided by the #crack.fieldset# module.
+
+An example of when you would use a #FieldSet# is in an HTTP request handler
+chain.  Let's say you have a set of request handlers that are called
+sequentially by your server.  The first does authentication, the second does
+dispatch based on URL path, and the third finally handles the request.  Both
+of the latter modules may need authentication information from the first, so a
+logical choice would be to add authentication information as an attribute of
+the request object.  In this way, authenticators can fill it in and consumers
+can read it from a standardized place.
+
+But there may be many authenticator implementations that all provide different
+forms of state information.  As an HTTP framework implementor, you wouldn't
+want to define authentication state that is tightly coupled with your request
+object.  One solution would be to add a request factory method to the HTTP
+server, allowing frameworks to customize their request objects, but that in
+turn makes it difficult to combine elements of different frameworks.
+
+Field sets provide an elegant solution to this problem.
+#crack.net.httpsrv.HTTPRequest# implements the #FieldSet# interface, allowing
+arbitrary objects to be attached to it.  So for example, for our
+authentication data we could define an #AuthData# class and use it as follows:
+
+{{
+
+    import crack.fieldset FieldSet;
+    @import crack.fieldset_ann fieldset_accessors;
+
+    class AuthData {
+        String userId;
+        oper init(String userId) : userId = userId {}
+
+        # Macro defining the methods allowing AuthData to be added and removed
+        # from a FieldSet.
+        @fieldset_accessors(AuthData);
+    }
+
+    void authHandler(HTTPRequest req) {
+        ... do authentication ...
+
+        # Store the auth data.
+        AuthData(userId).putIn(req);
+    }
+}}
+
+Our application handler could then access it using the #get()# method:
+
+{{
+    void appHandler(HTTPRequest req) {
+        auth := AuthData.get(req);
+
+        if (!auth) {
+            req.sendRedirect(303, LOGIN_URL);
+        } else {
+            ... serve page ...
+        }
+    }
+}}
+
+The #Formatter# interface is also derived from #FieldSet#.  For more
+information, see \X(Using the Formatter FieldSet Interface).
+
 Input\/Output
 -------------
 
@@ -4777,7 +4956,7 @@ descriptor.  You can obtain a file descriptor from any of the low-level IO
 functions on your system ("#open()#", for example).
 
 The #crack.io# module also provides the #Formatter# class.  See \X(The
-Formatter Interface) for details on how to use this.
+Formatter Protocol) for details on how to use this.
 
 Threads
 -------
