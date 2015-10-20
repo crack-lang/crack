@@ -723,6 +723,11 @@ line $lineNum: $msg\n`;
     ## Create, parse and return the next paragraph.
     TextBlock _parsePara(int indent) {
         tmp := _parseText('para', null, false, indent);
+
+        # If it entirely consists of another block, just promote it to the
+        # other block.
+        if (tmp.words.count() == 1 && tmp.words[0].isa(TextBlock))
+            tmp = TextBlock.cast(tmp.words[0]);
         _debug("Para: ", tmp);
         return tmp;
     }
