@@ -40,6 +40,7 @@ protected:
     StructMapType typeMap;
     std::map<llvm::Type *, bool> traversed;
 
+    llvm::Type *maybeMapStructTypeByElements(llvm::StructType *type);
     llvm::Type *mapStructTypeByElements(llvm::StructType *type);
     llvm::Type *mapStructType(llvm::StructType *structTy);
     void traceMapping(llvm::Type *type, llvm::Type *newType,

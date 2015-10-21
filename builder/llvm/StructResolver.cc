@@ -77,8 +77,54 @@ namespace {
     };
 } // anon namespace
 
-// 'type' should not be a duplicate.
 Type *StructResolver::mapStructTypeByElements(StructType *type) {
+    // See if the type already got mapped when doing the fields.
+    StructResolver::StructMapType::iterator iter =
+        typeMap.find(type);
+    if (iter != typeMap.end())
+        return iter->second;
+
+    // Make the current type relinquish its name.
+    string origName = type->getName();
+    SPUG_CHECK(origName.substr(0, 3) != ":::",
+               "re-renaming type " << origName
+               );
+    type->setName(SPUG_FSTR(":::" << origName << "." << type));
+
+    SR_DEBUG cerr << "Rebuilding struct type " << origName <<
+        " (depends on mapped types, old is now " <<
+        string(type->getName()) << ")" << endl;
+
+    SPUG_CHECK(!LLVMBuilder::getLLVMType(origName),
+               "Renamed registered type " << origName
+               );
+
+    // Create a new type and add it to the map so that when we map the
+    // elements, we'll fix recursive references to the new type.
+    StructType *newType =
+        StructType::create(type->getContext(), origName);
+    typeMap[type] = newType;
+
+    // Map all elements.
+    vector<Type *> elements;
+    for (StructType::element_iterator iter = type->element_begin();
+         iter != type->element_end();
+         ++iter
+         ) {
+        Type *elemType = *iter;
+        if (Type *newType = mapType(*iter))
+            elemType = newType;
+        elements.push_back(elemType);
+    }
+
+    newType->setBody(elements, type->isPacked());
+    LLVMBuilder::putLLVMType(origName, newType);
+
+    return newType;
+}
+
+// 'type' should not be a duplicate.
+Type *StructResolver::maybeMapStructTypeByElements(StructType *type) {
 
     // See if any of the element types must be mapped.
     bool mustMap = false;
@@ -93,49 +139,7 @@ Type *StructResolver::mapStructTypeByElements(StructType *type) {
     }
 
     if (mustMap) {
-        // See if the type already got mapped when doing the fields.
-        StructResolver::StructMapType::iterator iter =
-            typeMap.find(type);
-        if (iter != typeMap.end())
-            return iter->second;
-
-        // Make the current type relinquish its name.
-        string origName = type->getName();
-        SPUG_CHECK(origName.substr(0, 3) != ":::",
-                   "re-renaming type " << origName
-                   );
-        type->setName(SPUG_FSTR(":::" << origName << "." << type));
-
-        SR_DEBUG cerr << "Rebuilding struct type " << origName <<
-            " (depends on mapped types, old is now " <<
-            string(type->getName()) << ")" << endl;
-
-        SPUG_CHECK(!LLVMBuilder::getLLVMType(origName),
-                   "Renamed registered type " << origName
-                   );
-
-        // Create a new type and add it to the map so that when we map the
-        // elements, we'll fix recursive references to the new type.
-        StructType *newType =
-            StructType::create(type->getContext(), origName);
-        typeMap[type] = newType;
-
-        // Map all elements.
-        vector<Type *> elements;
-        for (StructType::element_iterator iter = type->element_begin();
-             iter != type->element_end();
-             ++iter
-             ) {
-            Type *elemType = *iter;
-            if (Type *newType = mapType(*iter))
-                elemType = newType;
-            elements.push_back(elemType);
-        }
-
-        newType->setBody(elements, type->isPacked());
-        LLVMBuilder::putLLVMType(origName, newType);
-
-        return newType;
+        return mapStructTypeByElements(type);
     } else {
         // If we get here, this is the original instance of the type,
         // loaded from the cache, and it contains no nested types that
@@ -177,7 +181,7 @@ Type *StructResolver::mapStructType(StructType *structTy) {
         // The type itself isn't a duplicate.  Now we have to check all
         // nested types since these might have been duplicates even if the
         // outer type wasn't.
-        return mapStructTypeByElements(structTy);
+        return maybeMapStructTypeByElements(structTy);
     }
 
     string canonicalName = name.substr(0, pos);
@@ -191,16 +195,18 @@ Type *StructResolver::mapStructType(StructType *structTy) {
     // type.
     StructType *type = LLVMBuilder::getLLVMType(canonicalName);
 
-    // since we're now deferring type resolution until after the linker,
-    // we can get into a situation where multiple modules load the type
-    // before it is registered.  Most likely this will cause problems with
-    // collapsing isomorphic types, too.
     if (!type) {
+        // We seem to be able to get into a situation where we get a duplicate 
+        // type that hasn't been registered yet, I'm not exactly sure why but
+        // I've observed it with cyclic modules.  Try changing the name and 
+        // remapping the type.
         SR_DEBUG cerr << "Unregistered duplicate type found for " <<
             canonicalName << endl;
-        LLVMBuilder::putLLVMType(canonicalName, structTy);
         structTy->setName(canonicalName);
-        return structTy;
+        SPUG_CHECK(structTy->getName() == canonicalName,
+                   "Failed to fix name of unregistered duplicate type " <<
+                   canonicalName);
+        return mapStructTypeByElements(structTy);
     } else if (type->getName() != canonicalName) {
         // This was to help me debug something.
         SR_DEBUG cerr << "Restoring missing name for original type " <<
