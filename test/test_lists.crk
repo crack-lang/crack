@@ -12,6 +12,9 @@ import crack.io cout, FStr;
 
 import crack.cont.list DList, List;
 import crack.cont.hashmap OrderedHashMap; // Also uses a list
+
+@import crack.ann assert;
+
 List[int] nums = {};
 DList[int] dnums = {};
 OrderedHashMap[int, int] map = {};
@@ -44,11 +47,22 @@ if (FStr() `$nums` != '[1]')
     cout `List.clear -> append failed formatting\n`;
 nums.clear();
 
+nums = List[int]![1, 2, 2, 3, 4];
+@assert(nums.tail.elem == 4);
+nums.remove(4);
+@assert(nums == List[int]![1, 2, 2, 3]);
+@assert(nums.tail.elem = 3);
+nums.remove(2);
+@assert(nums == List[int]![1, 2, 3]);
+nums.remove(1);
+@assert(nums == List[int]![2, 3]);
+@assert(nums.count() == 2);
+nums.clear();
+
 //------------------------------------------------------------------------------
 nums.append(1);
 nums.append(2);
 if (nums.count() != 2) cout `List append failed: $nums\n`;
-
 
 if (nums.pop() != 2) cout `List.pop failed\n`;
 
@@ -58,7 +72,6 @@ if (nums.count()) cout `List popTail failed: $nums\n`;
 nums.append(1);
 nums.append(2);
 if (nums.count() != 2) cout `List append failed: $nums\n`;
-
 
 if (nums.pop() != 2) cout `List.pop failed\n`;
 
@@ -117,6 +130,20 @@ if (dnums.pop() != 2) cout `DList.pop failed\n`;
 
 if (dnums.pop() != 1) cout `DList.pop failed\n`;
 if (dnums.count()) cout `DList popHead failed: $dnums\n`;
+
+dnums = DList[int]![1, 2, 2, 3, 4];
+@assert(dnums.remove(4));
+@assert(dnums == DList[int]![1, 2, 2, 3]);
+@assert(dnums.count() == 4);
+@assert(dnums.tail.elem == 3);
+@assert(dnums.remove(2));
+@assert(dnums == DList[int]![1, 2, 3]);
+@assert(dnums.count() == 3);
+@assert(dnums.remove(1));
+@assert(dnums == DList[int]![2, 3]);
+@assert(dnums.count() == 2);
+@assert(dnums.head.elem == 2);
+@assert(!dnums.remove(18));
 
 //------------------------------------------------------------------------------
 // OrderedHashMap

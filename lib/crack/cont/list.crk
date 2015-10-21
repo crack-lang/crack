@@ -7,9 +7,9 @@
 # 
 # Singly and Doubly Linked-list Generics
 
-import crack.lang AssertionError, IndexError, InvalidArgumentError, Writer, 
-                  Formatter;
-import crack.io FStr;
+import crack.io cerr, FStr;
+import crack.lang cmp, AssertionError, IndexError, InvalidArgumentError,
+    Writer, Formatter;
 
 # we use poormac here because the standard macro mechanism depends on this 
 # module.
@@ -99,11 +99,12 @@ class List[Elem] {
     
     oper init() {}
     
-    Iter iter() {
+    @final Iter iter() {
         return Iter(head);
     }
 
-    void append(Elem elem) {
+    ## Adds the element to the end of the list.
+    @final void append(Elem elem) {
         if (tail) {
             temp := Node(elem);
             tail.next = temp;
@@ -113,8 +114,9 @@ class List[Elem] {
         }
         _count = _count + 1;
     }
-    
-    void pushHead(Elem elem) {
+
+    ## Inserts the element at the beginning of the list.
+    @final void pushHead(Elem elem) {
         newNode := Node(elem);
         if (head) {
             newNode.next = head;
@@ -125,12 +127,11 @@ class List[Elem] {
         _count = _count + 1;
     }
     
-    void pushTail(Elem elem) {
-        append(elem);
-    }
+    ## Adds the element to the end of the list (equivalent to "append()")
+    alias pushTail = append;
 
     ## Remove the element from the front of the list and return it.
-    Elem popHead() {
+    @final Elem popHead() {
         if (!head)
             throw InvalidArgumentError('Attempting to pop from an empty list');
         elem := head.elem;
@@ -144,7 +145,7 @@ class List[Elem] {
 
     ## Remove the element from the end of the list and return it.
     ## This operation is O(N), do not use unless the list is short.
-    Elem popTail() {
+    @final Elem popTail() {
         if (!tail)
             throw InvalidArgumentError('Attempting to pop from an empty list');
         if (head == tail) {
@@ -158,22 +159,21 @@ class List[Elem] {
         old = head;
         cur = head;
 
-        while (cur != tail){
+        while (cur != tail) {
             old = cur;
             cur = cur.next;
         }
         
         elem := tail.elem;
         tail = old;
+        old.next = null;
         --_count;
         return elem;
     }
 
-    Elem pop(){
-        return popTail();
-    }
+    alias pop = popTail;
 
-    Node __findNode(uint index) {
+    @final Node __findNode(uint index) {
         i := index;
         node := head;
         while (i && node) {
@@ -184,7 +184,8 @@ class List[Elem] {
         return node;
     }
 
-    void insert(uint index, Elem elem) {
+    ## Insert a new element at the specified index.
+    @final void insert(uint index, Elem elem) {
         # special-case inserting at the beginning
         if (!index) {
             pushHead(elem);
@@ -205,7 +206,8 @@ class List[Elem] {
         _count = _count + 1;
     }
 
-    void delete(uint index) {
+    ## Delete the element at the specified index.
+    @final void delete(uint index) {
         if (head is null || tail is null) throw AssertionError("Cannot delete node from empty list");
         if (index > _count)
             throw IndexError('List index out of range in delete()');
@@ -229,13 +231,14 @@ class List[Elem] {
         _count = _count - 1;
     }
 
-    void delete(Elem elem) {
-        if (_isNull(elem)) throw InvalidArgumentError("Invalid argument null for delete()");
-        if (_isNull(head) || _isNull(tail)) throw AssertionError("Cannot delete element from empty list");
+    ## Remove the first element equal to 'elem' from the list.
+    @final void remove(Elem elem) {
+        if (_isNull(elem))
+            throw InvalidArgumentError("Invalid argument null for delete()");
+        if (_isNull(head) || _isNull(tail))
+            throw AssertionError("Cannot delete element from empty list");
         if (_equal(head.elem, elem) && head) {
             popHead();
-        } else if (_equal(tail.elem, elem) && tail) {
-            popTail();
         } else {
             Node onode, tnode;
             onode = tnode = head;
@@ -244,27 +247,56 @@ class List[Elem] {
                 tnode = tnode.next;
             }
             onode.next = tnode.next;
+            if (tnode is tail)
+                tail = onode;
+            _count--;
         }
-        _count--;
     }
 
     ## Delete all items in the list.
-    void clear() {
+    @final void clear() {
         head = tail = null;
         _count = 0;
     }
 
-    Elem oper [](uint index) {
+    ## Returns the element at the specified index.
+    @final Elem oper [](uint index) {
         if (index > _count)
             throw IndexError('List index out of range in []');
         node := __findNode(index);
         return node.elem;
     }
-    
-    uint count() { return _count; }
+
+    ## Returns the number of elements in the list.
+    @final uint count() { return _count; }
 
     ## Empty lists are false, non-empty lists are true.
     bool isTrue() { return _count; }
+
+    @final int cmp(List other) {
+        Node a = head, b = other.head;
+        while (a || b) {
+            if (a && !b) {
+                return 1;
+            } else if (!a && b) {
+                return -1;
+            } else {
+                diff := cmp(a.elem, b.elem);
+                if (diff)
+                    return diff;
+            }
+            a = a.next;
+            b = b.next;
+        }
+        return 0;
+    }
+
+    int cmp(Object other) {
+        if (o := List.cast(other, null))
+            return cmp(o);
+        else
+            return Object.cmp(other);
+    }
 
     void formatTo(Formatter fmt) {
         fmt `[`;
@@ -336,8 +368,8 @@ class DList[Elem] {
 
     oper init() {}
 
-    oper del() {
-        # have to break the reference cycles
+    ## Break the reference cycles between nodes.
+    void __breakRefCycles() {
         node := head;
         while (node) {
             node.prev = null;
@@ -345,10 +377,14 @@ class DList[Elem] {
         }
     }
 
+    oper del() {
+        __breakRefCycles();
+    }
+
     ## Insert the object at the iterator (after insertion, the iterator will 
     ## reference the new node with the element, the old node that
     ## iterator previously referenced will be the next node)
-    void insert(Iter ix, Elem elem) {
+    @final void insert(Iter ix, Elem elem) {
         
         # get what will be the next and previous node of the new node.
         next := ix._node;
@@ -372,7 +408,7 @@ class DList[Elem] {
 
     ## Delete the object at the iterator.  After deletion, the iterator 
     ## will refer to what was originally the subsequent node.
-    void delete(Iter ix) {
+    @final void delete(Iter ix) {
         node := Node.unsafeCast(ix._node);
         if (node.next)
             node.next.prev = node.prev;
@@ -389,26 +425,29 @@ class DList[Elem] {
     }
     
     ## Delete all elements from the list.
-    void clear() {
+    @final void clear() {
+        __breakRefCycles();
         head = tail = null;
         _count = 0;
     }
 
-    Iter iter() {
+    ## Returns an iterator for the list.
+    @final Iter iter() {
         return Iter(head);
     }
 
     ## Returns an iterator.
     ## if 'back' is true, initialize it to point to the last node on the 
     ## list. Otherwise point it to the first node.
-    Iter iter(bool back) {
+    @final Iter iter(bool back) {
         if (back)
             return Iter(tail);
         else
             return Iter(head);
     }
 
-    void append(Elem elem) {
+    ## Appends a new element to the end of the list.
+    @final void append(Elem elem) {
         if (tail) {
             temp := Node(elem, tail);
             tail.next = temp;
@@ -418,8 +457,9 @@ class DList[Elem] {
         }
         _count = _count + 1;
     }
-    
-    void pushHead(Elem elem) {
+
+    ## Insert a new element at the beginning of the list.
+    @final void pushHead(Elem elem) {
         newNode := Node(elem, null);
         if (head) {
             newNode.next = head;
@@ -431,11 +471,9 @@ class DList[Elem] {
         _count = _count + 1;
     }
 
-    void pushTail(Elem elem) {
-        append(elem);
-    }
+    alias pushTail = append;
 
-    Elem popHead() {
+    @final Elem popHead() {
         if (!head) 
             throw InvalidArgumentError('Attempting to pop from an empty list');
         elem := head.elem;
@@ -450,7 +488,7 @@ class DList[Elem] {
     }
 
     ## Remove the element from the back of the list and return it.
-    Elem popTail() {
+    @final Elem popTail() {
         if (!tail)
             throw InvalidArgumentError('Attempting to pop from an empty list');
         elem := tail.elem;
@@ -467,11 +505,9 @@ class DList[Elem] {
         return elem;
     }
 
-    Elem pop(){
-        return popTail();
-    }
+    alias pop = popTail;
 
-    Node __findNode(uint index) {
+    @final Node __findNode(uint index) {
         i := index;
         node := head;
         while (i && node) {
@@ -482,7 +518,8 @@ class DList[Elem] {
         return node;
     }
 
-    void insert(uint index, Elem elem) {
+    ## Insert a new element at the specified index.
+    @final void insert(uint index, Elem elem) {
         # special-case inserting at the beginning
         if (!index) {
             pushHead(elem);
@@ -505,7 +542,8 @@ class DList[Elem] {
         _count = _count + 1;
     }
 
-    void delete(uint index) {
+    ## Delete the element at the specified index.
+    @final void delete(uint index) {
         if (index > _count)
             throw IndexError('List index out of range in delete()');
         if (index > 0) {
@@ -534,17 +572,67 @@ class DList[Elem] {
         _count = _count - 1;
     }
 
-    Elem oper [](uint index) {
+    ## Removes the first matching element (by equality) from the list.  
+    ## Returns true if the element was deleted, false if not found.
+    @final bool remove(Elem elem) {
+        node := head;
+        while (node) {
+            if (_equal(node.elem, elem)) {
+                next := node.next;
+                if (node.prev)
+                    node.prev.next = next;
+                if (next)
+                    next.prev = node.prev;
+                if (node is head)
+                    head = node.next;
+                if (node is tail)
+                    tail = node.prev;
+                --_count;
+                return true;
+            }
+            node = node.next;
+        }
+        return false;
+    }
+
+    ## Returns the element at the specified index.
+    @final Elem oper [](uint index) {
         if (index > _count)
             throw IndexError('List index out of range in []');
         node := __findNode(index);
         return node.elem;
     }
 
-    uint count() { return _count; }
+    ## Returns the number of elements in the list.
+    @final uint count() { return _count; }
 
     ## Empty lists are false, non-empty lists are true.
     bool isTrue() { return !head ? false : _count; }
+
+    int cmp(DList other) {
+        Node a = head, b = other.head;
+        while (a || b) {
+            if (a && !b) {
+                return 1;
+            } else if (!a && b) {
+                return -1;
+            } else {
+                diff := cmp(a.elem, b.elem);
+                if (diff)
+                    return diff;
+            }
+            a = a.next;
+            b = b.next;
+        }
+        return 0;
+    }
+
+    int cmp(Object other) {
+        if (o := DList.cast(other, null))
+            return cmp(o);
+        else
+            return Object.cmp(other);
+    }
 
     void formatTo(Formatter fmt) {
         fmt `[`;

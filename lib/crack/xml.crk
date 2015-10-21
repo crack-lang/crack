@@ -160,7 +160,7 @@ class Element {
     }
 
     void removeChild(Element child) {
-        if (_children != null) _children.delete(child);
+        if (_children != null) _children.remove(child);
     }
 
     void remove() {
