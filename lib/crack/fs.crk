@@ -53,6 +53,10 @@ class Path;
     @abstract Writer writer();
     alias makeWriter = writer;
 
+    ## Returns a writer that appends to the file defined by the path.
+    @abstract Writer appender();
+    alias makeAppender = appender;
+
     ## Truncate the file to the specified size.
     @abstract void truncate(uint64 newSize);
 
@@ -270,7 +274,7 @@ class RealPath : Path {
             throw SystemError(FStr() `truncating $__path`);
     }
 
-    Writer makeAppender() {
+    Writer appender() {
         fd := open(__path.buffer, O_APPEND | O_WRONLY, 0777);
         if (fd == -1)
             throw SystemError(FStr() `opening $__path`);
@@ -365,6 +369,7 @@ class _CWD : Path {
 
     Reader reader() { return __path.reader(); }
     Writer writer() { return __path.writer(); }
+    Writer appender() { return __path.appender(); }
     void truncate(uint64 size) { __path.truncate(size); }
     void makeDir(bool errorOnExists) { __path.makeDir(errorOnExists); }
     Path oper [](String child) { return __path[child]; }
