@@ -1,10 +1,10 @@
 // Copyright 2012 Shannon Weyrick <weyrick@mozek.us>
 // Copyright 2013 Google Inc.
-// 
+//
 //   This Source Code Form is subject to the terms of the Mozilla Public
 //   License, v. 2.0. If a copy of the MPL was not distributed with this
 //   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-// 
+//
 
 #include "StructResolver.h"
 
@@ -196,9 +196,9 @@ Type *StructResolver::mapStructType(StructType *structTy) {
     StructType *type = LLVMBuilder::getLLVMType(canonicalName);
 
     if (!type) {
-        // We seem to be able to get into a situation where we get a duplicate 
+        // We seem to be able to get into a situation where we get a duplicate
         // type that hasn't been registered yet, I'm not exactly sure why but
-        // I've observed it with cyclic modules.  Try changing the name and 
+        // I've observed it with cyclic modules.  Try changing the name and
         // remapping the type.
         SR_DEBUG cerr << "Unregistered duplicate type found for " <<
             canonicalName << endl;
@@ -226,7 +226,7 @@ Type *StructResolver::mapStructType(StructType *structTy) {
     return right;
 }
 
-void StructResolver::traceMapping(Type *type, Type *newType, 
+void StructResolver::traceMapping(Type *type, Type *newType,
                                   const char *designator
                                   ) {
     cerr << "Mapping " << designator << " type " << llvmStr(*type) <<

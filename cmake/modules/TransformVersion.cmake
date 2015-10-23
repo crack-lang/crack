@@ -5,22 +5,22 @@
    # some non-numerical data in the patch version.
    #message(STATUS "DEBUG: version = ${version}")
    string(REGEX REPLACE "^([0-9.]+).*$" "\\1" internal_version ${version})
-    
+
       # internal_version is normally a period-delimited triplet string of the form
       # "major.minor.patch", but patch and/or minor could be missing.
       # Transform internal_version into a numerical result that can be compared.
       string(REGEX REPLACE "^([0-9]*).+$" "\\1" major ${internal_version})
       string(REGEX REPLACE "^[0-9]*\\.([0-9]*).*$" "\\1" minor ${internal_version})
       string(REGEX REPLACE "^[0-9]*\\.[0-9]*\\.([0-9]*)$" "\\1" patch ${internal_version})
-    
+
       if(NOT patch MATCHES "^[0-9]+$")
         set(patch 0)
       endif(NOT patch MATCHES "^[0-9]+$")
-    
+
       if(NOT minor MATCHES "[0-9]+")
         set(minor 0)
       endif(NOT minor MATCHES "[0-9]+")
-    
+
       if(NOT major MATCHES "[0-9]+")
         set(major 0)
       endif(NOT major MATCHES "[0-9]+")

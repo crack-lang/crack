@@ -1,10 +1,10 @@
 // Copyright 2010-2011 Shannon Weyrick <weyrick@mozek.us>
 // Copyright 2010-2012 Google Inc.
-// 
+//
 //   This Source Code Form is subject to the terms of the Mozilla Public
 //   License, v. 2.0. If a copy of the MPL was not distributed with this
 //   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-// 
+//
 
 #ifndef _builder_llvm_BArgVarDefImpl_h_
 #define _builder_llvm_BArgVarDefImpl_h_
@@ -40,7 +40,7 @@ public:
     virtual model::ResultExprPtr emitRef(model::Context &context,
                                          model::VarRef *var
                                         );
-    
+
     virtual model::ResultExprPtr
             emitAssignment(model::Context &context,
                            model::AssignExpr *assign);
@@ -48,7 +48,7 @@ public:
     virtual void emitAddr(model::Context &context, model::VarRef *var);
 
     model::VarDefImplPtr promote(LLVMBuilder &builder, model::ArgDef *arg);
-    
+
     virtual bool hasInstSlot() const;
     virtual int getInstSlot() const;
     virtual bool isInstVar() const;
@@ -103,19 +103,19 @@ public:
     BGlobalVarDefImpl(llvm::GlobalVariable *rep, int repModuleId);
 
     virtual llvm::Value *getRep(LLVMBuilder &builder);
-    
+
     llvm::PointerType *getLLVMType() const {
         return llvmType;
     }
-    
+
     std::string getName() const { return name; }
     bool isConstant() const { return constant; }
-    
+
     void setRep(llvm::GlobalVariable *newRep, int newRepModuleId) {
         rep = newRep;
         repModuleId = newRepModuleId;
     }
-    
+
     void fixModule(llvm::Module *oldMod, llvm::Module *newMod);
 };
 
@@ -129,7 +129,7 @@ private:
 
 public:
 
-    BConstDefImpl(BFuncDef *func, llvm::Function *rep) : 
+    BConstDefImpl(BFuncDef *func, llvm::Function *rep) :
         func(func), rep(rep) {}
 
     virtual model::ResultExprPtr emitRef(model::Context &context,
@@ -147,13 +147,13 @@ public:
     virtual bool hasInstSlot() const;
     virtual int getInstSlot() const;
     virtual bool isInstVar() const;
-    
+
     void fixModule(llvm::Module *oldMod, llvm::Module *newMod);
 };
 
 SPUG_RCPTR(BFieldDefImpl);
 
-// Base class for variable implementations that are offsets from a base 
+// Base class for variable implementations that are offsets from a base
 // pointer.
 class BFieldDefImpl : public model::VarDefImpl {
     public:
@@ -165,7 +165,7 @@ class BFieldDefImpl : public model::VarDefImpl {
                     "variable."
                    );
         }
-    
+
         virtual model::ResultExprPtr emitAssignment(model::Context &context,
                                                     model::AssignExpr *assign
                                                     ) {
@@ -188,7 +188,7 @@ class BFieldDefImpl : public model::VarDefImpl {
                                           ) = 0;
 
         virtual void emitAddr(model::Context &context, model::VarRef *var);
-        
+
         virtual llvm::Value *emitFieldAddr(llvm::IRBuilder<> &builder,
                                            llvm::Type *fieldType,
                                            llvm::Value *aggregate
@@ -224,8 +224,8 @@ class BInstVarDefImpl : public BFieldDefImpl {
         virtual bool isInstVar() const;
 };
 
-// Implementation for "offset fields."  These are used to access structure 
-// fields in extension objects, where we need fine grain control over where 
+// Implementation for "offset fields."  These are used to access structure
+// fields in extension objects, where we need fine grain control over where
 // the field is located.
 class BOffsetFieldDefImpl : public BFieldDefImpl {
     public:

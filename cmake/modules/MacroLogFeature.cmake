@@ -56,7 +56,7 @@ MACRO(MACRO_LOG_FEATURE _var _package _description _url ) # _required _minvers _
    STRING(TOUPPER "${ARGV4}" _required)
    SET(_minvers "${ARGV5}")
    SET(_comments "${ARGV6}")
-   
+
    IF (${_var})
      SET(_LOGFILENAME ${CMAKE_BINARY_DIR}/EnabledFeatures.txt)
    ELSE (${_var})
@@ -88,7 +88,7 @@ MACRO(MACRO_LOG_FEATURE _var _package _description _url ) # _required _minvers _
    ENDIF (NOT ${_var})
 
    FILE(APPEND "${_LOGFILENAME}" "${_logtext}\n")
- 
+
 ENDMACRO(MACRO_LOG_FEATURE)
 
 

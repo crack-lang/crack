@@ -1,10 +1,10 @@
 // Copyright 2010-2011 Shannon Weyrick <weyrick@mozek.us>
 // Copyright 2010-2012 Google Inc.
-// 
+//
 //   This Source Code Form is subject to the terms of the Mozilla Public
 //   License, v. 2.0. If a copy of the MPL was not distributed with this
 //   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-// 
+//
 
 #ifndef _builder_llvm_Ops_h_
 #define _builder_llvm_Ops_h_
@@ -28,17 +28,17 @@ SPUG_RCPTR(OpDef);
 
 class OpDef : public model::FuncDef {
     public:
-        
+
         OpDef(model::TypeDef *resultType, model::FuncDef::Flags flags,
               const std::string &name,
               size_t argCount
               ) :
             FuncDef(flags, name, argCount) {
-            
+
             // XXX we don't have a function type for these
             returnType = resultType;
         }
-        
+
         virtual model::FuncCallPtr createFuncCall() = 0;
 
         virtual void *getFuncAddr(Builder &builder) {
@@ -61,19 +61,19 @@ class BinOpDef : public OpDef {
 class UnOpDef : public OpDef {
     public:
     UnOpDef(model::TypeDef *resultType, const std::string &name) :
-            OpDef(resultType, model::FuncDef::builtin | model::FuncDef::method, 
-                  name, 
+            OpDef(resultType, model::FuncDef::builtin | model::FuncDef::method,
+                  name,
                   0
                   ) {
         }
 };
 
-// No-op call returns its receiver or argument.  This is used for oper new's 
+// No-op call returns its receiver or argument.  This is used for oper new's
 // to avoid doing any conversions if the type is already correct.
 class NoOpCall : public model::FuncCall {
 public:
     NoOpCall(model::FuncDef *def) : model::FuncCall(def) {}
-    
+
     virtual model::ResultExprPtr emit(model::Context &context);
 };
 
@@ -138,7 +138,7 @@ public:
     NegOpCall(model::FuncDef *def) : FuncCall(def) {}
 
     virtual model::ResultExprPtr emit(model::Context &context);
-    
+
     virtual model::ExprPtr foldConstants();
 };
 
@@ -174,7 +174,7 @@ class FunctionPtrOpDef : public OpDef {
 public:
     FunctionPtrOpDef(model::TypeDef *resultType,
                      size_t argCount) :
-    OpDef(resultType, FuncDef::builtin | FuncDef::method, "oper call", 
+    OpDef(resultType, FuncDef::builtin | FuncDef::method, "oper call",
           argCount
           ) {
         type = resultType;
@@ -211,9 +211,9 @@ public:
 
 class NoOpDef : public GeneralOpDef<NoOpCall> {
     public:
-        NoOpDef(model::TypeDef *resultType, const std::string &name) : 
-            GeneralOpDef<NoOpCall>(resultType, 
-                                   FuncDef::builtin | model::FuncDef::method, 
+        NoOpDef(model::TypeDef *resultType, const std::string &name) :
+            GeneralOpDef<NoOpCall>(resultType,
+                                   FuncDef::builtin | model::FuncDef::method,
                                    name,
                                    0
                                    ) {
@@ -545,8 +545,8 @@ FPTRUNCOP_DEF(FPTrunc)
 FPTRUNCOP_DEF(FPToSI)
 FPTRUNCOP_DEF(FPToUI)
 
-    // define a floating point truncation definition so we can use this as either 
-    // an explicit constructor or an implicit "oper to" for converting to the 
+    // define a floating point truncation definition so we can use this as either
+    // an explicit constructor or an implicit "oper to" for converting to the
     // 'float' PDNT.
 
 } // end namespace builder::vmll

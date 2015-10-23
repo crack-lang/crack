@@ -1,10 +1,10 @@
 // Copyright 2010-2012 Shannon Weyrick <weyrick@mozek.us>
 // Copyright 2010-2012 Google Inc.
-// 
+//
 //   This Source Code Form is subject to the terms of the Mozilla Public
 //   License, v. 2.0. If a copy of the MPL was not distributed with this
 //   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-// 
+//
 
 #include "VTableBuilder.h"
 
@@ -222,7 +222,7 @@ void VTableBuilder::emit(BTypeDef *type) {
         }
 
         // create a constant structure that actually is the vtable
-        
+
         // get the structure type from our global registry.
         StructType *vtableStructType =
             LLVMBuilder::getLLVMType(iter->second->name);
@@ -234,9 +234,9 @@ void VTableBuilder::emit(BTypeDef *type) {
             LLVMBuilder::putLLVMType(iter->second->name, vtableStructType);
         } else {
             // sanity check the type we retrieved.
-            SPUG_CHECK(vtableTypes.size() == 
+            SPUG_CHECK(vtableTypes.size() ==
                         vtableStructType->getNumElements(),
-                       "vtable type " << iter->second->name << 
+                       "vtable type " << iter->second->name <<
                         " has a differently sized body.  Want " <<
                         vtableTypes.size() << ", got " <<
                         vtableStructType->getNumElements()
@@ -302,8 +302,8 @@ void VTableBuilder::materialize(BTypeDef *type) {
          ) {
 
         Constant *gvar = module->getGlobalVariable(iter->second->name);
-        SPUG_CHECK(gvar, 
-                   "No global variable defined for vtable " << 
+        SPUG_CHECK(gvar,
+                   "No global variable defined for vtable " <<
                     iter->second->name
                    );
         type->vtables[iter->first] = gvar;
@@ -315,7 +315,7 @@ void VTableBuilder::materialize(BTypeDef *type) {
             type->firstVTableType = PointerType::getUnqual(gvar->getType());
             PointerType *pt = cast<PointerType>(gvar->getType());
             StructType *st = cast<StructType>(pt->getElementType());
-            
+
             // next vtable slot is the size of the table
             type->nextVTableSlot = st->getNumElements();
         }

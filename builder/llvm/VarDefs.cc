@@ -1,10 +1,10 @@
 // Copyright 2010 Shannon Weyrick <weyrick@mozek.us>
 // Copyright 2010-2012 Google Inc.
-// 
+//
 //   This Source Code Form is subject to the terms of the Mozilla Public
 //   License, v. 2.0. If a copy of the MPL was not distributed with this
 //   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-// 
+//
 
 #include "VarDefs.h"
 
@@ -49,10 +49,10 @@ ResultExprPtr BArgVarDefImpl::emitRef(Context &context,
     return new BResultExpr((Expr*)var, b.lastValue);
 }
 
-ResultExprPtr BArgVarDefImpl::emitAssignment(Context &context, 
+ResultExprPtr BArgVarDefImpl::emitAssignment(Context &context,
                                              AssignExpr *assign
                                              ) {
-    // This should never happen - arguments except for "this" all get promoted 
+    // This should never happen - arguments except for "this" all get promoted
     // to local variables at the start of the function.
     assert(0 && "attempting to emit an argument assignment");
 }
@@ -93,14 +93,14 @@ void BMemVarDefImpl::emitAddr(Context &context, VarRef *var) {
     LLVMBuilder &b =
             dynamic_cast<LLVMBuilder &>(context.builder);
     b.lastValue = getRep(b);
-}    
+}
 
 bool BMemVarDefImpl::hasInstSlot() const { return false; }
 int BMemVarDefImpl::getInstSlot() const { return -1; }
 bool BMemVarDefImpl::isInstVar() const { return false; }
 
 // BGlobalVarDefImpl
-BGlobalVarDefImpl::BGlobalVarDefImpl(llvm::GlobalVariable *rep, 
+BGlobalVarDefImpl::BGlobalVarDefImpl(llvm::GlobalVariable *rep,
                                      int repModuleId
                                      ) :
     rep(rep),
@@ -168,7 +168,7 @@ void BInstVarDefImpl::emitFieldAssign(IRBuilder<> &builder, Value *aggregate,
     builder.CreateStore(value, fieldPtr);
 }
 
-Value *BInstVarDefImpl::emitFieldRef(IRBuilder<> &builder, 
+Value *BInstVarDefImpl::emitFieldRef(IRBuilder<> &builder,
                                      Type *fieldType,
                                      Value *aggregate
                                      ) {
@@ -180,7 +180,7 @@ Value *BInstVarDefImpl::emitFieldAddr(IRBuilder<> &builder, Type *fieldType,
                                       Value *aggregate
                                       ) {
     return builder.CreateStructGEP(aggregate, index);
-}                                    
+}
 
 bool BInstVarDefImpl::hasInstSlot() const { return true; }
 int BInstVarDefImpl::getInstSlot() const { return index; }
@@ -192,7 +192,7 @@ void BOffsetFieldDefImpl::emitFieldAssign(IRBuilder<> &builder,
                                           Value *value
                                           ) {
     // cast to a byte pointer, GEP to the offset
-    Value *fieldPtr = builder.CreateBitCast(aggregate, 
+    Value *fieldPtr = builder.CreateBitCast(aggregate,
                                             builder.getInt8Ty()->getPointerTo()
                                             );
     fieldPtr = builder.CreateConstGEP1_32(fieldPtr, offset);
@@ -205,15 +205,15 @@ Value *BOffsetFieldDefImpl::emitFieldRef(IRBuilder<> &builder,
                                          Value *aggregate
                                          ) {
     // cast to a byte pointer, GEP to the offset
-    Value *fieldPtr = builder.CreateBitCast(aggregate, 
+    Value *fieldPtr = builder.CreateBitCast(aggregate,
                                             builder.getInt8Ty()->getPointerTo()
                                             );
     fieldPtr = builder.CreateConstGEP1_32(fieldPtr, offset);
     Type *fieldPtrType = fieldType->getPointerTo();
     return builder.CreateLoad(builder.CreateBitCast(fieldPtr, fieldPtrType));
 }
-    
-Value *BOffsetFieldDefImpl::emitFieldAddr(IRBuilder<> &builder, 
+
+Value *BOffsetFieldDefImpl::emitFieldAddr(IRBuilder<> &builder,
                                           Type *fieldType,
                                           Value *aggregate
                                           ) {

@@ -28,8 +28,8 @@ endif (NOT WIN32)
 
 if (PCRE_FOUND)
     set(PCRE_DEFINITIONS ${PC_PCRE_CFLAGS_OTHER})
-    find_path(PCRE_INCLUDE_DIR pcre.h 
-              HINTS ${PC_PCRE_INCLUDEDIR} ${PC_PCRE_INCLUDE_DIRS} 
+    find_path(PCRE_INCLUDE_DIR pcre.h
+              HINTS ${PC_PCRE_INCLUDEDIR} ${PC_PCRE_INCLUDE_DIRS}
               PATH_SUFFIXES pcre)
 
     find_library(PCRE_PCRE_LIBRARY NAMES pcre pcred HINTS ${PC_PCRE_LIBDIR} ${PC_PCRE_LIBRARY_DIRS})

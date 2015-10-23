@@ -29,15 +29,15 @@ endif (NOT WIN32)
 
 if (MONGO_FOUND)
     find_path(GLIB_INCLUDE_DIR glib.h
-              HINTS ${MONGO_INCLUDE_DIRS} 
+              HINTS ${MONGO_INCLUDE_DIRS}
               PATH_SUFFIXES glib-2.0)
 
     find_path(GLIB_CONFIG_DIR glibconfig.h
-              HINTS ${MONGO_INCLUDE_DIRS} 
+              HINTS ${MONGO_INCLUDE_DIRS}
               PATH_SUFFIXES glib-2.0)
 
     find_path(MONGO_INCLUDE_DIR mongo.h
-              HINTS ${MONGO_INCLUDE_DIRS} 
+              HINTS ${MONGO_INCLUDE_DIRS}
               PATH_SUFFIXES mongo-client)
 
     find_library(MONGO_LIBRARY NAMES mongo-client HINTS ${PC_MONGO_LIBDIR}

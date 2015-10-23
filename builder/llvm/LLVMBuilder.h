@@ -1,10 +1,10 @@
 // Copyright 2010-2012 Shannon Weyrick <weyrick@mozek.us>
 // Copyright 2010-2012 Google Inc.
-// 
+//
 //   This Source Code Form is subject to the terms of the Mozilla Public
 //   License, v. 2.0. If a copy of the MPL was not distributed with this
 //   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-// 
+//
 
 #ifndef _builder_LLVMBuilder_h_
 #define _builder_LLVMBuilder_h_
@@ -44,7 +44,7 @@ class LLVMBuilder : public Builder {
     private:
         struct SharedLibDef : public model::ModuleDef {
             void *handle;
-            SharedLibDef(const std::string &name, void *handle) : 
+            SharedLibDef(const std::string &name, void *handle) :
                 ModuleDef(name, 0),
                 handle(handle) {
             }
@@ -60,7 +60,7 @@ class LLVMBuilder : public Builder {
         SharedLibMap &getSharedLibs() {
             return getRoot().sharedLibs;
         }
-        
+
     protected:
 
         class LLVMCacheFile : public CacheFile {
@@ -69,7 +69,7 @@ class LLVMBuilder : public Builder {
                 std::string canonicalName;
 
             public:
-                LLVMCacheFile(model::Context &context, 
+                LLVMCacheFile(model::Context &context,
                               BuilderOptions *options,
                               const std::string &canonicalName
                               ) :
@@ -77,11 +77,11 @@ class LLVMBuilder : public Builder {
                     canonicalName(canonicalName) {
                 }
                 llvm::OwningPtr<llvm::MemoryBuffer> fileBuf;
-                
+
                 bool getCacheFile() {
                     return cacher.getCacheFile(canonicalName, fileBuf);
                 }
-                
+
                 BModuleDefPtr maybeLoadFromCache() {
                     return cacher.maybeLoadFromCache(canonicalName, fileBuf);
                 }
@@ -91,34 +91,34 @@ class LLVMBuilder : public Builder {
         llvm::Function *callocFunc;
         DebugInfo *debugInfo;
         BTypeDefPtr exStructType;
-        
-        // emit all cleanups for context and all parent contextts up to the 
+
+        // emit all cleanups for context and all parent contextts up to the
         // level of the function
         void emitFunctionCleanups(model::Context &context);
-        
+
         // stores primitive function pointers
         std::map<llvm::Function *, void *> primFuncs;
-        
+
         LLVMBuilderPtr rootBuilder;
-        
+
         BTypeDef *getExStructType() {
             return getRoot().exStructType.get();
         }
 
         /**
-         * Creates a new LLVM module and initializes all of the exception 
-         * handling declarations that need to be present.  Assigns the 
+         * Creates a new LLVM module and initializes all of the exception
+         * handling declarations that need to be present.  Assigns the
          * 'module' instance variable to the new module.
          */
         void createLLVMModule(const std::string &name);
 
         /**
-         * Finish generating the top-level module functions (:main and 
+         * Finish generating the top-level module functions (:main and
          * :cleanup)
          */
         void finishModule(model::Context &context, model::ModuleDef *modDef);
 
-        void initializeMethodInfo(model::Context &context, 
+        void initializeMethodInfo(model::Context &context,
                                   model::FuncDef::Flags flags,
                                   model::FuncDef *existing,
                                   BTypeDef *&classType,
@@ -154,7 +154,7 @@ class LLVMBuilder : public Builder {
                                         BModuleDef *moduleDef
                                         ) {
         }
-        
+
         /**
          * common module initialization that happens in all builders
          * during createModule. includes some functions that need to be
@@ -168,20 +168,20 @@ class LLVMBuilder : public Builder {
         std::string getSourcePath(const std::string &path);
 
         /**
-         * Gets the first unwind block for the context, emitting the whole 
+         * Gets the first unwind block for the context, emitting the whole
          * cleanup chain if necessary.
          */
         llvm::BasicBlock *getUnwindBlock(model::Context &context);
 
         /**
-         * Returns the exception personality function for the current builder 
+         * Returns the exception personality function for the current builder
          * (and hence, the current module).
-         */        
+         */
         llvm::Function *getExceptionPersonalityFunc();
-        
+
         /**
-         * Clears all cached cleanup blocks associated with the context (this 
-         * exists to deal with the module level init and delete functions, 
+         * Clears all cached cleanup blocks associated with the context (this
+         * exists to deal with the module level init and delete functions,
          * which both run against the module context).
          */
         void clearCachedCleanups(model::Context &context);
@@ -194,7 +194,7 @@ class LLVMBuilder : public Builder {
 
         /** Creates the "start blocks" for the current function. */
         void createFuncStartBlocks(const std::string &name);
-        
+
         /** Emit the beginning of the module :main function. */
         void beginModuleMain(const std::string &name);
 
@@ -206,29 +206,29 @@ class LLVMBuilder : public Builder {
                                                       model::ModuleDef *owner
                                                       ) = 0;
 
-        /** 
-         * Create a following block and cleanup block for an Invoke 
+        /**
+         * Create a following block and cleanup block for an Invoke
          * instruction given the context.
          */
-        void getInvokeBlocks(model::Context &context, 
+        void getInvokeBlocks(model::Context &context,
                              llvm::BasicBlock *&followingBlock,
                              llvm::BasicBlock *&cleanupBlock
                              );
-        /** 
+        /**
          * Insures that the class body global is present in the current module.
          */
         virtual void fixClassInstRep(BTypeDef *type) = 0;
 
-        // The module id to use for the next module.  This is a monotonically 
-        // increasing value which is used to verify that the rep of a def is 
+        // The module id to use for the next module.  This is a monotonically
+        // increasing value which is used to verify that the rep of a def is
         // associated with the current module.
         // This is also maintained by the root module.
         int nextModuleId;
         int getNextModuleId();
-                
+
     public:
-        // currently experimenting with making these public to give objects in 
-        // LLVMBuilder.cc's anonymous internal namespace access to them.  It 
+        // currently experimenting with making these public to give objects in
+        // LLVMBuilder.cc's anonymous internal namespace access to them.  It
         // seems to be cutting down on the amount of code necessary to do this.
         BModuleDefPtr moduleDef;
         llvm::Module *module;
@@ -238,9 +238,9 @@ class LLVMBuilder : public Builder {
         llvm::Value *lastValue;
         llvm::Type *intzLLVM;
         llvm::BasicBlock *funcBlock;
-        
-        /** 
-         * Returns the root builder or the current builder if it is the root. 
+
+        /**
+         * Returns the root builder or the current builder if it is the root.
          */
         LLVMBuilder &getRoot() {
             return rootBuilder ? *rootBuilder : *this;
@@ -249,17 +249,17 @@ class LLVMBuilder : public Builder {
         const LLVMBuilder &getRoot() const {
             return rootBuilder ? *rootBuilder : *this;
         }
-        
+
         static int argc;
         static char **argv;
 
-        // the list of types that need to be fixed when the meta-class has 
+        // the list of types that need to be fixed when the meta-class has
         // been defined.
         std::vector<BTypeDefPtr> deferMetaClass;
 
         /** Gets the _Unwind_Resume function. */
         llvm::Function *getUnwindResumeFunc();
-        
+
         /**
          * Instantiates the BModuleDef subclass appropriate for the builder.
          */
@@ -268,8 +268,8 @@ class LLVMBuilder : public Builder {
                                               llvm::Module *module
                                               );
 
-        /** 
-         * Returns true if cleanups should be suppressed (i.e. after a throw) 
+        /**
+         * Returns true if cleanups should be suppressed (i.e. after a throw)
          */
         bool suppressCleanups();
 
@@ -278,7 +278,7 @@ class LLVMBuilder : public Builder {
         llvm::Function *getModFunc(BFuncDef *funcDef);
 
         llvm::GlobalVariable *getModVar(BGlobalVarDefImpl *varDef);
-        
+
         BTypeDefPtr getFuncType(model::Context &context,
                                 model::FuncDef *funcDef,
                                 llvm::Type *llvmFuncType
@@ -289,7 +289,7 @@ class LLVMBuilder : public Builder {
                                           const parser::Location *loc = 0,
                                           llvm::Value *initVal = 0
                                           );
-        
+
         BTypeDefPtr createClass(model::Context &context,
                                 const std::string &name,
                                 unsigned int nextVTableSlot
@@ -298,7 +298,7 @@ class LLVMBuilder : public Builder {
         virtual void *getFuncAddr(llvm::Function *func) = 0;
 
         /**
-         * Gives LLVMJitBuilder a chance to keep track of orphaned defs for 
+         * Gives LLVMJitBuilder a chance to keep track of orphaned defs for
          * module merge.
          */
         virtual void recordOrphanedDef(model::VarDef *def) {}
@@ -306,8 +306,8 @@ class LLVMBuilder : public Builder {
         /** Creates an expresion to cleanup the current exception. */
         void emitExceptionCleanupExpr(model::Context &context);
 
-        /** 
-         * Create a landing pad block. 
+        /**
+         * Create a landing pad block.
          * @param next the block after the landing pad
          * @param cdata catch data or null if this is not a catch context.
          */
@@ -322,16 +322,16 @@ class LLVMBuilder : public Builder {
                                          ) {
         }
 
-        /** Return the execution engine if there is one, null if not. */        
+        /** Return the execution engine if there is one, null if not. */
         virtual llvm::ExecutionEngine *getExecEng() = 0;
 
         LLVMBuilder(LLVMBuilder *root = 0);
 
         virtual model::ResultExprPtr emitFuncCall(
-            model::Context &context, 
+            model::Context &context,
             model::FuncCall *funcCall
         );
-        
+
         virtual model::ResultExprPtr emitStrConst(model::Context &context,
                                                   model::StrConst *strConst
                                                   );
@@ -347,7 +347,7 @@ class LLVMBuilder : public Builder {
                                               model::NullConst *nullExpr
                                               );
 
-        virtual model::ResultExprPtr emitAlloc(model::Context &context, 
+        virtual model::ResultExprPtr emitAlloc(model::Context &context,
                                                model::AllocExpr *allocExpr,
                                                model::Expr *countExpr
                                                );
@@ -365,13 +365,13 @@ class LLVMBuilder : public Builder {
                                         const char* fLabel=0,
                                         bool condInCleanupFrame=true
                                         );
-        
+
         virtual model::BranchpointPtr
             emitElse(model::Context &context,
                      model::Branchpoint *pos,
                      bool terminal
                      );
-        
+
         virtual void emitEndIf(model::Context &context,
                                model::Branchpoint *pos,
                                bool terminal
@@ -388,8 +388,8 @@ class LLVMBuilder : public Builder {
                                                  model::TernaryExpr *expr
                                                  );
 
-        virtual model::BranchpointPtr 
-            emitBeginWhile(model::Context &context, 
+        virtual model::BranchpointPtr
+            emitBeginWhile(model::Context &context,
                            model::Expr *cond,
                            bool gotPostBlock
                            );
@@ -404,22 +404,22 @@ class LLVMBuilder : public Builder {
                                   bool isTerminal
                                   );
 
-        virtual void emitBreak(model::Context &context, 
+        virtual void emitBreak(model::Context &context,
                                model::Branchpoint *branch
                                );
 
-        virtual void emitContinue(model::Context &context, 
+        virtual void emitContinue(model::Context &context,
                                   model::Branchpoint *branch
                                   );
 
         virtual model::BranchpointPtr emitBeginTry(model::Context &context);
-        
+
         virtual model::ExprPtr emitCatch(model::Context &context,
                                          model::Branchpoint *branchpoint,
                                          model::TypeDef *catchType,
                                          bool terminal
                                          );
-        
+
         virtual void emitEndTry(model::Context &context,
                                 model::Branchpoint *branchpoint,
                                 bool terminal
@@ -453,7 +453,7 @@ class LLVMBuilder : public Builder {
                           const std::vector<model::ArgDefPtr> &args,
                           model::FuncDef *existing
                           );
-        
+
         virtual void emitEndFunc(model::Context &context,
                                  model::FuncDef *funcDef);
 
@@ -504,10 +504,10 @@ class LLVMBuilder : public Builder {
                                                    size_t offset
                                                    );
 
-        // for definitions, we're going to just let the builder be a factory 
-        // so that it can tie whatever special information it wants to the 
+        // for definitions, we're going to just let the builder be a factory
+        // so that it can tie whatever special information it wants to the
         // definition.
-        
+
         virtual model::FuncCallPtr
             createFuncCall(model::FuncDef *func, bool squashVirtual);
         virtual model::ArgDefPtr createArgDef(model::TypeDef *type,
@@ -523,7 +523,7 @@ class LLVMBuilder : public Builder {
                                                      model::AssignExpr *assign
                                                      );
 
-        model::ModuleDefPtr createModule(model::Context &context, 
+        model::ModuleDefPtr createModule(model::Context &context,
                                          const std::string &name,
                                          const std::string &path,
                                          model::ModuleDef *owner
@@ -570,7 +570,7 @@ class LLVMBuilder : public Builder {
             const std::string &uniquifier,
             bool retain
         );
-        
+
         virtual model::CleanupFramePtr
             createCleanupFrame(model::Context &context);
         virtual void closeAllCleanups(model::Context &context);
@@ -590,7 +590,7 @@ class LLVMBuilder : public Builder {
                                                   );
 
         virtual model::ModuleDefPtr registerPrimFuncs(model::Context &context);
-        
+
         virtual void initialize(model::Context &context);
 
         virtual void *loadSharedLibrary(const std::string &name);
@@ -615,33 +615,33 @@ class LLVMBuilder : public Builder {
                                  model::VarDef *varDef
                                  ) { }
 
-        virtual void setArgv(int argc, char **argv);        
+        virtual void setArgv(int argc, char **argv);
 
-        // internal functions used by our VarDefImpl to generate the 
+        // internal functions used by our VarDefImpl to generate the
         // appropriate variable references.
         void emitMemVarRef(model::Context &context, llvm::Value *val);
         void emitArgVarRef(model::Context &context, llvm::Value *val);
-        
-        // XXX hack to emit all vtable initializers until we get constructor 
+
+        // XXX hack to emit all vtable initializers until we get constructor
         // composition.
         virtual void emitVTableInit(model::Context &context,
                                     model::TypeDef *typeDef
                                     );
-        
-        // functions to manage the global type table.  The global type table 
-        // allows us to normalize types when loading modules from the 
+
+        // functions to manage the global type table.  The global type table
+        // allows us to normalize types when loading modules from the
         // persistent cache.
-        
+
         /**
-         * Return the LLVM type associated with the given canonical name.  
+         * Return the LLVM type associated with the given canonical name.
          * Returns null if there is currently no type stored under that name.
          */
         static llvm::StructType *getLLVMType(const std::string &canonicalName);
-        
+
         /**
          * Store a type by name in the global LLVM type table.
          */
-        static void putLLVMType(const std::string &canonicalName, 
+        static void putLLVMType(const std::string &canonicalName,
                                 llvm::StructType *type
                                 );
 

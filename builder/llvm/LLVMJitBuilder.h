@@ -1,10 +1,10 @@
 // Copyright 2011-2012 Shannon Weyrick <weyrick@mozek.us>
 // Copyright 2011-2012 Google Inc.
-// 
+//
 //   This Source Code Form is subject to the terms of the Mozilla Public
 //   License, v. 2.0. If a copy of the MPL was not distributed with this
 //   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-// 
+//
 
 #ifndef _builder_LLVMJitBuilder_h_
 #define _builder_LLVMJitBuilder_h_
@@ -31,7 +31,7 @@ class LLVMJitBuilder : public LLVMBuilder {
 
         llvm::ExecutionEngine *bindJitModule(llvm::Module *mp);
 
-        // symbols that were imported from a shared library (we don't want to 
+        // symbols that were imported from a shared library (we don't want to
         // try to resolve these).
         std::set<std::string> shlibSyms;
         std::set<std::string> &getShlibSyms() {
@@ -40,14 +40,14 @@ class LLVMJitBuilder : public LLVMBuilder {
             else
                 return shlibSyms;
         }
-        
-        // List of modules that need to have their cleanups setup before we 
+
+        // List of modules that need to have their cleanups setup before we
         // run main.
         std::vector<BModuleDefPtr> needsCleanup;
 
         ModuleMerger *moduleMerger;
         ModuleMerger *getModuleMerger();
-        
+
         virtual void run();
 
         virtual void dump();
@@ -71,9 +71,9 @@ class LLVMJitBuilder : public LLVMBuilder {
         void innerFinishModule(model::Context &context,
                                BModuleDef *moduleDef
                                );
-        
-        // Merge the module into the global main module, replace all of the 
-        // old pointers into the original module (including the builder's) and 
+
+        // Merge the module into the global main module, replace all of the
+        // old pointers into the original module (including the builder's) and
         // delete it.
         void mergeModule(model::ModuleDef *moduleDef,
                          StructResolver *resolver = 0
@@ -99,7 +99,7 @@ class LLVMJitBuilder : public LLVMBuilder {
 
         LLVMJitBuilder(LLVMBuilder *root = 0) :
             LLVMBuilder(root),
-            execEng(0), 
+            execEng(0),
             moduleMerger(0) {
         }
         ~LLVMJitBuilder();
@@ -120,10 +120,10 @@ class LLVMJitBuilder : public LLVMBuilder {
 
         virtual BuilderPtr createChildBuilder();
 
-        void innerCloseModule(model::Context &context, 
+        void innerCloseModule(model::Context &context,
                               model::ModuleDef *module
                               );
-        
+
         virtual void closeModule(model::Context &context,
                                  model::ModuleDef *module
                                  );
