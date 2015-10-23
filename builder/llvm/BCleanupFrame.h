@@ -1,10 +1,10 @@
 // Copyright 2010 Shannon Weyrick <weyrick@mozek.us>
 // Copyright 2011 Google Inc.
-// 
+//
 //   This Source Code Form is subject to the terms of the Mozilla Public
 //   License, v. 2.0. If a copy of the MPL was not distributed with this
 //   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-// 
+//
 
 #ifndef _builder_llvm_BCleanupFrame_h_
 #define _builder_llvm_BCleanupFrame_h_
@@ -28,7 +28,7 @@ private:
         bool emittingCleanups;
         model::ExprPtr action;
         llvm::BasicBlock *unwindBlock, *landingPad;
-        
+
         Cleanup(model::ExprPtr action) :
             emittingCleanups(false),
             action(action),
@@ -53,18 +53,18 @@ public:
     }
 
     virtual void close();
-    
+
     llvm::BasicBlock *emitUnwindCleanups(llvm::BasicBlock *next);
-    
-    /** 
-     * Returns a cached landing pad for the cleanup.   LLVM requires a call to 
-     * the selector to be in the unwind block for an invoke, so we have to 
+
+    /**
+     * Returns a cached landing pad for the cleanup.   LLVM requires a call to
+     * the selector to be in the unwind block for an invoke, so we have to
      * keep one of these for every cleanup block that needs one.
      */
-    llvm::BasicBlock *getLandingPad(llvm::BasicBlock *block, 
+    llvm::BasicBlock *getLandingPad(llvm::BasicBlock *block,
                                     BBuilderContextData::CatchData *cdata
                                     );
-    
+
     void clearCachedCleanups();
 };
 

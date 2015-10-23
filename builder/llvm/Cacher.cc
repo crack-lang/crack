@@ -1,10 +1,10 @@
 // Copyright 2011-2012 Shannon Weyrick <weyrick@mozek.us>
 // Copyright 2011-2012 Google Inc.
-// 
+//
 //   This Source Code Form is subject to the terms of the Mozilla Public
 //   License, v. 2.0. If a copy of the MPL was not distributed with this
 //   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-// 
+//
 
 #include "Cacher.h"
 #include "BModuleDef.h"
@@ -111,7 +111,7 @@ bool Cacher::readImports() {
                               );
         }
 
-        builder->importSharedLibrary(cname->getString().str(), symList, 
+        builder->importSharedLibrary(cname->getString().str(), symList,
                                      *context,
                                      0
                                      );
@@ -122,10 +122,10 @@ bool Cacher::readImports() {
 
 }
 
-Cacher::Cacher(model::Context &c, builder::BuilderOptions *o, 
+Cacher::Cacher(model::Context &c, builder::BuilderOptions *o,
                BModuleDef *m
                ) :
-    modDef(m), 
+    modDef(m),
     parentContext(c),
     options(o) {
 }
@@ -133,8 +133,8 @@ Cacher::Cacher(model::Context &c, builder::BuilderOptions *o,
 bool Cacher::getCacheFile(const string &canonicalName,
                           OwningPtr<MemoryBuffer> &fileBuf
                           ) {
-    string cacheFile = getCacheFilePath(options, *parentContext.construct, 
-                                        canonicalName, 
+    string cacheFile = getCacheFilePath(options, *parentContext.construct,
+                                        canonicalName,
                                         "bc"
                                         );
     if (cacheFile.empty())
@@ -158,7 +158,7 @@ BModuleDefPtr Cacher::maybeLoadFromCache(
 ) {
 
     // create a builder and module context
-    builder = 
+    builder =
         LLVMBuilderPtr::rcast(parentContext.builder.createChildBuilder());
     context = new Context(*builder, Context::module, &parentContext,
                           new GlobalNamespace(parentContext.ns.get(),

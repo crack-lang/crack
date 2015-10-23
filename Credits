@@ -13,12 +13,12 @@ Shannon Weyrick (weyrick@mozek.us):
     Floating point types.  Logical "&&" and "||" operators.  CMake support.
     Native binary builder support.
 
-Special thanks to the following buisnesses for providing employee time to work 
+Special thanks to the following buisnesses for providing employee time to work
 on this:
 
 -   Google
 -   Mozek LLC (http://mozek.us)
 
-Further special thanks to the LLVM project without which Crack would be far 
+Further special thanks to the LLVM project without which Crack would be far
 behind.
 

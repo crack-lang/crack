@@ -1,10 +1,10 @@
 // Copyright 2010-2011 Shannon Weyrick <weyrick@mozek.us>
 // Copyright 2010-2011 Google Inc.
-// 
+//
 //   This Source Code Form is subject to the terms of the Mozilla Public
 //   License, v. 2.0. If a copy of the MPL was not distributed with this
 //   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-// 
+//
 
 #include "Crack.h"
 
@@ -21,7 +21,7 @@ using namespace model;
 using namespace builder;
 
 Crack::Crack(void) :
-    initialized(false),    
+    initialized(false),
     options(new builder::BuilderOptions()),
     noBootstrap(false),
     useGlobalLibs(true) {
@@ -43,8 +43,8 @@ void Crack::setBuilder(Builder *builder) {
     builder->options = options;
     construct = new Construct(*this, builder);
 
-    // We should be able to get away with defining an empty context for this.                
-    Context context(*builder, Context::module, 
+    // We should be able to get away with defining an empty context for this.
+    Context context(*builder, Context::module,
                     construct->compileTimeConstruct.get(),
                     new GlobalNamespace(0, ""),
                     new GlobalNamespace(0, "")
@@ -54,17 +54,17 @@ void Crack::setBuilder(Builder *builder) {
 
 void Crack::setCompileTimeBuilder(Builder *builder) {
     assert(construct && "no call to setBuilder");
-    assert(builder->isExec() && "builder cannot be used compile time");    
+    assert(builder->isExec() && "builder cannot be used compile time");
     // we make a new options here, because compile time dump should be turned
     // so that compile time modules can run instead of dump
     // so that the _main_ builder can generate the correct ir to dump
     builder->options = new BuilderOptions(*options.get());
     builder->options->dumpMode = false;
-    construct->compileTimeConstruct = new Construct(*this, builder, 
+    construct->compileTimeConstruct = new Construct(*this, builder,
                                                     construct.get()
                                                     );
-    // We should be able to get away with defining an empty context for this.                
-    Context context(*builder, Context::module, 
+    // We should be able to get away with defining an empty context for this.
+    Context context(*builder, Context::module,
                     construct->compileTimeConstruct.get(),
                     new GlobalNamespace(0, ""),
                     new GlobalNamespace(0, "")
@@ -81,7 +81,7 @@ bool Crack::init() {
         if (useGlobalLibs) {
             construct->addToSourceLibPath(".");
             construct->addToSourceLibPath(CRACKLIB);
-            
+
             // XXX please refactor me
             if (ctc) {
                 ctc->addToSourceLibPath(".");
@@ -101,7 +101,7 @@ bool Crack::init() {
             return false;
         initialized = true;
     }
-    
+
     return true;
 }
 
@@ -113,7 +113,7 @@ int Crack::runScript(std::istream &src, const std::string &name, bool notAFile) 
         if (name.size() > 4 && name.substr(name.size() - 4) == ".crk")
             options->optionMap["out"] = name.substr(0, name.size() - 4);
         else
-            // no extension - add one to the output file to distinguish it 
+            // no extension - add one to the output file to distinguish it
             // from the script.
             options->optionMap["out"] = name + ".bin";
     }
@@ -123,7 +123,7 @@ int Crack::runScript(std::istream &src, const std::string &name, bool notAFile) 
 void Crack::callModuleDestructors() {
 
     // run through all of the destructors backwards.
-    for (vector<ModuleDefPtr>::reverse_iterator ri = 
+    for (vector<ModuleDefPtr>::reverse_iterator ri =
             construct->loadedModules.rbegin();
          ri != construct->loadedModules.rend();
          ++ri

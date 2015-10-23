@@ -2,11 +2,11 @@
 # Copyright 2010-2012 Google Inc.
 # Copyright 2011 Shannon Weyrick <weyrick@mozek.us>
 # Copyright 2012 Arno Rehn <arno@arnorehn.de>
-# 
+#
 #   This Source Code Form is subject to the terms of the Mozilla Public
 #   License, v. 2.0. If a copy of the MPL was not distributed with this
 #   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-# 
+#
 
 # include macros from the m4 dir.
 ACLOCAL_AMFLAGS = -I m4 --install
@@ -43,7 +43,7 @@ compiler_la_LDFLAGS = -avoid-version -module $(AM_LDFLAGS)
 compiler_la_SOURCES = opt/compiler.cc
 compiler_la_LIBADD = libCrackLang.la
 
-# this is really annoying, testext needs to be installed in order to generate 
+# this is really annoying, testext needs to be installed in order to generate
 # a .so file.
 extlibdir = $(libdir)/crack-$(VERSION)/crack/ext
 extlib_LTLIBRARIES = testext.la
@@ -86,7 +86,7 @@ if HAVE_SDLGFX
 extlib_LTLIBRARIES += _sdlgfx.la
 _sdlgfx_la_LDFLAGS = -avoid-version -module @SDL_LIBS@ @SDLGFX_LIBS@ \
     $(AM_LDFLAGS)
-_sdlgfx_la_CXXFLAGS = @SDL_CFLAGS@ @SDLGFX_CPPFLAGS@ 
+_sdlgfx_la_CXXFLAGS = @SDL_CFLAGS@ @SDLGFX_CPPFLAGS@
 _sdlgfx_la_SOURCES = opt/_sdlgfx.cc
 endif
 
@@ -345,7 +345,7 @@ cracklib = ${prefix}/lib/crack-${VERSION}
 AM_CPPFLAGS = @LLVM_CPPFLAGS@ -DCRACKLIB=\"${cracklib}\" @PTHREAD_CPPFLAGS@
 AM_LDFLAGS = @PTHREAD_LDFLAGS@
 
-# Depend on "testbed" so that the testbed installation won't happen as root if 
+# Depend on "testbed" so that the testbed installation won't happen as root if
 # the user runs "make; sudo make install"
 all: testbed
 

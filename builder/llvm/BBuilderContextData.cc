@@ -1,9 +1,9 @@
 // Copyright 2011 Google Inc.
-// 
+//
 //   This Source Code Form is subject to the terms of the Mozilla Public
 //   License, v. 2.0. If a copy of the MPL was not distributed with this
 //   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-// 
+//
 
 #include "BBuilderContextData.h"
 
@@ -27,9 +27,9 @@ using namespace model;
 Value *
 BBuilderContextData::getExceptionLandingPadResult(IRBuilder<> &builder) {
     VarDefPtr exStructVar = context->ns->lookUp(":exStruct");
-    BHeapVarDefImplPtr exStructImpl = 
+    BHeapVarDefImplPtr exStructImpl =
         BHeapVarDefImplPtr::rcast(exStructVar->impl);
-    return 
+    return
         builder.CreateLoad(builder.CreateConstGEP2_32(exStructImpl->rep, 0, 0));
 }
 
@@ -37,7 +37,7 @@ BasicBlock *BBuilderContextData::getUnwindBlock(Function *func) {
     if (!unwindBlock) {
         unwindBlock = BasicBlock::Create(getGlobalContext(), "unwind", func);
         IRBuilder<> b(unwindBlock);
-        
+
         Module *mod = func->getParent();
         Function *f = mod->getFunction("__CrackExceptionFrame");
         if (f)
@@ -46,13 +46,13 @@ BasicBlock *BBuilderContextData::getUnwindBlock(Function *func) {
         // create the resume instruction
         Value *exObj = getExceptionLandingPadResult(b);
 
-        // XXX We used to create an "unwind" instruction here, but that seems 
-        // to cause a problem when creating a module with dependencies on 
-        // classes in an unfinished module, as we can do when specializing a 
-        // generic.  The problem is that _Unwind_Resume is resolved from the 
+        // XXX We used to create an "unwind" instruction here, but that seems
+        // to cause a problem when creating a module with dependencies on
+        // classes in an unfinished module, as we can do when specializing a
+        // generic.  The problem is that _Unwind_Resume is resolved from the
         // incorrect module.
-        // To deal with this, we create an explicit call to _Unwind_Resume.  
-        // The only problem here is that we have to call llvm.eh.exception to 
+        // To deal with this, we create an explicit call to _Unwind_Resume.
+        // The only problem here is that we have to call llvm.eh.exception to
         // obtain the exception object, even though we might already have one.
         f = LLVMBuilderPtr::cast(&context->builder)->getUnwindResumeFunc();
         b.CreateCall(f, exObj);

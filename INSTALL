@@ -2,9 +2,9 @@
 Installation
 ============
 
-Crack can be built using either autoconf or CMake.  In either case, you'll 
-need LLVM 3.3 built with RTTI support.  If your distro provides a release of 
-LLVM 3.3, you may be able to use it, but if you get errors about RTTI symbols 
+Crack can be built using either autoconf or CMake.  In either case, you'll
+need LLVM 3.3 built with RTTI support.  If your distro provides a release of
+LLVM 3.3, you may be able to use it, but if you get errors about RTTI symbols
 you'll need to build it from source.
 
 Autoconf Install Instructions
@@ -18,8 +18,8 @@ $ ./configure
 $ make REQUIRES_RTTI=1
 $ make install
 
-(Add the options "--disable-optimized --enable-debug-runtime" if you want to 
-be able to debug LLVM, but be aware this comes with a huge performance 
+(Add the options "--disable-optimized --enable-debug-runtime" if you want to
+be able to debug LLVM, but be aware this comes with a huge performance
 cost).
 
 Build Crack:
@@ -38,7 +38,7 @@ CMake Install Instructions
 --------------------------
 
 CMake version 2.6 or greater is required. We recommend an out-of-tree
-build. You should ensure llvm 2. is already installed (see above) before 
+build. You should ensure llvm 2. is already installed (see above) before
 running cmake.
 
 Quick Install:
@@ -55,7 +55,7 @@ $ make install
 
 Details:
 
-If your LLVM libraries are installed in a non-standard location, set the 
+If your LLVM libraries are installed in a non-standard location, set the
 LLVM_DIR environment variable to the root of the install tree before running
 cmake.
 
@@ -64,7 +64,7 @@ See cmake --help for more options.
 Requirements
 ------------
 
-Here are the packages required to build crack on different operating systems 
+Here are the packages required to build crack on different operating systems
 (where we know them):
 
 Ubuntu\/Debian

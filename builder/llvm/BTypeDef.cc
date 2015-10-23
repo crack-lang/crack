@@ -1,10 +1,10 @@
 // Copyright 2010 Shannon Weyrick <weyrick@mozek.us>
 // Copyright 2010-2011 Google Inc.
-// 
+//
 //   This Source Code Form is subject to the terms of the Mozilla Public
 //   License, v. 2.0. If a copy of the MPL was not distributed with this
 //   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-// 
+//
 
 #include "BTypeDef.h"
 
@@ -60,8 +60,8 @@ void BTypeDef::extendVTables(VTableBuilder &vtb) {
                  ++fiter
                  )
                 if ((*fiter)->flags & FuncDef::virtualized &&
-                    
-                    // Make sure it's not an alias.  We don't want to add 
+
+                    // Make sure it's not an alias.  We don't want to add
                     // functions referenced by aliases to the vtable.
                     (*fiter)->name == overload->name
                     )
@@ -137,8 +137,8 @@ void BTypeDef::addPlaceholder(PlaceholderInstruction *inst) {
 
 BTypeDef *BTypeDef::findFirstVTable(BTypeDef *vtableBaseType) {
 
-    // special case - if this is VTableBase, it is its own first vtable 
-    // (normally it is the first class to derive from VTableBase that is the 
+    // special case - if this is VTableBase, it is its own first vtable
+    // (normally it is the first class to derive from VTableBase that is the
     // first vtable).
     if (this == vtableBaseType)
         return this;
@@ -163,7 +163,7 @@ GlobalVariable *BTypeDef::getClassInstRep(BModuleDef *module) {
     if (classInstModuleId == module->repId) {
         return classInst;
     } else {
-        GlobalVariable *gvar = 
+        GlobalVariable *gvar =
             cast_or_null<GlobalVariable>(
                 module->rep->getGlobalVariable(getFullName() + ":body")
             );
@@ -172,15 +172,15 @@ GlobalVariable *BTypeDef::getClassInstRep(BModuleDef *module) {
                        "Module " << module->getFullName() <<
                         " is missing the definiton for " << getFullName()
                        );
-            gvar = new GlobalVariable(*module->rep, 
-                                      classInstType, 
+            gvar = new GlobalVariable(*module->rep,
+                                      classInstType,
                                       true, // is constant
                                       GlobalValue::ExternalLinkage,
                                       0, // initializer: null for externs
                                       getFullName() + ":body"
                                       );
         }
-        
+
         classInst = gvar;
         classInstModuleId = module->repId;
         return gvar;
@@ -214,7 +214,7 @@ void BTypeDef::createEmptyOffsetsInitializer(Context &context) {
     Constant *offsetsArrayInit =
         ConstantArray::get(offsetsArrayType, ArrayRef<Constant *>());
     string offsetsVarName = getFullName() +  ":offsets";
-    GlobalVariable *offsetsVar = 
+    GlobalVariable *offsetsVar =
         module->getGlobalVariable(offsetsVarName);
     if (offsetsVar)
         offsetsVar->setInitializer(offsetsArrayInit);
@@ -258,11 +258,11 @@ void BTypeDef::createBaseOffsets(Context &context) const {
     for (int i = 0; i < parents.size(); ++i)
         offsetsVal[i] = getParentOffset(*builder, i);
     GlobalVariable *offsetsVar;
-    ArrayType *offsetsArrayType = 
+    ArrayType *offsetsArrayType =
         ArrayType::get(intzType, parents.size());
     if (this == context.construct->classType.get())
         // .builtin.Class - we have to create the global variable.
-        offsetsVar = 
+        offsetsVar =
             new GlobalVariable(*builder->module,
                                offsetsArrayType,
                                true, // is constant
@@ -273,10 +273,10 @@ void BTypeDef::createBaseOffsets(Context &context) const {
     else
         offsetsVar =
             builder->module->getGlobalVariable(getFullName() + ":offsets");
-    SPUG_CHECK(offsetsVar, 
+    SPUG_CHECK(offsetsVar,
                "Offsets variable not found for type " << getFullName()
                );
-    Constant *offsetsArrayInit = 
+    Constant *offsetsArrayInit =
         ConstantArray::get(offsetsArrayType, offsetsVal);
     offsetsVar->setInitializer(offsetsArrayInit);
 }
@@ -289,7 +289,7 @@ void BTypeDef::fixIncompletes(Context &context) {
             BTypeDefPtr::arcast(context.construct->vtableBaseType)
         );
         createAllVTables(
-            vtableBuilder, 
+            vtableBuilder,
             ".vtable." + context.parent->ns->getNamespaceName() + "." + name
         );
         vtableBuilder.emit(this);
@@ -298,14 +298,14 @@ void BTypeDef::fixIncompletes(Context &context) {
     createBaseOffsets(context);
 
     // fix-up all of the placeholder instructions
-    for (vector<PlaceholderInstruction *>::iterator iter = 
+    for (vector<PlaceholderInstruction *>::iterator iter =
             placeholders.begin();
          iter != placeholders.end();
          ++iter
          )
         (*iter)->fix();
     placeholders.clear();
-    
+
     // fix up all incomplete children
     for (IncompleteChildVec::iterator iter = incompleteChildren.begin();
          iter != incompleteChildren.end();
@@ -313,19 +313,19 @@ void BTypeDef::fixIncompletes(Context &context) {
          )
         iter->first->fixIncompletes(*iter->second);
     incompleteChildren.clear();
-    
+
     complete = true;
 }
 
 void BTypeDef::materializeVTable(Context &context) {
     if (hasVTable) {
-        VTableBuilder vtb(LLVMBuilderPtr::cast(&context.builder), 
+        VTableBuilder vtb(LLVMBuilderPtr::cast(&context.builder),
                           BTypeDefPtr::arcast(context.construct->vtableBaseType)
                           );
         createAllVTables(vtb, ".vtable." + getFullName());
         vtb.materialize(this);
     }
-}        
+}
 
 void BTypeDef::setClassInst(llvm::GlobalVariable *classInst) {
     SPUG_CHECK(!this->classInst && !classInstType,

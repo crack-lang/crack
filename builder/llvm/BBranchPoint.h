@@ -1,10 +1,10 @@
 // Copyright 2010 Shannon Weyrick <weyrick@mozek.us>
 // Copyright 2010 Google Inc.
-// 
+//
 //   This Source Code Form is subject to the terms of the Mozilla Public
 //   License, v. 2.0. If a copy of the MPL was not distributed with this
 //   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-// 
+//
 
 #ifndef _builder_llvm_BBranchPoint_h_
 #define _builder_llvm_BBranchPoint_h_
@@ -26,7 +26,7 @@ public:
     llvm::BasicBlock *block, *block2, *block3;
 
     BBranchpoint(llvm::BasicBlock *block) :
-        block(block), 
+        block(block),
         block2(0),
         block3(0) {
     }

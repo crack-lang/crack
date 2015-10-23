@@ -1,26 +1,26 @@
 0.11
     -   Allow importing crack.compiler outside of an annotation.
-    -   Fixed casting so we can now correctly cast from secondary bases and 
+    -   Fixed casting so we can now correctly cast from secondary bases and
         even cast across bases.
-    -   Added crack.protobuf.ann, which provides an annotation to allow you to 
+    -   Added crack.protobuf.ann, which provides an annotation to allow you to
         expand inline protobuf messages into generated code.
-    -   Streamline generic serialization (only serialize file name and line 
+    -   Streamline generic serialization (only serialize file name and line
         number when they change).
     _   Enhancements to jack and alsa modules, made alsa extension more OO.
     -   Added a protobuf annotation module (crack.protobuf.ann) to allow
         generating protobuf code.
     -   Lots of smaller fixes and enhancements.
 0.10
-    -   Fixed all known caching bugs and made caching the default. (Completed 
+    -   Fixed all known caching bugs and made caching the default. (Completed
         redid cyclic dependencies)
     -   Fixed inconsistencies in name access.
     -   Enhancements to SDL modules (notably audio) and alsa midi.
     -   Made JIT defer jitting of functions until they are needed.
-    -   Added the scoping operator ('::') and fixed the way the period 
+    -   Added the scoping operator ('::') and fixed the way the period
         operator does dereferencing and scoping.
-    -   Added "field sets" (allows you to attach arbitrary typed data to an 
+    -   Added "field sets" (allows you to attach arbitrary typed data to an
         object)
-    -   Replaced the "_iface_" functions hack used to implement interfaces 
+    -   Replaced the "_iface_" functions hack used to implement interfaces
         with an "oper from" method.
     -   Lots of smaller fixes and enhancements.
 0.9
@@ -31,7 +31,7 @@
 0.8
     -   Lots of bug fixes and small features.
     -   Lots of refactors and code cleanups.
-    -   Implemented most of the code for caching (which is still way too buggy 
+    -   Implemented most of the code for caching (which is still way too buggy
         for anything other than experimentation).
     -   Added flag driven tracing facility.
     -   Lots of new modules and extension modules:
@@ -48,21 +48,21 @@
     -   added the Wurld OpenGL example program.
     -   Ported to LLVM 3.3
     -   Changed annotation-in-generic semantics.
-        
+
 0.7.1
-    -   Fixed crack.process, respect the flags that are passed in defining 
+    -   Fixed crack.process, respect the flags that are passed in defining
         pipe configuration.
     -   Updated the manual for 0.7.
-    -   Added closedir() on destruction of a directory iterator (we were 
+    -   Added closedir() on destruction of a directory iterator (we were
         leaking handles).
-    -   Fixes for naming and module association for forward classes and 
+    -   Fixes for naming and module association for forward classes and
         extension types.
 0.7
     -   Switched licensing from LGPLv3 to MPL 2.0.
     -   Upgraded to LLVM 3.1
     -   16-bit integer types.
     -   The "alias" statement.
-    -   Implemented a version of cast that returns a default instead of 
+    -   Implemented a version of cast that returns a default instead of
         throwing an exception when the cast fails.
     -   Indented string constants.
     -   Virtual methods in extension classes.
@@ -78,7 +78,7 @@
     -   Added support for injecting crack function body code from an extension.
     -   Added the foundations of support for module caching.
     -   Added functors.
-    -   Added an 'ascii' module supporting functionality specific to ASCII 
+    -   Added an 'ascii' module supporting functionality specific to ASCII
         data.
     -   Added a module for dealing with numeric arrays.
     -   Migrated modules out of crack.exp, removed obsolete modules.
@@ -89,10 +89,10 @@
     -   Lots of bug fixes and small enhancements.
 0.5
     -   Added support for generics.  Created true generic containers.
-    -   Made functions "first class" objects, implemented support for storing 
-        functions in variables and "oper call", permitting the creation of 
+    -   Made functions "first class" objects, implemented support for storing
+        functions in variables and "oper call", permitting the creation of
         functors.
-    -   Implemented the Platform Dependent Numeric Types and made them work 
+    -   Implemented the Platform Dependent Numeric Types and made them work
         according to spec in all contexts.
     -   Added a command-line parsing module.
     -   Added a HashMap generic.
@@ -104,24 +104,24 @@
         C function name specification
     -   Various small bug fixes and enhancements.
 0.4
-    -   Added support for exception handling, converted the library to use 
+    -   Added support for exception handling, converted the library to use
         exceptions instead of the crack.exp.error module.
     -   Added support for compiling scripts to native binaries.
-    -   Added syntax to allow initialization of sequence types, e.g. 
+    -   Added syntax to allow initialization of sequence types, e.g.
         array[int] a = [1, 2, 3];
     -   Improved string interpolation, added calls to enter() and leave() and
-        made it a true expression returning the return value of leave() or the 
-        target object if leave() is undefined.  Implemented a StringFormatter 
+        made it a true expression returning the return value of leave() or the
+        target object if leave() is undefined.  Implemented a StringFormatter
         variation that can be used in an expression context.
-    -   Added the "encoding" annotation, allowing users to declare a script's 
+    -   Added the "encoding" annotation, allowing users to declare a script's
         encoding.
 0.3
-    -   Aggregate type variables now default to null if no initializer is 
+    -   Aggregate type variables now default to null if no initializer is
         given.
     -   Implemented the "for" statement.
     -   Added support for extensions.
         -   Added a module to generate bindings for many C APIs.
-        -   Converted the runtime, GTK and PCRE modules to use the extension 
+        -   Converted the runtime, GTK and PCRE modules to use the extension
             API.
         -   Added undocumented support for SDL, OpenGL
     -   Added the math module.
@@ -134,7 +134,7 @@
     -   Major code cleanups.
     -   Added RBTree maps.
     -   Numerous bug fixes and enhanced error checking.
-    -   Implemented the remaining C operators (pre/post increment/decrement, 
+    -   Implemented the remaining C operators (pre/post increment/decrement,
         bitwise operators, augmented assignment, ternary operator).
     -   Improved IR readability.
     -   Added debug information (not currently usable for lack of a debugger)
@@ -142,6 +142,6 @@
     -   Implemented forward declarations of functions and classes.
     -   Added the LineReader class
     -   Added support for a socket API.
-    -   Added support for hex and octal integer constants (and fixed integer 
+    -   Added support for hex and octal integer constants (and fixed integer
         constants in general)
     -   Added a File/Stream interface.
