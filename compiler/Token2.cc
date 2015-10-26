@@ -1,9 +1,9 @@
 // Copyright 2010-2011 Google Inc.
-// 
+//
 //   This Source Code Form is subject to the terms of the Mozilla Public
 //   License, v. 2.0. If a copy of the MPL was not distributed with this
 //   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-// 
+//
 
 #include "Token.h"
 
@@ -12,13 +12,13 @@
 
 using namespace compiler;
 
-Token::Token(const parser::Token &tok) : 
+Token::Token(const parser::Token &tok) :
     rep(new parser::Token(tok)),
     loc(0) {
 }
 
 Token::Token(int type, const char *text, Location *loc) : loc(loc) {
-    rep = new parser::Token(static_cast<parser::Token::Type>(type), text, 
+    rep = new parser::Token(static_cast<parser::Token::Type>(type), text,
                             *loc->rep
                             );
     loc->bind();

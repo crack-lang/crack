@@ -1,9 +1,9 @@
 // Copyright 2010-2011 Google Inc.
-// 
+//
 //   This Source Code Form is subject to the terms of the Mozilla Public
 //   License, v. 2.0. If a copy of the MPL was not distributed with this
 //   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-// 
+//
 
 #ifndef _crack_compiler_Token_h_
 #define _crack_compiler_Token_h_
@@ -103,9 +103,9 @@ class Token : public crack::ext::RCObj {
         static bool _isScoping(Token *inst);
         static bool _isBinOp(Token *inst);
         static bool _isAugAssign(Token *inst);
-        
+
         Token(const Token &other);
-        
+
     public:
         parser::Token *rep;
         Location *loc;
@@ -113,29 +113,29 @@ class Token : public crack::ext::RCObj {
         Token(const parser::Token &tok);
         Token(int type, const char *text, Location *loc);
         ~Token();
-        
+
         static Token *create(int type, const char *text, Location *loc);
 
         /**
-         * Returns true if the token's text form is the same as the string 
+         * Returns true if the token's text form is the same as the string
          * specified.
          */
         bool hasText(const char *text);
-        
+
         /**
-         * Returns the text of the token.  For a string token, this will 
+         * Returns the text of the token.  For a string token, this will
          * return the string contents.
          */
         const char *getText();
-        
+
         /**
          * Returns the token type.
          */
         int getType();
-        
+
         /**
          * Returns the total size of the text in bytes.
-         */        
+         */
         size_t getTextSize();
 
         Location *getLocation();

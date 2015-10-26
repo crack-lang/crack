@@ -2,11 +2,11 @@
  * Copyright 2010-2012 Google Inc.
  * Copyright 2010-2011 Shannon Weyrick <weyrick@mozek.us>
  * Copyright 2011-2012 Conrad Steenberg <conrad.steenberg@gmail.com>
- * 
+ *
  *   This Source Code Form is subject to the terms of the Mozilla Public
  *   License, v. 2.0. If a copy of the MPL was not distributed with this
  *   file, You can obtain one at http://mozilla.org/MPL/2.0/.
- * 
+ *
 }
 
 The Crack Programming Language Guide
@@ -27,19 +27,19 @@ So without further caveats - let's do some Crack!
 Important Note on Caching
 -------------------------
 
-Crack 0.11 enables module caching by default.  When a Crack module is 
+Crack 0.11 enables module caching by default.  When a Crack module is
 compiled, the compiler stores the modules metadata and LLVM bitcode in your
-`$HOME/.crack/cache` directory and reuses this information if it exists and is 
+`$HOME/.crack/cache` directory and reuses this information if it exists and is
 up to date with respect to the source file and all dependencies.
 
-While there are no known bugs in the caching mechanism, it is extremely likely 
-that there are a few unknown bugs in it.  If the compiler breaks or throws an 
-exception, try moving `$HOME/.crack/cache` to `$HOME/.crack/cache.org` and run 
-your program again.  If it succeeds the second time, then you have most likely 
-discovered a caching bug and we'd greatly appreciate it if you'd report this, 
+While there are no known bugs in the caching mechanism, it is extremely likely
+that there are a few unknown bugs in it.  If the compiler breaks or throws an
+exception, try moving `$HOME/.crack/cache` to `$HOME/.crack/cache.org` and run
+your program again.  If it succeeds the second time, then you have most likely
+discovered a caching bug and we'd greatly appreciate it if you'd report this,
 ideally including the cache files and source files that manifested it.
 
-To disable caching entirely, you may use the -K command line option or set the 
+To disable caching entirely, you may use the -K command line option or set the
 "`CRACK_CACHING`" environment variable to false.
 
 Overview
@@ -436,13 +436,13 @@ numeric types using type constructor notation (see \X(Constructors) below):
 }}
 
 There are two kinds of numeric types, Universal Numeric Types (UNTs) and
-Platform Dependent Numeric Types.  The UNT types are byte, int16, uint16, 
-int32, uint32, int64, uint64, float32 and float64.  These are guaranteed to 
-be of the same size no matter what the preferences of the platform.  A 
-numeric type can implicitly convert to a UNT as long as there is no risk of 
-precision loss on any platform.  Since we define most PDNTs to be either 
-32-bit or 64-bit values, this means that we can always implicitly convert 
-from, for example, an unsigned int to a uint64, but we can never implicitly 
+Platform Dependent Numeric Types.  The UNT types are byte, int16, uint16,
+int32, uint32, int64, uint64, float32 and float64.  These are guaranteed to
+be of the same size no matter what the preferences of the platform.  A
+numeric type can implicitly convert to a UNT as long as there is no risk of
+precision loss on any platform.  Since we define most PDNTs to be either
+32-bit or 64-bit values, this means that we can always implicitly convert
+from, for example, an unsigned int to a uint64, but we can never implicitly
 convert from an uint to a uint32.
 
 The PDNTs are int, uint, intz, and float.  Any numeric type can implicitly
@@ -574,13 +574,13 @@ For that matter, it is inappropriate to do this to any kind of #Buffer#
 derivative except for those derived from #WriteBuffer#.  See \X(Compatibilty)
 for more information.
 
-When defining very long string constants, it is useful to have facilities for 
-wrapping the constant across multiple lines (in general, very long lines are 
-difficult to read).  Crack string constants facilitate this by folding 
-adjacent constants (similar to languages like C and python) and also through 
+When defining very long string constants, it is useful to have facilities for
+wrapping the constant across multiple lines (in general, very long lines are
+difficult to read).  Crack string constants facilitate this by folding
+adjacent constants (similar to languages like C and python) and also through
 the definition of "indented strings."
 
-String constant folding is straighforward: adjacent string constants will be 
+String constant folding is straighforward: adjacent string constants will be
 treated as a single string constant:
 
 {{
@@ -590,7 +590,7 @@ treated as a single string constant:
 
 In the example above, the value of #a# is "this is a multi-line string".
 
-All string constants in crack can span multiple lines, so we could have 
+All string constants in crack can span multiple lines, so we could have
 written then same example as:
 
 {{
@@ -599,11 +599,11 @@ written then same example as:
     line string';
 }}
 
-The backslash at the end of the first line escapes the newline so it doesn't 
-show up in the string.  If we had omitted it, the value would have been "this 
+The backslash at the end of the first line escapes the newline so it doesn't
+show up in the string.  If we had omitted it, the value would have been "this
 is a multi-\\nline string".
 
-The problem with this approach to wrapping is that it breaks indentation.  For 
+The problem with this approach to wrapping is that it breaks indentation.  For
 example:
 
 {{
@@ -618,19 +618,19 @@ example:
     }
 }}
 
-In the example above, we've created a usage message in a single string 
-constant, but we've made a mess out of the indentation of our code.  We could 
-have used adjacent string constants to solve this, but that would require a 
+In the example above, we've created a usage message in a single string
+constant, but we've made a mess out of the indentation of our code.  We could
+have used adjacent string constants to solve this, but that would require a
 lot of extra quotes and escape characters.
 
-To solve this problem more elegantly, Crack introduces indented string 
-constants.  A string prefixed with a capital "I" is treated as an indented 
+To solve this problem more elegantly, Crack introduces indented string
+constants.  A string prefixed with a capital "I" is treated as an indented
 string.  Indented strings are handled as follows:
 
--   the shortest sequence of whitespace after a newline is stripped from all 
+-   the shortest sequence of whitespace after a newline is stripped from all
     lines.
--   An escaped newline also consumes all following whitespace, but the 
-    whitespace is still considered for the purpose of establishing the 
+-   An escaped newline also consumes all following whitespace, but the
+    whitespace is still considered for the purpose of establishing the
     shortest line.
 
 For example, we could have implemented our usage function as follows:
@@ -647,8 +647,8 @@ For example, we could have implemented our usage function as follows:
     }
 }}
 
-This returns the same string as the earlier example, but most programmers 
-would probably agree that the code is more readable by virtue of the 
+This returns the same string as the earlier example, but most programmers
+would probably agree that the code is more readable by virtue of the
 indentation.
 
 Sequence Constants
@@ -1123,9 +1123,9 @@ end of the module, we would have gotten an error.
 Interpolation Expressions
 -------------------------
 
-As noted earlier, Crack uses the backtick as an operator to allow formatted 
-output.  This kind of expression is called an "interpolation 
-expression," so named because they interpolate the values of expressions 
+As noted earlier, Crack uses the backtick as an operator to allow formatted
+output.  This kind of expression is called an "interpolation
+expression," so named because they interpolate the values of expressions
 nested within them.
 
 The simplest form of interpolation consists of just a variable name:
@@ -1136,7 +1136,7 @@ The simplest form of interpolation consists of just a variable name:
     cout `This is a $x\n`;  # prints "this is a test" to standard output.
 }}
 
-In order to expand the value of a general expression, a parenthesized 
+In order to expand the value of a general expression, a parenthesized
 expansion must be used:
 
 {{
@@ -1144,7 +1144,7 @@ expansion must be used:
     cout `$a * 20 = $(a * 20)\n`;  # prints "10 * 20 = 200"
 }}
 
-The 'I' prefix can also be used on the interpolation operator to allow you to 
+The 'I' prefix can also be used on the interpolation operator to allow you to
 format it according to the rules of an indented string (see \X(Strings) above):
 
 {{
@@ -1153,8 +1153,8 @@ format it according to the rules of an indented string (see \X(Strings) above):
            our forefathers ...\n`;
 }}
 
-Like everything else in Crack, interpolation expressions are implemented 
-through hooks into the language.  See \X(The Formatter Protocol) below for 
+Like everything else in Crack, interpolation expressions are implemented
+through hooks into the language.  See \X(The Formatter Protocol) below for
 details.
 
 Aliases
@@ -1204,7 +1204,7 @@ are defined.
 Aliases can be useful for providing shorter names, but their main value comes
 from defining alternate names for \X(Generics).
 
-As noted in \X(Member Access Protection), aliases can also be used to make private 
+As noted in \X(Member Access Protection), aliases can also be used to make private
 variables externally visible.
 
 Operators
@@ -1593,7 +1593,7 @@ can do this:
 Methods are Functions
 '''''''''''''''''''''
 
-For purposes of typing, methods are functions whose first argument is an 
+For purposes of typing, methods are functions whose first argument is an
 instance of the class.
 
 This means that we can assign them to variables:
@@ -1604,16 +1604,16 @@ This means that we can assign them to variables:
             ...
         }
     }
-    
+
     function[void, A, int] g = A.f;
 }}
 
 Dereferencing Versus Scoping
 ''''''''''''''''''''''''''''
 
-The period symbol ('.') can be used for both dereferencing and scoping.  
-Dereferencing is accessing a method or instance variable from an object.  
-Scoping is accessing a name from a nested scope.  For example, to dereference 
+The period symbol ('.') can be used for both dereferencing and scoping.
+Dereferencing is accessing a method or instance variable from an object.
+Scoping is accessing a name from a nested scope.  For example, to dereference
 a method or instance variable:
 
 {{
@@ -1621,27 +1621,27 @@ a method or instance variable:
         int i;
         void f() {}
     }
-    
+
     a := A();
     a.f();
     a.i = 1;
 }}
 
-But was can also use the period as a scoping operator to indicate "a 
+But was can also use the period as a scoping operator to indicate "a
 definition within a namespace:"
 
 {{
     function[void, A] g = A.f;
-    
+
     class B {
         class C {}
     }
-    
+
     b := B.C();  # Use the nested class B.C.
 }}
 
-This could produce ambiguities because, as we've said, classes are also 
-instances.  For example, let's say we define a class with an "isSubclass()" 
+This could produce ambiguities because, as we've said, classes are also
+instances.  For example, let's say we define a class with an "isSubclass()"
 method:
 
 {{
@@ -1655,26 +1655,26 @@ method:
 It isn't immediately obvious whether #A.isSubclass(B)# means:
 
 -   Calling the method defined in the class above ('.' is a /scoping operator/)
--   Calling the built-in metaclass method #isSubclass()# ('.' is a 
+-   Calling the built-in metaclass method #isSubclass()# ('.' is a
     /dereferencing operator/).
 
-To resolve this, dereferencing always takes precedence over scopoing.  If it 
-is possible that the period can be used as a dereferencing operator, it will 
-be used as a dereferencing operator.  It will only be used as a scoping 
+To resolve this, dereferencing always takes precedence over scopoing.  If it
+is possible that the period can be used as a dereferencing operator, it will
+be used as a dereferencing operator.  It will only be used as a scoping
 operator if there is no conflicting dereferencing usage.
 
-To call the explicitly defined #isSubclass()# method above, you would have to 
+To call the explicitly defined #isSubclass()# method above, you would have to
 make use of the explicit scoping operator, the double-colon ("::"):
 
 {{
     A::isSubclass(B);
 }}
 
-This operator unambiguously refers to a variable within the scope of a 
+This operator unambiguously refers to a variable within the scope of a
 namespace, it can not be used to dereference an instance.
 
-The period operator is preferred for scoping.  It's more convenient to type, 
-easier to read and comfortable for users of languages like Python and Java.  
+The period operator is preferred for scoping.  It's more convenient to type,
+easier to read and comfortable for users of languages like Python and Java.
 The explicit scoping operator is seldom necessary.
 
 Constructors
@@ -1993,9 +1993,9 @@ module or from classes derived from #Polygon#.  This allows derived classes to
 have special knowledge of the sequence of coordinates without access to the
 private #`__first`# variable.
 
-Access protection is based on the name used to access a definition, which is 
-not necessarily the name that it is defined as.  This is lets you create 
-public aliases for private defintions (see \X(Aliases) below).  For example, in 
+Access protection is based on the name used to access a definition, which is
+not necessarily the name that it is defined as.  This is lets you create
+public aliases for private defintions (see \X(Aliases) below).  For example, in
 the following code:
 
 {{
@@ -2003,7 +2003,7 @@ the following code:
     alias public = _private;  # But 'public' is public!
 }}
 
-The #public# alias essentially leaks access to #\_private#, which may be 
+The #public# alias essentially leaks access to #\_private#, which may be
 desirable in some circumstances.
 
 Destructors
@@ -2284,9 +2284,9 @@ compatible versions of the language.  Use #isSubclass()# instead.
 Interfaces
 ''''''''''
 
-Crack doesn't have virtual base classes, but it does have interfaces.  In 
+Crack doesn't have virtual base classes, but it does have interfaces.  In
 practice, you can do almost anything that you can do with virtual base classes
-using Crack's underlying mechanism for this, but we'll mainly focus on the 
+using Crack's underlying mechanism for this, but we'll mainly focus on the
 interface use case.
 
 The #crack.ann# module provides two special annotations: #@interface# and
@@ -2340,9 +2340,9 @@ annotations are really just syntactic sugar for class definitions.
 #@interface# generates a class definition from the syntax that follows it and
 injects three special methods: #oper bind()#, #oper release()# and
 #oper from# /IFaceName/#()# (where /IFaceName/ is the name of the interface,
-#Drawable# in the example above).  
+#Drawable# in the example above).
 
-#oper from# is a special operator created to facilitate interfaces (as well as 
+#oper from# is a special operator created to facilitate interfaces (as well as
 general translation across inheritance hierarchies).  For interfaces, these methods
 are defined with a return type of #Object# and they exist to provide an instance of
 #Object# for the #oper bind()# and #oper release()# methods to delegate to.
@@ -2354,18 +2354,18 @@ separated list of them) it generates an #oper from# /IFaceName/#()# method that
 simply returns "this".  Implementation classes must therefore derive from
 Object, either indirectly or directly and they must do so explicitly. So,
 "#class A @implements IFace#" would be illegal, you'd have to use "#class A
-: Object @implements IFace#" instead.  You can avoid the additional verbosity 
-by using the #@impl# annotation, which also expands the ": Object" part, 
+: Object @implements IFace#" instead.  You can avoid the additional verbosity
+by using the #@impl# annotation, which also expands the ": Object" part,
 letting you write:
 
 {{
     class A @impl IFace {
 }}
 
-These annotations are a very weak form of syntactic sugar that mostly works, 
-however failure to use them correctly may produce non-obvious errors.  For 
-example, if you try to inherit from an interface without using #@implements# 
-(or explicitly defining the #oper from# methods yourself) you'll get an error 
+These annotations are a very weak form of syntactic sugar that mostly works,
+however failure to use them correctly may produce non-obvious errors.  For
+example, if you try to inherit from an interface without using #@implements#
+(or explicitly defining the #oper from# methods yourself) you'll get an error
 like:
 
 {{
@@ -2373,14 +2373,14 @@ like:
       crack.lang.Object myfile.crk.Foo.oper from myfile.crk.Foo()
 }}
 
-Likewise, redefining the name of an interface class from within an interface 
+Likewise, redefining the name of an interface class from within an interface
 or its implementation is bad:
 
 {{
     @interface A {
         void A() {}  # DON'T DO THIS.
     }
-    
+
     class B @impl A {
         void A() {}  # OR THIS.
     }
@@ -2406,8 +2406,8 @@ invoked using a #null# value as the receiver.
     implicitly converted to that type.  Specifying the return type is
     optional. If it is specified it must be the same as the type in the name.
 #oper from #/type/::
-    This is a special function used to implement interfaces.  The interface 
-    annotations defines it as an abstract method and the @implements macro 
+    This is a special function used to implement interfaces.  The interface
+    annotations defines it as an abstract method and the @implements macro
     generates an implementation for it.
 #oper del#::
     The destructor.
@@ -2903,8 +2903,8 @@ Note that this mechanism can not be used to make module protected symbols
 importable.  To import a symbol, it must still be public.  To offer a
 non-public symbol for import, you must define an alias.
 
-Note that aliases by themselves to not circumvent the second-order import 
-rule.  To export symbols from another module you must use @`export_symbols`, 
+Note that aliases by themselves to not circumvent the second-order import
+rule.  To export symbols from another module you must use @`export_symbols`,
 and that goes for aliases for generic instantiatons, too:
 
 {{
@@ -2912,17 +2912,17 @@ and that goes for aliases for generic instantiatons, too:
 
     class MyObj {}
     alias MyMap = HashMap[String, MyObj];
-    
-    # Even though X is defined in this module, X[int] is not because generics 
+
+    # Even though X is defined in this module, X[int] is not because generics
     # are instantiated in their own modules.
     class X[T] {}
     alias XInt = X[int];
-    
+
     @export_symbols MyMap, XInt;
 }}
 
-We can now import #MyMap# and #XInt# from other modules, providing them with 
-a more abbreviated name for the type and insulating them from implementation 
+We can now import #MyMap# and #XInt# from other modules, providing them with
+a more abbreviated name for the type and insulating them from implementation
 changes.
 
 Protocols
@@ -2989,7 +2989,7 @@ static data, variables and expression values:
     cout `a = $a, a + 1 = $(a + 1)\n`;
 }}
 
-See \X(Interpolation Expressions) above for details on what this means.  The 
+See \X(Interpolation Expressions) above for details on what this means.  The
 interpolation expression above is equivalent to the following code:
 
 {{
@@ -3038,7 +3038,7 @@ create our own formatter that could be used in the expression above:
     # result is 2a + 1
 }}
 
-More often when doing this, you'll want to derive from #StandardFormatter# 
+More often when doing this, you'll want to derive from #StandardFormatter#
 and extend its functionality:
 
 {{
@@ -3930,28 +3930,28 @@ We can then import the macro as an annotation to another module:
 Assertions
 ''''''''''
 
-#crack.ann# also defines an #@assert# annotation that can be used to verify that 
+#crack.ann# also defines an #@assert# annotation that can be used to verify that
 a given expression is true:
 
 {{
     @import crack.ann assert;
-    
+
     @assert(2 + 2 == 4);
 }}
 
-#@assert# raises an #AssertionError# if the condition is false with a string 
+#@assert# raises an #AssertionError# if the condition is false with a string
 containing the location of line and a representation of the failing expression.
 
 Structs
 '''''''
 
-#crack.ann# also defines a #@struct# annotation that can be used to generate a 
-very limited class with a constructor that allows you to initialize all of its 
+#crack.ann# also defines a #@struct# annotation that can be used to generate a
+very limited class with a constructor that allows you to initialize all of its
 member variables.  For example:
 
 {{
     @import crack.ann struct;
-    
+
     @struct Coord { int x; int y; }
     Coord c = {10, 20};
 }}
@@ -3960,18 +3960,18 @@ Structs are very limited as of Crack 0.11.  In particular:
 
 -   They don't support inheritence.
 -   You can't add any other methods.
--   Instance variables definitions must be strictly of the form "/type/ 
+-   Instance variables definitions must be strictly of the form "/type/
     /name/;"  (we couldn't have written "int x, y;" above).
 
 Annotations in Generics
 '''''''''''''''''''''''
 
-There are limitations on the ways that you can use annotations with generics.  
-Generics are implemented as a simple stream of language tokens that are 
-replayed by the compiler when the generic is instantiated.  Unfortunately, 
-annotations can affect parser state in ways that can not always be passed 
-through to the instantiation.  For this reason, there are limitations on the 
-kinds of mutations that can be passed in from the context of a generic to the 
+There are limitations on the ways that you can use annotations with generics.
+Generics are implemented as a simple stream of language tokens that are
+replayed by the compiler when the generic is instantiated.  Unfortunately,
+annotations can affect parser state in ways that can not always be passed
+through to the instantiation.  For this reason, there are limitations on the
+kinds of mutations that can be passed in from the context of a generic to the
 code within the generic.  The only thing that is preserved are the imports.
 
 So this code would not work:
@@ -3979,27 +3979,27 @@ So this code would not work:
 {{
     @import crack.ann define;
     @define func() { void f() {} }
-    
+
     class A[T] {
         @func()   # func does not exist!
     }
 }}
 
-Likewise, registering parser callbacks, error contexts or new annotations will 
-not affect the instantiated generic code.  The only way to do so is to perform 
-all mutations within the scope of the generic.  So, for example, we could have 
+Likewise, registering parser callbacks, error contexts or new annotations will
+not affect the instantiated generic code.  The only way to do so is to perform
+all mutations within the scope of the generic.  So, for example, we could have
 successfully written our last example like this:
 
 {{
     @import crack.ann define;  # Imports are preserved.
-    
+
     class A[T] {
         @define func() { void f() {} }
         @func()
     }
 }}
 
-In this case, #define# is passed through (because it's an import) and #func# 
+In this case, #define# is passed through (because it's an import) and #func#
 will be defined within the generic at the time of its instantiation.
 
 Extensions
@@ -4200,27 +4200,27 @@ silly results like #float64(a) + 1# producing a result of type #int#.
 Threading
 ---------
 
-Crack provides rudimentary support for multi-threading.  Writing thread-safe 
-programs is difficult in any sufficiently primitive language, and crack is no 
+Crack provides rudimentary support for multi-threading.  Writing thread-safe
+programs is difficult in any sufficiently primitive language, and crack is no
 exception.
 
-Crack's reference counting mechanism is thread-safe, however it's bind and 
-release semantics are not: there is no guarantee of order of operations when 
-it comes to assigning reference counted variables, and without proper 
-synchronization it may still be possible to get into a situation where you are 
+Crack's reference counting mechanism is thread-safe, however it's bind and
+release semantics are not: there is no guarantee of order of operations when
+it comes to assigning reference counted variables, and without proper
+synchronization it may still be possible to get into a situation where you are
 referencing illegal memory.
 
-When sharing objects between threads, always be sure to do one of the 
+When sharing objects between threads, always be sure to do one of the
 following:
 
 -   Fully transfer ownership of the object to the other thread.
 -   Fully protect the state of the object with a #Mutex#.
 -   Treat the object as immutable.
 
-Follow these rules diligently and you won't have any problems.  Keep in mind 
+Follow these rules diligently and you won't have any problems.  Keep in mind
 that module-scoped globals are very easy to share accidentally.
 
-See \X(Threads) for information on the #crack.threads# module used to support 
+See \X(Threads) for information on the #crack.threads# module used to support
 threading.
 
 Debugging
@@ -4961,10 +4961,10 @@ Formatter Protocol) for details on how to use this.
 Threads
 -------
 
-The #crack.threads# module provides high-level thread functionality.  It 
-includes the #Thread#, #Mutex#, #MutexLock#, #Condition# and #Queue# classes.  
+The #crack.threads# module provides high-level thread functionality.  It
+includes the #Thread#, #Mutex#, #MutexLock#, #Condition# and #Queue# classes.
 
-To create a thread, derive from the #Thread# base class and implement the 
+To create a thread, derive from the #Thread# base class and implement the
 #run()# method:
 
 {{
@@ -4972,35 +4972,35 @@ To create a thread, derive from the #Thread# base class and implement the
 
     class MyThread : Thread {
         void run() {
-            # Note that cout, cin and cerr are threadsafe: their only state is 
+            # Note that cout, cin and cerr are threadsafe: their only state is
             # a file-descriptor.
             cout `hello from the background!\n`;
         }
     }
 }}
 
-We can then start use #start()# and #join()# to start the thread running in 
+We can then start use #start()# and #join()# to start the thread running in
 the background and wait for it to complete:
 
 {{
     MyThread thread = {};
     thread.start();
-    
+
     # block until completion
     thread.join();
 }}
 
-The simplest synchronization primitive is the #atomic\_int# type.  
-#atomic\_int# is an integer (an #intz#, actually, because it is the size of a 
-pointer) whose only operations are performed atomically.  Atomic operations 
-are visible to all threads and are not subject to reordering by the compiler.  
-They are used to implement the reference counting mechanism in #Object#, and 
-can also be used to implement other forms of thread-safe counters and control 
+The simplest synchronization primitive is the #atomic\_int# type.
+#atomic\_int# is an integer (an #intz#, actually, because it is the size of a
+pointer) whose only operations are performed atomically.  Atomic operations
+are visible to all threads and are not subject to reordering by the compiler.
+They are used to implement the reference counting mechanism in #Object#, and
+can also be used to implement other forms of thread-safe counters and control
 mechanisms.  For example, here is a simple active thread counter:
 
 {{
     atomic_int count;
-    
+
     class MyThread : Thread {
         void run() {
             count += 1;
@@ -5018,9 +5018,9 @@ The only operations supported for #`atomic_int`# are:
 Mutexes
 '''''''
 
-Mutexes synchronize access to shared resources.  Only one thread can have a 
-mutex locked at any given time.  If a thread tries to lock a mutex that is 
-currently locked by another thread, it will block until the mutex becomes 
+Mutexes synchronize access to shared resources.  Only one thread can have a
+mutex locked at any given time.  If a thread tries to lock a mutex that is
+currently locked by another thread, it will block until the mutex becomes
 available.
 
 The #Mutex# class provides the #lock()# and #unlock()# methods:
@@ -5028,55 +5028,55 @@ The #Mutex# class provides the #lock()# and #unlock()# methods:
 {{
     int value;
     Mutex valueMutex = {};
-    
+
     valueMutex.lock();
     value = 100;
     valueMutex.unlock();
 }}
 
-There is also a #MutexLock# class that manages locking and unlocking a mutex 
+There is also a #MutexLock# class that manages locking and unlocking a mutex
 for the context it is defined:
 
 {{
     void f() {
-        # The mutex will be unlocked when this goes out of scope and is 
+        # The mutex will be unlocked when this goes out of scope and is
         # deleted at the end of the function call.
         lock := MutexLock(valueMutex);
         value = 200;
     }
 }}
 
-Note that #MutexLock# is rather expensive, as it involves a memory allocation 
+Note that #MutexLock# is rather expensive, as it involves a memory allocation
 and free.  However, it also has the virtue of being exception safe.
 
 Conditions
 ''''''''''
 
-Conditions allow you to send events between threads.  They must be used in 
-conjuntion with a #Mutex#.  The mutex protects a shared resource, the 
+Conditions allow you to send events between threads.  They must be used in
+conjuntion with a #Mutex#.  The mutex protects a shared resource, the
 notifies observers of changes in that resource:
 
 {{
 
     # Create a condition associated with our value.
     Condition cond = {valueMutex};
-    
+
     # Change the value.
     if (true) {
         lock := MutexLock(valueMutex);
         value += 1;
         cond.signal();
     }
-    
+
     # Thread that waits on changes.
     class Waiter : Thread {
         void run() {
             lock := MutexLock(valueMutex);
             while (true) {
-                # The condition atomically releases the mutex while it's 
+                # The condition atomically releases the mutex while it's
                 # waiting for an event.
                 cond.wait();
-                
+
                 cout `value changed, new value = $value\n`;
             }
         }
@@ -5085,8 +5085,8 @@ notifies observers of changes in that resource:
 Queues
 ''''''
 
-#Queue# is the most sophisticated inter-thread communication mechanism 
-provided by #crack.threads#.  As its name implies, it is a thread-safe message 
+#Queue# is the most sophisticated inter-thread communication mechanism
+provided by #crack.threads#.  As its name implies, it is a thread-safe message
 queue.  It is also a generic.
 
 Here's how we could use #Queue# to implement a worker pool:
@@ -5105,7 +5105,7 @@ Here's how we could use #Queue# to implement a worker pool:
         pool.append(thread);
         thread.start();
     }
-    
+
     void doSomething() {
         cout `blah`;
     }
@@ -5333,8 +5333,8 @@ the final return code.
 To retrieve stdout and stderr output from the process, use getStdOut() and
 getStdErr().
 
-Alternately, you can use the #run()# method and pass the process a handler to 
-handle standard input and standard error, or add the process and a handler to 
+Alternately, you can use the #run()# method and pass the process a handler to
+handle standard input and standard error, or add the process and a handler to
 a #Poller# to multiplex it with other IO (see \X(Networking) below).
 
 Regular Expressions
@@ -5986,7 +5986,7 @@ From 0.11 to 1.0
 ----------------
 
 -   Many methods that were unnecssarily virtual are now @final.
--   The deprecated "createString()" and "createCString()" methods in 
+-   The deprecated "createString()" and "createCString()" methods in
     StringWriter and StringFormatter have been removed.
 -   The "do" keyword has been reserved and can no longer be used for variables.
 -   the crack.exp.error module has been removed.
@@ -5994,34 +5994,34 @@ From 0.11 to 1.0
 From 0.10 to 0.11
 -----------------
 
--   The low-level alsa midi functions have been regenerated to feel more 
+-   The low-level alsa midi functions have been regenerated to feel more
     object-oriented (the high-level crack wrappers remain backwards compatible).
--   The name of the "EACCES" constant has been fixed (it was "EACCESS", which 
+-   The name of the "EACCES" constant has been fixed (it was "EACCESS", which
     is not what it is in POSIX).
 
 From 0.9 to 0.10
 ----------------
 
--   crack.fs.Path.makeDir() has been converted to a final function, 
+-   crack.fs.Path.makeDir() has been converted to a final function,
     makeDir(bool errorOnExists) is now the abstract that must be overriden.
 
 From 0.8 to 0.9
 ---------------
 
--   The #URLEncode# and #URLDecode# functions in #crack.net.curl# have been 
+-   The #URLEncode# and #URLDecode# functions in #crack.net.curl# have been
     renamed to #urlEncode# and #urlDecode#.
--   Changed the protected variable interface to MersenneTwister in 
+-   Changed the protected variable interface to MersenneTwister in
     #crack.random#.
--   Cache file format has changed, if experimenting with the cache you'll need 
+-   Cache file format has changed, if experimenting with the cache you'll need
     to purge your existing cache files from `~/.crack/cache`.
 
 From 0.7 to 0.8
 ---------------
 
 -   Renamed #crack.cont.numericarray.NumericArray# to #Matrix#.
--   Moved the single parameter overload of #strutil.split()# to #crack.ascii# 
+-   Moved the single parameter overload of #strutil.split()# to #crack.ascii#
     and renamed it #wsplit()#.
--   Changed the semantics of annotations in generics, see \X(Annotations in 
+-   Changed the semantics of annotations in generics, see \X(Annotations in
     Generics) for details.
 
 From 0.6 to 0.7
@@ -6044,8 +6044,8 @@ From 0.6 to 0.7
     versions are still there.
 -   Renamed #TreeMap#, #HashMap#, and #OrderedHashMap# #contains()# method to
     #hasKey()#.
--   Renamed #OrderedHashMap.getIndex()# method to #getItemAt()#.    
--   The #now()# function in the time module is now a static method of the 
+-   Renamed #OrderedHashMap.getIndex()# method to #getItemAt()#.
+-   The #now()# function in the time module is now a static method of the
     #Time# class.
 
 From 0.5 to 0.6

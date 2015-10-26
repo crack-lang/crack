@@ -1,10 +1,10 @@
 // Copyright 2011-2012 Shannon Weyrick <weyrick@mozek.us>
 // Copyright 2011-2012 Google Inc.
-// 
+//
 //   This Source Code Form is subject to the terms of the Mozilla Public
 //   License, v. 2.0. If a copy of the MPL was not distributed with this
 //   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-// 
+//
 
 #include <iostream>
 #include <fstream>
@@ -92,17 +92,17 @@ void usage(int retval) {
     cout << " -K\n    Disable module caching." << endl;
 
     cout << " -g --debug\n    Generate DWARF debug information" << endl;
-    cout << " -O <N> --optimize\n    Use optimization level N (default 2)" << 
+    cout << " -O <N> --optimize\n    Use optimization level N (default 2)" <<
         endl;
     cout << " -l <path> --lib\n    Add directory to module search path" << endl;
     cout << " -m --migration-warnings\n    Include migration warnings" << endl;
-    cout << " -n --no-bootstrap\n    Do not load bootstrapping modules" << 
+    cout << " -n --no-bootstrap\n    Do not load bootstrapping modules" <<
         endl;
     cout << " -v --verbose\n    Verbose output, use more than once for "
             "greater effect" << endl;
     cout << " -q --quiet\n    No extra output, implies verbose level 0" << endl;
     cout << " --version\n    Emit the version number and exit" << endl;
-    cout << " --stats\n    Emit statistics about compile time operations." << 
+    cout << " --stats\n    Emit statistics about compile time operations." <<
         endl;
     cout << " --dump-func-table\n    Dump the debug function table." << endl;
     cout << " -t <module> --trace <module>\n    Turn tracing on for the "
@@ -138,7 +138,7 @@ int main(int argc, char **argv) {
     string libPath;
     if (getenv("CRACK_LIB_PATH"))
         libPath = getenv("CRACK_LIB_PATH");
-    
+
     if (const char *caching = getenv("CRACK_CACHING")) {
         if (!strcasecmp(caching, "true")) {
             crack.cacheMode = true;
@@ -156,9 +156,9 @@ int main(int argc, char **argv) {
     char *subopts, *value;
     char * const token[] = { NULL };
     bool optionsError = false;
-    bool useDoubleBuilder = false;    
+    bool useDoubleBuilder = false;
     bool doDumpFuncTable = false;
-    while ((opt = getopt_long(argc, argv, "+B:b:dgO:nCKGml:vqt:", longopts, 
+    while ((opt = getopt_long(argc, argv, "+B:b:dgO:nCKGml:vqt:", longopts,
                               &idx
                               )
             ) != -1
@@ -246,7 +246,7 @@ int main(int argc, char **argv) {
                         << "expected 0-3" << endl;
                     exit(1);
                 }
-                
+
                 crack.options->optimizeLevel = atoi(optarg);
                 break;
             case 'v':
@@ -286,7 +286,7 @@ int main(int argc, char **argv) {
                 break;
         }
     }
-    
+
     // check for options errors
     if (optionsError)
         usage(1);
@@ -338,14 +338,14 @@ int main(int argc, char **argv) {
             rc = crack.runScript(src, argv[optind], false);
         }
     }
-    
+
     if (bType == jitBuilder && !crack.options->dumpMode)
         crack.callModuleDestructors();
 
     if (crack.options->statsMode) {
         crack.printStats(cerr);
     }
-    
+
     if (doDumpFuncTable)
         crack::debug::dumpFuncTable(cerr);
 

@@ -1,10 +1,10 @@
 // Copyright 2010-2012 Google Inc.
 // Copyright 2012 Shannon Weyrick <weyrick@mozek.us>
-// 
+//
 //   This Source Code Form is subject to the terms of the Mozilla Public
 //   License, v. 2.0. If a copy of the MPL was not distributed with this
 //   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-// 
+//
 
 #include "CrackContext.h"
 
@@ -27,7 +27,7 @@ using namespace model;
 namespace {
     struct Callback : parser::ParserCallback {
         parser::Parser::Event event;
-        
+
         Callback(parser::Parser::Event event) : event(event) {}
     };
 
@@ -42,7 +42,7 @@ namespace {
             func(func) {
         }
 
-        virtual void run(parser::Parser *parser, parser::Toker *toker, 
+        virtual void run(parser::Parser *parser, parser::Toker *toker,
                          model::Context *context
                          ) {
             CrackContext ctx(parser, toker, context);
@@ -51,7 +51,7 @@ namespace {
     };
 
     // Implements parser callback to wrap functor callbacks.
-    // This only exists because the parser namespace is private, otherwise we 
+    // This only exists because the parser namespace is private, otherwise we
     // could just derive out callbacks from the parser's.
     struct FunctorCallback : public Callback {
         CrackContext::AnnotationFunctor *functor;
@@ -63,7 +63,7 @@ namespace {
             functor(functor) {
         }
 
-        virtual void run(parser::Parser *parser, parser::Toker *toker, 
+        virtual void run(parser::Parser *parser, parser::Toker *toker,
                          model::Context *context
                          ) {
             CrackContext ctx(parser, toker, context);
@@ -87,7 +87,7 @@ void CrackContext::inject(char *sourceName, int lineNumber, char *code) {
     parser::Toker tempToker(iss, sourceName, lineNumber);
     list<parser::Token> tokens;
     parser::Token tok;
-    
+
     // 0 - not in an istring
     // 1 - in an istring
     // 2 - in an interpolation sequence
@@ -109,10 +109,10 @@ void CrackContext::inject(char *sourceName, int lineNumber, char *code) {
         } else if (tok.isIstrBegin()) {
             ++istrMode;
         }
-                    
+
         tokens.push_front(tok);
     }
-    
+
     // transfer the tokens to the tokenizer
     while (!tokens.empty()) {
         toker->putBack(tokens.front());
@@ -137,7 +137,7 @@ void CrackContext::storeAnnotation(const char *name, AnnotationFunc func) {
 }
 
 compiler::Annotation *CrackContext::getAnnotation(const char *name) {
-    model::Annotation *ann = 
+    model::Annotation *ann =
         model::AnnotationPtr::rcast(context->compileNS->lookUp(name));
     return ann ? new Annotation(ann) : 0;
 }
@@ -237,7 +237,7 @@ void CrackContext::continueIString() {
     toker->continueIString();
 }
 
-void CrackContext::_inject(CrackContext *inst, char *sourceName, int lineNumber, 
+void CrackContext::_inject(CrackContext *inst, char *sourceName, int lineNumber,
                            char *code
                            ) {
     inst->inject(sourceName, lineNumber, code);
@@ -255,7 +255,7 @@ int CrackContext::_getScope(CrackContext *inst) {
     return inst->context->scope;
 }
 
-void CrackContext::_storeAnnotation(CrackContext *inst, const char *name, 
+void CrackContext::_storeAnnotation(CrackContext *inst, const char *name,
                                     AnnotationFunc func
                                     ) {
     inst->context->compileNS->addDef(new PrimFuncAnnotation(name, func));
@@ -264,12 +264,12 @@ void CrackContext::_storeAnnotation(CrackContext *inst, const char *name,
 compiler::Annotation *CrackContext::_getAnnotation(CrackContext *inst,
                                                    const char *name
                                                    ) {
-    model::Annotation *ann = 
+    model::Annotation *ann =
         model::AnnotationPtr::rcast(inst->context->compileNS->lookUp(name));
     return ann ? new Annotation(ann) : 0;
 }
 
-void CrackContext::_storeAnnotation(CrackContext *inst, const char *name, 
+void CrackContext::_storeAnnotation(CrackContext *inst, const char *name,
                                     AnnotationFunc func,
                                     void *userData
                                     ) {
@@ -312,7 +312,7 @@ void CrackContext::_popErrorContext(CrackContext *inst) {
 }
 
 parser::ParserCallback *CrackContext::_addCallback(
-    CrackContext *inst,     
+    CrackContext *inst,
     int event,
     CrackContext::AnnotationFunc func
 ) {

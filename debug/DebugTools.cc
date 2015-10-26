@@ -1,9 +1,9 @@
 // Copyright 2011-2012 Google Inc.
-// 
+//
 //   This Source Code Form is subject to the terms of the Mozilla Public
 //   License, v. 2.0. If a copy of the MPL was not distributed with this
 //   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-// 
+//
 
 #include "config.h"
 #include "DebugTools.h"
@@ -20,13 +20,13 @@
 using namespace std;
 
 namespace {
-    
+
     struct DebugInfo {
         size_t size;
         const char *funcName;
         const char *filename;
         int lineNumber;
-        
+
         DebugInfo(size_t size, const char *funcName, const char *filename,
                   int lineNumber
                   ) :
@@ -35,20 +35,20 @@ namespace {
             filename(filename),
             lineNumber(lineNumber) {
         }
-        
+
         DebugInfo() : funcName(0), filename(0), lineNumber(0) {}
     };
-    
+
     struct InternedString {
         const char *val;
-    
+
         InternedString(const char *val) : val(val) {}
-        
+
         bool operator <(const InternedString &other) const {
             return strcmp(val, other.val) < 0;
         }
     };
-    
+
     struct InternedStringSet : public set<InternedString> {
         ~InternedStringSet() {
             for (InternedStringSet::iterator iter = begin();
@@ -66,7 +66,7 @@ namespace {
     const InternedString &lookUpString(const InternedString &key) {
         InternedStringSet::iterator iter = internTable.find(key);
         if (iter == internTable.end())
-            iter = 
+            iter =
                 internTable.insert(InternedString(strdup(key.val))).first;
         return *iter;
     }
@@ -77,7 +77,7 @@ namespace {
     }
 }
 
-void crack::debug::registerDebugInfo(void *address, 
+void crack::debug::registerDebugInfo(void *address,
                                      size_t size,
                                      const string &funcName,
                                      const string &fileName,
@@ -91,7 +91,7 @@ void crack::debug::registerDebugInfo(void *address,
 void crack::debug::registerFuncTable(const char **table) {
     while (table[0]) {
         const InternedString &name = lookUpString(InternedString(table[1]));
-        debugTable[(void *)table[0]] = 
+        debugTable[(void *)table[0]] =
             DebugInfo(0, name.val, "", 0);
         table = table + 2;
     }
@@ -105,7 +105,7 @@ void crack::debug::getLocation(void *address, const char *info[3]) {
     DebugTable::iterator i = debugTable.lower_bound(address);
     if (i == debugTable.end() || i->first != address)
         --i;
-    
+
     if (i == debugTable.end() ||
         (i->second.size &&
          address >= reinterpret_cast<char *>(i->first) + i->second.size
@@ -130,7 +130,7 @@ void crack::debug::dumpFuncTable(ostream &out) {
 void *__builtin_frame_address(unsigned int level);
 
 void *crack::debug::getStackFrame() {
-    // note: on certain architectures, this won't be able to see past the 
+    // note: on certain architectures, this won't be able to see past the
     // current stack frame and will always return zero.
     return __builtin_frame_address(0);
 }

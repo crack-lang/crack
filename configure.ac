@@ -1,11 +1,11 @@
 # Copyright 2003 Michael A. Muller <mmuller@enduden.com>
 # Copyright 2009-2012 Google Inc.
 # Copyright 2012 Arno Rehn <arno@arnorehn.de>
-# 
+#
 #   This Source Code Form is subject to the terms of the Mozilla Public
 #   License, v. 2.0. If a copy of the MPL was not distributed with this
 #   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-# 
+#
 
 AC_INIT(crack, 0.10)
 AM_INIT_AUTOMAKE

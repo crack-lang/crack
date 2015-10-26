@@ -1,9 +1,9 @@
 // Copyright 2009-2010 Google Inc.
-// 
+//
 //   This Source Code Form is subject to the terms of the Mozilla Public
 //   License, v. 2.0. If a copy of the MPL was not distributed with this
 //   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-// 
+//
 
 # overriden definitions in the same context should be an error
 int32 a;
@@ -35,11 +35,11 @@ void returnsVoid() {}
 void returnsOther() { return returnsVoid(); }
 
 
-# these are tests that I've done at some point with interesting results and 
+# these are tests that I've done at some point with interesting results and
 # should be added to the general test suite
 
 # Tests that local vars in a loop (LLVM allocas) do not overrun the stack.
-# Blocks in a function caused problems because of the order of deletion of 
+# Blocks in a function caused problems because of the order of deletion of
 # ref-counted pointers.
 void foo() {
     while (1) {
@@ -54,13 +54,13 @@ class Foo {
     void f() { this.global(); }  // should error
 };
 
-# currently fails because we generate unreachable code after the else but 
+# currently fails because we generate unreachable code after the else but
 # don't give it a return statement.  Need to stop generating unreachable code.
 int32 foo(int32 x) { if (x) return 1; else return 0; puts("test"); }
 
-# this snippet will currently print "true" instead of 100, because implicit 
-# conversion means f(bool) hides f(int32).  The overloader should reorder the 
-# methods so the least general is called first.  I'm not sure what it should 
+# this snippet will currently print "true" instead of 100, because implicit
+# conversion means f(bool) hides f(int32).  The overloader should reorder the
+# methods so the least general is called first.  I'm not sure what it should
 # do for f(bool, int32) vs f(int32, bool).  It should probably not do
 # reordering and just not attempt conversions unless exact matches fail.
 void f(int32 v) {printint(v);}
@@ -80,7 +80,7 @@ class A {
 void f() {}
 f = 100;
 
-# this should cause an error because x is initialized before y and we are 
+# this should cause an error because x is initialized before y and we are
 # initializing x with the value of y.
 class A {
     int x;
@@ -88,7 +88,7 @@ class A {
     oper init() : y = 0, x = y {}
 };
 
-# not sure why, but this causes a "Calling a function with a bad signature" 
+# not sure why, but this causes a "Calling a function with a bad signature"
 # assertion failure in LLVM:
 import crack.lang FreeBase;
 class Foo : FreeBase { oper bind() { print('binding'); } oper release() { print('releasing'); } };
@@ -101,11 +101,11 @@ class Foo {}
 import crack.io cout;
 (Foo().class.name);
 
-# the "unsafeCast" from non-primary base class test should really be this.  
-# The general problem of correctly specializing a base class is not one we can 
-# currently deal with because a class can have multiple VTableBase ancestors 
-# so there's no way to infer which of them the pointer references at compile 
-# time.  The only thing I can think of is to have another special method in 
+# the "unsafeCast" from non-primary base class test should really be this.
+# The general problem of correctly specializing a base class is not one we can
+# currently deal with because a class can have multiple VTableBase ancestors
+# so there's no way to infer which of them the pointer references at compile
+# time.  The only thing I can think of is to have another special method in
 # VTableBase that provides an offset table.
 class A : VTableBase {} class B { int j; }
 class C : A, B { int k; void run() { puts("ok"); } }

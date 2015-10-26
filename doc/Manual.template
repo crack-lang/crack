@@ -1,11 +1,11 @@
 <html>
 <!--
  * Copyright 2011-2012 Google Inc.
- * 
+ *
  *   This Source Code Form is subject to the terms of the Mozilla Public
  *   License, v. 2.0. If a copy of the MPL was not distributed with this
  *   file, You can obtain one at http://mozilla.org/MPL/2.0/.
- * 
+ *
 -->
   <head>
     <title>
@@ -17,7 +17,7 @@
         The Crack Programming Language Guide
     </h2>
     <p>Because life is too short to wait for software.</p>
-    
+
     <br>
     <i>Author: Michael Muller</i><br>
     <i>Contributions by: Shannon Weyrick, Conrad Steenberg</i>
