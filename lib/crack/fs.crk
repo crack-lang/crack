@@ -262,7 +262,7 @@ class RealPath : Path {
     }
 
     Writer writer() {
-        fd := open(__path.buffer, O_CREAT | O_WRONLY | O_TRUNC, 0777);
+        fd := open(__path.buffer, O_CREAT | O_WRONLY | O_TRUNC, 0666);
         if (fd == -1)
             throw SystemError(FStr() `opening $__path`);
         return OwningFDWriter(fd);
@@ -275,7 +275,7 @@ class RealPath : Path {
     }
 
     Writer appender() {
-        fd := open(__path.buffer, O_APPEND | O_WRONLY, 0777);
+        fd := open(__path.buffer, O_APPEND | O_WRONLY, 0666);
         if (fd == -1)
             throw SystemError(FStr() `opening $__path`);
         return OwningFDWriter(fd);
