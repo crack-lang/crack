@@ -2,11 +2,11 @@
 // Copyright 2011 Shannon Weyrick <weyrick@mozek.us>
 // Copyright 2011 Arno Rehn <arno@arnorehn.de>
 // Copyright 2011-2012 Conrad Steenberg <conrad.steenberg@gmail.com>
-// 
+//
 //   This Source Code Form is subject to the terms of the Mozilla Public
 //   License, v. 2.0. If a copy of the MPL was not distributed with this
 //   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-// 
+//
 //
 // This is a simple stub that defines the public extension interface used
 // during compile-time extension initialization. This stub is only used when
@@ -82,7 +82,7 @@ class Module {
         Type *getStringType();
         Type *getStaticStringType();
         Type *getOverloadType();
-        
+
         Type *getType(const char *name);
         Type *addType(const char *name, size_t instSize, bool hasVTable);
         Type *addForwardType(const char *name, size_t instSize);
@@ -104,7 +104,7 @@ class Type {
         void checkFinished();
 
     public:
-        
+
         void addBase(Type *base);
         void addInstVar(Type *type, const std::string &name, size_t offset);
 
@@ -136,7 +136,7 @@ class Type {
         void injectEnd(const std::string& code);
         void finish();
 };
-    
+
 
 }} // namespace crack::ext
 

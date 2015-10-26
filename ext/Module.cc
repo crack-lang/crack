@@ -2,11 +2,11 @@
 // Copyright 2011 Shannon Weyrick <weyrick@mozek.us>
 // Copyright 2011 Arno Rehn <arno@arnorehn.de>
 // Copyright 2011-2012 Conrad Steenberg <conrad.steenberg@gmail.com>
-// 
+//
 //   This Source Code Form is subject to the terms of the Mozilla Public
 //   License, v. 2.0. If a copy of the MPL was not distributed with this
 //   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-// 
+//
 
 #include "Module.h"
 
@@ -39,11 +39,11 @@ Module::~Module() {
     // cleanup the builtin types
     for (i = 0; i < sizeof(builtinTypes) / sizeof(Type *); ++i)
         delete builtinTypes[i];
-    
+
     // cleanup new or looked up types
     for (TypeMap::iterator iter = types.begin(); iter != types.end(); ++iter)
          delete iter->second;
-    
+
     // cleanup the funcs
     for (i = 0; i < funcs.size(); ++i)
         delete funcs[i];
@@ -86,10 +86,10 @@ namespace {
 
 // internal type for types with vtables.
 class VTableType : public Type {
-    
+
     private:
         string proxyName;
-    
+
     public:
         VTableType(Module *module, const string &name, Context *context,
                    size_t size,
@@ -100,23 +100,23 @@ class VTableType : public Type {
         }
 
         // propagate all constructors from 'inner' to 'outer'
-        void propagateConstructors(Context &context, TypeDef *inner, 
+        void propagateConstructors(Context &context, TypeDef *inner,
                                    TypeDef *outer
                                    ) {
-            
-            OverloadDefPtr constructors = 
+
+            OverloadDefPtr constructors =
                 OverloadDefPtr::rcast(inner->lookUp("oper init"));
-            
+
             if (!constructors)
                 return;
-            
+
             for (OverloadDef::FuncList::iterator fi =
                   constructors->beginTopFuncs();
                  fi != constructors->endTopFuncs();
                  ++fi
                  ) {
                 // create the init function, wrap it in an "oper new"
-                FuncDefPtr operInit = 
+                FuncDefPtr operInit =
                     outer->createOperInit(context, (*fi)->args);
                 outer->createNewFunc(context, operInit.get());
             }
@@ -128,7 +128,7 @@ class VTableType : public Type {
 
             // finish the inner class
             Type::finish();
-            
+
             TypeDef::TypeVec bases;
             bases.reserve(2);
             bases.push_back(module->getVTableBaseType()->typeDef);
@@ -136,7 +136,7 @@ class VTableType : public Type {
 
             // create the subcontext and emit the beginning of the class.
             Context *ctx = impl->context;
-            ContextPtr clsCtx = 
+            ContextPtr clsCtx =
                 new Context(ctx->builder, Context::instance, ctx, 0,
                             ctx->compileNS.get()
                 );
@@ -150,9 +150,9 @@ class VTableType : public Type {
 
             // wrap all of the constructors
             propagateConstructors(*clsCtx, typeDef, td.get());
-            
+
             // wrap all of the vwrapped methods
-            for (FuncVec::iterator fi = impl->funcs.begin(); 
+            for (FuncVec::iterator fi = impl->funcs.begin();
                  fi != impl->funcs.end();
                  ++fi
                  ) {
@@ -163,28 +163,28 @@ class VTableType : public Type {
             }
 
             ctx->builder.emitEndClass(*clsCtx);
-            
-            // replace the inner type with the outer type (we can be cavalier 
-            // about discarding the reference here because Type::finish() 
+
+            // replace the inner type with the outer type (we can be cavalier
+            // about discarding the reference here because Type::finish()
             // should have assigned this to a variable)
             typeDef = td.get();
-        }        
+        }
 };
 
 } // anon namespace
 
 Type *Module::getType(const char *name) {
-    
+
     // try looking it up in the map, first
     TypeMap::iterator iter = types.find(name);
     if (iter != types.end())
         return iter->second;
-    
+
     TypeDefPtr rawType = TypeDefPtr::rcast(context->ns->lookUp(name));
     if (!rawType) {
         return 0;
     }
-    
+
     // Create a new type, add it to the map.
     Type *type = new Type(this, rawType.get());
     types[name] = type;
@@ -206,10 +206,10 @@ Type *Module::addTypeWorker(const char *name, size_t instSize, bool forward,
     Type *result;
 
     if (forward) {
-        // we can't currently combine forward and hasVTable because our inner 
+        // we can't currently combine forward and hasVTable because our inner
         // TypeDef changes for a vtable class.
         assert(!hasVTable);
-        result = new Type(this, name, context, instSize, 
+        result = new Type(this, name, context, instSize,
                           context->createForwardClass(name).get()
                           );
     } else if (hasVTable) {
@@ -279,7 +279,7 @@ void Module::finish() {
 
     for (int i = 0; i < funcs.size(); ++i)
         funcs[i]->finish();
-    
+
     // add the variable definitions to the context.
     for (int i = 0; i < vars.size(); ++i)
         context->ns->addDef(vars[i]);

@@ -1,11 +1,11 @@
 # Copyright 2011-2012 Google Inc.
 # Copyright 2011-2012 Shannon Weyrick <weyrick@mozek.us>
 # Copyright 2011-2012 Conrad Steenberg <conrad.steenberg@gmail.com>
-# 
+#
 #   This Source Code Form is subject to the terms of the Mozilla Public
 #   License, v. 2.0. If a copy of the MPL was not distributed with this
 #   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-# 
+#
 # Generic hash map implementation
 
 import crack.lang makeHashVal, free, AssertionError, KeyError, Formatter,
@@ -13,13 +13,13 @@ import crack.lang makeHashVal, free, AssertionError, KeyError, Formatter,
 import crack.io cout, StandardFormatter, FStr, Writer;
 import crack.math log2, abs;
 
-# optimal bucket count sizes (these are prime numbers and guaranteed to be 
-# relatively prime to all hash values, reducing the number of collisions and 
+# optimal bucket count sizes (these are prime numbers and guaranteed to be
+# relatively prime to all hash values, reducing the number of collisions and
 # substantially improving performance)
 const array[uint] _BUCKET_COUNT = [
-    17, 37, 67, 131, 257, 521, 1031, 2053, 4099, 8209, 16411, 32771, 65537, 
-    131101, 262147, 524309, 1048583, 2097169, 4194319, 8388617, 16777259, 
-    33554467, 67108879, 134217757, 268435459, 536870923, 1073741827, 
+    17, 37, 67, 131, 257, 521, 1031, 2053, 4099, 8209, 16411, 32771, 65537,
+    131101, 262147, 524309, 1048583, 2097169, 4194319, 8388617, 16777259,
+    33554467, 67108879, 134217757, 268435459, 536870923, 1073741827,
     2147483659, 0
 ];
 
@@ -29,7 +29,7 @@ uint _increaseCap(uint cap) {
     for (int i = 0; (bc = _BUCKET_COUNT[i]) && bc < cap * 2; ++i);
     if (!bc)
         throw AssertionError('Hashtable too big!!');
-    
+
     return bc;
 }
 
@@ -39,38 +39,38 @@ class HashMap[Key, Value] {
         uint _hash;
         Key key;
         Value val;
-        
+
         oper init(uint hash, Key key, Value val) :
             _hash = hash,
             key = key,
             val = val {
         }
     }
-    
+
     array[Item] _items;
     uint _size, _cap;
-    
+
     class Iter {
         HashMap __map;
         int __index = -1;
 
         @final void next();
-        
+
         oper init(HashMap map) : __map = map { next(); }
-        
+
         @final Item elem() { return __map._items[__index]; }
-        
+
         @final void next() {
-            while ((++__index < __map._cap) && 
+            while ((++__index < __map._cap) &&
                    (!__map._items[__index]))
                 ;
         }
-        
+
         bool isTrue() { return __index < __map._cap; }
     }
 
     oper init() : _items(16), _cap = 16 {}
-    
+
     @final
     void _free(){
         # release all items
@@ -78,11 +78,11 @@ class HashMap[Key, Value] {
             _items[i].oper release();
             _items[i] = null;
         }
-        
+
         # free the list
         free(_items);
     }
-    
+
     @final
     void clear(uint newcap) {
         _free();
@@ -90,22 +90,22 @@ class HashMap[Key, Value] {
         _cap = newcap;
         _size = 0;
     }
-    
+
     @final
     void clear() {
         clear(16);
     }
-    
+
     oper del() {
         _free();
     }
-    
+
     @final int __findSlot(uint hash, Key key) {
-        
+
         # find the ideal slot
         i := hash % _cap;
-        
-        # if it's occupied by something with a different key, increment to 
+
+        # if it's occupied by something with a different key, increment to
         # the next slot.
         while (_items[i] && _items[i].key != key) {
 #            cout `desired slot $i for $key is occupied,`;
@@ -113,29 +113,29 @@ class HashMap[Key, Value] {
 #            cout `checking slot $i\n`;
         }
 #        cout `assigning $key to $i\n`;
-        
+
         return int(i);
     }
-    
+
     @final void __reallocate() {
-        
+
         # stash the old array, create a new array with double the capacity.
         oldCap := _cap;
         _cap = _increaseCap(_cap);
         array[Item] oldItems = _items;
         _items = array[Item](_cap);
-        
+
         # move everything over to the new array.
         for (uint i = 0; i < oldCap; ++i) {
             item := oldItems[i];
             if (item)
                 _items[__findSlot(item._hash, item.key)] = item;
         }
-        
+
         # free the old list
         free(oldItems);
     }
-    
+
     Value set(Key key, Value val) {
 #        cout `*** map[$key] = $val\n`;
         hash := makeHashVal(key);
@@ -151,14 +151,14 @@ class HashMap[Key, Value] {
                 __reallocate();
                 i = __findSlot(hash, key);
             }
-            
+
             item := Item(hash, key, val);
 #            cout `storing key $key at $i with $val\n`;
             _items[i] = item;
             item.oper bind();
             ++_size;
         }
-        
+
         return val;
     }
 
@@ -174,7 +174,7 @@ class HashMap[Key, Value] {
         return _items[i];
     }
 
-    ## Returns the value associated with the specified key, throws KeyError if 
+    ## Returns the value associated with the specified key, throws KeyError if
     ## the key is not in the container.
     Value oper [](Key key) {
         hash := makeHashVal(key);
@@ -185,46 +185,46 @@ class HashMap[Key, Value] {
             throw KeyError(FStr() `Unknown key: $key`);
     }
 
-    ## Returns the value associated with the specified key, null if the key is 
+    ## Returns the value associated with the specified key, null if the key is
     ## not in the container.
     Value get(Key key) {
         hash := makeHashVal(key);
         i := __findSlot(hash, key);
         return _items[i] ? _items[i].val : null;
     }
-    
-    ## Returns the value associated with the key, 'default' if the key is not 
+
+    ## Returns the value associated with the key, 'default' if the key is not
     ## in the container.
     Value get(Key key, Value default) {
         hash := makeHashVal(key);
         i := __findSlot(hash, key);
         return _items[i] ? _items[i].val : default;
     }
-    
+
     void __findNewOccupant(int opening) {
-        
+
         # check if a < b <= c, respecting the modulus operation.
         bool inOrder(int a, int b, int c) {
-            return 
+            return
                 # if a < c, this is trivial
                 a < c && a < b && b <= c ||
-                
+
                 # if a > c, the range is split between a..top of range and
                 # bottom of range .. c
                    a > c && (b > a || b <= c);
         }
-        
-        # scan through the continguous following items to see if there are any 
-        # that don't belong where they are and would be better served by the 
-        # newly opened position.  
+
+        # scan through the continguous following items to see if there are any
+        # that don't belong where they are and would be better served by the
+        # newly opened position.
         # make this determination with a simple '<=' check)
         i := int((opening + 1) % _cap);
-        
+
         # find the last open slot
         last := opening ? opening - 1 : int(_cap - 1);
         while (_items[last])
             if (--last < 0) last = int(_cap + last);
-        
+
         while (_items[i]) {
             desired := int(_items[i]._hash % _cap);
 #            cout `does $(_items[i].key) at $i which wants to be at \
@@ -234,14 +234,14 @@ class HashMap[Key, Value] {
 #                cout `moving $(_items[i].key) to $opening\n`;
                 _items[opening] = _items[i];
                 _items[i] = null;
-                
+
                 # repeat with the newly vacated opening
                 opening = i;
             }
             i = int((i + 1) % _cap);
         }
     }
-    
+
     void delete(Key key) {
         hash := makeHashVal(key);
         i := __findSlot(hash, key);
@@ -275,7 +275,7 @@ class HashMap[Key, Value] {
 
     ## A HashMap is true if it has elements.
     bool isTrue() { return _size; }
-    
+
     ## Method for testing - verify that all constraints are satisfied.
     void checkConstraints() {
         for (int i = 0; i < _cap; ++i) {
@@ -302,8 +302,8 @@ $expected`);
     }
 }
 
-## An ordered hash map is a combination of a hash-map and a sequence.  The 
-## container supports positional insertion of key-value pairs.  Iteration 
+## An ordered hash map is a combination of a hash-map and a sequence.  The
+## container supports positional insertion of key-value pairs.  Iteration
 ## traverses the elements according to the positions they were inserted at.
 class OrderedHashMap[Key, Value] {
 
@@ -314,7 +314,7 @@ class OrderedHashMap[Key, Value] {
         Key key;
         Value val;
         Item prev, next;
-        
+
         oper init(uint hash, Key key, Value val, Item prev) :
             _hash = hash,
             key = key,
@@ -350,31 +350,31 @@ class OrderedHashMap[Key, Value] {
         bool next() {
             if (!_item)
                 return false;
-            
+
             _item = _item.next;
             return _item;
         }
-    
+
         bool nx() {
             if (!_item)
                 return false;
-            
+
             if (__first)
                 __first = false;
             else
                 _item = _item.next;
             return _item;
         }
-        
+
         bool isTrue() { return _item; }
 
-        ## The opposite of next(): Back-up the iterator to the last node, 
+        ## The opposite of next(): Back-up the iterator to the last node,
         ## return true if it's valid.
         bool prev() { _item = _item.prev; return _item; }
     }
 
     ## Returns an iterator.
-    ## if 'back' is true, initialize it to point to the last node on the 
+    ## if 'back' is true, initialize it to point to the last node on the
     ## list. Otherwise point it to the first node.
     Iter iter(bool back) {
         if (back)
@@ -393,7 +393,7 @@ class OrderedHashMap[Key, Value] {
 
 
     oper init() : _items(16), _cap = 16 {}
-    
+
     @final
     void _free(){
         # release all items
@@ -408,12 +408,12 @@ class OrderedHashMap[Key, Value] {
         # release head & tail references
         head = null;
         tail = null;
-        
+
         # free the list
         free(_items);
     }
-    
-    ## Delete all of the contents of the map, converting the map to an empty 
+
+    ## Delete all of the contents of the map, converting the map to an empty
     ## map with the specified capacity.
     @final void clear(uint newcap) {
         # free everything and reallocate
@@ -422,46 +422,46 @@ class OrderedHashMap[Key, Value] {
         _cap = newcap;
         _size = 0;
     }
-    
-    ## Delete all of the contents of the map, converting the map to an empty 
+
+    ## Delete all of the contents of the map, converting the map to an empty
     ## map with the default capacity.
     @final void clear() {
         clear(16);
     }
-    
+
     oper del() {
         _free();
     }
-    
+
     @final int __findSlot(uint hash, Key key) {
-        
+
         # find the ideal slot
         i := hash % _cap;
-        
-        # if it's occupied by something with a different key, increment to 
+
+        # if it's occupied by something with a different key, increment to
         # the next slot.
         while (_items[i] && _items[i].key != key) {
             i = (i + 1) % _cap;
         }
-        
+
         return int(i);
     }
-    
+
     @final void __reallocate() {
-        
+
         # stash the old array, create a new array with over twice the capacity.
         oldCap := _cap;
         _cap = _increaseCap(_cap);
         array[Item] oldItems = _items;
         _items = array[Item](_cap);
-        
+
         # move everything over to the new array.
         for (uint i = 0; i < oldCap; ++i) {
             item := oldItems[i];
             if (item)
                 _items[__findSlot(item._hash, item.key)] = item;
         }
-        
+
         # free the old list
         free(oldItems);
     }
@@ -515,7 +515,7 @@ class OrderedHashMap[Key, Value] {
         return _items[i];
     }
 
-    ## Returns the value associated with the specified key, throws KeyError if 
+    ## Returns the value associated with the specified key, throws KeyError if
     ## the key is not in the container.
     Value oper [](Key key) {
         hash := makeHashVal(key);
@@ -526,7 +526,7 @@ class OrderedHashMap[Key, Value] {
             throw KeyError(FStr() `Unknown key: $key`);
     }
 
-    ## Returns the item associated with the specified key, null if the key is 
+    ## Returns the item associated with the specified key, null if the key is
     ## not in the container.
     Item getItem(Key key) {
         hash := makeHashVal(key);
@@ -534,15 +534,15 @@ class OrderedHashMap[Key, Value] {
         return _items[i] ? _items[i] : null;
     }
 
-    ## Returns the value associated with the specified key, null if the key is 
+    ## Returns the value associated with the specified key, null if the key is
     ## not in the container.
     Value get(Key key) {
         hash := makeHashVal(key);
         i := __findSlot(hash, key);
         return _items[i] ? _items[i].val : null;
     }
-    
-    ## Returns the value associated with the key, 'default' if the key is not 
+
+    ## Returns the value associated with the key, 'default' if the key is not
     ## in the container.
     Value get(Key key, Value default) {
         hash := makeHashVal(key);
@@ -551,43 +551,43 @@ class OrderedHashMap[Key, Value] {
     }
 
     void __findNewOccupant(int opening) {
-        
+
         # check if a < b <= c, respecting the modulus operation.
         bool inOrder(int a, int b, int c) {
-            return 
+            return
                 # if a < c, this is trivial
                 a < c && a < b && b <= c ||
-                
+
                 # if a > c, the range is split between a..top of range and
                 # bottom of range .. c
                    a > c && (b > a || b <= c);
         }
-        
-        # scan through the continguous following items to see if there are any 
-        # that don't belong where they are and would be better served by the 
-        # newly opened position.  
+
+        # scan through the continguous following items to see if there are any
+        # that don't belong where they are and would be better served by the
+        # newly opened position.
         # make this determination with a simple '<=' check)
         i := int((opening + 1) % _cap);
-        
+
         # find the last open slot
         last := opening ? opening - 1 : int(_cap - 1);
         while (_items[last])
             if (--last < 0) last = int(_cap + last);
-        
+
         while (_items[i]) {
             desired := int(_items[i]._hash % _cap);
             if (inOrder(last, desired, opening)) {
                 # found one!
                 _items[opening] = _items[i];
                 _items[i] = null;
-                
+
                 # repeat with the newly vacated opening
                 opening = i;
             }
             i = int((i + 1) % _cap);
         }
     }
-    
+
     void _deleteHash(Key key) {
         hash := makeHashVal(key);
         i := __findSlot(hash, key);
@@ -629,7 +629,7 @@ class OrderedHashMap[Key, Value] {
     }
 
     Item popHead() {
-        if (!head) 
+        if (!head)
             throw InvalidArgumentError('Attempting to pop from an empty list');
         item := head;
         if (head is tail)
@@ -643,7 +643,7 @@ class OrderedHashMap[Key, Value] {
         _deleteHash(item.key);
         return item;
     }
-    
+
     ## Remove the element from the back of the list and return it.
     Item popTail() {
         if (!tail)
@@ -699,7 +699,7 @@ class OrderedHashMap[Key, Value] {
         temp := _items[i];
 
         # The same key is already at the same index
-        if (item != null && item.next is temp) { 
+        if (item != null && item.next is temp) {
             temp.val = value;
             return;
         }
@@ -715,7 +715,7 @@ class OrderedHashMap[Key, Value] {
         if (item.next)
             item.next.prev = newItem;
         item.next = newItem;
-        
+
         # see if we need to fix the tail
         if (item is tail)
             tail = newItem;
@@ -810,7 +810,7 @@ class OrderedHashMap[Key, Value] {
 
     ## A HashMap is true if it has elements.
     bool isTrue() { return _size; }
-    
+
     ## Method for testing - verify that all constraints are satisfied.
     void checkConstraints() {
         for (int i = 0; i < _cap; ++i) {
@@ -834,7 +834,7 @@ $expected`);
                 }
             }
         }
-        
+
         # check the linked list.
         if (cur := head) {
             if (cur.prev)
@@ -843,15 +843,15 @@ $expected`);
             while (cur) {
                 if (!(cur.prev is last))
                     throw AssertionError('Previous is not the last element');
-                
+
                 index := __findSlot(cur._hash, cur.key);
                 if (!(_items[index] is cur))
                     throw AssertionError('Item is not in its slot');
-                
+
                 last = cur;
                 cur = cur.next;
             }
-            
+
             if (last != tail)
                 throw AssertionError('last != tail');
         } else if (tail) {

@@ -1,11 +1,11 @@
 // Copyright 2010-2012 Google Inc.
 // Copyright 2011-2012 Shannon Weyrick <weyrick@mozek.us>
 // Copyright 2011-2012 Arno Rehn <arno@arnorehn.de>
-// 
+//
 //   This Source Code Form is subject to the terms of the Mozilla Public
 //   License, v. 2.0. If a copy of the MPL was not distributed with this
 //   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-// 
+//
 
 #include "Func.h"
 
@@ -34,7 +34,7 @@ namespace crack { namespace ext {
     struct Arg {
         Type *type;
         string name;
-    
+
         Arg(Type *type, const string &name) :
             type(type),
             name(name) {
@@ -43,7 +43,7 @@ namespace crack { namespace ext {
 }}
 
 void Func::addArg(Type *type, const string &name) {
-    assert(!finished && 
+    assert(!finished &&
             "Attempted to add an argument to a finished function."
            );
     args.push_back(new Arg(type, name));
@@ -126,7 +126,7 @@ void Func::finish() {
     std::vector<ArgDefPtr> realArgs(args.size());
     for (int i = 0; i < args.size(); ++i) {
         args[i]->type->checkFinished();
-        realArgs[i] = builder.createArgDef(args[i]->type->typeDef, 
+        realArgs[i] = builder.createArgDef(args[i]->type->typeDef,
                                            args[i]->name
                                            );
     }
@@ -156,7 +156,7 @@ void Func::finish() {
     // if we have a function pointer, create a extern function for it
     if (funcPtr) {
 
-        // if this is a vwrap, use an internal name for the function so as not 
+        // if this is a vwrap, use an internal name for the function so as not
         // to conflict with the actual virtual function we're creating
         string externName;
         if (flags & vwrap) {
@@ -174,7 +174,7 @@ void Func::finish() {
 
         funcDef =
             builder.createExternFunc(*realCtx,
-                                     static_cast<FuncDef::Flags>(flags & 
+                                     static_cast<FuncDef::Flags>(flags &
                                                                  funcDefFlags
                                                                  ),
                                      externName,
@@ -182,7 +182,7 @@ void Func::finish() {
                                      (flags & method) ? receiverType : 0,
                                      realArgs,
                                      funcPtr,
-                                     (symbolName.empty()) ? 0 : 
+                                     (symbolName.empty()) ? 0 :
                                       symbolName.c_str()
                                      );
 
@@ -239,13 +239,13 @@ void Func::finish() {
     if (flags & constructor) {
         ContextPtr funcContext = context->createSubContext(Context::local);
         funcContext->toplevel = true;
-    
+
         // create the "this" variable
         ArgDefPtr thisDef =
             context->builder.createArgDef(receiverType, "this");
         funcContext->addDef(thisDef.get());
         VarRefPtr thisRef = funcContext->builder.createVarRef(thisDef.get());
-        
+
         // emit the function
         FuncDefPtr newFunc = context->builder.emitBeginFunc(*funcContext,
                                                             FuncDef::method,
@@ -254,7 +254,7 @@ void Func::finish() {
                                                             realArgs,
                                                             override.get()
                                                             );
-        
+
         // emit the initializers
         Initializers inits;
         if (!ctorInitializers.empty()) {
@@ -264,19 +264,19 @@ void Func::finish() {
             initsParser.parseInitializers(&inits, thisRef.get());
         }
         receiverType->emitInitializers(*funcContext, &inits);
-        
+
         // if we got a function, emit a call to it.
         if (funcDef) {
             FuncCallPtr call = context->builder.createFuncCall(funcDef.get());
             call->receiver = thisRef;
-            
+
             // populate the arg list with references to the existing args
             for (int i = 0; i < realArgs.size(); ++i) {
                 VarRefPtr ref =
                     context->builder.createVarRef(realArgs[i].get());
                 call->args.push_back(ref.get());
             }
-            
+
             funcContext->createCleanupFrame();
             call->emit(*funcContext)->handleTransient(*funcContext);
             funcContext->closeCleanupFrame();
@@ -297,7 +297,7 @@ void Func::finish() {
         context->addDef(newFunc.get(), receiverType);
 
         receiverType->createNewFunc(*realCtx, newFunc.get());
-    
+
     // is this a virtual wrapper class?
     } else if ((flags & vwrap) || (override && funcPtr)) {
         if (flags & vwrap) {
@@ -307,13 +307,13 @@ void Func::finish() {
         ContextPtr funcContext = context->createSubContext(Context::local);
         funcContext->returnType = returnType->typeDef;
         funcContext->toplevel = true;
-    
+
         // create the "this" variable
         ArgDefPtr thisDef =
             context->builder.createArgDef((flags & vwrap) ? wrapperClass : receiverType, "this");
         funcContext->addDef(thisDef.get());
         VarRefPtr thisRef = funcContext->builder.createVarRef(thisDef.get());
-        
+
         // emit the function
         FuncDef::Flags realFlags = FuncDef::method | FuncDef::virtualized;
         FuncDefPtr newFunc = context->builder.emitBeginFunc(*funcContext,
@@ -329,12 +329,12 @@ void Func::finish() {
             funcContext->addDef(realArgs[i].get());
         }
 
-        // create a call to the real function        
+        // create a call to the real function
         FuncCallPtr call = context->builder.createFuncCall(funcDef.get());
         call->receiver = thisRef;
-        
+
         for (int i = 0; i < realArgs.size(); ++i) {
-            VarRefPtr ref = 
+            VarRefPtr ref =
                 funcContext->builder.createVarRef(realArgs[i].get());
             call->args.push_back(ref);
         }

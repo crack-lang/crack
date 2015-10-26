@@ -2,11 +2,11 @@
 // Copyright 2011 Shannon Weyrick <weyrick@mozek.us>
 // Copyright 2011 Arno Rehn <arno@arnorehn.de>
 // Copyright 2011-2012 Conrad Steenberg <conrad.steenberg@gmail.com>
-// 
+//
 //   This Source Code Form is subject to the terms of the Mozilla Public
 //   License, v. 2.0. If a copy of the MPL was not distributed with this
 //   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-// 
+//
 // Extension library Module class.
 
 #ifndef _crack_ext_Module_h_
@@ -102,9 +102,9 @@ class Module {
         Type *getStringType();
         Type *getStaticStringType();
         Type *getOverloadType();
-        
+
         Type *getType(const char *name);
-        Type *addType(const char *name, size_t instSize, 
+        Type *addType(const char *name, size_t instSize,
                       bool hasVTable = false
                       );
         Type *addForwardType(const char *name, size_t instSize);
@@ -121,7 +121,7 @@ class Module {
         void inject(const std::string& code);
 
         /**
-         * finish the module (extension init funcs need not call this, it will 
+         * finish the module (extension init funcs need not call this, it will
          * be called automatically by the loader).
          */
         void finish();

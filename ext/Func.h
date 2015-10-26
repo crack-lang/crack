@@ -1,11 +1,11 @@
 // Copyright 2010-2012 Google Inc.
 // Copyright 2011 Shannon Weyrick <weyrick@mozek.us>
 // Copyright 2011 Arno Rehn <arno@arnorehn.de>
-// 
+//
 //   This Source Code Form is subject to the terms of the Mozilla Public
 //   License, v. 2.0. If a copy of the MPL was not distributed with this
 //   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-// 
+//
 
 #ifndef _crack_ext_Func_h_
 #define _crack_ext_Func_h_
@@ -45,7 +45,7 @@ class Func {
 
     private:
         model::Context *context;
-        // receiver type gets set for methods, wrapperClass gets set for 
+        // receiver type gets set for methods, wrapperClass gets set for
         // vwrapped types.
         model::TypeDef *receiverType, *wrapperClass;
         Type *returnType;
@@ -58,12 +58,12 @@ class Func {
         std::string ctorInitializers;
 
         unsigned int vtableSlot;
-        
+
         // these must match the values in FuncDef::Flags
         Flags flags;
         bool finished;
 
-        Func(model::Context *context, Type *returnType, std::string name, 
+        Func(model::Context *context, Type *returnType, std::string name,
              void *funcPtr,
              Flags flags
              ) :
@@ -110,17 +110,17 @@ class Func {
 
         // gets whether the Func maps to a variadic function
         bool isVariadic() const;
-        
-        // sets the "vwrap" flag, which indicates that the function is a 
+
+        // sets the "vwrap" flag, which indicates that the function is a
         // virtual that wraps a call to another function.
         void setVWrap(bool vwrapEnabled);
-        
+
         // gets the "vwrap" flag.
         bool getVWrap() const;
-        
+
         // sets the "virtualized" flag
         void setVirtual(bool virtualizedEnabled);
-        
+
         // gets the "virtualized" flag
         bool getVirtual() const;
 
@@ -140,7 +140,7 @@ class Func {
         // after the containing type has been finish()'ed.
         unsigned int getVTableOffset() const;
 
-        // finish the definition of the function (this will be called 
+        // finish the definition of the function (this will be called
         // automatically by Module::finish())
         void finish();
 };

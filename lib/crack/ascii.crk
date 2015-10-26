@@ -1,10 +1,10 @@
 ## Copyright 2011-2013 Google Inc.
 ## Copyright 2011-2013 Conrad Steenberg <conrad.steenberg@gmail.com>
-## 
+##
 ##   This Source Code Form is subject to the terms of the Mozilla Public
 ##   License, v. 2.0. If a copy of the MPL was not distributed with this
 ##   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-## 
+##
 ## Module for manipulating ascii stirngs.
 
 import crack.io cout, FStr;
@@ -12,8 +12,8 @@ import crack.lang AppendBuffer, Buffer, InvalidArgumentError, ManagedBuffer;
 import crack.strutil split, StringArray;
 
 @import crack.ann define;
- 
-## Returns the number converted to a string in the specified base - e.g. 
+
+## Returns the number converted to a string in the specified base - e.g.
 ## radix(26, 16) -> '1a'
 String radix(uintz val, uint base) {
     const SIZE := 20;
@@ -22,7 +22,7 @@ String radix(uintz val, uint base) {
     cur[0] = 0;
     cur = cur + -1;
     uint size;
-    
+
     if (!val) {
         cur += -1;
         cur[0] = b'0';
@@ -185,14 +185,14 @@ bool parseBool(Buffer rep) {
       if ((rep[0] == b't' || rep[0] == b'T') &&
           (rep[1] == b'r' || rep[1] == b'R') &&
           (rep[2] == b'u' || rep[2] == b'U') &&
-          (rep[3] == b'e' || rep[3] == b'E'))  
+          (rep[3] == b'e' || rep[3] == b'E'))
         return true;
     }
     return false;
 }
 
-String _changeCase(String text, byte lowerBound, byte upperBound, 
-                   byte newOffset, 
+String _changeCase(String text, byte lowerBound, byte upperBound,
+                   byte newOffset,
                    uint num
                    )
 {
@@ -225,7 +225,7 @@ String toLower(String text){
     return _changeCase(text, b'A', b'Z', b'a', text.size);
 }
 
-## Split the string into an array of words delimited by a sequence of 
+## Split the string into an array of words delimited by a sequence of
 ## ascii whitespace characters.
 StringArray wsplit(String val) {
     return split(val, ' \t\n\r');
@@ -284,16 +284,16 @@ bool isHexDigit(byte b) {
 String strip(String text) {
     int start, end;
     for (start = 0; start < text.size && isSpace(text[start]); ++start);
-    
+
     # if the string is entirely whitespace, return the empty string
     if (start == text.size)
         return '';
-    
-    # we can now assume that the string is at least one character, find the 
+
+    # we can now assume that the string is at least one character, find the
     # last non-whitespace character.
     for (end = text.size - 1; isSpace(text[end]); --end);
-    
-    # 'end' is now the last non-whitespace character, slice the string after 
+
+    # 'end' is now the last non-whitespace character, slice the string after
     # that.
     return text.slice(start, end + 1);
 }

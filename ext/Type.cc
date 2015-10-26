@@ -1,11 +1,11 @@
 // Copyright 2010-2012 Google Inc.
 // Copyright 2011 Conrad Steenberg <conrad.steenberg@gmail.com>
 // Copyright 2011-2012 Arno Rehn <arno@arnorehn.de>
-// 
+//
 //   This Source Code Form is subject to the terms of the Mozilla Public
 //   License, v. 2.0. If a copy of the MPL was not distributed with this
 //   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-// 
+//
 
 #include "Type.h"
 
@@ -30,11 +30,11 @@ using namespace std;
 Type::Impl::~Impl() {
     // we don't have to clean up "bases" - since these are types, they should
     // get cleaned up by the module.
-    
+
     // clean up the funcs
     for (FuncVec::iterator i = funcs.begin(); i != funcs.end(); ++i)
         delete *i;
-    
+
     // clean up the inst vars
     for (VarMap::iterator vi = instVars.begin(); vi != instVars.end(); ++vi)
         delete vi->second;
@@ -101,7 +101,7 @@ Func* Type::addMethod(Type* returnType, const std::string& name,
 
 Func *Type::addConstructor(const char *name, void *funcPtr) {
     checkInitialized();
-    Func *result = new Func(0, module->getVoidType(), name ? name : "", 
+    Func *result = new Func(0, module->getVoidType(), name ? name : "",
                             funcPtr,
                             Func::constructor | Func::method
                             );
@@ -179,14 +179,14 @@ Type *Type::getSpecialization(const vector<Type *> &params) {
         innerParams->push_back(params[i]->typeDef);
     }
 
-    TypeDefPtr spec = typeDef->getSpecialization(*module->context, 
+    TypeDefPtr spec = typeDef->getSpecialization(*module->context,
                                                  innerParams.get());
-    
+
     // see if it's cached in the module
     Module::TypeMap::iterator iter = module->types.find(spec->getFullName());
     if (iter != module->types.end())
         return iter->second;
-    
+
     Type *type = new Type(module, spec.get());
     module->types[spec->getFullName()] = type;
     return type;
@@ -285,7 +285,7 @@ void Type::finish() {
     // ignore this if we're already finished.
     if (isFinished())
         return;
-    
+
     Context *ctx = impl->context;
 
     // construct the list of bases
@@ -345,8 +345,8 @@ void Type::finish() {
     for (FuncVec::iterator fi = impl->funcs.begin(); fi != impl->funcs.end();
          ++fi
          ) {
-        // bind the class to the function, if it's not VWrapped, bind the 
-        // context to it and finish it.  VWrapped functions get finished in 
+        // bind the class to the function, if it's not VWrapped, bind the
+        // context to it and finish it.  VWrapped functions get finished in
         // the outer class.
         (*fi)->receiverType = typeDef;
         if (!(*fi)->getVWrap()) {

@@ -1,11 +1,11 @@
 # Copyright 2011-2012 Google Inc.
 # Copyright 2012 Conrad Steenberg <conrad.steenberg@gmail.com>
 # Copyright 2012 Arno Rehn <arno@arnorehn.de>
-# 
+#
 #   This Source Code Form is subject to the terms of the Mozilla Public
 #   License, v. 2.0. If a copy of the MPL was not distributed with this
 #   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-# 
+#
 # Implements some basic annotations that no one should be without.  Included
 # are:
 # @define name(arg, ...) { contents }
@@ -19,7 +19,7 @@
 #   mainly entails doing normal class derivation and implementing the
 #   'get<interface>Object()' method.
 # class A @impl I, J { ... }
-#   Equivalent to "class A : Object I, J { ... }".  Shorthand for the most 
+#   Equivalent to "class A : Object I, J { ... }".  Shorthand for the most
 #   common case.
 
 import crack.compiler CrackContext, Location, Token, TOK_COMMA, TOK_LCURLY,
@@ -212,18 +212,18 @@ class NodeListImpl : NodeList {
 
     Node getLast() { return last; }
     Node getFirst() { return first; }
-    
+
     void expand(CrackContext context, Array[NodeList] args) {
         for (node :in this)
             node.expand(context, args);
     }
-    
+
     String toString(Array[NodeList] args) {
         StringFormatter sf = {};
         Array[Node] nodeArray = {};
         for (node :in this)
             nodeArray.append(node);
-        
+
         bool first = true;
         for (int i = nodeArray.count() - 1; i >= 0; --i) {
             if (first)
@@ -232,7 +232,7 @@ class NodeListImpl : NodeList {
                 sf ` `;
             sf `$(nodeArray[i].toString(args))`;
         }
-        
+
         return sf.string();
     }
 }
@@ -478,9 +478,9 @@ Array[NodeList] parseArgs(CrackContext ctx, uint argCount) {
     argTokList := NodeListImpl();
     Array[NodeList] args = {argCount};
     Array[byte] brackStack = {4};
-    
-    # pop everything on the bracket stack up to the matching value.  This 
-    # behavior lets us both respect existing balanced delimiters and ignore 
+
+    # pop everything on the bracket stack up to the matching value.  This
+    # behavior lets us both respect existing balanced delimiters and ignore
     # unbalanced ones.
     void popTo(Array[byte] brackStack, byte val) {
         for (int i = brackStack.count() - 1; i >= 0; --i) {
@@ -814,8 +814,8 @@ void readIStr(CrackContext ctx, NodeList nodes) {
     }
 }
 
-## Reads a sequence of tokens between a specified left and right delimiter 
-## which can be nested.  For example, if left and right are TOK_LPAREN and 
+## Reads a sequence of tokens between a specified left and right delimiter
+## which can be nested.  For example, if left and right are TOK_LPAREN and
 ## TOK_RPAREN this function would read the following sequence:
 ##    ( 1 + 2 + (3 + 4) )
 ##   ^                   ^
@@ -911,14 +911,14 @@ void warn(CrackContext ctx) {
     ctx.warn(tok, tok.getText());
 }
 
-## A node whose expand() method injects raw text into the token stream.  
+## A node whose expand() method injects raw text into the token stream.
 ## This avoids the need to painstakingly reconstruct the code token by toke.
 class _InjectionNode : Node {
     Location __loc;
     String __code;
-    
+
     oper init(Location loc, String code) : __loc = loc, __code = code {}
-    
+
     void expand(CrackContext ctx, Array[NodeList] args) {
         ctx.inject(__loc.getName(), __loc.getLineNumber(), __code.buffer);
     }
@@ -927,7 +927,7 @@ class _InjectionNode : Node {
     Location getLocation() {
         return __loc;
     }
-    
+
     void writeTo(MacroSerializer dst) {
         throw Exception('Unsupported operation');
     }
@@ -936,31 +936,31 @@ class _InjectionNode : Node {
 class Type {
     String name;
     Array[Type] params;
-    
-    oper init(String name, Array[Type] params) : 
+
+    oper init(String name, Array[Type] params) :
         name = name,
         params = params {
     }
-    
+
     void formatTo(Formatter out) {
         out `$name`;
         if (params) {
             out `$params`;
         }
     }
-    
-    @static Type parse(CrackContext ctx, NodeList result) {        
+
+    @static Type parse(CrackContext ctx, NodeList result) {
         tok := ctx.getToken();
         if (!tok.isIdent())
             ctx.error(tok, 'Identifier expected for type name'.buffer);
         String name = {tok.getText()};
         if (!(result is null))
             result.pushHead(Tok(tok));
-        
+
         Array[Type] params;
         tok = ctx.getToken();
         if (tok.isLBracket()) {
-            
+
             # got a left bracket, parse the type parameters
             params = Array[Type]();
             if (!(result is null))
@@ -977,11 +977,11 @@ class Type {
                     ctx.error(tok, text.buffer)
                 }
             }
-                        
+
         } else {
             ctx.putBack(tok);
         }
-        
+
         return Type(name, params);
     }
 }
@@ -990,10 +990,10 @@ class Field {
     Type type;
     String name;
     oper init(Type type, String name) : type = type, name = name {}
-    
+
     @static void parse(CrackContext ctx, Array[Field] fields, NodeList result) {
         type := Type.parse(ctx, result);
-        
+
         # parse each of the variables
         while (true) {
             tok := ctx.getToken();
@@ -1002,18 +1002,18 @@ class Field {
                 ctx.error(tok, msg.buffer);
             }
             result.pushHead(Tok(tok));
-            
+
             name := String(tok.getText());
             f := Field(type, name);
             fields.append(f);
-            
+
             # check for a comma or semicolon
             tok = ctx.getToken();
             result.pushHead(Tok(tok));
             if (tok.isSemi())
                 return;
             else if (!tok.isComma())
-                ctx.error(tok, 
+                ctx.error(tok,
                           I'Comma or semicolon expected after field \
                             definition'.buffer);
         }
@@ -1024,19 +1024,19 @@ void struct(CrackContext ctx) {
     tok := ctx.getToken();
     if (!tok.isIdent())
         ctx.error(tok, 'Identifier expexted after @struct annotation'.buffer);
-    
-    
+
+
     className := String(tok.getText());
-    
+
     # start the result token list with "class <tok>"
     NodeListImpl result = {};
-    result.pushHead(_InjectionNode(ctx.getLocation(@FILE.buffer, @LINE), 
+    result.pushHead(_InjectionNode(ctx.getLocation(@FILE.buffer, @LINE),
                                    'class \0'
                                    )
                     );
     result.pushHead(Tok(tok));
 
-    # parse a curly    
+    # parse a curly
     tok = ctx.getToken();
     if (!tok.isLCurly())
         ctx.error(tok, 'Curly brace expected after struct name.'.buffer);
@@ -1046,30 +1046,30 @@ void struct(CrackContext ctx) {
 
     # parse fields
     while (true) {
-        
+
         tok = ctx.getToken();
         if (tok.isRCurly()) {
             break;
         }
 
-        # put it back and parse a field        
+        # put it back and parse a field
         ctx.putBack(tok);
         Field.parse(ctx, fields, result)
     }
-    
+
     # create the constructor.
-    
-    result.pushHead(_InjectionNode(ctx.getLocation(@FILE.buffer, 
+
+    result.pushHead(_InjectionNode(ctx.getLocation(@FILE.buffer,
                                                    @LINE),
                                    'oper init('
                                    )
                     );
-    
+
     # arg list
     first := true;
     pfx := '';
     for (field :in fields) {
-        result.pushHead(_InjectionNode(ctx.getLocation(@FILE.buffer, 
+        result.pushHead(_InjectionNode(ctx.getLocation(@FILE.buffer,
                                                        @LINE),
                                        FStr() I`$pfx$(field.type) \
                                                 $(field.name) \0`
@@ -1080,25 +1080,25 @@ void struct(CrackContext ctx) {
             first = false;
         }
     }
-    
-    result.pushHead(_InjectionNode(ctx.getLocation(@FILE.buffer, 
+
+    result.pushHead(_InjectionNode(ctx.getLocation(@FILE.buffer,
                                                    @LINE),
                                    ') : '
                                    )
                     );
-    
+
     # initializers
     first = true;
     pfx = '';
     for (field :in fields) {
 
-        result.pushHead(_InjectionNode(ctx.getLocation(@FILE.buffer, 
+        result.pushHead(_InjectionNode(ctx.getLocation(@FILE.buffer,
                                                        @LINE),
-                                       FStr() I`$pfx$(field.name) = 
+                                       FStr() I`$pfx$(field.name) =
                                                 $(field.name) \0`
                                        )
                         );
-                            
+
         if (first) {
             pfx = ', ';
             first = false;
@@ -1110,7 +1110,7 @@ void struct(CrackContext ctx) {
     # push the closing bracket for the class
     result.pushHead(Tok(tok));
 
-    # finally, expand the result    
+    # finally, expand the result
     for (node :in result)
         node.expand(ctx, null);
 }
@@ -1119,8 +1119,8 @@ void assert(CrackContext ctx) {
     expr := readDelimited(ctx, TOK_LPAREN, TOK_RPAREN, true);
     loc := expr.getFirst().getLocation();
     message := expr.toString(null);
-    ctx.inject(@FILE.buffer, @LINE, 
-               FStr() I`)) { 
+    ctx.inject(@FILE.buffer, @LINE,
+               FStr() I`)) {
                     import crack.lang AssertionError;
                     import crack.io FStr;
                     throw AssertionError(
@@ -1145,7 +1145,7 @@ String _capitalize(String str) {
     return str;
 }
 
-# quickly create property accessors, inspired by Ruby's attr_accessor and 
+# quickly create property accessors, inspired by Ruby's attr_accessor and
 # C#'s properties.
 void property(CrackContext ctx) {
     readonlyAttr := ctx.getToken();
@@ -1394,7 +1394,7 @@ void _implements(CrackContext ctx, bool emitObject) {
 
     # inject the get*Object() implementation
     StringFormatter f = {};
-    for (iface :in ifaces) 
+    for (iface :in ifaces)
         f `    Object oper from $iface() { return this; }\n`;
     f `}\0`;
     ctx.inject(loc.getName(), loc.getLineNumber(), f.string().buffer);
@@ -1405,7 +1405,7 @@ void _implements(CrackContext ctx, bool emitObject) {
     # inject the interfaces
     for (node :in interfaces)
         node.expand(ctx, null);
-    
+
     # emit ": Object" for @impl
     if (emitObject) {
         loc = firstTok.getLocation();
@@ -1419,7 +1419,7 @@ void implements(CrackContext ctx) {
     _implements(ctx, false);
 }
 
-## Shorthand so we can say "class A @impl IFace" instead of 
+## Shorthand so we can say "class A @impl IFace" instead of
 ## "class A : Object @implements IFace"
 void impl(CrackContext ctx) {
     _implements(ctx, true);

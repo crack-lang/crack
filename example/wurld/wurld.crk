@@ -4,15 +4,15 @@
 #   License, v. 2.0. If a copy of the MPL was not distributed with this
 #   file, You can obtain one at http://mozilla.org/MPL/2.0/.
 #
-# This is a demo of an OpenGL 3D multiplayer environment written in Crack.  It 
-# demonstrates the use of the g3d modules (3D graphics), the network facade 
+# This is a demo of an OpenGL 3D multiplayer environment written in Crack.  It
+# demonstrates the use of the g3d modules (3D graphics), the network facade
 # and serialization.
 #
-# Run it from the directory where it lives - there are texture files in the 
+# Run it from the directory where it lives - there are texture files in the
 # "data" subdirectory that it will try to load.
 #
-# Without options, this program will run in standalone mode.  You can run it 
-# as a server by specifying a TCP/IP port to bind to using '-p'.  You can run 
+# Without options, this program will run in standalone mode.  You can run it
+# as a server by specifying a TCP/IP port to bind to using '-p'.  You can run
 # it as a client by specifying the server address as '-s address:port'.
 #
 # When running, you can use the following keys:
@@ -24,7 +24,7 @@
 #   x - move down.
 #   Mouse button 1 - create a block.
 #   e - show where a block would be created
-#   v - when running as a client, make the attached server your slave (so it 
+#   v - when running as a client, make the attached server your slave (so it
 #       will show the same view as the client)
 #   o - save the game state to the file "wurld.dat"
 #   q - quit.
@@ -49,20 +49,20 @@ import crack.cont.hashmap HashMap, OrderedHashMap;
 @import crack.ann assert, define, implements;
 import crack.math cos, sin;
 import crack.ext._sdl SDL_Event, SDL_EventNew, SDL_Event_GetType,
-    SDL_GL_SetAttribute, SDL_GL_SwapBuffers, SDL_Init, SDL_PollEvent, 
-    SDL_Quit, SDL_SetVideoMode, SDL_WarpMouse, SDL_GL_RED_SIZE, SDL_GL_GREEN_SIZE, 
-    SDL_GL_BLUE_SIZE, SDL_INIT_EVERYTHING, SDL_FULLSCREEN, SDL_KEYDOWN, 
+    SDL_GL_SetAttribute, SDL_GL_SwapBuffers, SDL_Init, SDL_PollEvent,
+    SDL_Quit, SDL_SetVideoMode, SDL_WarpMouse, SDL_GL_RED_SIZE, SDL_GL_GREEN_SIZE,
+    SDL_GL_BLUE_SIZE, SDL_INIT_EVERYTHING, SDL_FULLSCREEN, SDL_KEYDOWN,
     SDL_KEYUP,
     SDL_MOUSEBUTTONDOWN, SDL_MOUSEMOTION, SDL_OPENGL, SDL_RESIZABLE;
-import crack.exp.g3d loadPNGMaterial, openRd, App, Camera, Coord, Light, 
-    MFObj, Face, Graphics, KeyboardEvent, KeyboardHandler, Material, 
-    MouseButtonEvent, MouseButtonHandler, MouseMotionEvent, 
-    MouseMotionHandler, Prim, Quad, Renderable, RotMatrix, TextureMaterial, 
+import crack.exp.g3d loadPNGMaterial, openRd, App, Camera, Coord, Light,
+    MFObj, Face, Graphics, KeyboardEvent, KeyboardHandler, Material,
+    MouseButtonEvent, MouseButtonHandler, MouseMotionEvent,
+    MouseMotionHandler, Prim, Quad, Renderable, RotMatrix, TextureMaterial,
     Tri, Vector, Vertex, RenderFrameEvent, RenderFrameHandler;
 import crack.exp.g3d.wfobj readWFObj;
 import comm firstProxy, commInst = inst, proxies, CommManager, Proxy, WurldInst;
 import model SparseVoxelSpace;
-    
+
 import crack.ext._gl glNormal3f, glVertex3f, GL_LIGHT0, GL_LIGHT1;
 
 ## A game object.  Renderable, persistable and (eventually) collidable.
@@ -86,7 +86,7 @@ const uint OBJ_CUBE = 1, OBJ_LIGHT = 2, OBJ_QUAD = 3, OBJ_MFOBJ = 4;
 # The material array - lets us store materials by their index.
 Array[Material] materials;
 
-_agentBotTri := Tri(Vector(0, 0, 0.25), Vector(-0.5, 0, -0.25), 
+_agentBotTri := Tri(Vector(0, 0, 0.25), Vector(-0.5, 0, -0.25),
                     Vector(0.5, 0, -0.25)
                     );
 _agentBotNormal := _agentBotTri.normal();
@@ -108,12 +108,12 @@ class Agent : Prim {
 
     RotMatrix rot = {};
     Vector __rotated = {};
-    
+
     @final Vector r(Vector org) {
         rot.rotate(org, __rotated);
         return __rotated;
     }
-    
+
     oper init(int id, Vector pos, Vector orientation) :
         Prim(materials[id % materials.count()]),
         pos = pos,
@@ -130,36 +130,36 @@ class Agent : Prim {
     void render() {
         material.makeCurrent();
         Graphics.loadIdentity();
-        
+
         # rotate and move
 #        RotMatrix rot = {};
         rot.fromDirection(orientation);
         Graphics.translate(pos);
 
-# I'd prefer to use the OpenGL matrix for this, but I can't figure out what 
-# permutation to use to get it to rotate the coordinates correctly - when I 
-# just do Graphics.rotate() to multiply the model matrix, the rotation is the 
+# I'd prefer to use the OpenGL matrix for this, but I can't figure out what
+# permutation to use to get it to rotate the coordinates correctly - when I
+# just do Graphics.rotate() to multiply the model matrix, the rotation is the
 # opposite of what I expect (and my grasp of 3D math is apparently quite rusty).
 # So for now I'm just going to handle the multiply myself.
 #        Graphics.rotate(rot);
-        
+
         Tri.begin();
-        
+
         # bottom face
         drawFace(_agentBotNormal, _agentBotTri, 1, 0.5, 0, 0.5);
-        
+
         # port face
         drawFace(_agentPortNormal, _agentPortTri, 1, 0, 1, 0.5);
-        
+
         # starboard face
         drawFace(_agentStarboardNormal, _agentStarboardTri, 0, 0, 0, 1);
 
         Tri.end();
     }
-}        
+}
 
-## Front, back and side faces are oriented so the material top is on the top 
-## of the cube.  Top and bottom faces have the top of the material oriented 
+## Front, back and side faces are oriented so the material top is on the top
+## of the cube.  Top and bottom faces have the top of the material oriented
 ## towards the front.
 class Cube : WurldObj {
 
@@ -168,22 +168,22 @@ class Cube : WurldObj {
     }
 
     Vector pos;
-    
+
     oper init(Material material0, Vector pos0) : WurldObj(material0), pos = pos0 {}
-    
+
     void render() {
         material.makeCurrent();
 
         Graphics.loadIdentity();
         Quad.begin();
-        
+
         # front face, counter-clockwise from top right
         normal(0, 0, -1);
         @Cube_vertex(1, 1, 0, 0, 0);
         @Cube_vertex(0, 1, 0, 1, 0);
         @Cube_vertex(0, 0, 0, 1, 1);
         @Cube_vertex(1, 0, 0, 0, 1);
-        
+
         # rear face, clockwise from top left
         normal(0, 0, 1);
         @Cube_vertex(0, 1, 1, 0, 0);
@@ -204,7 +204,7 @@ class Cube : WurldObj {
         @Cube_vertex(1, 1, 0, 1, 0);
         @Cube_vertex(1, 0, 0, 1, 1);
         @Cube_vertex(1, 0, 1, 0, 1);
-        
+
         # top face, clockwise from front left
         normal(0, 1, 0);
         @Cube_vertex(0, 1, 0, 0, 0);
@@ -221,13 +221,13 @@ class Cube : WurldObj {
 
         Quad.end();
     }
-    
+
     void store(SerialWriter out) {
         out.write(OBJ_CUBE);
         out.write(uint(12));
         writeVector(out, pos);
     }
-    
+
     @static Cube load(SerialReader src, Material material) {
         size := src.readUInt();
         @assert(size == 12);
@@ -237,12 +237,12 @@ class Cube : WurldObj {
 
 class WurldLight : WurldObj {
     Light __rep;
-    
-    oper init(uint id, Vector pos, Vector color, bool diffuse) : 
+
+    oper init(uint id, Vector pos, Vector color, bool diffuse) :
         WurldObj(null),
         __rep(id, pos, color, diffuse) {
     }
-    
+
     void store(SerialWriter out) {
         out.write(OBJ_LIGHT);
         AppendBufferWriter bw = {AppendBuffer(24)};
@@ -253,14 +253,14 @@ class WurldLight : WurldObj {
         sw.write(__rep.diffuse ? 1 : 0);
         out.write(String(bw.buffer, true));
     }
-    
+
     @static WurldLight load(SerialReader src) {
         @assert(src.readUInt() >= 26);
-        return WurldLight(src.readUInt(), readVector(src), readVector(src), 
+        return WurldLight(src.readUInt(), readVector(src), readVector(src),
                           src.readUInt()
                           );
     }
-    
+
     void render() {
         Graphics.loadIdentity();
         __rep.render();
@@ -270,15 +270,15 @@ class WurldLight : WurldObj {
 class WurldQuad : WurldObj {
     uint materialId;
     Quad __rep;
-    
-    oper init(uint materialId, Vector a, Vector b, Vector c, Vector d, 
+
+    oper init(uint materialId, Vector a, Vector b, Vector c, Vector d,
               Vector normal
               ) :
         WurldObj(null),
         materialId = materialId,
         __rep(materials[materialId], a, b, c, d, normal) {
     }
-    
+
     void store(SerialWriter dst) {
         dst.write(OBJ_QUAD);
         AppendBufferWriter bw = {AppendBuffer(24)};
@@ -291,10 +291,10 @@ class WurldQuad : WurldObj {
         writeVector(sw, __rep.norm);
         dst.write(String(bw.buffer, true));
     }
-    
+
     @static WurldQuad load(SerialReader src) {
         @assert(src.readUInt() >= 21);
-        return WurldQuad(src.readUInt(), readVector(src), readVector(src), 
+        return WurldQuad(src.readUInt(), readVector(src), readVector(src),
                          readVector(src),
                          readVector(src),
                          readVector(src)
@@ -310,29 +310,29 @@ class WurldQuad : WurldObj {
 class WurldMFObj : WurldObj {
     uint materialId;
     MFObj __rep;
-    
-    oper init(uint materialId, MFObj rep) : 
+
+    oper init(uint materialId, MFObj rep) :
         WurldObj(null),
         materialId = materialId,
         __rep = rep {
         __rep.material = materials[materialId];
     }
-    
+
     @static WurldMFObj load(String name, uint materialId) {
-        return WurldMFObj(materialId, 
+        return WurldMFObj(materialId,
                           readWFObj(makePath(name).reader())
                           );
     }
-    
+
     void render() {
         Graphics.loadIdentity();
         __rep.render();
     }
-    
+
     void store(SerialWriter out) {
-        # build unique sets of vectors, coords and normals.  We're assuming 
-        # that the objects comprising these entities are normalized, so for 
-        # example if two vertex positions have the same value, they are 
+        # build unique sets of vectors, coords and normals.  We're assuming
+        # that the objects comprising these entities are normalized, so for
+        # example if two vertex positions have the same value, they are
         # references to the same object.
         class ObjMap[T] : OrderedHashMap[T, uint] {
             @final void add(T obj) {
@@ -342,7 +342,7 @@ class WurldMFObj : WurldObj {
         }
         ObjMap[Vector] positions = {}, normals = {};
         ObjMap[Coord] coords = {};
-        
+
         for (face :in __rep.faces) {
             for (vert :in face) {
                 positions.add(vert.pos);
@@ -355,22 +355,22 @@ class WurldMFObj : WurldObj {
         # store the type and material id
         out.write(OBJ_MFOBJ);
         out.write(materialId);
-        
+
         # serialize all of them
         out.write(positions.count());
         for (p :in positions)
             writeVector(out, p.key);
-        
+
         out.write(normals.count());
         for (n :in normals)
             writeVector(out, n.key);
-        
+
         out.write(coords.count());
         for (item :in coords) {
             out.write(float32(item.key.x));
             out.write(float32(item.key.y));
         }
-        
+
         # serialize all of the faces
         out.write(__rep.faces.count());
         for (face :in __rep.faces) {
@@ -382,14 +382,14 @@ class WurldMFObj : WurldObj {
             }
         }
     }
-    
+
     @static WurldMFObj load(SerialReader src) {
         Array[Vector] positions = {}, normals = {};
         Array[Coord] coords = {};
-        
+
         # read the material id
         materialId := src.readUInt();
-        
+
         # read the positions
         count := src.readUInt();
         for (int i = 0; i < count; ++i)
@@ -399,12 +399,12 @@ class WurldMFObj : WurldObj {
         count = src.readUInt();
         for (int i = 0; i < count; ++i)
             normals.append(readVector(src));
-        
+
         # read coords
         count = src.readUInt();
         for (int i = 0; i < count; ++i)
             coords.append(Coord(src.readFloat32(), src.readFloat32()));
-        
+
         # read the faces
         Array[Face] faces = {};
         count = src.readUInt();
@@ -419,7 +419,7 @@ class WurldMFObj : WurldObj {
                             );
             faces.append(face);
         }
-        
+
         # construct the MFObj
         rep := MFObj(null, faces);
         return WurldMFObj(materialId, rep);
@@ -428,7 +428,7 @@ class WurldMFObj : WurldObj {
 
 # parse command line options.
 opts := CmdOptions![
-    Option('port', 'p', 
+    Option('port', 'p',
            'Port number.  If specified, runs as a server on the given port',
            '0',
            CMD_INT
@@ -458,7 +458,7 @@ if (opts.getBool('help')) {
     exit(0);
 }
 
-# Initialize the application and all of the entities in the app 
+# Initialize the application and all of the entities in the app
 # environment.
 
 alias WurldObjArray = Array[WurldObj];
@@ -512,8 +512,8 @@ void load(String name) {
             objects.append(WurldMFObj.load(deser));
         else {
             cout `Unknown object type $objType\n`;
-            
-            # All object data are stored with a size, so read it as a string 
+
+            # All object data are stored with a size, so read it as a string
             # so we can skip to the next object.
             deser.readString();
         }
@@ -544,8 +544,8 @@ Cube makeTargetCube() {
     Vector fwd = {0, 0, -2}, dir = {};
     camera.rotMatrix.rotate(fwd, dir);
     dir += camera.pos;
-    
-    # calculate the floor of all coords, this will be the location of 
+
+    # calculate the floor of all coords, this will be the location of
     # our cube.
     dir[0] = floor(dir[0]);
     dir[1] = floor(dir[1]);
@@ -563,21 +563,21 @@ void renderCube(Vector org, byte materialId, int face) {
     @define normal(x, y, z) {
         glNormal3f(x, y, z);
     }
-    
+
     @define Cube_vertex(x, y, z, s, t) {
         material.pin(s, t);
-        glVertex3f(float32(org.raw[0] + x * 0.125), 
-                   float32(org.raw[1] + y * 0.125), 
+        glVertex3f(float32(org.raw[0] + x * 0.125),
+                   float32(org.raw[1] + y * 0.125),
                    float32(org.raw[2] + z * 0.125)
                    );
     }
-        
+
     material.makeCurrent();
     Graphics.loadIdentity();
     material.makeCurrent();
     Graphics.loadIdentity();
     Quad.begin();
-    
+
     if (face == 0) {
         @normal(-1, 0, 0);
         @Cube_vertex(0, 1, 0, 0, 0);
@@ -620,11 +620,11 @@ void renderCube(Vector org, byte materialId, int face) {
         @Cube_vertex(1, 0, 1, 1, 1);
         @Cube_vertex(0, 0, 1, 0, 1);
     }
-    
+
     Quad.end();
 }
 
-class DemoApp : Renderable @implements KeyboardHandler, MouseMotionHandler, 
+class DemoApp : Renderable @implements KeyboardHandler, MouseMotionHandler,
                                        MouseButtonHandler,
                                        RenderFrameHandler,
                                        WurldInst {
@@ -678,7 +678,7 @@ class DemoApp : Renderable @implements KeyboardHandler, MouseMotionHandler,
         doKey(evt, true);
         return false;
     }
-    
+
     bool onKeyUp(KeyboardEvent evt) {
         doKey(evt, false);
         return false;
@@ -696,9 +696,9 @@ class DemoApp : Renderable @implements KeyboardHandler, MouseMotionHandler,
         if (!targetCube)
             targetCube = makeTargetCube();
 
-        # Convert the target cube to a stucco cube.            
+        # Convert the target cube to a stucco cube.
         if (client) {
-            # client mode - tell the server to add the target cube, the server 
+            # client mode - tell the server to add the target cube, the server
             # will tell us to add it when it has processed the request.
             firstProxy.addCube(targetCube.pos);
         } else {
@@ -710,28 +710,28 @@ class DemoApp : Renderable @implements KeyboardHandler, MouseMotionHandler,
         targetCube = null;
         return false;
     }
-    
+
     bool onMouseButtonUp(MouseButtonEvent evt) {
         return false;
     }
-    
+
     void setView(Vector pos, float yaw0, float pitch0) {
         camera.pos = pos;
         yaw = yaw0;
         pitch = pitch0;
     }
-    
+
     void addCube(Vector pos) {
         objects.append(Cube(stucco, pos));
-        
-        # if this is the server, tell all of the clients that we have a new 
+
+        # if this is the server, tell all of the clients that we have a new
         # cube.
         if (server) {
             for (proxy :in proxies)
                 proxy.val.addCube(pos);
         }
     }
-    
+
     void reportPosition(uint id, Vector pos, Vector orientation) {
         # get or create an agent object
         agent := agents.get(id);
@@ -741,8 +741,8 @@ class DemoApp : Renderable @implements KeyboardHandler, MouseMotionHandler,
             agent.pos = pos;
             agent.orientation = orientation;
         }
-        
-        # if we're a server, tell all of the other clients about the new 
+
+        # if we're a server, tell all of the other clients about the new
         # reported position.
         if (server) {
             for (item :in proxies) {
@@ -757,20 +757,20 @@ class DemoApp : Renderable @implements KeyboardHandler, MouseMotionHandler,
         pitchMat.makePitch(pitch);
         camera.rotMatrix.makeProduct(pitchMat, yawMat);
         camera.render();
-        
+
         # Render the block space.
         blockSpace.render(camera.pos, renderCube);
 
         for (r :in objects)
             r.render();
-        
+
         for (r :in agents)
             r.val.render();
 
         if (targetCube)
             targetCube.render();
     }
-    
+
     void onRenderFrame(RenderFrameEvent evt) {
         incr := velocity * (float(evt.deltaUSecs) / 1e+6);
         if (forward) {
@@ -784,7 +784,7 @@ class DemoApp : Renderable @implements KeyboardHandler, MouseMotionHandler,
             camera.pos += dir;
             viewChanged = true;
         }
-        
+
         if (left) {
             Vector leftVec = {-1 * incr, 0, 0}, dir = {};
             camera.rotMatrix.rotate(leftVec, dir);
@@ -796,7 +796,7 @@ class DemoApp : Renderable @implements KeyboardHandler, MouseMotionHandler,
             camera.pos += dir;
             viewChanged = true;
         }
-        
+
         float vert;
         if (up)
             vert = 1;
@@ -808,8 +808,8 @@ class DemoApp : Renderable @implements KeyboardHandler, MouseMotionHandler,
             camera.pos += dir;
             viewChanged = true;
         }
-        
-        # if the view has changed and there is a slave, set the view with the 
+
+        # if the view has changed and there is a slave, set the view with the
         # slave.
         if (viewChanged && slave) {
             slave.setView(camera.pos, yaw, pitch);
@@ -855,7 +855,7 @@ if (gameToLoad := opts.getString('load')) {
     # let there be light
     objects.append(WurldLight(GL_LIGHT0, Vector(0, 10, 0), Vector(0.001, 0.001, 0.001 ), false));
     objects.append(WurldLight(GL_LIGHT1, Vector(0, 10, 0), Vector(1, 1, 1), true));
-    
+
     # the floor
     objects.append(WurldQuad(MAT_STUCCO,
                              Vector(-10, 0, 10),
@@ -865,7 +865,7 @@ if (gameToLoad := opts.getString('load')) {
                              Vector(0, 1, 0)
                              )
                 );
-    
+
     # front wall
     objects.append(WurldQuad(MAT_SKY,
                              Vector(-10, 0, 10),
@@ -875,7 +875,7 @@ if (gameToLoad := opts.getString('load')) {
                              Vector(0, 0, -1)
                              )
                 );
-    
+
     # rear wall
     objects.append(WurldQuad(MAT_PLASMA,
                              Vector(10, 0, -10),
