@@ -2380,13 +2380,18 @@ ContextPtr Parser::parseIfStmt() {
 
    // the if is terminal if both conditions are terminal.  The terminal 
    // context is the innermost of the two.
-   if (terminalIf && terminalElse)
+   if (terminalIf && terminalElse) {
       if (terminalIf->encloses(*terminalElse))
          return terminalElse;
       else
          return terminalIf;
-   else
+   } else {
+      // Clean up any variables from the conditional.  If both conditions are
+      // terminal, we don't need to do this because both returns should do
+      // their own cleanups.
+      context->builder.closeAllCleanups(*context);
       return 0;
+   }
 }
 
 // while ( expr ) stmt ; (';' can be replaced with EOF)

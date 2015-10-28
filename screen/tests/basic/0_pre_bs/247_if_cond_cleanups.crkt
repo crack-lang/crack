@@ -1,0 +1,76 @@
+%%TEST%%
+if conditional cleanups
+%%ARGS%%
+%%FILE%%
+# Verify that we do cleanups correctly for variables defined in "if"
+# conditionals.
+int count;
+class A {
+    oper bind() {
+        ++count;
+    }
+    oper release() {
+        --count;
+    }
+    oper to bool() {
+        return 1;
+    }
+}
+
+if ((a := A()) && count != 1)
+    puts('invalid ref count after define');
+
+count = 0;
+if (a := A()) {
+    if (count != 1)
+        puts('invalid ref count after define in if body');
+}
+
+if (count != 0)
+    puts('invalid ref count after conditional expression cleanup');
+
+# Verify that everythhing works with terminal if/else conditions.
+
+void both() {
+    if (a := A()) {
+        return;
+    } else {
+        return;
+    }
+}
+
+void terminalIf(bool cond) {
+    if ((a := A()) && cond) {
+        return;
+    } else {
+    }
+}
+
+void terminalElse(bool cond) {
+    if ((a := A()) && cond) {
+    } else {
+        return;
+    }
+}
+
+both();
+if (count != 0)
+    puts('FAILED: bind/release mismatch after terminal if/else');
+terminalIf(1);
+if (count != 0)
+    puts('FAILED: bind/release mismatch after terminal if, cond = true');
+terminalIf(0);
+if (count != 0)
+    puts('FAILED: bind/release mismatch after terminal if, cond = false');
+terminalElse(1);
+if (count != 0)
+    puts('FAILED: bind/release mismatch after terminal else, cond = false');
+terminalElse(0);
+if (count != 0)
+    puts('FAILED: bind/release mismatch after terminal else, cond = false');
+
+
+puts('ok');
+%%EXPECT%%
+ok
+%%STDIN%%
