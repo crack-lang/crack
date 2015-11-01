@@ -1,4 +1,5 @@
 #include <openssl/ssl.h>
+#include <openssl/evp.h>
 
 
 #include <iostream>
@@ -22,6 +23,28 @@ void my_SSL_set_accept_state(SSL *ssl) {
     SSL_set_accept_state(ssl);
 }
 
+int my_EVP_CIPHER_iv_length(EVP_CIPHER *cipher) {
+    return EVP_CIPHER_iv_length(cipher);
+}
+
+int my_EVP_CIPHER_key_length(EVP_CIPHER *cipher) {
+    return EVP_CIPHER_key_length(cipher);
+}
+
+int my_EVP_CIPHER_block_size(EVP_CIPHER *cipher) {
+    return EVP_CIPHER_block_size(cipher);
+}
+
+int my_EVP_CIPHER_mode(EVP_CIPHER *cipher) {
+    return EVP_CIPHER_mode(cipher);
+}
+
+int my_EVP_CIPHER_flags(EVP_CIPHER *cipher) {
+    return EVP_CIPHER_flags(cipher);
+}
+
+// Definining this here.
+struct engine_st {};
 
 
 #include "ext/Module.h"
@@ -252,6 +275,175 @@ void crack_ext__ssl_cinit(crack::ext::Module *mod) {
 
     type_SSL->finish();
 
+
+    crack::ext::Type *type_EVPCipher = mod->addType("EVPCipher", sizeof(EVP_CIPHER));
+
+    f = type_EVPCipher->addMethod(
+        type_int, 
+        "getIVLength",
+        (void *)my_EVP_CIPHER_iv_length
+    );
+
+
+    f = type_EVPCipher->addMethod(
+        type_int, 
+        "getKeyLength",
+        (void *)my_EVP_CIPHER_key_length
+    );
+
+
+    f = type_EVPCipher->addMethod(
+        type_int, 
+        "getBlockSize",
+        (void *)my_EVP_CIPHER_block_size
+    );
+
+
+    f = type_EVPCipher->addMethod(
+        type_int, 
+        "getMode",
+        (void *)my_EVP_CIPHER_mode
+    );
+
+
+    f = type_EVPCipher->addMethod(
+        type_int, 
+        "getFlags",
+        (void *)my_EVP_CIPHER_flags
+    );
+
+    type_EVPCipher->finish();
+
+
+    crack::ext::Type *type_Engine = mod->addType("Engine", sizeof(ENGINE));
+    type_Engine->finish();
+
+
+    crack::ext::Type *array = mod->getType("array");
+
+    crack::ext::Type *array_pint_q;
+    {
+        std::vector<crack::ext::Type *> params(1);
+        params[0] = type_int;
+        array_pint_q = array->getSpecialization(params);
+    }
+
+    crack::ext::Type *type_EVPCipherContext = mod->addType("EVPCipherContext", sizeof(EVP_CIPHER_CTX));
+        f = type_EVPCipherContext->addConstructor("oper init",
+                            (void *)EVP_CIPHER_CTX_init
+                        );
+
+
+    f = type_EVPCipherContext->addMethod(
+        type_void, 
+        "cleanup",
+        (void *)EVP_CIPHER_CTX_cleanup
+    );
+
+
+    f = type_EVPCipherContext->addMethod(
+        type_int, 
+        "encryptInit",
+        (void *)EVP_EncryptInit_ex
+    );
+    f->addArg(type_EVPCipher, 
+              "type"
+              );
+    f->addArg(type_Engine, 
+              "impl"
+              );
+    f->addArg(type_byteptr, 
+              "key"
+              );
+    f->addArg(type_byteptr, 
+              "iv"
+              );
+
+
+    f = type_EVPCipherContext->addMethod(
+        type_int, 
+        "encryptUpdate",
+        (void *)EVP_EncryptUpdate
+    );
+    f->addArg(type_byteptr, 
+              "out"
+              );
+    f->addArg(array_pint_q, 
+              "out1"
+              );
+    f->addArg(type_byteptr, 
+              "inp"
+              );
+    f->addArg(type_int, 
+              "inp1"
+              );
+
+
+    f = type_EVPCipherContext->addMethod(
+        type_int, 
+        "encryptFinal",
+        (void *)EVP_EncryptFinal
+    );
+    f->addArg(type_byteptr, 
+              "out"
+              );
+    f->addArg(array_pint_q, 
+              "out1"
+              );
+
+
+    f = type_EVPCipherContext->addMethod(
+        type_int, 
+        "decryptInit",
+        (void *)EVP_DecryptInit_ex
+    );
+    f->addArg(type_EVPCipher, 
+              "type"
+              );
+    f->addArg(type_Engine, 
+              "impl"
+              );
+    f->addArg(type_byteptr, 
+              "key"
+              );
+    f->addArg(type_byteptr, 
+              "iv"
+              );
+
+
+    f = type_EVPCipherContext->addMethod(
+        type_int, 
+        "decryptUpdate",
+        (void *)EVP_DecryptUpdate
+    );
+    f->addArg(type_byteptr, 
+              "out"
+              );
+    f->addArg(array_pint_q, 
+              "out1"
+              );
+    f->addArg(type_byteptr, 
+              "inp"
+              );
+    f->addArg(type_int, 
+              "inp1"
+              );
+
+
+    f = type_EVPCipherContext->addMethod(
+        type_int, 
+        "decryptFinal",
+        (void *)EVP_DecryptFinal
+    );
+    f->addArg(type_byteptr, 
+              "out"
+              );
+    f->addArg(array_pint_q, 
+              "out1"
+              );
+
+    type_EVPCipherContext->finish();
+
     f = mod->addFunc(type_BIO_METHOD, "BIO_s_mem",
                      (void *)BIO_s_mem
                      );
@@ -278,6 +470,198 @@ void crack_ext__ssl_cinit(crack::ext::Module *mod) {
                      (void *)SSL_new
                      );
        f->addArg(type_SSL_CTX, "ctx");
+
+    f = mod->addFunc(type_EVPCipher, "EVP_enc_null",
+                     (void *)EVP_enc_null
+                     );
+
+    f = mod->addFunc(type_EVPCipher, "EVP_aes_128_cbc",
+                     (void *)EVP_aes_128_cbc
+                     );
+
+    f = mod->addFunc(type_EVPCipher, "EVP_aes_128_ecb",
+                     (void *)EVP_aes_128_ecb
+                     );
+
+    f = mod->addFunc(type_EVPCipher, "EVP_aes_128_cfb",
+                     (void *)EVP_aes_128_cfb
+                     );
+
+    f = mod->addFunc(type_EVPCipher, "EVP_aes_128_ofb",
+                     (void *)EVP_aes_128_ofb
+                     );
+
+    f = mod->addFunc(type_EVPCipher, "EVP_aes_192_cbc",
+                     (void *)EVP_aes_192_cbc
+                     );
+
+    f = mod->addFunc(type_EVPCipher, "EVP_aes_192_ecb",
+                     (void *)EVP_aes_192_ecb
+                     );
+
+    f = mod->addFunc(type_EVPCipher, "EVP_aes_192_cfb",
+                     (void *)EVP_aes_192_cfb
+                     );
+
+    f = mod->addFunc(type_EVPCipher, "EVP_aes_192_ofb",
+                     (void *)EVP_aes_192_ofb
+                     );
+
+    f = mod->addFunc(type_EVPCipher, "EVP_aes_256_cbc",
+                     (void *)EVP_aes_256_cbc
+                     );
+
+    f = mod->addFunc(type_EVPCipher, "EVP_aes_256_ecb",
+                     (void *)EVP_aes_256_ecb
+                     );
+
+    f = mod->addFunc(type_EVPCipher, "EVP_aes_256_cfb",
+                     (void *)EVP_aes_256_cfb
+                     );
+
+    f = mod->addFunc(type_EVPCipher, "EVP_aes_256_ofb",
+                     (void *)EVP_aes_256_ofb
+                     );
+
+    f = mod->addFunc(type_EVPCipher, "EVP_des_cbc",
+                     (void *)EVP_des_cbc
+                     );
+
+    f = mod->addFunc(type_EVPCipher, "EVP_des_ecb",
+                     (void *)EVP_des_ecb
+                     );
+
+    f = mod->addFunc(type_EVPCipher, "EVP_des_cfb",
+                     (void *)EVP_des_cfb
+                     );
+
+    f = mod->addFunc(type_EVPCipher, "EVP_des_ofb",
+                     (void *)EVP_des_ofb
+                     );
+
+    f = mod->addFunc(type_EVPCipher, "EVP_des_ede_cbc",
+                     (void *)EVP_des_ede_cbc
+                     );
+
+    f = mod->addFunc(type_EVPCipher, "EVP_des_ede",
+                     (void *)EVP_des_ede
+                     );
+
+    f = mod->addFunc(type_EVPCipher, "EVP_des_ede_ofb",
+                     (void *)EVP_des_ede_ofb
+                     );
+
+    f = mod->addFunc(type_EVPCipher, "EVP_des_ede_cfb",
+                     (void *)EVP_des_ede_cfb
+                     );
+
+    f = mod->addFunc(type_EVPCipher, "EVP_des_ede3_cbc",
+                     (void *)EVP_des_ede3_cbc
+                     );
+
+    f = mod->addFunc(type_EVPCipher, "EVP_des_ede3",
+                     (void *)EVP_des_ede3
+                     );
+
+    f = mod->addFunc(type_EVPCipher, "EVP_des_ede3_ofb",
+                     (void *)EVP_des_ede3_ofb
+                     );
+
+    f = mod->addFunc(type_EVPCipher, "EVP_des_ede3_cfb",
+                     (void *)EVP_des_ede3_cfb
+                     );
+
+    f = mod->addFunc(type_EVPCipher, "EVP_desx_cbc",
+                     (void *)EVP_desx_cbc
+                     );
+
+    f = mod->addFunc(type_EVPCipher, "EVP_rc4",
+                     (void *)EVP_rc4
+                     );
+
+    f = mod->addFunc(type_EVPCipher, "EVP_rc4_40",
+                     (void *)EVP_rc4_40
+                     );
+
+    f = mod->addFunc(type_EVPCipher, "EVP_rc2_cbc",
+                     (void *)EVP_rc2_cbc
+                     );
+
+    f = mod->addFunc(type_EVPCipher, "EVP_rc2_ecb",
+                     (void *)EVP_rc2_ecb
+                     );
+
+    f = mod->addFunc(type_EVPCipher, "EVP_rc2_cfb",
+                     (void *)EVP_rc2_cfb
+                     );
+
+    f = mod->addFunc(type_EVPCipher, "EVP_rc2_ofb",
+                     (void *)EVP_rc2_ofb
+                     );
+
+    f = mod->addFunc(type_EVPCipher, "EVP_rc2_40_cbc",
+                     (void *)EVP_rc2_40_cbc
+                     );
+
+    f = mod->addFunc(type_EVPCipher, "EVP_rc2_64_cbc",
+                     (void *)EVP_rc2_64_cbc
+                     );
+
+    f = mod->addFunc(type_EVPCipher, "EVP_bf_cbc",
+                     (void *)EVP_bf_cbc
+                     );
+
+    f = mod->addFunc(type_EVPCipher, "EVP_bf_ecb",
+                     (void *)EVP_bf_ecb
+                     );
+
+    f = mod->addFunc(type_EVPCipher, "EVP_bf_cfb",
+                     (void *)EVP_bf_cfb
+                     );
+
+    f = mod->addFunc(type_EVPCipher, "EVP_bf_ofb",
+                     (void *)EVP_bf_ofb
+                     );
+
+    f = mod->addFunc(type_EVPCipher, "EVP_cast5_cbc",
+                     (void *)EVP_cast5_cbc
+                     );
+
+    f = mod->addFunc(type_EVPCipher, "EVP_cast5_ecb",
+                     (void *)EVP_cast5_ecb
+                     );
+
+    f = mod->addFunc(type_EVPCipher, "EVP_cast5_cfb",
+                     (void *)EVP_cast5_cfb
+                     );
+
+    f = mod->addFunc(type_EVPCipher, "EVP_cast5_ofb",
+                     (void *)EVP_cast5_ofb
+                     );
+
+    f = mod->addFunc(type_EVPCipher, "EVP_aes_128_gcm",
+                     (void *)EVP_aes_128_gcm
+                     );
+
+    f = mod->addFunc(type_EVPCipher, "EVP_aes_192_gcm",
+                     (void *)EVP_aes_192_gcm
+                     );
+
+    f = mod->addFunc(type_EVPCipher, "EVP_aes_256_gcm",
+                     (void *)EVP_aes_256_gcm
+                     );
+
+    f = mod->addFunc(type_EVPCipher, "EVP_aes_128_ccm",
+                     (void *)EVP_aes_128_ccm
+                     );
+
+    f = mod->addFunc(type_EVPCipher, "EVP_aes_192_ccm",
+                     (void *)EVP_aes_192_ccm
+                     );
+
+    f = mod->addFunc(type_EVPCipher, "EVP_aes_256_ccm",
+                     (void *)EVP_aes_256_ccm
+                     );
 
 
     mod->addConstant(type_int, "SSL_FILETYPE_PEM",
@@ -318,5 +702,181 @@ void crack_ext__ssl_cinit(crack::ext::Module *mod) {
 
     mod->addConstant(type_int, "SSL_ERROR_SSL",
                      static_cast<int>(SSL_ERROR_SSL)
+                     );
+
+    mod->addConstant(type_int, "EVP_CIPH_STREAM_CIPHER",
+                     static_cast<int>(EVP_CIPH_STREAM_CIPHER)
+                     );
+
+    mod->addConstant(type_int, "EVP_CIPH_ECB_MODE",
+                     static_cast<int>(EVP_CIPH_ECB_MODE)
+                     );
+
+    mod->addConstant(type_int, "EVP_CIPH_CBC_MODE",
+                     static_cast<int>(EVP_CIPH_CBC_MODE)
+                     );
+
+    mod->addConstant(type_int, "EVP_CIPH_CFB_MODE",
+                     static_cast<int>(EVP_CIPH_CFB_MODE)
+                     );
+
+    mod->addConstant(type_int, "EVP_CIPH_OFB_MODE",
+                     static_cast<int>(EVP_CIPH_OFB_MODE)
+                     );
+
+    mod->addConstant(type_int, "EVP_CIPH_CTR_MODE",
+                     static_cast<int>(EVP_CIPH_CTR_MODE)
+                     );
+
+    mod->addConstant(type_int, "EVP_CIPH_GCM_MODE",
+                     static_cast<int>(EVP_CIPH_GCM_MODE)
+                     );
+
+    mod->addConstant(type_int, "EVP_CIPH_CCM_MODE",
+                     static_cast<int>(EVP_CIPH_CCM_MODE)
+                     );
+
+    mod->addConstant(type_int, "EVP_CIPH_XTS_MODE",
+                     static_cast<int>(EVP_CIPH_XTS_MODE)
+                     );
+
+    mod->addConstant(type_int, "EVP_CIPH_MODE",
+                     static_cast<int>(EVP_CIPH_MODE)
+                     );
+
+    mod->addConstant(type_int, "EVP_CIPH_VARIABLE_LENGTH",
+                     static_cast<int>(EVP_CIPH_VARIABLE_LENGTH)
+                     );
+
+    mod->addConstant(type_int, "EVP_CIPH_CUSTOM_IV",
+                     static_cast<int>(EVP_CIPH_CUSTOM_IV)
+                     );
+
+    mod->addConstant(type_int, "EVP_CIPH_ALWAYS_CALL_INIT",
+                     static_cast<int>(EVP_CIPH_ALWAYS_CALL_INIT)
+                     );
+
+    mod->addConstant(type_int, "EVP_CIPH_CTRL_INIT",
+                     static_cast<int>(EVP_CIPH_CTRL_INIT)
+                     );
+
+    mod->addConstant(type_int, "EVP_CIPH_CUSTOM_KEY_LENGTH",
+                     static_cast<int>(EVP_CIPH_CUSTOM_KEY_LENGTH)
+                     );
+
+    mod->addConstant(type_int, "EVP_CIPH_NO_PADDING",
+                     static_cast<int>(EVP_CIPH_NO_PADDING)
+                     );
+
+    mod->addConstant(type_int, "EVP_CIPH_RAND_KEY",
+                     static_cast<int>(EVP_CIPH_RAND_KEY)
+                     );
+
+    mod->addConstant(type_int, "EVP_CIPH_CUSTOM_COPY",
+                     static_cast<int>(EVP_CIPH_CUSTOM_COPY)
+                     );
+
+    mod->addConstant(type_int, "EVP_CIPH_FLAG_DEFAULT_ASN1",
+                     static_cast<int>(EVP_CIPH_FLAG_DEFAULT_ASN1)
+                     );
+
+    mod->addConstant(type_int, "EVP_CIPH_FLAG_LENGTH_BITS",
+                     static_cast<int>(EVP_CIPH_FLAG_LENGTH_BITS)
+                     );
+
+    mod->addConstant(type_int, "EVP_CIPH_FLAG_FIPS",
+                     static_cast<int>(EVP_CIPH_FLAG_FIPS)
+                     );
+
+    mod->addConstant(type_int, "EVP_CIPH_FLAG_NON_FIPS_ALLOW",
+                     static_cast<int>(EVP_CIPH_FLAG_NON_FIPS_ALLOW)
+                     );
+
+    mod->addConstant(type_int, "EVP_CIPH_FLAG_CUSTOM_CIPHER",
+                     static_cast<int>(EVP_CIPH_FLAG_CUSTOM_CIPHER)
+                     );
+
+    mod->addConstant(type_int, "EVP_CIPH_FLAG_AEAD_CIPHER",
+                     static_cast<int>(EVP_CIPH_FLAG_AEAD_CIPHER)
+                     );
+
+    mod->addConstant(type_int, "EVP_CTRL_INIT",
+                     static_cast<int>(EVP_CTRL_INIT)
+                     );
+
+    mod->addConstant(type_int, "EVP_CTRL_SET_KEY_LENGTH",
+                     static_cast<int>(EVP_CTRL_SET_KEY_LENGTH)
+                     );
+
+    mod->addConstant(type_int, "EVP_CTRL_GET_RC2_KEY_BITS",
+                     static_cast<int>(EVP_CTRL_GET_RC2_KEY_BITS)
+                     );
+
+    mod->addConstant(type_int, "EVP_CTRL_SET_RC2_KEY_BITS",
+                     static_cast<int>(EVP_CTRL_SET_RC2_KEY_BITS)
+                     );
+
+    mod->addConstant(type_int, "EVP_CTRL_GET_RC5_ROUNDS",
+                     static_cast<int>(EVP_CTRL_GET_RC5_ROUNDS)
+                     );
+
+    mod->addConstant(type_int, "EVP_CTRL_SET_RC5_ROUNDS",
+                     static_cast<int>(EVP_CTRL_SET_RC5_ROUNDS)
+                     );
+
+    mod->addConstant(type_int, "EVP_CTRL_RAND_KEY",
+                     static_cast<int>(EVP_CTRL_RAND_KEY)
+                     );
+
+    mod->addConstant(type_int, "EVP_CTRL_PBE_PRF_NID",
+                     static_cast<int>(EVP_CTRL_PBE_PRF_NID)
+                     );
+
+    mod->addConstant(type_int, "EVP_CTRL_COPY",
+                     static_cast<int>(EVP_CTRL_COPY)
+                     );
+
+    mod->addConstant(type_int, "EVP_CTRL_GCM_SET_IVLEN",
+                     static_cast<int>(EVP_CTRL_GCM_SET_IVLEN)
+                     );
+
+    mod->addConstant(type_int, "EVP_CTRL_GCM_GET_TAG",
+                     static_cast<int>(EVP_CTRL_GCM_GET_TAG)
+                     );
+
+    mod->addConstant(type_int, "EVP_CTRL_GCM_SET_TAG",
+                     static_cast<int>(EVP_CTRL_GCM_SET_TAG)
+                     );
+
+    mod->addConstant(type_int, "EVP_CTRL_GCM_SET_IV_FIXED",
+                     static_cast<int>(EVP_CTRL_GCM_SET_IV_FIXED)
+                     );
+
+    mod->addConstant(type_int, "EVP_CTRL_GCM_IV_GEN",
+                     static_cast<int>(EVP_CTRL_GCM_IV_GEN)
+                     );
+
+    mod->addConstant(type_int, "EVP_CTRL_CCM_SET_IVLEN",
+                     static_cast<int>(EVP_CTRL_CCM_SET_IVLEN)
+                     );
+
+    mod->addConstant(type_int, "EVP_CTRL_CCM_GET_TAG",
+                     static_cast<int>(EVP_CTRL_CCM_GET_TAG)
+                     );
+
+    mod->addConstant(type_int, "EVP_CTRL_CCM_SET_TAG",
+                     static_cast<int>(EVP_CTRL_CCM_SET_TAG)
+                     );
+
+    mod->addConstant(type_int, "EVP_CTRL_CCM_SET_L",
+                     static_cast<int>(EVP_CTRL_CCM_SET_L)
+                     );
+
+    mod->addConstant(type_int, "EVP_CTRL_CCM_SET_MSGLEN",
+                     static_cast<int>(EVP_CTRL_CCM_SET_MSGLEN)
+                     );
+
+    mod->addConstant(type_int, "EVP_CTRL_AEAD_TLS1_AAD",
+                     static_cast<int>(EVP_CTRL_AEAD_TLS1_AAD)
                      );
 }
