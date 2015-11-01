@@ -7,7 +7,7 @@ import crack.fs makePath;
 import crack.io cout, FStr, StringWriter, StringReader, Reader, Writer;
 import crack.lang free, AppendBuffer, Buffer, InvalidArgumentError, InvalidStateError,
     ManagedBuffer, WriteBuffer;
-import crack.crypt.ssl EVPCipher, EncryptWriter, DecryptWriter,
+import crack.crypt.ssl.cipher EVPCipher, EncryptWriter, DecryptWriter,
     EVP_enc_null, EVP_aes_128_cbc, EVP_aes_128_ecb, EVP_aes_128_cfb,
     EVP_aes_128_ofb, EVP_aes_192_cbc, EVP_aes_192_ecb, EVP_aes_192_cfb,
     EVP_aes_192_ofb, EVP_aes_256_cbc, EVP_aes_256_ecb, EVP_aes_256_cfb,

@@ -5,7 +5,7 @@
 ##
 ## Usage synopsis:
 ##
-##     import crack.crypt.ssl EVP_aes_256_cbc, EncryptWriter;
+##     import crack.crypt.ssl.cipher EVP_aes_256_cbc, EncryptWriter;
 ##
 ##     backing := (cwd/'outfile').writer();
 ##     out := EncryptWriter(EVP_aes_256_cbc(), key, backing);
