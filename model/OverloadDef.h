@@ -140,8 +140,10 @@ class OverloadDef : public VarDef {
         /**
          * Adds the parent overload.  Lookups will be delgated to parents in 
          * the order provided.
+         * @param before If true, insert before all other parents, otherwise
+         *     insert after.
          */
-        void addParent(OverloadDef *paren);
+        void addParent(OverloadDef *paren, bool before = false);
         
         /**
          * Go through the ancestors of 'ns', collect all other instances of 

@@ -17,7 +17,64 @@ class B : A {
 
 A a = B();
 B().f(a);
+
+# This illustrates a bug discovered in nested scopes.  When A is nested within C,
+# we were resolving "oper del" to IFace instead of Obj.
+@abstract class IFace : VTableBase {
+    @abstract void f();
+}
+
+class Obj : VTableBase {
+    oper del() {
+        puts('Obj deleted');
+    }
+}
+
+class C : Obj {
+    class A : Obj, IFace {
+        void f() {}
+        oper del() {
+            puts('A deleted');
+        }
+    }
+}
+
+C.A o = C.A();
+o.oper del();
+
+# Verify that we don't override/implement functions in a base class.
+class D : VTableBase {
+    void f() {
+        puts('in D.f');
+    }
+    class A : VTableBase {
+        void f() {
+            puts('in D.A.f');
+        }
+
+        void g() {
+            f();
+        }
+    }
+}
+
+D.A().g();
+
+# Verify that we _can_ override functions in a base class we're derived from.
+class E : VTableBase {
+  oper init() {}
+  void f() { puts('in E.f'); }
+  class A : E {
+    void f() { puts('in E.A.f'); }
+  }
+}
+E.A().f();
+
 %%EXPECT%%
 in B.f(A)
 in B.f(B)
+A deleted
+Obj deleted
+in D.A.f
+in E.A.f
 %%STDIN%%

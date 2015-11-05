@@ -1125,7 +1125,7 @@ void Context::insureOverloadPath(Context *ancestor, OverloadDef *overload) {
             break;
     assert(parent && "insureOverloadPath(): parent is not a direct parent.");
     
-    localOverload->addParent(overload);
+    localOverload->addParent(overload, /* before */ true);
 }
 
 AnnotationPtr Context::lookUpAnnotation(const std::string &name) {

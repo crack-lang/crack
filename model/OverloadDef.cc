@@ -231,13 +231,30 @@ void OverloadDef::addFunc(FuncDef *func) {
     funcs.push_back(func);
 }
 
-void OverloadDef::addParent(OverloadDef *parent) {
-    // Remove any parents that overload derives from (to preserve the
+void OverloadDef::addParent(OverloadDef *parent, bool before) {
+    // When inserting before, we don't check for intermediates.
+    if (before) {
+        vector<OverloadDefPtr> newParents;
+        newParents.push_back(parent);
+        SPUG_FOR(ParentVec, iter, parents)
+            newParents.push_back(*iter);
+        parents = newParents;
+        return;
+    }
+
+    // Replace any parents that the new parent derives from (to preserve the
     // correct lookup order, we should be discovering those parents through
     // the overload)
+    // Note: I'm not convinced that this code is correct.  The relationship
+    // between overloads and their namespaces is complicated, and the
+    // approaches that seemed correct while fixing the most recent problem
+    // (see 235_method_resolution_order) didn't work.  This code, however,
+    // does.
     for(ParentVec::iterator iter = parents.begin(); iter != parents.end(); ) {
         if (parent->hasAncestor(iter->get())) {
             iter = parents.erase(iter);
+            parents.insert(iter, parent);
+            return;
         } else {
             ++iter;
         }
@@ -454,17 +471,22 @@ bool OverloadDef::isConstant() {
 }
 
 void OverloadDef::dump(ostream &out, const string &prefix) const {
+    Namespace *owner = getOwner();
+    cerr << prefix << "overload " << name << " in " <<
+        (owner ? owner->getNamespaceName() : "null") <<
+        " {" << endl;
     for (FuncList::const_iterator iter = funcs.begin();
          iter != funcs.end();
          ++iter
          )
-        (*iter)->dump(out, prefix);
+        (*iter)->dump(out, prefix + "  ");
 
     for (ParentVec::const_iterator parent = parents.begin();
          parent != parents.end();
          ++parent
          )
-        (*parent)->dump(out, prefix);
+        (*parent)->dump(out, prefix + "  ");
+    cerr << prefix << "}" << endl;
 }
 
 void OverloadDef::display(ostream &out, const string &prefix) const {
