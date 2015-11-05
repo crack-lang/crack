@@ -1,0 +1,96 @@
+%%TEST%%
+SSL ciphers
+%%ARGS%%
+%%FILE%%
+import crack.cont.array Array;
+import crack.fs makePath;
+import crack.io cout, FStr, StringWriter, StringReader, Reader, Writer;
+import crack.lang free, AppendBuffer, Buffer, InvalidArgumentError, InvalidStateError,
+    ManagedBuffer, WriteBuffer;
+import crack.crypt.ssl.cipher EVPCipher, EncryptWriter, DecryptWriter,
+    EVP_enc_null, EVP_aes_128_cbc, EVP_aes_128_ecb, EVP_aes_128_cfb,
+    EVP_aes_128_ofb, EVP_aes_192_cbc, EVP_aes_192_ecb, EVP_aes_192_cfb,
+    EVP_aes_192_ofb, EVP_aes_256_cbc, EVP_aes_256_ecb, EVP_aes_256_cfb,
+    EVP_aes_256_ofb, EVP_des_cbc, EVP_des_ecb, EVP_des_cfb, EVP_des_ofb,
+    EVP_des_ede_cbc, EVP_des_ede, EVP_des_ede_ofb, EVP_des_ede_cfb,
+    EVP_des_ede3_cbc, EVP_des_ede3, EVP_des_ede3_ofb, EVP_des_ede3_cfb,
+    EVP_desx_cbc, EVP_rc4, EVP_rc4_40, EVP_rc2_cbc, EVP_rc2_ecb, EVP_rc2_cfb,
+    EVP_rc2_ofb, EVP_rc2_40_cbc, EVP_rc2_64_cbc, EVP_bf_cbc, EVP_bf_ecb,
+    EVP_bf_cfb, EVP_bf_ofb, EVP_cast5_cbc, EVP_cast5_ecb, EVP_cast5_cfb,
+    EVP_cast5_ofb, EVP_CIPH_VARIABLE_LENGTH;
+
+import crack.random MersenneTwister;
+
+@import crack.ann assert, struct, define;
+
+# Generate a big random buffer.
+String makeData() {
+    twister := MersenneTwister(12345678);
+    AppendBuffer buf = {20004};
+    for (int i = 0; i < 5001; ++i) {
+        val := twister.get();
+        buf.append(byte(val >> 24));
+        buf.append(byte(val >> 16));
+        buf.append(byte(val >> 8));
+        buf.append(byte(val));
+    }
+    return String(buf, true);
+}
+
+const DATA := makeData();
+const KEY := '123456asdLKJSDCoimn09234olkjmsdcklh23498ulksdc0982342';
+
+@struct NamedCipher {
+    String name;
+    EVPCipher cipher;
+}
+
+@define c(cipher) { NamedCipher($cipher, cipher()) }
+
+void testRoundTrip(NamedCipher nc) {
+    String key;
+    if (nc.cipher.getFlags() & EVP_CIPH_VARIABLE_LENGTH)
+        key = KEY;
+    else
+        key = KEY.slice(0, nc.cipher.getKeyLength());
+
+    backing := StringWriter();
+    out := EncryptWriter(nc.cipher, key, backing);
+    src := StringReader(DATA);
+    while (data := src.read(1024))
+        out.write(data);
+    out.close();
+
+    input := StringReader(backing.string());
+    backing = StringWriter();
+    dec := DecryptWriter(nc.cipher, key, backing);
+    while (buf := input.read(4096))
+        dec.write(buf);
+    dec.close();
+    if (backing.string() != DATA)
+        cout `FAILED round trip: $(nc.name)\n`;
+}
+
+const CIPHERS := Array[NamedCipher]![
+    @c(EVP_enc_null), @c(EVP_aes_128_cbc), @c(EVP_aes_128_ecb),
+    @c(EVP_aes_128_cfb), @c(EVP_aes_128_ofb), @c(EVP_aes_192_cbc),
+    @c(EVP_aes_192_ecb), @c(EVP_aes_192_cfb), @c(EVP_aes_192_ofb),
+    @c(EVP_aes_256_cbc), @c(EVP_aes_256_ecb), @c(EVP_aes_256_cfb),
+    @c(EVP_aes_256_ofb), @c(EVP_des_cbc), @c(EVP_des_ecb), @c(EVP_des_cfb),
+    @c(EVP_des_ofb), @c(EVP_des_ede_cbc), @c(EVP_des_ede),
+    @c(EVP_des_ede_ofb), @c(EVP_des_ede_cfb), @c(EVP_des_ede3_cbc),
+    @c(EVP_des_ede3), @c(EVP_des_ede3_ofb), @c(EVP_des_ede3_cfb),
+    @c(EVP_desx_cbc), @c(EVP_rc4), @c(EVP_rc4_40), @c(EVP_rc2_cbc),
+    @c(EVP_rc2_ecb), @c(EVP_rc2_cfb), @c(EVP_rc2_ofb), @c(EVP_rc2_40_cbc),
+    @c(EVP_rc2_64_cbc), @c(EVP_bf_cbc), @c(EVP_bf_ecb), @c(EVP_bf_cfb),
+    @c(EVP_bf_ofb), @c(EVP_cast5_cbc), @c(EVP_cast5_ecb), @c(EVP_cast5_cfb),
+    @c(EVP_cast5_ofb)
+];
+
+for (nc :in CIPHERS)
+    testRoundTrip(nc);
+
+cout `ok\n`;
+%%EXPECT%%
+ok
+%%STDIN%%
