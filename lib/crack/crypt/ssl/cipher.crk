@@ -1,0 +1,198 @@
+## High level wrappers for working with openssl.
+##
+## This module lets you use the EVP cipher algorithms as crack Writer objects,
+## which encrypts a stream and forwards it to a backing store.
+##
+## Usage synopsis:
+##
+##     import crack.crypt.ssl.cipher EVP_aes_256_cbc, EncryptWriter;
+##
+##     backing := (cwd/'outfile').writer();
+##     out := EncryptWriter(EVP_aes_256_cbc(), key, backing);
+##     for (data := src.read(1024))
+##         out.write(data);
+##     out.close();   # You must explicitly close (or make them go out of scope).
+##
+## Note: The AES GCM and CCM ciphers don't pass round trip tests with this
+## module.
+
+import crack.io cout, FStr, Writer;
+import crack.lang free, Buffer, InvalidArgumentError, InvalidStateError,
+    ManagedBuffer;
+import crack.ext._ssl EVPCipher, EVPCipherContext,
+    EVP_enc_null, EVP_aes_128_cbc, EVP_aes_128_ecb, EVP_aes_128_cfb,
+    EVP_aes_128_ofb, EVP_aes_192_cbc, EVP_aes_192_ecb, EVP_aes_192_cfb,
+    EVP_aes_192_ofb, EVP_aes_256_cbc, EVP_aes_256_ecb, EVP_aes_256_cfb,
+    EVP_aes_256_ofb, EVP_des_cbc, EVP_des_ecb, EVP_des_cfb, EVP_des_ofb,
+    EVP_des_ede_cbc, EVP_des_ede, EVP_des_ede_ofb, EVP_des_ede_cfb,
+    EVP_des_ede3_cbc, EVP_des_ede3, EVP_des_ede3_ofb, EVP_des_ede3_cfb,
+    EVP_desx_cbc, EVP_rc4, EVP_rc4_40, EVP_rc2_cbc, EVP_rc2_ecb, EVP_rc2_cfb,
+    EVP_rc2_ofb, EVP_rc2_40_cbc, EVP_rc2_64_cbc, EVP_bf_cbc, EVP_bf_ecb,
+    EVP_bf_cfb, EVP_bf_ofb, EVP_cast5_cbc, EVP_cast5_ecb, EVP_cast5_cfb,
+    EVP_cast5_ofb, EVP_aes_128_gcm, EVP_aes_192_gcm, EVP_aes_256_gcm,
+    EVP_aes_128_ccm, EVP_aes_192_ccm, EVP_aes_256_ccm, EVP_CIPH_STREAM_CIPHER,
+    EVP_CIPH_ECB_MODE, EVP_CIPH_CBC_MODE, EVP_CIPH_CFB_MODE,
+    EVP_CIPH_OFB_MODE, EVP_CIPH_CTR_MODE, EVP_CIPH_GCM_MODE,
+    EVP_CIPH_CCM_MODE, EVP_CIPH_XTS_MODE, EVP_CIPH_MODE,
+    EVP_CIPH_VARIABLE_LENGTH, EVP_CIPH_CUSTOM_IV, EVP_CIPH_ALWAYS_CALL_INIT,
+    EVP_CIPH_CTRL_INIT, EVP_CIPH_CUSTOM_KEY_LENGTH, EVP_CIPH_NO_PADDING,
+    EVP_CIPH_RAND_KEY, EVP_CIPH_CUSTOM_COPY, EVP_CIPH_FLAG_DEFAULT_ASN1,
+    EVP_CIPH_FLAG_LENGTH_BITS, EVP_CIPH_FLAG_FIPS,
+    EVP_CIPH_FLAG_NON_FIPS_ALLOW, EVP_CIPH_FLAG_CUSTOM_CIPHER,
+    EVP_CIPH_FLAG_AEAD_CIPHER, EVP_CTRL_INIT, EVP_CTRL_SET_KEY_LENGTH,
+    EVP_CTRL_GET_RC2_KEY_BITS, EVP_CTRL_SET_RC2_KEY_BITS,
+    EVP_CTRL_GET_RC5_ROUNDS, EVP_CTRL_SET_RC5_ROUNDS, EVP_CTRL_RAND_KEY,
+    EVP_CTRL_PBE_PRF_NID, EVP_CTRL_COPY, EVP_CTRL_GCM_SET_IVLEN,
+    EVP_CTRL_GCM_GET_TAG, EVP_CTRL_GCM_SET_TAG, EVP_CTRL_GCM_SET_IV_FIXED,
+    EVP_CTRL_GCM_IV_GEN, EVP_CTRL_CCM_SET_IVLEN, EVP_CTRL_CCM_GET_TAG,
+    EVP_CTRL_CCM_SET_TAG, EVP_CTRL_CCM_SET_L, EVP_CTRL_CCM_SET_MSGLEN,
+    EVP_CTRL_AEAD_TLS1_AAD;
+
+@import crack.ann impl;
+
+@export_symbols EVPCipher, EVPCipherContext, EVP_enc_null, EVP_aes_128_cbc,
+    EVP_aes_128_ecb, EVP_aes_128_cfb, EVP_aes_128_ofb, EVP_aes_192_cbc,
+    EVP_aes_192_ecb, EVP_aes_192_cfb, EVP_aes_192_ofb, EVP_aes_256_cbc,
+    EVP_aes_256_ecb, EVP_aes_256_cfb, EVP_aes_256_ofb, EVP_des_cbc,
+    EVP_des_ecb, EVP_des_cfb, EVP_des_ofb, EVP_des_ede_cbc, EVP_des_ede,
+    EVP_des_ede_ofb, EVP_des_ede_cfb, EVP_des_ede3_cbc, EVP_des_ede3,
+    EVP_des_ede3_ofb, EVP_des_ede3_cfb, EVP_desx_cbc, EVP_rc4, EVP_rc4_40,
+    EVP_rc2_cbc, EVP_rc2_ecb, EVP_rc2_cfb, EVP_rc2_ofb, EVP_rc2_40_cbc,
+    EVP_rc2_64_cbc, EVP_bf_cbc, EVP_bf_ecb, EVP_bf_cfb, EVP_bf_ofb,
+    EVP_cast5_cbc, EVP_cast5_ecb, EVP_cast5_cfb, EVP_cast5_ofb,
+    EVP_aes_128_gcm, EVP_aes_192_gcm, EVP_aes_256_gcm, EVP_aes_128_ccm,
+    EVP_aes_192_ccm, EVP_aes_256_ccm, EVP_CIPH_STREAM_CIPHER,
+    EVP_CIPH_ECB_MODE, EVP_CIPH_CBC_MODE, EVP_CIPH_CFB_MODE,
+    EVP_CIPH_OFB_MODE, EVP_CIPH_CTR_MODE, EVP_CIPH_GCM_MODE,
+    EVP_CIPH_CCM_MODE, EVP_CIPH_XTS_MODE, EVP_CIPH_MODE,
+    EVP_CIPH_VARIABLE_LENGTH, EVP_CIPH_CUSTOM_IV, EVP_CIPH_ALWAYS_CALL_INIT,
+    EVP_CIPH_CTRL_INIT, EVP_CIPH_CUSTOM_KEY_LENGTH, EVP_CIPH_NO_PADDING,
+    EVP_CIPH_RAND_KEY, EVP_CIPH_CUSTOM_COPY, EVP_CIPH_FLAG_DEFAULT_ASN1,
+    EVP_CIPH_FLAG_LENGTH_BITS, EVP_CIPH_FLAG_FIPS,
+    EVP_CIPH_FLAG_NON_FIPS_ALLOW, EVP_CIPH_FLAG_CUSTOM_CIPHER,
+    EVP_CIPH_FLAG_AEAD_CIPHER, EVP_CTRL_INIT, EVP_CTRL_SET_KEY_LENGTH,
+    EVP_CTRL_GET_RC2_KEY_BITS, EVP_CTRL_SET_RC2_KEY_BITS,
+    EVP_CTRL_GET_RC5_ROUNDS, EVP_CTRL_SET_RC5_ROUNDS, EVP_CTRL_RAND_KEY,
+    EVP_CTRL_PBE_PRF_NID, EVP_CTRL_COPY, EVP_CTRL_GCM_SET_IVLEN,
+    EVP_CTRL_GCM_GET_TAG, EVP_CTRL_GCM_SET_TAG, EVP_CTRL_GCM_SET_IV_FIXED,
+    EVP_CTRL_GCM_IV_GEN, EVP_CTRL_CCM_SET_IVLEN, EVP_CTRL_CCM_GET_TAG,
+    EVP_CTRL_CCM_SET_TAG, EVP_CTRL_CCM_SET_L, EVP_CTRL_CCM_SET_MSGLEN,
+    EVP_CTRL_AEAD_TLS1_AAD;
+
+## Wraps EVPCipherContext to deal with cleanup and common functionality.
+##
+## For CBC algorithms that deal with an "iv" array, this always allocates an
+## array of zeroes.
+class CipherContext : Object, EVPCipherContext {
+    ManagedBuffer iv;
+    EVPCipher __type;
+
+    void __commonInit(EVPCipher type, Buffer key) {
+        __type = type;
+        if (!(type.getFlags() & EVP_CIPH_VARIABLE_LENGTH)) {
+            keyLen := type.getKeyLength();
+            if (key.size != keyLen)
+                throw InvalidArgumentError(FStr() `Key length != $(keyLen)\n`);
+        }
+        ivlen := type.getIVLength();
+        if (ivlen)
+            iv = ManagedBuffer(ivlen);
+    }
+
+    void encryptInit(EVPCipher type, Buffer key) {
+        __commonInit(type, key);
+        encryptInit(type, null, key.buffer, iv ? iv.buffer : null);
+    }
+
+    void decryptInit(EVPCipher type, Buffer key) {
+        __commonInit(type, key);
+        decryptInit(type, null, key.buffer, iv ? iv.buffer : null);
+    }
+
+    uintz getBlockSize() {
+        return __type.getBlockSize();
+    }
+
+    oper del() {
+        cleanup();
+    }
+}
+
+## Encrypts a stream.
+class EncryptWriter @impl Writer {
+    CipherContext __ctx;
+    Writer __out;
+    ManagedBuffer __buf;
+    array[int] __size = {1};
+
+    oper init(EVPCipher type, Buffer key, Writer out) : __out = out {
+        __ctx = CipherContext();
+        __ctx.encryptInit(type, key);
+        __buf = ManagedBuffer(4096 + __ctx.getBlockSize() - 1);
+    }
+
+    void write(Buffer data) {
+        if (__out is null)
+            throw InvalidStateError('Writer is closed');
+        required := data.size + __ctx.getBlockSize() - 1;
+        if (required > __buf.cap)
+            __buf.grow(required);
+        __ctx.encryptUpdate(__buf.buffer, __size, data.buffer, data.size);
+        __buf.size = __size[0];
+        __out.write(__buf);
+    }
+
+    void close() {
+        if (!(__out is null)) {
+            __ctx.encryptFinal(__buf.buffer, __size);
+            __buf.size = __size[0];
+            __out.write(__buf);
+            __out = null;
+        }
+    }
+
+    oper del() {
+        close();
+        free(__size);
+    }
+}
+
+## Decrypts a stream.
+class DecryptWriter @impl Writer {
+    CipherContext __ctx;
+    Writer __out;
+    ManagedBuffer __buf;
+    array[int] __size = {1};
+
+    oper init(EVPCipher type, Buffer key, Writer out) : __out = out {
+        __ctx = CipherContext();
+        __ctx.decryptInit(type, key);
+        __buf = ManagedBuffer(4096 + __ctx.getBlockSize() - 1);
+    }
+
+    void write(Buffer data) {
+        if (__out is null)
+            throw InvalidStateError('Writer is closed');
+        required := data.size + __ctx.getBlockSize() - 1;
+        if (required > __buf.cap)
+            __buf.grow(required);
+        __ctx.decryptUpdate(__buf.buffer, __size, data.buffer, data.size);
+        __buf.size = __size[0];
+        __out.write(__buf);
+    }
+
+    void close() {
+        if (!(__out is null)) {
+            __ctx.decryptFinal(__buf.buffer, __size);
+            __buf.size = __size[0];
+            __out.write(__buf);
+            __out = null;
+        }
+    }
+
+    oper del() {
+        close();
+        free(__size);
+    }
+}
+

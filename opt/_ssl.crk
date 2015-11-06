@@ -5,6 +5,7 @@
     @crack_internal
 
     @inject '#include <openssl/ssl.h>\n'
+    @inject '#include <openssl/evp.h>\n'
     @inject '
 
 #include <iostream>
@@ -28,6 +29,28 @@ void my_SSL_set_accept_state(SSL *ssl) {
     SSL_set_accept_state(ssl);
 }
 
+int my_EVP_CIPHER_iv_length(EVP_CIPHER *cipher) {
+    return EVP_CIPHER_iv_length(cipher);
+}
+
+int my_EVP_CIPHER_key_length(EVP_CIPHER *cipher) {
+    return EVP_CIPHER_key_length(cipher);
+}
+
+int my_EVP_CIPHER_block_size(EVP_CIPHER *cipher) {
+    return EVP_CIPHER_block_size(cipher);
+}
+
+int my_EVP_CIPHER_mode(EVP_CIPHER *cipher) {
+    return EVP_CIPHER_mode(cipher);
+}
+
+int my_EVP_CIPHER_flags(EVP_CIPHER *cipher) {
+    return EVP_CIPHER_flags(cipher);
+}
+
+// Definining this here.
+struct engine_st {};
 ';
 
     const int SSL_FILETYPE_PEM,
@@ -127,5 +150,192 @@ void my_SSL_set_accept_state(SSL *ssl) {
     }
 
     SSL SSL_new(SSL_CTX ctx);
+
+    # The high-level EVP functions.  These can do pretty much all of the
+    # encryption/decryption that we could want.
+
+    @cname EVP_CIPHER
+    class EVPCipher {
+
+        ## This appears to produce the size of the IV vector in bytes.
+        @cname my_EVP_CIPHER_iv_length
+        int getIVLength();
+
+        @cname my_EVP_CIPHER_key_length
+        int getKeyLength();
+
+        @cname my_EVP_CIPHER_block_size
+        int getBlockSize();
+
+        @cname my_EVP_CIPHER_mode
+        int getMode();
+
+        @cname my_EVP_CIPHER_flags
+        int getFlags();
+    }
+
+    @cname ENGINE
+    class Engine {}
+
+    # The set of ciphers.  Groups of ciphers that are commented out were
+    # unavailable on debian.
+    EVPCipher EVP_enc_null();
+    EVPCipher EVP_aes_128_cbc();
+    EVPCipher EVP_aes_128_ecb();
+    EVPCipher EVP_aes_128_cfb();
+    EVPCipher EVP_aes_128_ofb();
+
+    EVPCipher EVP_aes_192_cbc();
+    EVPCipher EVP_aes_192_ecb();
+    EVPCipher EVP_aes_192_cfb();
+    EVPCipher EVP_aes_192_ofb();
+
+    EVPCipher EVP_aes_256_cbc();
+    EVPCipher EVP_aes_256_ecb();
+    EVPCipher EVP_aes_256_cfb();
+    EVPCipher EVP_aes_256_ofb();
+
+    EVPCipher EVP_des_cbc();
+    EVPCipher EVP_des_ecb();
+    EVPCipher EVP_des_cfb();
+    EVPCipher EVP_des_ofb();
+
+    EVPCipher EVP_des_ede_cbc();
+    EVPCipher EVP_des_ede();
+    EVPCipher EVP_des_ede_ofb();
+    EVPCipher EVP_des_ede_cfb();
+
+    EVPCipher EVP_des_ede3_cbc();
+    EVPCipher EVP_des_ede3();
+    EVPCipher EVP_des_ede3_ofb();
+    EVPCipher EVP_des_ede3_cfb();
+
+    EVPCipher EVP_desx_cbc();
+
+    EVPCipher EVP_rc4();
+
+    EVPCipher EVP_rc4_40();
+
+/*
+    EVPCipher EVP_idea_cbc();
+    EVPCipher EVP_idea_ecb();
+    EVPCipher EVP_idea_cfb();
+    EVPCipher EVP_idea_ofb();
+*/
+
+    EVPCipher EVP_rc2_cbc();
+    EVPCipher EVP_rc2_ecb();
+    EVPCipher EVP_rc2_cfb();
+    EVPCipher EVP_rc2_ofb();
+
+    EVPCipher EVP_rc2_40_cbc();
+    EVPCipher EVP_rc2_64_cbc();
+
+    EVPCipher EVP_bf_cbc();
+    EVPCipher EVP_bf_ecb();
+    EVPCipher EVP_bf_cfb();
+    EVPCipher EVP_bf_ofb();
+
+    EVPCipher EVP_cast5_cbc();
+    EVPCipher EVP_cast5_ecb();
+    EVPCipher EVP_cast5_cfb();
+    EVPCipher EVP_cast5_ofb();
+
+/*
+    EVPCipher EVP_rc5_32_12_16_cbc();
+    EVPCipher EVP_rc5_32_12_16_ecb();
+    EVPCipher EVP_rc5_32_12_16_cfb();
+    EVPCipher EVP_rc5_32_12_16_ofb();
+*/
+
+    EVPCipher EVP_aes_128_gcm();
+    EVPCipher EVP_aes_192_gcm();
+    EVPCipher EVP_aes_256_gcm();
+
+/*
+    EVPCipher EVP_aes_128_ocb();
+    EVPCipher EVP_aes_192_ocb();
+    EVPCipher EVP_aes_256_ocb();
+*/
+
+    EVPCipher EVP_aes_128_ccm();
+    EVPCipher EVP_aes_192_ccm();
+    EVPCipher EVP_aes_256_ccm();
+
+    # Cipher modes.
+
+    const int EVP_CIPH_STREAM_CIPHER,
+              EVP_CIPH_ECB_MODE,
+              EVP_CIPH_CBC_MODE,
+              EVP_CIPH_CFB_MODE,
+              EVP_CIPH_OFB_MODE,
+              EVP_CIPH_CTR_MODE,
+              EVP_CIPH_GCM_MODE,
+              EVP_CIPH_CCM_MODE,
+              EVP_CIPH_XTS_MODE,
+              EVP_CIPH_MODE,
+              EVP_CIPH_VARIABLE_LENGTH,
+              EVP_CIPH_CUSTOM_IV,
+              EVP_CIPH_ALWAYS_CALL_INIT,
+              EVP_CIPH_CTRL_INIT,
+              EVP_CIPH_CUSTOM_KEY_LENGTH,
+              EVP_CIPH_NO_PADDING,
+              EVP_CIPH_RAND_KEY,
+              EVP_CIPH_CUSTOM_COPY,
+              EVP_CIPH_FLAG_DEFAULT_ASN1,
+              EVP_CIPH_FLAG_LENGTH_BITS,
+              EVP_CIPH_FLAG_FIPS,
+              EVP_CIPH_FLAG_NON_FIPS_ALLOW,
+              EVP_CIPH_FLAG_CUSTOM_CIPHER,
+              EVP_CIPH_FLAG_AEAD_CIPHER,
+
+              EVP_CTRL_INIT,
+              EVP_CTRL_SET_KEY_LENGTH,
+              EVP_CTRL_GET_RC2_KEY_BITS,
+              EVP_CTRL_SET_RC2_KEY_BITS,
+              EVP_CTRL_GET_RC5_ROUNDS,
+              EVP_CTRL_SET_RC5_ROUNDS,
+              EVP_CTRL_RAND_KEY,
+              EVP_CTRL_PBE_PRF_NID,
+              EVP_CTRL_COPY,
+              EVP_CTRL_GCM_SET_IVLEN,
+              EVP_CTRL_GCM_GET_TAG,
+              EVP_CTRL_GCM_SET_TAG,
+              EVP_CTRL_GCM_SET_IV_FIXED,
+              EVP_CTRL_GCM_IV_GEN,
+              EVP_CTRL_CCM_SET_IVLEN,
+              EVP_CTRL_CCM_GET_TAG,
+              EVP_CTRL_CCM_SET_TAG,
+              EVP_CTRL_CCM_SET_L,
+              EVP_CTRL_CCM_SET_MSGLEN,
+              EVP_CTRL_AEAD_TLS1_AAD;
+
+    @cname EVP_CIPHER_CTX
+    class EVPCipherContext {
+        @cname EVP_CIPHER_CTX_init
+        oper init();
+
+        @cname EVP_CIPHER_CTX_cleanup
+        void cleanup();
+
+        @cname EVP_EncryptInit_ex
+        int encryptInit(EVPCipher type, Engine impl, byteptr key, byteptr iv);
+
+        @cname EVP_EncryptUpdate
+        int encryptUpdate(byteptr out, array[int] out1, byteptr inp,
+                          int inp1);
+
+        @cname EVP_EncryptFinal
+        int encryptFinal(byteptr out, array[int] out1);
+
+        @cname EVP_DecryptInit_ex
+        int decryptInit(EVPCipher type, Engine impl, byteptr key, byteptr iv);
+
+        @cname EVP_DecryptUpdate
+        int decryptUpdate(byteptr out, array[int] out1, byteptr inp, int inp1);
+
+        @cname EVP_DecryptFinal
+        int decryptFinal(byteptr out, array[int] out1);
+    }
 
 }
