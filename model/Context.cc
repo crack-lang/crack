@@ -734,17 +734,20 @@ ModuleDefPtr Context::emitImport(Namespace *ns,
         }
     }
     
-    // add a dependency on the module itself.  We have to check that 
-    // curModule is not null when we do this, it can be null in the case of 
-    // an annotation import.
-    if (curModule)
+    // Add a dependency on the module itself.  We don't do this for
+    // annotations, dependencies on annotations are recorded separately
+    // because a module needs to be recompiled if even the implementation of
+    // its annotation changes.
+    if (!annotation)
         curModule->addDependency(mod.get());
-   
-    // If we're recording imports, track the import in the parent context.  
-    // (the current context is a temporary annotation context in this case 
+
+    // If we're recording imports, track the import in the parent context.
+    // (the current context is a temporary annotation context in this case
     // where we do this)
-    if (annotation && recordImport)
+    if (annotation && recordImport) {
         parent->compileNSImports.push_back(new Import(moduleName, imports));
+        parent->ns->getModule()->addCompileTimeDependency(mod.get());
+    }
     
     return mod;
 }
