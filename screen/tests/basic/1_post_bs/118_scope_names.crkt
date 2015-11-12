@@ -1,0 +1,13 @@
+%%TEST%%
+scope name annotations
+%%ARGS%%
+%%FILE%%
+import crack.io cout;
+@import crack.ann assert, SCOPE_NAME, REAL_SCOPE_NAME;
+
+@assert(@SCOPE_NAME == '.main');
+@assert(@REAL_SCOPE_NAME.startsWith('.main.'));
+cout `ok\n`;
+%%EXPECT%%
+ok
+%%STDIN%%

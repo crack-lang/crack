@@ -404,6 +404,10 @@ void init(Module *mod) {
                   (void *)CrackContext::_getScope
                   );
 
+    cc->addMethod(mod->getByteptrType(), "getNamespaceName",
+                  (void *)CrackContext::_getNamespaceName
+                  );
+
     cc->addMethod(mod->getVoidptrType(), "getUserData",
                   (void *)CrackContext::_getUserData
                   );

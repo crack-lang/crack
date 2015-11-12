@@ -76,6 +76,7 @@ class CrackContext {
         static Token *_getToken(CrackContext *inst);
         static void _putBack(CrackContext *inst, Token *tok);
         static int _getScope(CrackContext *inst);
+        static char *_getNamespaceName(CrackContext *inst);
         static void _storeAnnotation(CrackContext *inst, const char *name,
                                      AnnotationFunc func
                                      );
@@ -137,6 +138,14 @@ class CrackContext {
          * Returns the context scope.
          */
         int getScope();
+
+        /**
+         * Returns the name of the current scope.
+         *
+         * It is the responsibility of the caller to delete the returned
+         * pointer.
+         */
+        char *getNamespaceName();
 
         /**
          * Stores a simple annotation function in the context.
