@@ -15,6 +15,8 @@
 #include "util/SourceDigest.h"
 #include "Context.h"
 #include "Deserializer.h"
+#include "NestedDeserializer.h"
+#include "ProtoBuf.h"
 #include "Serializer.h"
 #include "StatState.h"
 
@@ -27,6 +29,35 @@ void ModuleDef::getNestedTypeDefs(std::vector<TypeDef*> &typeDefs,
                                   ) {
     SPUG_FOR(vector<ModuleDefPtr>, slave, slaves)
         (*slave)->getTypeDefs(typeDefs, master);
+}
+
+void ModuleDef::serializeAsCTDep(Serializer &serializer) const {
+
+    serializer.write(CRACK_PB_KEY(1, string), "canonicalName.header");
+    serializer.write(getFullName(), "canonicalName");
+    serializer.write(CRACK_PB_KEY(2, string), "headerDigest.header");
+    serializer.write(headerDigest.asHex(), "headerDigest");
+}
+
+bool ModuleDef::deserializeCTDep(Deserializer &deser,
+                                 pair<string, ModuleDefPtr> &info
+                                 ) {
+    CRACK_PB_BEGIN(deser, 256, compileDep)
+        CRACK_PB_FIELD(1, string) {
+            info.second =
+                deser.context->construct->getModule(
+                    compileDepDeser.readString(64, "canonicalName")
+                );
+            break;
+        }
+        CRACK_PB_FIELD(2, string) {
+            info.first = compileDepDeser.readString(32, "headerDigest");
+            break;
+        }
+    CRACK_PB_END
+
+    return info.second && info.second->finished &&
+           info.second->headerDigest.asHex() == info.first;
 }
 
 ModuleDef::ModuleDef(const std::string &name, Namespace *parent) :
@@ -60,6 +91,13 @@ void ModuleDef::addDependency(ModuleDef *other) {
         dependencies.find(other->getNamespaceName()) == dependencies.end()
         )
         dependencies[other->getNamespaceName()] = other;
+}
+
+void ModuleDef::addCompileTimeDependency(ModuleDef *other) {
+    if (compileTimeDeps.find(other->getNamespaceName()) ==
+        compileTimeDeps.end()
+        )
+        compileTimeDeps[other->getNamespaceName()] = other;
 }
 
 void ModuleDef::addSlave(ModuleDef *slave) {
@@ -163,6 +201,8 @@ void ModuleDef::serialize(Serializer &serializer) {
                 " is not 0: " << id
                );
     serializer.module = this;
+
+    serializer.digestEnabled = true;
     serializer.write(CRACK_METADATA_V1, "magic");
 
     // If we are a slave, just serialize a reference to the master.
@@ -194,7 +234,24 @@ void ModuleDef::serialize(Serializer &serializer) {
         serializer.write(0, "optional");
     }
 
-    serializer.write(0, "optional");
+    if (compileTimeDeps.size()) {
+        ostringstream temp;
+        Serializer sub(serializer, temp);
+        SPUG_FOR(ModuleDefMap, iter, compileTimeDeps) {
+            ostringstream depOut;
+            Serializer depSer(sub, depOut);
+            iter->second->serializeAsCTDep(depSer);
+            sub.write(CRACK_PB_KEY(1, string), "compileDep.header");
+            sub.write(depOut.str(), "compileDep");
+        }
+
+        serializer.write(temp.str(), "optional");
+    } else {
+        serializer.write(0, "optional");
+    }
+    serializer.digestEnabled = false;
+    headerDigest = serializer.hasher.getDigest();
+    serializer.hasher.reset();
 
     // end of Header
 
@@ -240,6 +297,8 @@ ModuleDefPtr ModuleDef::deserialize(Deserializer &deser,
                                     ) {
     if (Serializer::trace)
         cerr << ">>>> Deserializing module " << canonicalName << endl;
+
+    deser.digestEnabled = true;
     if (deser.readUInt("magic") != CRACK_METADATA_V1)
         return 0;
 
@@ -339,9 +398,34 @@ ModuleDefPtr ModuleDef::deserialize(Deserializer &deser,
         }
     }
 
-    deser.readString(64, "optional");
+    CRACK_PB_BEGIN(deser, 256, optional)
+        CRACK_PB_FIELD(1, string) {
+            pair<string, ModuleDefPtr> depInfo;
+            bool upToDate = deserializeCTDep(optionalDeser, depInfo);
+            if (!upToDate) {
+                if (Construct::traceCaching) {
+                    if (!depInfo.second)
+                        cerr << "No cache module for compile-time "
+                            "dependency " <<
+                            depInfo.second->getFullName() <<
+                            ", need to rebuild " << canonicalName << endl;
+                    else
+                        cerr << "header digest doesn't match for "
+                            "compile-time dependency on " <<
+                            depInfo.second->getFullName() <<
+                            ", need to rebuild " << canonicalName <<
+                            " (depending on " << depInfo.first << ", got " <<
+                            depInfo.second->headerDigest.asHex() <<  ")" <<
+                            endl;
+                }
+                return 0;
+            }
+            break;
+        }
+    CRACK_PB_END
 
     // The cached meta-data is up-to-date.
+    deser.digestEnabled = false;
 
     // deserialize the actual code through the builder.
     ModuleDefPtr mod =
@@ -352,6 +436,10 @@ ModuleDefPtr ModuleDef::deserialize(Deserializer &deser,
                                                  );
     if (!mod)
         return 0;
+
+    // Set the header digest from what we discovered.
+    mod->headerDigest = deser.hasher.getDigest();
+    deser.hasher.reset();
 
     // storing the module in the construct cache - this is actually also done
     // later within construct, but we need the module to be present while

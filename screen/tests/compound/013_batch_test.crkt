@@ -363,6 +363,26 @@ test.run();
 # compiled against cache.
 test.run();
 
+# Compile-time dependencies.
+test.mod('mod', "
+    import crack.compiler CrackContext;
+    void f(CrackContext ctx) {
+        ctx.inject(@FILE, @LINE, '\"compile time dep 1\"');
+    }
+    ");
+test.main("
+    @import mod f;
+    puts(@f);
+    ");
+test.run();
+test.mod('mod', "
+    import crack.compiler CrackContext;
+    void f(CrackContext ctx) {
+        ctx.inject(@FILE, @LINE, '\"compile time dep 2\"');
+    }
+    ");
+test.run();
+
 %%REXPECT%%
 out: alias
 terminated: success
@@ -463,5 +483,9 @@ terminated: success
 out: mapping of self-referential types
 terminated: success
 out: mapping of self-referential types
+terminated: success
+out: compile time dep 1
+terminated: success
+out: compile time dep 2
 terminated: success
 %%STDIN%%

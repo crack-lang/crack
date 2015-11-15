@@ -110,8 +110,8 @@ So given this, our meta-data format is:
             array[Dependency] deps
         }
 
-        # reserved for future optional data
-        blob optional
+        # Compile-time dependencies.
+        repeated CompileDependency compileDep = 1
     }
 
     # identifies a dependency module by its canonical name and the hash of its
@@ -122,6 +122,12 @@ So given this, our meta-data format is:
 
         # reserved for future optional data
         blob optional
+    }
+
+    # A compile-time dependency (an annotation import).
+    CompileDependency {
+        blob canonicalName = 1
+        blob headerDigest = 2
     }
 
     SlaveModule {

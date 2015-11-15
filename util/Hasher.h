@@ -42,6 +42,11 @@ class Hasher {
         void add(const void *data, size_t size);
 
         /**
+         * Reinitialize the hasher state, allowing the hasher to be reused.
+         */
+        void reset();
+
+        /**
          * Returns the digest for the information read.
          */
         SourceDigest getDigest();

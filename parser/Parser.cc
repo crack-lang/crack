@@ -1778,6 +1778,15 @@ int Parser::parseFuncDef(TypeDef *returnType, const Token &nameTok,
                                           name
                                           );
 
+   // Ignore the override if we're in a class and the override is from a class
+   // we're not derived from.
+   if (override && classTypeDef &&
+       (!(override->flags & FuncDef::method) ||
+        !classTypeDef->isDerivedFrom(TypeDefPtr::cast(override->getOwner()))
+        )
+       )
+         override = 0;
+
    // if we're "overriding" a forward declaration, use the namespace of the 
    // forward declaration.
    if (override && override->flags & FuncDef::forward)

@@ -9,6 +9,7 @@
 #include "CrackContext.h"
 
 #include <stdlib.h>
+#include <string.h>
 #include <list>
 #include <sstream>
 #include "parser/Parser.h"
@@ -132,6 +133,13 @@ int CrackContext::getScope() {
     return context->scope;
 }
 
+char *CrackContext::getNamespaceName() {
+    string name = context->ns->getNamespaceName();
+    char *result = reinterpret_cast<char *>(malloc(name.size() + 1));
+    strcpy(result, name.c_str());
+    return result;
+}
+
 void CrackContext::storeAnnotation(const char *name, AnnotationFunc func) {
     context->compileNS->addDef(new PrimFuncAnnotation(name, func));
 }
@@ -253,6 +261,10 @@ void CrackContext::_putBack(CrackContext *inst, Token *tok) {
 
 int CrackContext::_getScope(CrackContext *inst) {
     return inst->context->scope;
+}
+
+char *CrackContext::_getNamespaceName(CrackContext *inst) {
+    return inst->getNamespaceName();
 }
 
 void CrackContext::_storeAnnotation(CrackContext *inst, const char *name,

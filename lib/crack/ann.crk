@@ -1424,3 +1424,18 @@ void implements(CrackContext ctx) {
 void impl(CrackContext ctx) {
     _implements(ctx, true);
 }
+
+## Expands the sanitized scope name as a string.
+## This converts the "main script" scope name to simply ".main".
+void SCOPE_NAME(CrackContext ctx) {
+    result := CString(ctx.getNamespaceName(), true);
+    if (result.startsWith('.main.'))
+        result = '.main';
+    ctx.putBack(Token(TOK_STRING, result.buffer, ctx.getLocation()));
+}
+
+## Expands the true (unsanitized) scope name.
+void REAL_SCOPE_NAME(CrackContext ctx) {
+    result := CString(ctx.getNamespaceName(), true);
+    ctx.putBack(Token(TOK_STRING, result.buffer, ctx.getLocation()));
+}
