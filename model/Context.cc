@@ -250,8 +250,7 @@ ModuleDefPtr Context::createModule(const string &name,
     return result;
 }
 
-ModuleDefPtr Context::materializeModule(const string &canonicalName,
-                                        ModuleDef *owner) {
+ModuleDefPtr Context::materializeModule(const string &canonicalName) {
     // check the cache path for module metadata.
     string metaDataPath = getCacheFilePath(builder.options.get(),
                                            *construct,

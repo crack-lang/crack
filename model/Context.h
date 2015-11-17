@@ -231,9 +231,7 @@ class Context : public spug::RCBase {
          * Try to load the module from the cache, return true if the module 
          * exists in the cache and is up to date.
          */
-        ModuleDefPtr materializeModule(const std::string &canonicalName,
-                                       ModuleDef *owner = 0
-                                       );
+        ModuleDefPtr materializeModule(const std::string &canonicalName);
 
         /**
          * Store the module in the cache.
