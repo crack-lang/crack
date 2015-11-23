@@ -1,9 +1,9 @@
 // Copyright 2011 Google Inc.
-// 
+//
 //   This Source Code Form is subject to the terms of the Mozilla Public
 //   License, v. 2.0. If a copy of the MPL was not distributed with this
 //   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-// 
+//
 #!/usr/local/bin/crack
 
 import crack.lang free;
@@ -24,15 +24,15 @@ import crack.ext._gtk
     gtk_tooltips_new,
     gtk_tooltips_set_tip,
     gtk_vbox_new,
-    g_print, 
-    gtk_init, 
+    g_print,
+    gtk_init,
     gtk_main,
-    gtk_main_quit, 
+    gtk_main_quit,
     gtk_widget_show,
     gtk_widget_destroy,
-    gtk_window_new, 
+    gtk_window_new,
     gtk_object_destroy,
-    g_list_append, 
+    g_list_append,
     g_signal_connect_data,
     GtkWidget,
     GList,
@@ -47,7 +47,7 @@ void destroy(GtkWidget widget, byteptr data) {
 class List {
     GList _start = null;
     GList _end = null;
-    
+
     @final void append(voidptr elem) {
         _start = g_list_append(_start, elem);
         if (_end is null)
@@ -75,7 +75,7 @@ bool _handleDestroy(GtkObject widget, Handlers handlers) {
 class GTKObject : Handlers {
     GtkObject _rep = null;
     Handlers __handlers = null;
-    
+
     @final void setHandlers(Handlers handlers) {
         __handlers = handlers;
     }
@@ -88,9 +88,9 @@ class GTKObject : Handlers {
     }
 
     void handleClicked() {
-        g_signal_connect_data(_rep, 'clicked'.buffer, _handleClicked, 
-                              this, 
-                              null, 
+        g_signal_connect_data(_rep, 'clicked'.buffer, _handleClicked,
+                              this,
+                              null,
                               0
                               );
     }
@@ -106,26 +106,26 @@ class GTKObject : Handlers {
     oper init(GtkObject rep) : _rep = rep {
         # connnect our destroy handler
         g_signal_connect_data(_rep, 'destroy'.buffer, _handleDestroy,
-                              this, 
-                              null, 
+                              this,
+                              null,
                               0
                               );
     }
 
     oper del() {
         if (!(_rep is null))
-            gtk_object_destroy(_rep); 
+            gtk_object_destroy(_rep);
     }
 }
 
 class Widget : GTKObject {
-    
+
     oper init(GtkWidget rep) : GTKObject(GtkObject_cast(rep)) {}
 
     void show() {
         gtk_widget_show(GtkWidget.unsafeCast(_rep));
     }
-    
+
     @final void destroy() {
         if (!(_rep is null))
             # _rep gets set to null in onDestroy()
@@ -135,15 +135,15 @@ class Widget : GTKObject {
     oper del() {
         destroy();
     }
-    
+
 };
 
 class Container : Widget {
     void add(Widget child) {
-        gtk_container_add(GtkWidget.unsafeCast(_rep), 
+        gtk_container_add(GtkWidget.unsafeCast(_rep),
                           GtkWidget.unsafeCast(child._rep));
     }
-    
+
     oper init(GtkWidget rep) : Widget(rep) {}
 };
 
@@ -157,56 +157,56 @@ class Button : Widget {
 
 class Box : Container {
     void add(Widget child) {
-        gtk_box_pack_start(GtkWidget.unsafeCast(_rep), 
-                           GtkWidget.unsafeCast(child._rep), 
-                           false, 
-                           false, 
+        gtk_box_pack_start(GtkWidget.unsafeCast(_rep),
+                           GtkWidget.unsafeCast(child._rep),
+                           false,
+                           false,
                            0
                            );
     }
 
-    ## expand: if true, expand the box to fill the container, otherwise shrink 
+    ## expand: if true, expand the box to fill the container, otherwise shrink
     ##  to enclose the children.
     void add(Widget child, bool expand) {
-        gtk_box_pack_start(GtkWidget.unsafeCast(_rep), 
-                           GtkWidget.unsafeCast(child._rep), 
-                           expand, 
-                           false, 
+        gtk_box_pack_start(GtkWidget.unsafeCast(_rep),
+                           GtkWidget.unsafeCast(child._rep),
+                           expand,
+                           false,
                            0
                            );
     }
 
     ## fill: if true, expand the child, otherwise add padding.
     void add(Widget child, bool expand, bool fill) {
-        gtk_box_pack_start(GtkWidget.unsafeCast(_rep), 
-                           GtkWidget.unsafeCast(child._rep), 
-                           expand, 
-                           fill, 
+        gtk_box_pack_start(GtkWidget.unsafeCast(_rep),
+                           GtkWidget.unsafeCast(child._rep),
+                           expand,
+                           fill,
                            0
                            );
     }
 
     ## padding: amount of padding added around each child.
     void add(Widget child, bool expand, bool fill, uint padding) {
-        gtk_box_pack_start(GtkWidget.unsafeCast(_rep), 
-                           GtkWidget.unsafeCast(child._rep), 
-                           expand, 
-                           fill, 
+        gtk_box_pack_start(GtkWidget.unsafeCast(_rep),
+                           GtkWidget.unsafeCast(child._rep),
+                           expand,
+                           fill,
                            0
                            );
     }
 
-    oper init(GtkWidget rep) : Container(rep) {}    
+    oper init(GtkWidget rep) : Container(rep) {}
 };
 
 class HBox : Box {
-    oper init(bool homogeneous, uint spacing) : 
+    oper init(bool homogeneous, uint spacing) :
         Box(gtk_hbox_new(homogeneous, spacing)) {
     }
 };
 
 class VBox : Box {
-    oper init(bool homogeneous, uint spacing) : 
+    oper init(bool homogeneous, uint spacing) :
         Box(gtk_vbox_new(homogeneous, spacing)) {
     }
 };
@@ -217,10 +217,10 @@ class Label : Widget {
 
 class Tooltips : GTKObject {
     oper init() : GTKObject(gtk_tooltips_new()) {}
-    
+
     void setTip(Widget widget, String text) {
-        gtk_tooltips_set_tip(_rep, GtkWidget.unsafeCast(widget._rep), 
-                             text.buffer, 
+        gtk_tooltips_set_tip(_rep, GtkWidget.unsafeCast(widget._rep),
+                             text.buffer,
                              null
                              );
     }
@@ -228,23 +228,23 @@ class Tooltips : GTKObject {
 
 class Entry : Widget {
     oper init() : Widget(gtk_entry_new()) {}
-    
+
     @final String getText() {
         return String(gtk_entry_get_text(GtkWidget.unsafeCast(_rep)));
     }
-    
+
     @final void setText(String text) {
         gtk_entry_set_text(GtkWidget.unsafeCast(_rep), text.buffer);
     }
-    
+
     @final void setEditable(bool editable) {
         gtk_editable_set_editable(GtkWidget.unsafeCast(_rep), editable);
     }
-    
+
     @final void setVisibility(bool visible) {
         gtk_entry_set_visibility(GtkWidget.unsafeCast(_rep), visible);
     }
-    
+
     @final void selectRegion(int start, int end) {
         gtk_editable_select_region(GtkWidget.unsafeCast(_rep), start, end);
     }
@@ -258,11 +258,11 @@ class App {
         free(argc);
         free(argvWrapper);
     }
-    
+
     @final void main() {
         gtk_main();
     }
-    
+
     @final void quit() {
         gtk_main_quit();
     }

@@ -1,22 +1,22 @@
 ## Copyright 2012 Google Inc.
-## 
+##
 ##   This Source Code Form is subject to the terms of the Mozilla Public
 ##   License, v. 2.0. If a copy of the MPL was not distributed with this
 ##   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-## 
+##
 ## SDL Wrapper library.
 
-import crack.ext._sdl SDL_Event, SDL_EventNew, SDL_Event_GetType, 
+import crack.ext._sdl SDL_Event, SDL_EventNew, SDL_Event_GetType,
     SDL_Event_GetKey,
     SDL_Event_GetMotion,
     SDL_FillRect,
     SDL_Flip,
     SDL_KeyboardEvent_GetKeysym,
-    SDL_keysym_GetSym, 
+    SDL_keysym_GetSym,
     SDL_MouseButtonEvent,
     SDL_MouseMotionEvent_GetX,
     SDL_MouseMotionEvent_GetY,
-    SDL_GL_SetAttribute, SDL_GL_SwapBuffers, SDL_Init, SDL_PollEvent, 
+    SDL_GL_SetAttribute, SDL_GL_SwapBuffers, SDL_Init, SDL_PollEvent,
     SDL_Quit, SDL_SetVideoMode,
     SDL_Rect,
     SDL_ResizeEvent,
@@ -25,9 +25,9 @@ import crack.ext._sdl SDL_Event, SDL_EventNew, SDL_Event_GetType,
     SDL_ResizeEvent_GetH,
     SDL_ResizeEvent_GetW,
     SDL_Surface,
-    SDL_GL_RED_SIZE, SDL_GL_GREEN_SIZE, SDL_GL_BLUE_SIZE, 
-    SDL_INIT_EVERYTHING, SDL_FULLSCREEN, SDL_HWSURFACE, SDL_KEYDOWN, SDL_KEYUP, 
-    SDL_MOUSEBUTTONDOWN, SDL_MOUSEBUTTONUP, SDL_MOUSEMOTION, SDL_OPENGL, 
+    SDL_GL_RED_SIZE, SDL_GL_GREEN_SIZE, SDL_GL_BLUE_SIZE,
+    SDL_INIT_EVERYTHING, SDL_FULLSCREEN, SDL_HWSURFACE, SDL_KEYDOWN, SDL_KEYUP,
+    SDL_MOUSEBUTTONDOWN, SDL_MOUSEBUTTONUP, SDL_MOUSEMOTION, SDL_OPENGL,
     SDL_QUIT, SDL_RESIZABLE, SDL_VIDEORESIZE;
 import crack.functor Functor0;
 import crack.io cout, Formatter;
@@ -280,11 +280,11 @@ class Coord {
     int x, y;
 
     oper init(int x, int y) : x = x, y = y {}
-    
+
     Coord oper +(Coord other) { return Coord(x + other.x, y + other.y); }
-    
+
     Coord oper +=(Coord other) { x += other.x; y += other.y; return this; }
-    
+
     void formatTo(Formatter out) {
         out `Coord($x, $y)`;
     }
@@ -293,7 +293,7 @@ class Coord {
 ## Indicates mouse motion.
 class MouseMotionEvent {
     uint x, y;
-    
+
     oper init(uint x, uint y) : x = x, y = y {}
 }
 
@@ -305,7 +305,7 @@ class MouseMotionEvent {
 ## Indicates a mouse button press or release.
 ## byte type - SDL_MOUSEBUTTON{DOWN,UP}
 ## byte which - mouse device index
-## byte button - button 
+## byte button - button
 ## byte state - SDL_{PRESSED,RELEASED}
 ## uint16 x, y;
 class MouseButtonEvent : Object, SDL_MouseButtonEvent {
@@ -328,7 +328,7 @@ class MouseButtonEvent : Object, SDL_MouseButtonEvent {
 ## Indicates a keyboard event.
 class KeyboardEvent {
     uint sym;
-    
+
     oper init(uint sym) : sym = sym {}
 }
 
@@ -354,30 +354,30 @@ class Holder[T] {
     oper init(T obj) : obj = obj {}
 }
 
-## A g3d application.  Takes care of initialization shutdown and provides the 
+## A g3d application.  Takes care of initialization shutdown and provides the
 ## application event loop.
 class App {
 
-    ## if true, try to run the program full-screen.  Set this before calling 
+    ## if true, try to run the program full-screen.  Set this before calling
     ## initialize().
     bool fullscreen;
 
-    ## if true, run in a resizable window and trigger an event when resized.  
+    ## if true, run in a resizable window and trigger an event when resized.
     ## Set this before calling initialize().
     bool resizable;
-    
+
     # The list of keyboard event handlers.
     Array[Holder[KeyboardHandler]] keyboardHandlers = {};
-    
+
     ## underlying SDL surface (XXX make protected?)
     Surface surface;
 
-    ## Set this to the function used to render the graphics.    
+    ## Set this to the function used to render the graphics.
     Functor0[void] graphics;
-    
+
     # The list of mouse motion event handlers.
     Array[Holder[MouseMotionHandler]] __mouseMotionHandlers = {};
-    
+
     # The list of mouse button event handlers.
     Array[Holder[MouseButtonHandler]] __mouseButtonHandlers = {};
 
@@ -386,25 +386,25 @@ class App {
 
     # true until someone calls terminate()
     bool __active = true;
-    
+
     uint32 flags;
-    
+
     int16 width = 640, height = 480;
 
     oper init(int16 width, int16 height) : width = width, height = height {}
     oper init() {}
-    
+
     oper del() {
         SDL_Quit();
     }
-    
+
     ## Initialize the application (do all SDL and OpenGL initializations)
     void initialize() {
         # sdl initialization
         SDL_Init(SDL_INIT_EVERYTHING);
         flags = (fullscreen ? SDL_FULLSCREEN : 0) |
                 (resizable ? SDL_RESIZABLE : 0) | SDL_HWSURFACE;
-        surface = SDL_SetVideoMode(width, height, 24, flags);        
+        surface = SDL_SetVideoMode(width, height, 24, flags);
     }
 
     ## Terminate the application.
@@ -416,7 +416,7 @@ class App {
     void addKeyboardHandler(KeyboardHandler handler) {
         keyboardHandlers.append(Holder[KeyboardHandler](handler));
     }
-    
+
     void addMouseButtonHandler(MouseButtonHandler handler) {
         __mouseButtonHandlers.append(Holder[MouseButtonHandler](handler));
     }
@@ -428,19 +428,19 @@ class App {
 
     ## Run a single poll for events/process events cycle.
     bool runOneCycle() {
-        
+
         evt := SDL_EventNew();
 
         # handle all pending events
         while (SDL_PollEvent(evt)) {
             evtType := SDL_Event_GetType(evt);
             if (evtType == SDL_KEYDOWN || evtType == SDL_KEYUP) {
-                
+
                 # get the key symbol
                 key := SDL_Event_GetKey(evt);
                 keysym := SDL_KeyboardEvent_GetKeysym(key);
                 sym := SDL_keysym_GetSym(keysym);
-                
+
                 KeyboardEvent kevt = {sym};
 
                 if (evtType == SDL_KEYDOWN) {
@@ -452,7 +452,7 @@ class App {
                         if (handler.obj.onKeyUp(kevt))
                             break;
                 }
-    
+
             } else if (evtType == SDL_VIDEORESIZE) {
                 resize := SDL_Event_GetResize(evt);
                 width = SDL_ResizeEvent_GetW(resize);
@@ -467,12 +467,12 @@ class App {
                             break;
                     }
                 }
-                
+
             } else if (evtType == SDL_MOUSEMOTION) {
                 motion := SDL_Event_GetMotion(evt);
                 x := SDL_MouseMotionEvent_GetX(motion);
                 y := SDL_MouseMotionEvent_GetY(motion);
-                
+
                 MouseMotionEvent mevt = {x, y};
                 for (handler :in __mouseMotionHandlers)
                     if (handler.obj.onMouseMotion(mevt))
@@ -489,34 +489,34 @@ class App {
                         break;
             }
         }
-        
+
         free(evt);
-        
+
         if (!(graphics is null))
             graphics();
-        
+
         return false;
     }
-    
+
     ## Flips the current draw surface into video.
     void flip() {
         SDL_Flip(surface);
     }
 
-    ## Poll for events and process events and run graphics until terminate() 
-    ## is called.    
+    ## Poll for events and process events and run graphics until terminate()
+    ## is called.
     void mainloop() {
         while (__active)
             runOneCycle();
     }
-    
+
     bool isActive() { return __active; }
 }
 
 # primitive graphic functions
 void fillRect(Surface surface, Coord pos, Coord size, uint32 color) {
-    r := SDL_Rect(int16(pos.x), int16(pos.y), uint16(size.x), 
-                  uint16(size.y) 
+    r := SDL_Rect(int16(pos.x), int16(pos.y), uint16(size.x),
+                  uint16(size.y)
                   );
     SDL_FillRect(surface, r, color >> 8);
     free(r);

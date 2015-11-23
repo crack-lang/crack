@@ -1,9 +1,9 @@
 // Copyright 2012 Conrad Steenberg <conrad.steenberg@gmail.com>
-// 
+//
 //   This Source Code Form is subject to the terms of the Mozilla Public
 //   License, v. 2.0. If a copy of the MPL was not distributed with this
 //   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-// 
+//
 // 6/26/2012
 
 // This implementation is derived from the public domain code at
@@ -26,7 +26,7 @@ uint32 CalculateMurmur3_32(byteptr data, uint32 len, uint32 seed) {
 
     //----------
     // body
-    
+
     blocks := array[uint32](data);
 
     for (i = 0; i < nblocks; i++) {
@@ -73,7 +73,7 @@ uint32 CalculateMurmur3_32(byteptr data, uint32 len, uint32 seed) {
     h1 ^= h1 >> 16;
 
     return h1;
-} 
+}
 
 ## Murmur3_32 class implements a Hash
 class Murmur3_32 : Hash {
