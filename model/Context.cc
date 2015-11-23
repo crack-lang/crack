@@ -250,7 +250,9 @@ ModuleDefPtr Context::createModule(const string &name,
     return result;
 }
 
-ModuleDefPtr Context::materializeModule(const string &canonicalName) {
+ModuleDefPtr Context::materializeModule(const string &canonicalName,
+                                        GenericModuleInfo *genModInfo
+                                        ) {
     // check the cache path for module metadata.
     string metaDataPath = getCacheFilePath(builder.options.get(),
                                            *construct,
@@ -266,7 +268,8 @@ ModuleDefPtr Context::materializeModule(const string &canonicalName) {
 
     try {
         // try to read the module
-        ModuleDefPtr result = ModuleDef::deserialize(deser, canonicalName);
+        ModuleDefPtr result = ModuleDef::deserialize(deser, canonicalName,
+                                                     genModInfo);
         if (result)
             ns = result;
         return result;

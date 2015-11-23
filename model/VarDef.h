@@ -46,10 +46,6 @@ class VarDef : public virtual spug::RCBase {
                                    const std::vector<TypeDefPtr> *localDeps
                                    ) const;
 
-        void serializeExternRef(Serializer &serializer, 
-                                const std::vector<TypeDefPtr> *localDeps
-                                ) const;
-
     public:
         
         TypeDefPtr type;
@@ -209,6 +205,13 @@ class VarDef : public virtual spug::RCBase {
          * Serialize an external definition. "Extern"
          */
         virtual void serializeExtern(Serializer &serializer) const;
+
+        /**
+         * Serializes a reference to an extern.
+         */
+        void serializeExternRef(Serializer &serializer,
+                                const std::vector<TypeDefPtr> *localDeps
+                                ) const;
 
         /**
          * Serialize the definition as an alias. "AliasDef"

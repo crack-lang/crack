@@ -91,7 +91,8 @@ namespace {
 // specializations of array types actually create a new type
 // object.
 TypeDefPtr ArrayTypeDef::getSpecialization(Context &context,
-                                           TypeVecObj *types
+                                           TypeVecObj *types,
+                                           bool checkCache
                                            ) {
     // see if it already exists
     TypeDef *spec = findSpecialization(types);

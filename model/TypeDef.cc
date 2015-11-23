@@ -1048,7 +1048,8 @@ namespace {
 }
 
 TypeDefPtr TypeDef::getSpecialization(Context &context, 
-                                      TypeDef::TypeVecObj *types
+                                      TypeDef::TypeVecObj *types,
+                                      bool checkCache
                                       ) {
     assert(genericInfo);
 
@@ -1087,7 +1088,7 @@ TypeDefPtr TypeDef::getSpecialization(Context &context,
     // modules: if there is an existing copy in the cache, we can't depend on 
     // it because it's from a non-copersistent version.
     ModuleDefPtr module;
-    if (!copersistent)
+    if (checkCache && !copersistent)
         module = context.construct->getCachedModule(moduleName);
 
     if (!module) {
@@ -1169,9 +1170,43 @@ TypeDefPtr TypeDef::getSpecialization(Context &context,
                                                          0
                                           );
         
-        // Add the modules of the parameter types as dependents.
-        SPUG_FOR(TypeVecObj, typeIter, *types)
+        // Add the path to the generic's variable to the module.
+        {
+            string sourceModFullName = getModule()->getFullName();
+            string typeFullName = getFullName();
+            SPUG_CHECK(typeFullName.substr(0, sourceModFullName.size() + 1) ==
+                       sourceModFullName + ".",
+                       SPUG_FSTR("Type " << typeFullName <<
+                                 " is not qualified by its module " <<
+                                 sourceModFullName
+                                 )
+                       );
+            typeFullName = typeFullName.substr(sourceModFullName.size() + 1);
+
+            int startOfLastWord = 0;
+            for (int i = 0; i < typeFullName.size(); ++i) {
+                if (typeFullName[i] == '.') {
+                    module->genericName.push_back(
+                        typeFullName.substr(startOfLastWord, i)
+                    );
+                    startOfLastWord = i + 1;
+                }
+            }
+
+            // Add the last part of the name.
+            module->genericName.push_back(
+                typeFullName.substr(startOfLastWord)
+            );
+
+            module->genericModule = sourceModFullName;
+        }
+
+        // Add the modules of the parameter types as dependents and also add
+        // them to the generic params for the module.
+        SPUG_FOR(TypeVecObj, typeIter, *types) {
             module->addDependency((*typeIter)->getModule().get());
+            module->genericParams.push_back(*typeIter);
+        }
         
         // XXX this is confusing: there's a "owner" that's part of some kinds of 
         // ModuleDef that's different from VarDef::owner - we set VarDef::owner 
@@ -1200,6 +1235,7 @@ TypeDefPtr TypeDef::getSpecialization(Context &context,
 
         module->cacheable = true;    
         module->close(*modContext);
+        module->finished = true;
 
         // store the module in the in-memory cache
         context.construct->registerModule(module.get());

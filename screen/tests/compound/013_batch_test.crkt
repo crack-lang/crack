@@ -383,6 +383,17 @@ test.mod('mod', "
     ");
 test.run();
 
+# Generic instantiations get rebuilt.
+test.mod('mod', 'class A[T] { void f() {} }');
+test.main("
+    import mod A;
+    A[int]().f();
+    puts('generic instantiations rebuilt');
+    ");
+test.run();
+test.mod('mod', 'class A[T] { void g() {} }');
+test.run();
+
 %%REXPECT%%
 out: alias
 terminated: success
@@ -488,4 +499,9 @@ out: compile time dep 1
 terminated: success
 out: compile time dep 2
 terminated: success
+out: generic instantiations rebuilt
+terminated: success
+err: ParseError: .*/main.crk:3:14: Instance of mod.A\[.builtin.int\].A has no member f
+err:\s*
+terminated, rc = 2049
 %%STDIN%%

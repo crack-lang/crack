@@ -28,6 +28,7 @@ namespace model {
 
 SPUG_RCPTR(Context);
 class Deserializer;
+class GenericModuleInfo;
 class Serializer;
 
 SPUG_RCPTR(ModuleDef);
@@ -106,6 +107,18 @@ class ModuleDef : public VarDef, public Namespace {
         
         // true if the module should be persisted in the cache when closed.
         bool cacheable;
+
+        // If the module is a generic instantiation, this is the path to the
+        // generic type definition within the module that defines it.
+        std::vector<std::string> genericName;
+
+        // If the module is a generic instantiation, these are the parameters
+        // of the generic.
+        std::vector<TypeDefPtr> genericParams;
+
+        // If the module is a generic instantiation, this is the canonical
+        // name of the module.
+        std::string genericModule;
 
         ModuleDef(const std::string &name, Namespace *parent);
         ~ModuleDef();
@@ -214,7 +227,8 @@ class ModuleDef : public VarDef, public Namespace {
          * Deserialize the remainder of the module meta-data.
          */        
         static ModuleDefPtr deserialize(Deserializer &deserializer,
-                                        const std::string &canonicalName
+                                        const std::string &canonicalName,
+                                        GenericModuleInfo *genModInfo = 0
                                         );
 
         /**

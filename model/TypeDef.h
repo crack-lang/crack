@@ -364,9 +364,15 @@ class TypeDef : public VarDef, public Namespace {
         /**
          * Returns a new specialization for the specified types, creating it 
          * if necessary.
+         * @param context the current context.
+         * @param types The generic parameters that we're specializing on.
+         * @param checkCache If true, check the persistent cache for the
+         *                   specialized type's module.  (If false, we still
+         *                   check the type's in-memory cache).
          */
         virtual TypeDefPtr getSpecialization(Context &context, 
-                                             TypeVecObj *types
+                                             TypeVecObj *types,
+                                             bool checkCache = true
                                              );
 
         /**

@@ -112,6 +112,17 @@ So given this, our meta-data format is:
 
         # Compile-time dependencies.
         repeated CompileDependency compileDep = 1
+
+        # If the module is an ephemeral generic instantiation, this is
+        # the path to the generic in the module.
+        repeated string genericName = 2
+
+        # If the module is an ephemeral generic instantiation, these are
+        # the generic parameters.  They must be types.
+        repeated ref[Extern] genericParams = 3
+
+        # Canonical name of the origin module.
+        optional blob genericModule = 4
     }
 
     # identifies a dependency module by its canonical name and the hash of its

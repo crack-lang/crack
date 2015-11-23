@@ -15,6 +15,7 @@
 #include "util/SourceDigest.h"
 #include "Context.h"
 #include "Deserializer.h"
+#include "GenericModuleInfo.h"
 #include "NestedDeserializer.h"
 #include "ProtoBuf.h"
 #include "Serializer.h"
@@ -234,7 +235,7 @@ void ModuleDef::serialize(Serializer &serializer) {
         serializer.write(0, "optional");
     }
 
-    if (compileTimeDeps.size()) {
+    if (compileTimeDeps.size() || genericName.size() || genericParams.size()) {
         ostringstream temp;
         Serializer sub(serializer, temp);
         SPUG_FOR(ModuleDefMap, iter, compileTimeDeps) {
@@ -243,6 +244,21 @@ void ModuleDef::serialize(Serializer &serializer) {
             iter->second->serializeAsCTDep(depSer);
             sub.write(CRACK_PB_KEY(1, string), "compileDep.header");
             sub.write(depOut.str(), "compileDep");
+        }
+
+        SPUG_FOR(vector<string>, iter, genericName) {
+            sub.write(CRACK_PB_KEY(2, string), "genericName.header");
+            sub.write(*iter, "genericName");
+        }
+
+        SPUG_FOR(vector<TypeDefPtr>, iter, genericParams) {
+            sub.write(CRACK_PB_KEY(3, ref), "genericParams.header");
+            (*iter)->serializeExternRef(sub, 0);
+        }
+
+        if (genericModule.size()) {
+            sub.write(CRACK_PB_KEY(4, string), "genericModule.header");
+            sub.write(genericModule, "genericModule");
         }
 
         serializer.write(temp.str(), "optional");
@@ -293,7 +309,8 @@ void ModuleDef::serialize(Serializer &serializer) {
 }
 
 ModuleDefPtr ModuleDef::deserialize(Deserializer &deser,
-                                    const string &canonicalName
+                                    const string &canonicalName,
+                                    GenericModuleInfo *genModInfo
                                     ) {
     if (Serializer::trace)
         cerr << ">>>> Deserializing module " << canonicalName << endl;
@@ -333,6 +350,11 @@ ModuleDefPtr ModuleDef::deserialize(Deserializer &deser,
                                                )
                               );
 
+    // We're going to complete the serialization at this point so we can read
+    // the generic name and params if they exist, so we keep track of whether
+    // we have to rebuild anyway.
+    bool mustRebuild = false;
+
     // check the digest against that of the actual source file (if the source
     // file can be found)
     Construct::ModulePath modPath =
@@ -346,57 +368,62 @@ ModuleDefPtr ModuleDef::deserialize(Deserializer &deser,
                     "\n  current = " <<
                     fileDigest.asHex() << "\n  module: " <<
                     canonicalName << endl;
-            if (Serializer::trace)
-                cerr << ">>>> Finished deserializing SOURCE MISMATCH " <<
-                    canonicalName << endl;
-            return 0;
+            mustRebuild = true;
         }
     }
 
     // See if the builder can open its file.
-    builder::Builder::CacheFilePtr builderCache =
-        deser.context->builder.getCacheFile(*deser.context, canonicalName);
-    if (!builderCache) {
-        if (Construct::traceCaching)
-            cerr << "No builder cache file for " << sourcePath << "@" <<
-                recordedSourceDigest.asHex() << endl;
-        if (Serializer::trace)
-            cerr << ">>>> Finished deserializing NO BUILDER CACHE " <<
-                canonicalName << endl;
-        return 0;
+    builder::Builder::CacheFilePtr builderCache;
+    if (!mustRebuild) {
+        builderCache =
+            deser.context->builder.getCacheFile(*deser.context, canonicalName);
+        if (!builderCache) {
+            if (Construct::traceCaching)
+                cerr << "No builder cache file for " << sourcePath << "@" <<
+                    recordedSourceDigest.asHex() << endl;
+            mustRebuild = true;
+        }
     }
 
     // read and load the dependencies
     int count = deser.readUInt("#deps");
     for (int i = 0; i < count; ++i) {
-        ModuleDefPtr mod =
-            deser.context->construct->getModule(
-                deser.readString(64, "canonicalName")
-            );
+        string depName = deser.readString(64, "canonicalName");
         SourceDigest moduleDigest =
             SourceDigest::fromHex(deser.readString(64, "metaDigest"));
-
         deser.readString(64, "optional");
 
-        // if the dependency isn't finished, don't do a depdendency check.
-        if (!mod || !mod->finished)
-            continue;
+        if (!mustRebuild) {
+            ModuleDefPtr mod = deser.context->construct->getModule(depName);
 
-        // if the dependency has a different definition hash from what we were
-        // built against, we have to recompile.
-        if (mod->metaDigest != moduleDigest) {
-            if (Construct::traceCaching)
-                cerr << "meta digest doesn't match for dependency " <<
-                    mod->getFullName() << ", need to rebuild " <<
-                    canonicalName << "(depending on " <<
-                    moduleDigest.asHex() <<
-                    " current = " << mod->metaDigest.asHex() << ")" << endl;
-            if (Serializer::trace)
-                cerr << ">>>> Finished deserializing DEP MISMATCH " <<
-                    canonicalName << endl;
-            return 0;
+            // If we didn't get the module, we need to rebuild.
+            if (!mod) {
+                mustRebuild = true;
+                continue;
+
+            // if the dependency isn't finished, don't do a depdendency check.
+            // Note: I don't know why we hit this, but we seem to.
+            } else if (!mod->finished) {
+                continue;
+            }
+
+            // if the dependency has a different definition hash from what we were
+            // built against, we have to recompile.
+            if (mod->metaDigest != moduleDigest) {
+                if (Construct::traceCaching)
+                    cerr << "meta digest doesn't match for dependency " <<
+                        mod->getFullName() << ", need to rebuild " <<
+                        canonicalName << "(depending on " <<
+                        moduleDigest.asHex() <<
+                        " current = " << mod->metaDigest.asHex() << ")" << endl;
+                mustRebuild = true;
+            }
         }
     }
+
+    vector<string> genericName;
+    vector<TypeDefPtr> genericParams;
+    string genericModule;
 
     CRACK_PB_BEGIN(deser, 256, optional)
         CRACK_PB_FIELD(1, string) {
@@ -418,28 +445,63 @@ ModuleDefPtr ModuleDef::deserialize(Deserializer &deser,
                             depInfo.second->headerDigest.asHex() <<  ")" <<
                             endl;
                 }
-                return 0;
+                mustRebuild = true;
             }
             break;
         }
+        CRACK_PB_FIELD(2, string) {
+            genericName.push_back(
+                optionalDeser.readString(64, "genericName")
+            );
+            break;
+        }
+        CRACK_PB_FIELD(3, ref) {
+            genericParams.push_back(
+                TypeDefPtr::rcast(TypeDef::deserializeRef(optionalDeser, "ext"))
+            );
+            break;
+        }
+        CRACK_PB_FIELD(4, string) {
+            genericModule = optionalDeser.readString(64, "genericModule");
+            break;
+        }
     CRACK_PB_END
+
+    if (genModInfo && genericName.size()) {
+        genModInfo->present = true;
+        genModInfo->name = genericName;
+        genModInfo->params = genericParams;
+        genModInfo->module = genericModule;
+    }
 
     // The cached meta-data is up-to-date.
     deser.digestEnabled = false;
 
     // deserialize the actual code through the builder.
-    ModuleDefPtr mod =
-        deser.context->builder.materializeModule(*deser.context,
-                                                 builderCache.get(),
-                                                 canonicalName,
-                                                 0 // owner
-                                                 );
-    if (!mod)
+    ModuleDefPtr mod;
+    if (!mustRebuild) {
+        mod = deser.context->builder.materializeModule(*deser.context,
+                                                       builderCache.get(),
+                                                       canonicalName,
+                                                       0 // owner
+                                                       );
+    }
+
+    if (!mod) {
+        if (Serializer::trace)
+            cerr << ">>>> Finished deserializing header, must rebuild." <<
+                canonicalName << endl;
         return 0;
+    }
 
     // Set the header digest from what we discovered.
     mod->headerDigest = deser.hasher.getDigest();
     deser.hasher.reset();
+
+    // Set the generic name and params.
+    mod->genericName = genericName;
+    mod->genericParams = genericParams;
+    mod->genericModule = genericModule;
 
     // storing the module in the construct cache - this is actually also done
     // later within construct, but we need the module to be present while

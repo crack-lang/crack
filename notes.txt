@@ -672,3 +672,22 @@ Parser Refactor:
     in parsePostIdent().  For this to happen, method lookups without args 
     need to return a special kind of field reference that accepts "oper call"
     and translates it to the underlying method invocation.
+
+Glossary of terms in the code:
+
+    master/slave: When modules have a cyclic relationship (as in the case of
+        ephemeral modules) they must be cached together for complex reasons
+        involving the original LLVM jit.  We call the outermost module (under
+        whose name the entire cyclic set is persisted) the "master" and the
+        modules persisted with it the "slaves".  Slave modules still have
+        their own file in the cache, but it is only a tiny stub that
+        references the master module.
+
+    owner: The namespace that "owns" a definition (corresponding to the scope
+        where the definiton was defined).  There can only be one owner.  Other
+        namespaces may contain the definition, but only as an alias.
+
+    origin module/class: A generic instantiation is created as a
+        specialization of a generic class.  The class it is instantiated from
+        is known as its "origin" class and the module of the origin class is
+        called the "origin module".
