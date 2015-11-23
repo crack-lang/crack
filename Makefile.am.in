@@ -236,6 +236,7 @@ noinst_HEADERS = \
     model/Deref.h \
     model/DeserializationError.h \
     model/Deserializer.h \
+    model/DummyModuleDef.h \
     model/EphemeralImportDef.h \
     model/Expr.h \
     model/FloatConst.h \

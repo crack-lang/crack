@@ -22,6 +22,7 @@
 #include "ArgDef.h"
 #include "Branchpoint.h"
 #include "Context.h"
+#include "DummyModuleDef.h"
 #include "FuncDef.h"
 #include "Generic.h"
 #include "GlobalNamespace.h"
@@ -1033,18 +1034,6 @@ void instantiateGeneric(TypeDef *type, Context &context, Context &localCtx,
     Parser parser(toker, &localCtx);
     parser.parse();
     localCtx.popErrorContext();
-}
-
-namespace {
-    class DummyModuleDef : public ModuleDef {
-        public:
-            DummyModuleDef(const string &name, Namespace *ns) :
-                ModuleDef(name, ns) {
-            }
-            virtual void callDestructor() {}
-            virtual void runMain(builder::Builder &builder) {}
-            virtual bool isHiddenScope() { return true; }
-    };
 }
 
 TypeDefPtr TypeDef::getSpecialization(Context &context, 

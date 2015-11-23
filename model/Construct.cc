@@ -24,6 +24,7 @@
 #include "builder/Builder.h"
 #include "ext/Module.h"
 #include "Context.h"
+#include "DummyModuleDef.h"
 #include "GenericModuleInfo.h"
 #include "GlobalNamespace.h"
 #include "ModuleDef.h"
@@ -572,17 +573,6 @@ namespace {
         dotted.writeTo(out);
         return out;
     }
-}
-namespace {
-    class DummyModuleDef : public ModuleDef {
-        public:
-            DummyModuleDef(const string &name, Namespace *ns) :
-                ModuleDef(name, ns) {
-            }
-            virtual void callDestructor() {}
-            virtual void runMain(builder::Builder &builder) {}
-            virtual bool isHiddenScope() { return true; }
-    };
 }
 
 ModuleDefPtr Construct::getModule(Construct::StringVecIter moduleNameBegin,
