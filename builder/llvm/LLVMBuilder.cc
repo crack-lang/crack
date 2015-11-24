@@ -2856,7 +2856,7 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
     context.addDef(new AtomicLoadOpDef(intzType, "oper to .builtin.intz"),
                    atomicType
                    );
-    context.addDef(new AtomicLoadOpDef(intzType, "oper to .builtin.uintz"),
+    context.addDef(new AtomicLoadOpDef(uintzType, "oper to .builtin.uintz"),
                    atomicType
                    );
     if (ptrIs32Bit == intIs32Bit) {
@@ -2864,8 +2864,8 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
                     atomicType
                     );
         context.addDef(new AtomicLoadOpDef(uintType, "oper to .builtin.uint"),
-                    atomicType
-                    );
+                       atomicType
+                       );
     } else if (!ptrIs32Bit && intIs32Bit) {
         context.addDef(new AtomicLoadTruncOpDef(intType,
                                                 "oper to .builtin.int"
@@ -2878,11 +2878,39 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
                        atomicType
                        );
     } else {
-        SPUG_CHECK(false,
-                   "This platform has 32-bit integers but 64 bit pointers, "
-                    "which the crack executor can't deal with.  We need to "
-                    "implement a ZExt atomic load operation to accomodate it."
-                   );
+        // Untested.  I don't know of any platforms that do this.
+        context.addDef(new AtomicLoadZExtOpDef(intType,
+                                               "oper to .builtin.int"
+                                               ),
+                       atomicType
+                       );
+        context.addDef(new AtomicLoadZExtOpDef(uintType,
+                                               "oper to .builtin.uint"
+                                               ),
+                       atomicType
+                       );
+    }
+
+    if (ptrIs32Bit) {
+        context.addDef(new AtomicLoadZExtOpDef(int64Type,
+                                               "oper to .builtin.int64"
+                                               ),
+                       atomicType
+                       );
+        context.addDef(new AtomicLoadZExtOpDef(uint64Type,
+                                               "oper to .builtin.uint64"
+                                               ),
+                       atomicType
+                       );
+    } else {
+        context.addDef(new AtomicLoadOpDef(int64Type, "oper to .builtin.int64"),
+                    atomicType
+                    );
+        context.addDef(new AtomicLoadOpDef(uint64Type,
+                                           "oper to .builtin.uint64"
+                                           ),
+                    atomicType
+                    );
     }
 
     // boolean logic

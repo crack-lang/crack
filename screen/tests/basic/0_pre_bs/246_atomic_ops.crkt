@@ -4,14 +4,24 @@ atomic operations
 %%FILE%%
 atomic_int ai;
 ai += 100;
-if (int(ai) != 100)
+int i = ai;
+if (i != 100)
     puts('FAILED conversion to int');
-if (uint(ai) != 100)
+uint u = ai;
+if (u != 100)
     puts('FAILED conversion to uint');
-if (intz(ai) != 100)
+intz iz = ai;
+if (iz != 100)
     puts('FAILED conversion to intz');
-if (uintz(ai) != 100)
+uintz uz = ai;
+if (uz != 100)
     puts('FAILED conversion to uintz');
+int64 i64 = ai;
+if (i64 != 100)
+    puts('FAILED conversion to int64');
+uint64 u64 = ai;
+if (u64 != 100)
+    puts('FAILED conversion to uint64');
 puts('ok');
 %%EXPECT%%
 ok
