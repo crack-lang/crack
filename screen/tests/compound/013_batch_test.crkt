@@ -394,6 +394,36 @@ test.run();
 test.mod('mod', 'class A[T] { void g() {} }');
 test.run();
 
+# Compile-time dependencies in generic instantiations
+test.mod('mod', "
+    @import ann funcs;
+
+    class A[T] {
+        @funcs
+    }
+    ");
+test.mod('ann', "
+    import crack.compiler CrackContext;
+
+    void funcs(CrackContext ctx) {
+        ctx.inject(@FILE, @LINE, 'void f() { puts(\"ctdeps in generics\"); }');
+    }
+    ");
+test.main("
+    import mod A;
+    A[int] a = {};
+    a.f();
+    ");
+test.run();
+test.mod('ann', "
+    import crack.compiler CrackContext;
+
+    void funcs(CrackContext ctx) {
+        ctx.inject(@FILE, @LINE, 'void g() { puts(\"wtf?\"); }');
+    }
+    ");
+test.run();
+
 %%REXPECT%%
 out: alias
 terminated: success
@@ -502,6 +532,11 @@ terminated: success
 out: generic instantiations rebuilt
 terminated: success
 err: ParseError: .*/main.crk:3:14: Instance of mod.A\[.builtin.int\].A has no member f
+err:\s*
+terminated, rc = 2049
+out: ctdeps in generics
+terminated: success
+err: ParseError: .*/main.crk:4:7: Instance of mod.A\[.builtin.int\].A has no member f
 err:\s*
 terminated, rc = 2049
 %%STDIN%%

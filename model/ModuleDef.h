@@ -189,6 +189,14 @@ class ModuleDef : public VarDef, public Namespace {
         void addCompileTimeDependency(ModuleDef *other);
 
         /**
+         * Copies compile time dependencies from another module.  This is used
+         * for generic instantiation modules.
+         */
+        void copyCompileTimeDepsFrom(ModuleDef *other) {
+            compileTimeDeps = other->compileTimeDeps;
+        }
+
+        /**
          * Adds the other module to this module's slaves.
          */
         void addSlave(ModuleDef *slave);
