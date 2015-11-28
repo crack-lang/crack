@@ -1572,7 +1572,7 @@ namespace {
             // Deserialize optional fields.
             CRACK_PB_BEGIN(deser, 256, optional)
                 CRACK_PB_FIELD(2, ref) {
-                    ModuleDefPtr mod = deser.context->ns;
+                    ModuleDefPtr mod = deser.context->ns->getModule();
                     owner = mod->deserializeSlaveRef( optionalDeser);
                     break;
                 }
