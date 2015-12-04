@@ -44,7 +44,6 @@ private:
     int classInstModuleId;
 
 public:
-    unsigned fieldCount;
     llvm::Type *rep;
     llvm::DIType debugInfo; // debug info (wrapper for MDNode*)
     unsigned nextVTableSlot;
@@ -64,7 +63,6 @@ public:
              unsigned nextVTableSlot = 0
              ) :
         model::TypeDef(metaType, name, pointer),
-        fieldCount(0),
         classInst(0),
         classInstType(0),
         classInstModuleId(-1),
@@ -89,11 +87,6 @@ public:
     void createAllVTables(VTableBuilder &vtb, const std::string &name,
                           bool firstVTable = true
                           );
-
-    /**
-     * Add a base class to the type.
-     */
-    void addBaseClass(BTypeDef *base);
 
     /**
      * register a placeholder instruction to be replaced when the class is

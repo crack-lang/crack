@@ -191,17 +191,14 @@ class ModelBuilder : public builder::Builder {
             result->returnType = returnType;
             result->args = args;
             result->type = getFuncType(context, returnType, args);
+            result->flags = model::FuncDef::forward;
+            result->ns = context.ns;
             return result;
         }
 
         virtual model::TypeDefPtr createClassForward(model::Context &context,
                                                      const std::string &name
-                                                     ) {
-            return new model::TypeDef(context.construct->classType.get(),
-                                      name,
-                                      true
-                                      );
-        }
+                                                     );
 
         virtual model::FuncDefPtr emitBeginFunc(
             model::Context &context,
@@ -278,9 +275,7 @@ class ModelBuilder : public builder::Builder {
             const std::string &name,
             model::Expr *initializer = 0,
             bool staticScope = false
-        ) {
-            return new model::VarDef(type, name);
-        }
+        );
 
         virtual model::VarDefPtr createOffsetField(model::Context &context,
                                                    model::TypeDef *type,
@@ -423,6 +418,7 @@ class ModelBuilder : public builder::Builder {
                                                   int64_t val,
                                                   model::TypeDef *type = 0
                                                   ) {
+            type = type ? type : model::IntConst::selectType(context, val);
             return new model::IntConst(type, val);
         }
 
@@ -430,6 +426,7 @@ class ModelBuilder : public builder::Builder {
                                                    uint64_t val,
                                                    model::TypeDef *type = 0
                                                    ) {
+            type = type ? type : context.construct->uint64Type.get();
             return new model::IntConst(type, val);
         }
 
@@ -437,6 +434,7 @@ class ModelBuilder : public builder::Builder {
                                                     double val,
                                                     model::TypeDef *type = 0
                                                     ) {
+            type = type ? type : context.construct->floatType.get();
             return new model::FloatConst(type, val);
         }
 
@@ -444,9 +442,7 @@ class ModelBuilder : public builder::Builder {
 
         virtual void initialize(model::Context &context) {}
 
-        virtual void *loadSharedLibrary(const std::string &name) {
-            return 0;
-        }
+        virtual void *loadSharedLibrary(const std::string &name);
 
         virtual void importSharedLibrary(const std::string &name,
                                          const model::ImportedDefVec &symbols,
