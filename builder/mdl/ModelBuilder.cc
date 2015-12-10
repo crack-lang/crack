@@ -12,6 +12,7 @@
 #include "spug/stlutil.h"
 #include "spug/Exception.h"
 
+#include "model/BaseMetaClass.h"
 #include "model/InstVarDef.h"
 #include "model/VarDefImpl.h"
 #include "ArrayTypeDef.h"
@@ -179,6 +180,35 @@ TypeDefPtr ModelBuilder::createClassForward(Context &context,
     return result;
 }
 
+FuncDefPtr ModelBuilder::createFuncForward(Context &context,
+                                           FuncDef::Flags flags,
+                                           const string &name,
+                                           TypeDef *returnType,
+                                           const vector<ArgDefPtr> &args,
+                                           FuncDef *override
+                                           ) {
+    FuncDefPtr result = new ModelFuncDef(flags, name, args.size());
+    result->returnType = returnType;
+    result->args = args;
+    result->type = getFuncType(context, returnType, args);
+    if (!(flags & FuncDef::abstract))
+        result->flags = flags | FuncDef::forward;
+    result->ns = context.ns;
+    if (override)
+        result->receiverType = override->receiverType;
+    else if (flags &FuncDef::method)
+        result->receiverType =
+            TypeDefPtr::arcast(context.getClassContext()->ns);
+    return result;
+}
+
+namespace {
+    void addImplToArgs(const vector<ArgDefPtr> &args) {
+        SPUG_FOR(vector<ArgDefPtr>, iter, args)
+            (*iter)->impl = new VarDefImplImpl();
+    }
+}
+
 FuncDefPtr ModelBuilder::emitBeginFunc(
     Context &context,
     FuncDef::Flags flags,
@@ -188,10 +218,20 @@ FuncDefPtr ModelBuilder::emitBeginFunc(
     FuncDef *existing
 ) {
     assert(returnType);
-    if (existing) {
+
+    // TODO: need cleaner ways to express these relationships (e.g. "is
+    // implementation of forward", "is override of ...") built into to the
+    // model objects.
+
+    // If this is a forward definition from the same context, just
+    // un-forward it.
+    if (existing && existing->flags & FuncDef::forward &&
+        existing->getOwner() == context.getParent()->getDefContext()->ns
+        ) {
+        addImplToArgs(existing->args);
         existing->flags = static_cast<FuncDef::Flags>(existing->flags &
-                                                      ~FuncDef::forward
-                                                      );
+                                                    ~FuncDef::forward
+                                                    );
         return existing;
     }
 
@@ -199,6 +239,18 @@ FuncDefPtr ModelBuilder::emitBeginFunc(
     func->args = args;
     func->returnType = returnType;
     func->type = getFuncType(context, returnType, args);
+
+    addImplToArgs(func->args);
+
+    if (existing && existing->flags & FuncDef::virtualized) {
+        func->receiverType = existing->receiverType;
+        func->vtableSlot = existing->vtableSlot;
+    } else if (flags & FuncDef::method) {
+        func->receiverType = TypeDefPtr::arcast(context.getClassContext()->ns);
+        if (flags & FuncDef::virtualized)
+            // TODO: move nextVTableSlot into TypeDef.
+            func->vtableSlot = 0; // func->receiverType->nextVTableSlot++;
+    }
     return func;
 }
 
@@ -208,12 +260,15 @@ model::TypeDefPtr ModelBuilder::emitBeginClass(Context &context,
                                                TypeDef *forwardDef
                                                ) {
     TypeDefPtr result;
-    if (forwardDef)
+    if (forwardDef) {
         result = forwardDef;
-    else
+        result->forward = false;
+    } else {
         result = createClass(context, name);
-    result->parents = bases;
-    result->fieldCount = bases.size();
+    }
+    SPUG_FOR(vector<TypeDefPtr>, iter, bases)
+        result->addBaseClass(iter->get());
+
     context.ns = result;
     return result;
 }
@@ -239,6 +294,32 @@ VarDefPtr ModelBuilder::emitVarDef(
         result->impl = new VarDefImplImpl();
     }
     return result;
+}
+
+ModuleDefPtr ModelBuilder::createModule(Context &context, const string &name,
+                                        const string &path,
+                                        ModuleDef *owner
+                                        ) {
+    ModuleDefPtr result = new ModelModuleDef(name, context.ns.get());
+
+    // Add __CrackBadCast.
+    FuncDefPtr func = new ModelFuncDef(FuncDef::builtin, "__CrackBadCast",
+                                       2
+                                       );
+    func->args[0] = new ArgDef(context.construct->classType.get(), "curType");
+    func->args[1] = new ArgDef(context.construct->classType.get(), "newType");
+    func->returnType = context.construct->voidType;
+    context.addDef(func.get(), result.get());
+
+    return result;
+}
+
+
+void ModelBuilder::closeModule(model::Context &context,
+                               model::ModuleDef *modDef
+                               ) {
+    if (options->dumpMode)
+        cerr << static_cast<Namespace&>(*modDef) << endl;
 }
 
 ModuleDefPtr ModelBuilder::registerPrimFuncs(Context &context) {
@@ -473,6 +554,22 @@ ModuleDefPtr ModelBuilder::registerPrimFuncs(Context &context) {
     CONVERTER(uint32, int64);
     CONVERTER(uint32, float64);
     CONVERTER(float32, float64);
+
+    CONVERTER(byte, int);
+    CONVERTER(byte, uint);
+    CONVERTER(byte, intz);
+    CONVERTER(byte, uintz);
+    CONVERTER(byte, float);
+    CONVERTER(uint16, int);
+    CONVERTER(uint16, uint);
+    CONVERTER(uint16, intz);
+    CONVERTER(uint16, uintz);
+    CONVERTER(uint16, float);
+    CONVERTER(int16, int);
+    CONVERTER(int16, uint);
+    CONVERTER(int16, intz);
+    CONVERTER(int16, uintz);
+    CONVERTER(int16, float);
 
     CONVERTER(int32, int);
     CONVERTER(uint32, uint);
@@ -735,10 +832,15 @@ ModuleDefPtr ModelBuilder::registerPrimFuncs(Context &context) {
         context.createSubContext(Context::instance, vtableBaseType);
     vtableBaseType->createOperClass(*classCtx);
 
-    context.addDef(newVoidPtrOpDef(vtableBaseType).get());
+    context.addDef(newVoidPtrOpDef(gd->voidptrType.get()).get(),
+                   vtableBaseType
+                   );
     vtableBaseType->complete = true;
 
     context.addDef(newUnOpDef(boolType, "oper !", false).get());
+
+    ArrayTypeDef::addArrayMethods(context, byteptrType, byteType);
+    populateBaseMetaClass(context);
 
     return builtins;
 }

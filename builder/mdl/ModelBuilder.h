@@ -153,7 +153,9 @@ class ModelBuilder : public builder::Builder {
                                                      model::Expr *cond,
                                                      bool gotPostLoop
                                                      ) {
-            return new model::Branchpoint();
+            model::BranchpointPtr result = new model::Branchpoint();
+            result->context = &context;
+            return result;
         }
 
         virtual void emitEndWhile(model::Context &context,
@@ -185,16 +187,7 @@ class ModelBuilder : public builder::Builder {
                               model::TypeDef *returnType,
                               const std::vector<model::ArgDefPtr> &args,
                               model::FuncDef *override
-                              ) {
-            model::FuncDefPtr result =
-                new ModelFuncDef(flags, name, args.size());
-            result->returnType = returnType;
-            result->args = args;
-            result->type = getFuncType(context, returnType, args);
-            result->flags = model::FuncDef::forward;
-            result->ns = context.ns;
-            return result;
-        }
+                              );
 
         virtual model::TypeDefPtr createClassForward(model::Context &context,
                                                      const std::string &name
@@ -318,14 +311,11 @@ class ModelBuilder : public builder::Builder {
                                                  const std::string &name,
                                                  const std::string &path,
                                                  model::ModuleDef *owner
-                                                 ) {
-            return new ModelModuleDef(name, context.ns.get());
-        }
+                                                 );
 
         virtual void closeModule(model::Context &context,
                                  model::ModuleDef *modDef
-                                 ) {
-        }
+                                 );
 
         virtual CacheFilePtr getCacheFile(
             model::Context &context,
