@@ -1,0 +1,18 @@
+%%TEST%%
+Aliased nested slave generics
+%%ARGS%%
+%%FILE%%
+import test.testmod_generic G;
+
+class X {}
+
+# Excercises the case of a generic that aliases a slave module in a nested
+# scope.
+class Outer {
+    alias GX = G[X];
+}
+
+puts('ok');
+%%EXPECT%%
+ok
+%%STDIN%%
