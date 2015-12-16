@@ -14,6 +14,7 @@
 
 #include "model/BaseMetaClass.h"
 #include "model/InstVarDef.h"
+#include "model/OverloadDef.h"
 #include "model/VarDefImpl.h"
 #include "ArrayTypeDef.h"
 #include "FunctionTypeDef.h"
@@ -196,7 +197,7 @@ FuncDefPtr ModelBuilder::createFuncForward(Context &context,
     result->ns = context.ns;
     if (override)
         result->receiverType = override->receiverType;
-    else if (flags &FuncDef::method)
+    else if (flags & FuncDef::method)
         result->receiverType =
             TypeDefPtr::arcast(context.getClassContext()->ns);
     return result;
@@ -314,12 +315,86 @@ ModuleDefPtr ModelBuilder::createModule(Context &context, const string &name,
     return result;
 }
 
+namespace {
+
+    void dumpLineMode(Namespace *modDef);
+
+    void dumpDefLM(VarDef *def) {
+        if (OverloadDef *ovld = OverloadDefPtr::cast(def)) {
+            for(OverloadDef::FuncList::iterator fi = ovld->beginTopFuncs();
+                fi != ovld->endTopFuncs();
+                ++fi
+                ) {
+                if ((*fi)->doc.size())
+                    cout << "/**\n" << (*fi)->doc << "\n*/" << endl;
+
+                if ((*fi)->flags & FuncDef::abstract)
+                    cout << "@abstract ";
+                if ( TypeDef *owner = TypeDefPtr::cast((*fi)->getOwner()) ) {
+
+                    if ((*fi)->isStatic())
+                        cout << "@static ";
+                    else if (owner->hasVTable &&
+                        !((*fi)->flags & FuncDef::virtualized)
+                        )
+                        cout << "@final ";
+                }
+
+                cout << (*fi)->returnType->getFullName() << " " <<
+                    (*fi)->name << "(";
+                SPUG_FOR(ArgVec, ai, (*fi)->args)
+                    cout << (*ai)->type->getFullName() << " " <<
+                        (*ai)->name << ", ";
+                cout << ")" << endl;
+            }
+        } else {
+            if (def->doc.size())
+                cout << "/**\n" << def->doc << "\n*/" << endl;
+            if (TypeDef *type = TypeDefPtr::cast(def)) {
+                if (type->abstract)
+                    cout << "@abstract ";
+                cout << "class " << type->name << " : ";
+                SPUG_FOR(TypeDef::TypeVec, ti, type->parents)
+                    cout << (*ti)->getFullName() << ", ";
+                cout << "{" << endl;
+                dumpLineMode(type);
+                cout << "}" << endl;
+            } else {
+                cout << def->type->getFullName() << " " <<
+                    def->name << endl;
+            }
+        }
+
+    }
+
+    void dumpLineMode(Namespace *modDef) {
+        for(Namespace::VarDefMap::iterator di = modDef->beginDefs();
+            di != modDef->endDefs();
+            ++di)
+            dumpDefLM(di->second.get());
+    }
+}
 
 void ModelBuilder::closeModule(model::Context &context,
                                model::ModuleDef *modDef
                                ) {
-    if (options->dumpMode)
-        cerr << static_cast<Namespace&>(*modDef) << endl;
+    if (options->dumpMode && (spug::contains(options->optionMap, "all") ||
+                              modDef->name.find(".main.") == 0
+                              )
+        ) {
+        string mode;
+        BuilderOptions::StringMap::iterator cur =
+            options->optionMap.find("mode");
+        if (cur != options->optionMap.end())
+            mode = cur->second;
+        else
+            mode = "line";
+
+        if (mode == "debug")
+            cerr << static_cast<Namespace&>(*modDef) << endl;
+        else if (mode == "line")
+            dumpLineMode(modDef);
+    }
 }
 
 ModuleDefPtr ModelBuilder::registerPrimFuncs(Context &context) {
