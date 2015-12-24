@@ -502,6 +502,7 @@ BINOPD(AtomicAdd, "+=");
 BINOPD(AtomicSub, "-=");
 UNOP_DEF(AtomicLoad);
 UNOP_DEF(AtomicLoadTrunc);
+UNOP_DEF(AtomicLoadZExt);
 
 // Type Conversion Ops
 UNOP_DEF(SExt);

@@ -1,11 +1,11 @@
 // Copyright 2011-2012 Google Inc.
 // Copyright 2011-2012 Conrad Steenberg <conrad.steenberg@gmail.com>
-// 
+//
 //   This Source Code Form is subject to the terms of the Mozilla Public
 //   License, v. 2.0. If a copy of the MPL was not distributed with this
 //   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-// 
-import crack.lang cmp, free, IndexError, InvalidArgumentError, AssertionError, 
+//
+import crack.lang cmp, free, IndexError, InvalidArgumentError, AssertionError,
        Formatter;
 import crack.math abs, log2;
 import crack.io cout, Writer, FStr, StandardFormatter;
@@ -20,11 +20,11 @@ bool _isNull(Object obj) {
     return (obj is null);
 }
 
-@define _nobind(type) { 
+@define _nobind(type) {
     void _bind(type i) { }
     void _release(type i) { }
     bool _isObject(type i) { return false; }
-    bool _isNull(type i) { return false; } 
+    bool _isNull(type i) { return false; }
 }
 
 @_nobind(byte)
@@ -78,7 +78,7 @@ class NumericVector[Elem] : Array[Elem] {
         }
         return V;
     }
-    
+
     @static
     NumericVector range(uint endVal){
         return range(0, Elem(endVal), 1);
@@ -240,17 +240,17 @@ class NumericVector[Elem] : Array[Elem] {
 class Matrix[Elem] {
     // underlying data
     Array[Elem] data;
-    
+
     // description of our view of the data
     Array[uint] shape;
     uint dims;
     Array[uintz] strides;
     Array[uintz] offsets;
-    
+
     Matrix T; // Transpose
-    
+
     @define initFromArray(ArrayType){
-        oper init(ArrayType[Elem] A): dims=1 
+        oper init(ArrayType[Elem] A): dims=1
         {
             cols := A.count();
             data = Array[Elem](cols);
@@ -266,7 +266,7 @@ class Matrix[Elem] {
 
     @initFromArray(Array)
     @initFromArray(NumericVector)
-    
+
     void _oneDinitWorker(uint cols){
         data = Array[Elem](cols);
 
@@ -281,7 +281,7 @@ class Matrix[Elem] {
     oper init(){
         _oneDinitWorker(16);
     }
-    
+
     oper init(uint cols){
         _oneDinitWorker(cols);
     }
@@ -301,7 +301,7 @@ class Matrix[Elem] {
                     throw AssertionError("All rows must have the same length");
             }
 
-            
+
             data = Array[Elem](cols * rows);
 
             // Copy over data
@@ -323,19 +323,19 @@ class Matrix[Elem] {
 
     @initFromArrayArray(Array)
 
-    // This is a low-level constructor for use when slices, subarrays or 
+    // This is a low-level constructor for use when slices, subarrays or
     // transposes are created
     oper init(Array[Elem] data0, Array[uint] shape0,
               Array[uintz] strides0, Array[uintz] offsets0):
-              data = data0, shape = shape0, 
+              data = data0, shape = shape0,
               strides = strides0, offsets = offsets0 {
 
         dims = shape0.count();
         T = null;
     }
-    
+
     void _createTranspose() {
-        
+
         if (dims == 1) {
             T = this;
             return;
@@ -348,7 +348,7 @@ class Matrix[Elem] {
             T = Matrix(data, newShape, newStrides, newOffsets);
         }
     }
-    
+
     Array[Elem] _copyData(uint newCap){
         newData := Array[Elem](newCap);
 
@@ -370,9 +370,9 @@ class Matrix[Elem] {
                     newData.append(0);
             }
         }
-        
-        return Matrix(newData, Array[uint]![dim, dim], 
-                                     Array[uintz]![1, dim], 
+
+        return Matrix(newData, Array[uint]![dim, dim],
+                                     Array[uintz]![1, dim],
                                      Array[uintz]![0, 0]);
     }
 
@@ -396,7 +396,7 @@ class Matrix[Elem] {
         for (i = 0; i < size; i++)
             data[i] = value;
     }
-    
+
     @static
     Matrix empty(Array[uint] d){
         if (d.count() == 0)
@@ -414,7 +414,7 @@ class Matrix[Elem] {
             newOffsets.append(0);
             cap*=d[i];
         }
-        
+
         newData := Array[Elem](cap);
         return Matrix(newData, newShape, newStrides, newOffsets);
     }
@@ -440,20 +440,20 @@ class Matrix[Elem] {
 
 
     Elem oper [](uint i){
-        if (dims != 1) 
-            throw InvalidArgumentError(FStr() 
+        if (dims != 1)
+            throw InvalidArgumentError(FStr()
                 I`Attempting to access element from $(dims)D array using only \
                   one index`);
         if (i >= size := data.count())
             throw IndexError(FStr() `Index $i out of bounds for size $size \
                                      array`);
         return data[offsets[0] + strides[0] * i];
-        
+
     }
 
     void oper []=(uint i, Elem e) {
-        if (dims != 1) 
-            throw InvalidArgumentError(FStr() 
+        if (dims != 1)
+            throw InvalidArgumentError(FStr()
                 I`Attempting to assign element from $(dims)D array using only \
                   one index`);
         if (i >= size := data.count())
@@ -464,7 +464,7 @@ class Matrix[Elem] {
 
 
     Elem oper [](uint i, uint j){
-        if (dims != 2) 
+        if (dims != 2)
             throw InvalidArgumentError(FStr() I`Attempting to access element \
                                                 from $(dims)D array using 2 \
                                                 indices`
@@ -477,7 +477,7 @@ class Matrix[Elem] {
     }
 
     Elem oper [](uint i, uint j, uint k) {
-        if (dims != 3) 
+        if (dims != 3)
             throw InvalidArgumentError(FStr() I`Attempting to access element \
                                                 from $(dims)D array using 3 \
                                                 indices`
@@ -502,8 +502,8 @@ class Matrix[Elem] {
             oc := peer.shape[0];
             c := shape[0];
             for (uint i = 0; i < c; ++i) {
-                
-                # if I'm longer than other, and we share a common prefix, I'm 
+
+                # if I'm longer than other, and we share a common prefix, I'm
                 # greater.
                 if (i > oc)
                     return 1;
@@ -513,8 +513,8 @@ class Matrix[Elem] {
                 if (elemDiff)
                     return elemDiff;
             }
-            
-            # if other is longer than me, and we share a common prefix, I'm 
+
+            # if other is longer than me, and we share a common prefix, I'm
             # lesser.
             if (oc > c)
                 return -1;
@@ -531,20 +531,20 @@ class Matrix[Elem] {
                 od := peer.shape[0];
                 d := shape[0];
                 for (uint i = 0; i < d; ++i) {
-                    
-                    # if I'm longer than other, and we share a common prefix, 
+
+                    # if I'm longer than other, and we share a common prefix,
                     # I'm greater.
                     if (i > od)
                         return 1;
 
                     # compare the elements
                     # TODO use faster iteration
-                    elemDiff := cmp(this[i, j], peer[i, j]); 
+                    elemDiff := cmp(this[i, j], peer[i, j]);
                     if (elemDiff)
                         return elemDiff;
                 }
-                
-                # if other is longer than me, and we share a common prefix, 
+
+                # if other is longer than me, and we share a common prefix,
                 # I'm lesser.
                 if (od > d)
                     return - 1;
@@ -586,7 +586,7 @@ class Matrix[Elem] {
         if (data.capacity() > index) {
             newData = data.clone();
         } else {
-            # not enough capacity, allocate and copy manually to avoid doing 
+            # not enough capacity, allocate and copy manually to avoid doing
             # multiple allocs.
             newData = Array[Elem](data.capacity() * 2);
             for (int i = 0; i < data.count(); ++i)
@@ -594,8 +594,8 @@ class Matrix[Elem] {
         }
         newData.append(e);
 
-        return Matrix(newData, Array[uint]![shape[0] + 1], 
-                            strides.clone(), 
+        return Matrix(newData, Array[uint]![shape[0] + 1],
+                            strides.clone(),
                             offsets.clone()
                             );
     }
@@ -614,9 +614,9 @@ class Matrix[Elem] {
 
     Matrix flattened() {
         if (dims == 1) return this;
-        
+
         if (dims == 2) {
-            if (shape[1] > 1 && 
+            if (shape[1] > 1 &&
                 (offsets[0] > 0 || offsets[1] > 0 || strides[1] != shape[0]))
 
                 throw AssertionError("2D subarray with this shape and offsets \
@@ -632,10 +632,10 @@ class Matrix[Elem] {
         }
     }
 
-    void _writeLevel(Formatter fmt, Array[uintz] wstrides, Array[uintz] woffsets, 
+    void _writeLevel(Formatter fmt, Array[uintz] wstrides, Array[uintz] woffsets,
                      Array[uint] wshape, uint dim);
 
-    void _writeLevel(Formatter fmt, Array[uintz] wstrides, Array[uintz] woffsets, 
+    void _writeLevel(Formatter fmt, Array[uintz] wstrides, Array[uintz] woffsets,
                      Array[uint] wshape, uint dim) {
         fmt `[`;
         if (dim == 1) {
@@ -648,7 +648,7 @@ class Matrix[Elem] {
                 else
                     first = false;
                 Elem elem = data[offset + stride * i];
-                if (_isNull(elem)) 
+                if (_isNull(elem))
                     fmt `null`;
                 else
                     fmt `$elem`;
@@ -671,7 +671,7 @@ class Matrix[Elem] {
                 noffsets[dim - 2] = noffset;
             }
         }
-        
+
         fmt `]`;
     }
 

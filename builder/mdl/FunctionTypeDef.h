@@ -29,7 +29,8 @@ public:
     // specializations of array types actually create a new type
     // object.
     virtual model::TypeDefPtr getSpecialization(model::Context &context,
-                                                TypeVecObj *types
+                                                TypeVecObj *types,
+                                                bool checkCache
                                                 );
 
 };

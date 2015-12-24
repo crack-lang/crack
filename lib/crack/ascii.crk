@@ -298,6 +298,29 @@ String strip(String text) {
     return text.slice(start, end + 1);
 }
 
+## Strip trailing whitespace.
+String rstrip(String text) {
+    int end;
+
+    if (!text)
+        return '';
+
+    for (end = text.size - 1; end >= 0 && isSpace(text[end]); --end);
+    return text.slice(0, end + 1);
+}
+
+## Strip leading whitespace.
+String lstrip(String text) {
+    int start;
+    for (start = 0; start < text.size && isSpace(text[start]); ++start);
+
+    # if the string is entirely whitespace, return the empty string
+    if (start == text.size)
+        return '';
+
+    return text.slice(start);
+}
+
 String escape(Buffer data, byte min, byte max) {
     AppendBuffer buf = {data.size + 2};
     byte ch;

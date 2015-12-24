@@ -46,16 +46,15 @@ class VarDef : public virtual spug::RCBase {
                                    const std::vector<TypeDefPtr> *localDeps
                                    ) const;
 
-        void serializeExternRef(Serializer &serializer, 
-                                const std::vector<TypeDefPtr> *localDeps
-                                ) const;
-
     public:
         
         TypeDefPtr type;
         std::string name;
         VarDefImplPtr impl;
         bool constant;
+        
+        // The doc-string for the definition.
+        std::string doc;
         
         // This flag is true for private defs that are exposed via an alias.  
         // (It should also be true for private types that are exposed as a 
@@ -209,6 +208,13 @@ class VarDef : public virtual spug::RCBase {
          * Serialize an external definition. "Extern"
          */
         virtual void serializeExtern(Serializer &serializer) const;
+
+        /**
+         * Serializes a reference to an extern.
+         */
+        void serializeExternRef(Serializer &serializer,
+                                const std::vector<TypeDefPtr> *localDeps
+                                ) const;
 
         /**
          * Serialize the definition as an alias. "AliasDef"

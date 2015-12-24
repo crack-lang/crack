@@ -329,7 +329,7 @@ class BSON {
         bdo := BSON(_fromJSONObject(jdo));
         bdo.finish();
         return bdo;
-        
+
     }
 
     // Append API --------------------------------------------------------------
@@ -563,7 +563,7 @@ class BSON {
    void formatTo(Formatter fmt) {
         if (_type == BSON_TYPE_ARRAY) fmt.write("[");
         else fmt.write("{");
-        
+
         cursor := BSONCursor(this);
         first := true;
 
@@ -608,7 +608,7 @@ class BSON {
 class MongoSync {
     mongo_sync_connection _m;
     bool _owner = true;
-    
+
     void _checkConnected() {
         if (_m is null) throw InvalidStateError("Not connected");
     }
@@ -901,28 +901,28 @@ class MongoSync {
     /// Send a query command to MongoDB
     /// ns     database namespace in the form db.collection
     /// flags
-    ///     MONGO_WIRE_FLAG_QUERY_TAILABLE_CURSOR    
+    ///     MONGO_WIRE_FLAG_QUERY_TAILABLE_CURSOR
     ///         Set the TailableCursor flag on the query.
     ///
-    ///      MONGO_WIRE_FLAG_QUERY_SLAVE_OK  
+    ///      MONGO_WIRE_FLAG_QUERY_SLAVE_OK
     ///         Allow queries made against a replica slave.
-    ///   
-    ///      MONGO_WIRE_FLAG_QUERY_NO_CURSOR_TIMEOUT     
+    ///
+    ///      MONGO_WIRE_FLAG_QUERY_NO_CURSOR_TIMEOUT
     ///         Disable cursor timeout.
     ///
-    ///      MONGO_WIRE_FLAG_QUERY_AWAIT_DATA    
+    ///      MONGO_WIRE_FLAG_QUERY_AWAIT_DATA
     ///         Block if at the end of the data block, awaiting data.
     ///         Use only with MONGO_WIRE_FLAG_QUERY_TAILABLE_CURSOR!
     ///
-    ///      MONGO_WIRE_FLAG_QUERY_EXHAUST   
+    ///      MONGO_WIRE_FLAG_QUERY_EXHAUST
     ///         Stream the data down full blast in multiple packages.
     ///         When set, the client is not allowed not to read all the data,
     ///         unless it closes connection.
     ///
-    ///      MONGO_WIRE_FLAG_QUERY_PARTIAL_RESULTS   
+    ///      MONGO_WIRE_FLAG_QUERY_PARTIAL_RESULTS
     ///         Allow partial results in a sharded environment.
     ///         In case one or more required shards are down, with this flag set,
-    ///         partial results will be returned instead of failing. 
+    ///         partial results will be returned instead of failing.
     /// skip   number of results to skip
     /// ret    number of documents to return
     /// query  the bson-formatted query

@@ -35,7 +35,7 @@
  Several members in the gamedev.se forum.
  Gregory Petrosyan
  */
- 
+
 
 import crack.cont.array Array;
 import crack.ascii radix;
@@ -120,7 +120,7 @@ void innerHash(array[uint32] result, array[uint32] w) {
 // SHA1 class implements a Hash
 class SHA1 : Hash {
     ManagedBuffer hash;
-    array[uint32] result = [0x67452301, 0xefcdab89, 0x98badcfe, 0x10325476, 
+    array[uint32] result = [0x67452301, 0xefcdab89, 0x98badcfe, 0x10325476,
                             0xc3d2e1f0];
     array[uint32] w = {80};
     AppendBuffer src = {1024};

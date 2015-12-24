@@ -1,11 +1,11 @@
 // Copyright 2011-2012 Google Inc.
 // Copyright 2011 Shannon Weyrick <weyrick@mozek.us>
 // Copyright 2011-2012 Conrad Steenberg <conrad.steenberg@gmail.com>
-// 
+//
 //   This Source Code Form is subject to the terms of the Mozilla Public
 //   License, v. 2.0. If a copy of the MPL was not distributed with this
 //   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-// 
+//
 # annotation that generates bindings.
 # This currently duplicates the parser logic - rewrite this once the
 # annotation interface supports introspection of compile contexts.
@@ -37,8 +37,8 @@ class AlreadyExists : Exception {
     String __emitName;
     bool initialized;
 
-    oper init(String name, String cname) : 
-        name = name, 
+    oper init(String name, String cname) :
+        name = name,
         cname = cname,
         __emitName = 'type_' + name {
     }
@@ -242,14 +242,14 @@ class TypeImpl : Type {
     uint numDecls;
     uint numEmitted;
 
-    oper init(String name, String cname) : 
-        Type(name, cname), 
+    oper init(String name, String cname) :
+        Type(name, cname),
         members(), methods(),
         numDecls(1), numEmitted(0) {
     }
 
-    oper init(String name, String cname, uint numDecls) : 
-        Type(name, cname), 
+    oper init(String name, String cname, uint numDecls) :
+        Type(name, cname),
         members(), methods(),
         numDecls(numDecls), numEmitted(0) {
     }
@@ -289,7 +289,7 @@ class TypeImpl : Type {
 
         // emit initializer
         if (numDecls == 1 || numEmitted == 1){
-            if (numEmitted == 0) 
+            if (numEmitted == 0)
                 out `\n    crack::ext::Type *$typeVar = mod->addType("$name", sizeof($cname));\n`;
             else {
                 comment := FStr() `\n    // Definition of forward type $name `;
@@ -298,7 +298,7 @@ class TypeImpl : Type {
         }
         else
             out `\n    crack::ext::Type *$typeVar = mod->addForwardType("$name", sizeof($cname));\n`;
-        
+
         if (numDecls == 1 || numEmitted ==1) {
             // emit member variables
             for (member :in members){
@@ -321,14 +321,14 @@ class TypeImpl : Type {
                 } else {
                     out I`
                         f = $typeVar->addMethod(
-                            $(method.retType.emit()), 
+                            $(method.retType.emit()),
                             "$(method.name)",
                             (void *)$(method.cname)
                         );
                     `;
                 }
                 for (arg :in method.args)
-                    out I`    f->addArg($(arg.type.emit()), 
+                    out I`    f->addArg($(arg.type.emit()),
                                        "$(arg.name)"
                                        );
                          `;
@@ -378,7 +378,7 @@ class SpecializedType : TypeImpl {
         generic = generic {
         specializers.append(specializer);
     }
-    
+
     oper init(String name, Type generic, Array[Type] specializers) :
         TypeImpl(name, name, _mangle(name)),
         generic = generic,
@@ -469,7 +469,7 @@ class ArrayType : GenericType {
 `;
         initialized = true;
     }
-    
+
     int getParamCount() { return 1; }
 }
 
@@ -486,7 +486,7 @@ class FunctionType : GenericType {
 `;
         initialized = true;
     }
-    
+
     int getParamCount() { return -1; }
 }
 
@@ -569,16 +569,16 @@ class Errors : StringFormatter {
 class constClassInfo {
     String prefix;
     String sep;
-    
+
     oper init(String prefix0, String sep0): prefix=prefix0, sep=sep0 { }
  }
 
 class boundClassInfo {
     String classname, basemember, prefix, sep, basetype;
-    
-    oper init(String classname0, String basemember0, 
-             String prefix0, String sep0, String basetype0): 
-        classname=classname0, basemember=basemember0, 
+
+    oper init(String classname0, String basemember0,
+             String prefix0, String sep0, String basetype0):
+        classname=classname0, basemember=basemember0,
         prefix=prefix0, sep=sep0, basetype=basetype0 { }
  }
 
@@ -654,7 +654,7 @@ class ExtensionData {
 
             if (!type.isa(GenericType))
                 error(ctx, tok) `$(type.name) is not a generic type`;
-            
+
             generic := GenericType.unsafeCast(type);
             paramCount := generic.getParamCount();
             if (paramCount == -1 && specializers.count() < 1)
@@ -665,7 +665,7 @@ parameter.`;
                      )
                 error(ctx, tok) `$(type.name) requires \
 $(generic.getParamCount()) parameters.`;
-                
+
             type = generic.getSpecialization(types, typeNames, specializers);
         } else {
             ctx.putBack(tok);
@@ -704,7 +704,7 @@ $(generic.getParamCount()) parameters.`;
         _populateIfdefs(OPENBRACE, ifdefTest,  ifdefCond);
 
     }
-    
+
     void _parseLParen(CrackContext ctx) {
         tok := ctx.getToken();
         if (!tok.isLParen())
@@ -846,7 +846,7 @@ $(generic.getParamCount()) parameters.`;
     ## Parse an arbitrary definition and add it to the class.
     ## type: enclosing class
     void _parseDef(CrackContext ctx, TypeImpl type) {
-        
+
         # Check for an "oper" def, which may not be preceeded by a return type.
         tok := ctx.getToken();
         if (tok.isOper()) {
@@ -864,14 +864,14 @@ $(generic.getParamCount()) parameters.`;
         } else {
             ctx.putBack(tok);
         }
-        
+
         # return or object type.
         retType := _parseType(ctx);
-        
+
         ident := ctx.getToken();
         if (!ident.isIdent())
             error(ctx, ident) `Identifier expected in definition, got $ident`;
-        
+
         tok = ctx.getToken();
         if (tok.isLParen()) {
             # it's a function.  parse the rest of it
@@ -900,7 +900,7 @@ $(generic.getParamCount()) parameters.`;
             } catch (AlreadyExists ex) {
                 error(ctx, tok) `$(ex.text)`;
             }
-            
+
             # put back the semicolon.
             ctx.putBack(tok);
         }
@@ -923,7 +923,7 @@ $(generic.getParamCount()) parameters.`;
             if (types.get(className))
                numDecl = 2;
 
-            classType = TypeImpl(className, lastCName ? lastCName : className, 
+            classType = TypeImpl(className, lastCName ? lastCName : className,
                                  numDecl
                                  );
             types[className] = classType;
@@ -938,7 +938,7 @@ class declaration`;
             tok = ctx.getToken();
             Type type;
             while (!tok.isRCurly()) {
-                
+
                 // check for an annotation
                 if (tok.isAnn()) {
                     _parseAnnotation(ctx);
@@ -1180,7 +1180,7 @@ void $(moduleName.join('_'))_cinit(crack::ext::Module *mod) {
     void emitSymbols(Writer out) {
         o := StandardFormatter(out);
         uint i=0, l=0, tNum = 0;
-        
+
         o `// auto-generated by extgen.crk\n// Constants\n`;
         i=0;
         l=0;
@@ -1297,16 +1297,16 @@ void $(moduleName.join('_'))_cinit(crack::ext::Module *mod) {
                 for (func :in funcs) {
                     if (!func.isIfdef() && func.args.count() > 0 &&
                         func.args[0].type.name == boundClass.basetype &&
-                        func.name.size > plen) 
+                        func.name.size > plen)
                     {
-                        StringFormatter cFmt = {}, nFmt = {}; // class-based and normal 
+                        StringFormatter cFmt = {}, nFmt = {}; // class-based and normal
 
                         if (i>0 && i%10==0) o `\n`;
 
                         // return type
                         retTypeRepr := func.retType.name;
                         nFmt `    $retTypeRepr `;
-                        
+
                         bool argBound = false, returnBound = false;
                         bciReturn := boundMap.get(retTypeRepr);
                         if (bciReturn) {
@@ -1380,7 +1380,7 @@ void $(moduleName.join('_'))_cinit(crack::ext::Module *mod) {
                         cFmt `)`;
                         if (bciReturn) cFmt `)`;
                         cFmt `; }\n`;
-                        
+
                         // output strings
                         nLine := nFmt.string();
                         cLine := cFmt.string();

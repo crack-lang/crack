@@ -1,11 +1,11 @@
 # Classes for reading high-level stuff from Readers.
 # Copyright 2011-2012 Google Inc.
 # Copyright 2012 Conrad Steenberg <conrad.steenberg@gmail.com>
-# 
+#
 #   This Source Code Form is subject to the terms of the Mozilla Public
 #   License, v. 2.0. If a copy of the MPL was not distributed with this
 #   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-# 
+#
 
 import crack.lang AppendBuffer, Buffer, ManagedBuffer, WriteBuffer, IndexError;
 import crack.io cout, cerr, FDReader, Reader;
@@ -25,12 +25,12 @@ class LineReader {
     Reader r;
     ManagedBuffer buffer = {1024};
     uint start;
-    
+
     oper init(Reader reader) : r = reader {}
-    
+
     @final String readLine() {
         while (true) {
-            
+
             for (uint i = start; i < buffer.size; ++i) {
                 if (buffer.buffer[i] == NEWLINE) {
                     tmp := Buffer(buffer.buffer + start, i + 1 - start);
@@ -38,25 +38,25 @@ class LineReader {
                     return String(tmp);
                 }
             }
-            
+
             # we didn't find a newline, grow the buffer and read another block
-            
+
             # compact the buffer
             if (start) {
                 buffer.compact(start);
                 start = 0;
             }
-            
+
             # if there's less than 1K of space available, grow the buffer
             if (buffer.size + 1024 > buffer.cap)
                 buffer.grow(buffer.cap + 1024);
-            
+
             # read the next block
-            amtRead := 
+            amtRead :=
                 r.read(WriteBuffer(buffer.buffer + buffer.size, 0, 1024));
             buffer.size += amtRead;
-            
-            # if we are at the end of the file, either return the remaining 
+
+            # if we are at the end of the file, either return the remaining
             # chunk or a null pointer if there is no remaining chunk
             if (!amtRead)
                 if (start == buffer.size) {
@@ -70,18 +70,18 @@ class LineReader {
                     return result;
                 }
         }
-        
+
         // should never get here
         return null;
     }
-    
+
     LineIter iter() { return _createLineIter(this); }
 }
 
 class LineIter {
     LineReader reader;
     String line;
-    
+
     oper init(LineReader reader) : reader = reader, line = reader.readLine() {}
     bool isTrue() { return !(line is null); }
     @final String elem() { return line; }
@@ -92,36 +92,36 @@ LineIter _createLineIter(LineReader reader) {
     return LineIter(reader);
 }
 
-## A FullReader is a Reader that supports line reads, and complete reads of 
+## A FullReader is a Reader that supports line reads, and complete reads of
 ## its underlying reader.
 class FullReader : LineReader @implements Reader {
-    
+
     oper init(Reader reader) : LineReader(reader) {}
 
-    ## Read the entire remaining contents of the underlying reader and return 
+    ## Read the entire remaining contents of the underlying reader and return
     ## it as a string.
     @final String readAll() {
         # start with the current contents of the buffer
         AppendBuffer result = {buffer.size - start};
         result.extend(buffer.buffer + start, buffer.size - start);
-        
+
         # reset the buffer
         start = 0;
         buffer.size = 0;
-        
+
         # use a temporary write buffer so we read in chunks
         buf := WriteBuffer(buffer.buffer, 1024);
-        
+
         # read in the remainder of the file
         amtRead := r.read(buf);
         while (amtRead) {
             result.extend(buf);
             amtRead = r.read(buf);
         }
-        
+
         return String(result, true);
     }
-    
+
     uint read(WriteBuffer buf) {
         return r.read(buf);
     }
@@ -146,7 +146,7 @@ class PageBufferReader : PageBuffer {
 
     @final void _readTo(uint i){
         uint bi = i/_pageSize; // Buffer index
-        
+
         if (_pages>0 && bi == _currentPage) // Already there
             return;
         else if (bi <= _currentPage && _pages > 0){
@@ -206,7 +206,7 @@ class PageBufferReader : PageBuffer {
     uint vacuum(uint i) {
         uint j = 0;
         for (uint bi = min(i / _pageSize, _pages);
-             bi > 0 && _pageMap.hasKey(bi-1); 
+             bi > 0 && _pageMap.hasKey(bi-1);
              bi--
              ) {
             _pageMap.delete(bi - 1);

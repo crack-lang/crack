@@ -36,6 +36,7 @@ SPUG_RCPTR(Branchpoint);
 SPUG_RCPTR(BuilderContextData);
 SPUG_RCPTR(CleanupFrame);
 SPUG_RCPTR(Expr);
+class GenericModuleInfo;
 SPUG_RCPTR(ModuleDef);
 SPUG_RCPTR(Namespace);
 SPUG_RCPTR(OverloadDef);
@@ -230,9 +231,12 @@ class Context : public spug::RCBase {
         /**
          * Try to load the module from the cache, return true if the module 
          * exists in the cache and is up to date.
+         * @param canonicalName The canonical name of the module.
+         * @param genModInfo Generic module info.  If this is not null It gets
+         *  populated with information obtained from the header.
          */
         ModuleDefPtr materializeModule(const std::string &canonicalName,
-                                       ModuleDef *owner = 0
+                                       GenericModuleInfo *genModInfo = 0
                                        );
 
         /**

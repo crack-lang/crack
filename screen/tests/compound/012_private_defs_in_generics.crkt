@@ -71,11 +71,9 @@ err: Moving cached file from .*/mod2.crkmeta..* to .*/mod2.crkmeta
 err: digests don't match for mod2.crk got .*
 err:   current = .*
 err:   module: mod2.A\[.builtin.int\]
-err: Source for mod2.A\[.builtin.int\] not found.  Not compiling it at this time.
-err: digests don't match for mod2.crk got .*
-err:   current = .*
-err:   module: mod2.A\[.builtin.int\]
+err: Trying to recompile mod2.A\[.builtin.int\] from its origin module.
 err: Moving cached file from .*/mod2.A\[.builtin.int\].crkmeta..* to .*/mod2.A\[.builtin.int\].crkmeta
+err:   Rebuilt mod2.A\[.builtin.int\]
 err: Reusing cached script .*/main.crk
 err: ok
 terminated: success

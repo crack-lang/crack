@@ -28,6 +28,7 @@ namespace model {
 
 SPUG_RCPTR(Context);
 class Deserializer;
+class GenericModuleInfo;
 class Serializer;
 
 SPUG_RCPTR(ModuleDef);
@@ -50,6 +51,9 @@ class ModuleDef : public VarDef, public Namespace {
         // Slave modules.  These are all of the modules that we are the 
         // "master" of (see getMaster()).
         Vec slaves;
+
+        // Compile time dependencies.
+        ModuleDefMap compileTimeDeps;
     
     protected:
         
@@ -59,6 +63,17 @@ class ModuleDef : public VarDef, public Namespace {
                                        ModuleDef *master
                                        );
     
+        // Serialize the module as a compile-time dependency.
+        void serializeAsCTDep(Serializer &serializer) const;
+
+        // Deserialize a compile-time dependency.
+        // @param info This is a pair of the header digest (in hex) of the
+        //     dependency module and the canonical name of the module for
+        //     purposes of error reporting.  The module itself is not needed
+        //     during evaluation of a compile-time dependency.
+        static bool deserializeCTDep(Deserializer &deser,
+                                     std::pair<std::string, ModuleDefPtr> &info
+                                     );
     public:
         typedef std::vector<std::string> StringVec;
 
@@ -86,12 +101,24 @@ class ModuleDef : public VarDef, public Namespace {
         // path to original source code on disk
         std::string sourcePath;
         
-        // MD5 digests of the source file the module was built from and the 
-        // meta-data.
-        crack::util::SourceDigest sourceDigest, metaDigest;
+        // MD5 digests of the source file the module was built from, the
+        // meta-data and the module cache-file header.
+        crack::util::SourceDigest sourceDigest, metaDigest, headerDigest;
         
         // true if the module should be persisted in the cache when closed.
         bool cacheable;
+
+        // If the module is a generic instantiation, this is the path to the
+        // generic type definition within the module that defines it.
+        std::vector<std::string> genericName;
+
+        // If the module is a generic instantiation, these are the parameters
+        // of the generic.
+        std::vector<TypeDefPtr> genericParams;
+
+        // If the module is a generic instantiation, this is the canonical
+        // name of the module.
+        std::string genericModule;
 
         ModuleDef(const std::string &name, Namespace *parent);
         ~ModuleDef();
@@ -153,6 +180,23 @@ class ModuleDef : public VarDef, public Namespace {
         void addDependency(ModuleDef *other);
         
         /**
+         * Add a compile time dependency on the other module.  Compile time
+         * dependencies are used for annotations.  They are different from
+         * normal dependencies.  With normal dependencies, we only need to
+         * rebuild if the dependency's interface changes.  With compile time
+         * dependencies, we must rebuild if anything about the module changes.
+         */
+        void addCompileTimeDependency(ModuleDef *other);
+
+        /**
+         * Copies compile time dependencies from another module.  This is used
+         * for generic instantiation modules.
+         */
+        void copyCompileTimeDepsFrom(ModuleDef *other) {
+            compileTimeDeps = other->compileTimeDeps;
+        }
+
+        /**
          * Adds the other module to this module's slaves.
          */
         void addSlave(ModuleDef *slave);
@@ -191,7 +235,8 @@ class ModuleDef : public VarDef, public Namespace {
          * Deserialize the remainder of the module meta-data.
          */        
         static ModuleDefPtr deserialize(Deserializer &deserializer,
-                                        const std::string &canonicalName
+                                        const std::string &canonicalName,
+                                        GenericModuleInfo *genModInfo = 0
                                         );
 
         /**

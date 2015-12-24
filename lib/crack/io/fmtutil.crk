@@ -50,19 +50,25 @@ class Indenter : StandardFormatter {
         while (start + pos < data.size) {
             # Write indentation if we're currently at the beginning of a line
             # (and not at the end of the next line).
-            if (__state.bol && data[pos] != b'\n') {
+            if (__state.bol && data[start + pos] != b'\n') {
                 rep.write(String(__state.indentAmount * __state.level, b' '));
                 __state.bol = false;
             }
 
             # Write out through the next newline in the buffer.
-            for (; pos < data.size; ++pos) {
-                if (data[pos] == b'\n') {
+            for (; start + pos < data.size; ++pos) {
+                if (data[start + pos] == b'\n') {
                     rep.write(Buffer(data.buffer + start, ++pos));
                     __state.bol = true;
                     break;
                 }
             }
+
+            # If we escaped that loop without encountering a newline, write
+            # the rest of the buffer.
+            if (!__state.bol)
+                rep.write(Buffer(data.buffer + start, pos));
+
             start += pos;
             pos = 0;
         }

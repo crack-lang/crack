@@ -7,8 +7,15 @@
 
 #include "ModelBuilder.h"
 
-#include "spug/stlutil.h"
+#include <dlfcn.h>
 
+#include "spug/stlutil.h"
+#include "spug/Exception.h"
+
+#include "model/BaseMetaClass.h"
+#include "model/InstVarDef.h"
+#include "model/OverloadDef.h"
+#include "model/VarDefImpl.h"
 #include "ArrayTypeDef.h"
 #include "FunctionTypeDef.h"
 #include "ModelFuncDef.h"
@@ -18,53 +25,6 @@ using namespace model;
 using namespace builder::mdl;
 using namespace std;
 using namespace util;
-
-model::TypeDefPtr ModelBuilder::getFuncType(
-    Context &context,
-    TypeDef *returnType,
-    const vector<ArgDefPtr> &args
-) {
-    TypeDef::TypeVecObjPtr paramTypes = new TypeDef::TypeVecObj();
-    paramTypes->push_back(returnType);
-    SPUG_FOR(vector<ArgDefPtr>, arg, args)
-        paramTypes->push_back((*arg)->type.get());
-    return context.construct->functionType->getSpecialization(context,
-                                                              paramTypes.get()
-                                                              );
-}
-
-FuncDefPtr ModelBuilder::emitBeginFunc(
-    Context &context,
-    FuncDef::Flags flags,
-    const string &name,
-    TypeDef *returnType,
-    const vector<ArgDefPtr> &args,
-    FuncDef *existing
-) {
-    if (existing)
-        return existing;
-
-    model::FuncDefPtr func = new ModelFuncDef(flags, name, args.size());
-    func->args = args;
-    func->returnType = returnType;
-    func->type = getFuncType(context, returnType, args);
-    return func;
-}
-
-model::TypeDefPtr ModelBuilder::emitBeginClass(Context &context,
-                                               const string &name,
-                                               const vector<TypeDefPtr> &bases,
-                                               TypeDef *forwardDef
-                                               ) {
-    TypeDefPtr result;
-    if (forwardDef)
-        result = forwardDef;
-    else
-        result = new TypeDef(context.construct->classType.get(), name, true);
-    result->parents = bases;
-    context.ns = result;
-    return result;
-}
 
 namespace {
     struct PrimTypeBuilder {
@@ -101,14 +61,340 @@ namespace {
             return result;
         }
 
+        TypeDefPtr makeNumericType(const string &name,
+                                   ExprPtr (*makeInitializer)(TypeDef *type)
+                                   ) {
+            TypeDefPtr result = makeType(name, makeInitializer);
+            context.addDef(newUnOpDef(context.construct->boolType.get(),
+                                      "oper to .builtin.bool",
+                                      true
+                                      ).get(),
+                           result.get()
+                           );
+            return result;
+        }
+
         TypeDefPtr makeIntType(const string &name) {
-            return makeType(name, makeIntInitializer);
+            return makeNumericType(name, makeIntInitializer);
         }
 
         TypeDefPtr makeFloatType(const string &name) {
-            return makeType(name, makeFloatInitializer);
+            return makeNumericType(name, makeFloatInitializer);
         }
     };
+
+    TypeDefPtr createMetaClass(Context &context, const string &name) {
+        TypeDef *classType = context.construct->classType.get();
+        TypeDefPtr metaType = new TypeDef(classType, name + ":meta", true);
+        metaType->addBaseClass(classType);
+        metaType->defaultInitializer = new NullConst(metaType.get());
+        metaType->complete = true;
+        context.parent->getDefContext()->addDef(metaType.get());
+        return metaType;
+    }
+
+    // Creates a class for a pointer type.  'context' is the context of the
+    // new class.
+    TypeDefPtr createClass(Context &context, const string &name) {
+        TypeDefPtr metaClass = createMetaClass(context, name);
+        TypeDefPtr type = new TypeDef(metaClass.get(), name, true);
+        metaClass->meta = type.get();
+
+        FuncDefPtr unsafeCast =
+            newFuncDef(type.get(), FuncDef::noFlags, "unsafeCast", 1);
+        unsafeCast->args[0] = new ArgDef(context.construct->voidptrType.get(),
+                                         "val"
+                                         );
+        context.addDef(unsafeCast.get(), metaClass.get());
+        context.addDef(
+            newVoidPtrOpDef(context.construct->voidptrType.get()).get(),
+            type.get()
+        );
+        type->defaultInitializer = new NullConst(type.get());
+        return type;
+    }
+
+    class ResultExprImpl : public ResultExpr {
+        public:
+            ResultExprImpl(Expr *sourceExpr) : ResultExpr(sourceExpr) {}
+            ResultExprPtr emit(Context &context) {
+                return this;
+            }
+    };
+
+    class VarDefImplImpl : public VarDefImpl {
+        private:
+            int instSlot;
+            VarDef *owner;
+        public:
+
+            VarDefImplImpl() : instSlot(-1) {}
+            VarDefImplImpl(int instSlot) : instSlot(instSlot) {}
+
+            virtual ResultExprPtr emitRef(Context &context, VarRef *var) {
+                return new ResultExprImpl(var);
+            }
+
+            virtual ResultExprPtr emitAssignment(Context &context,
+                                                AssignExpr *assign
+                                                ) {
+                return new ResultExprImpl(assign);
+            }
+
+            virtual void emitAddr(Context &context, VarRef *var) {
+            }
+
+            virtual bool hasInstSlot() const {
+                return instSlot != -1;
+            }
+
+            virtual int getInstSlot() const {
+                return instSlot;
+            }
+
+            virtual bool isInstVar() const {
+                return hasInstSlot();
+            }
+
+    };
+}
+
+model::TypeDefPtr ModelBuilder::getFuncType(
+    Context &context,
+    TypeDef *returnType,
+    const vector<ArgDefPtr> &args
+) {
+    TypeDef::TypeVecObjPtr paramTypes = new TypeDef::TypeVecObj();
+    paramTypes->push_back(returnType);
+    SPUG_FOR(vector<ArgDefPtr>, arg, args)
+        paramTypes->push_back((*arg)->type.get());
+    return context.construct->functionType->getSpecialization(context,
+                                                              paramTypes.get()
+                                                              );
+}
+
+TypeDefPtr ModelBuilder::createClassForward(Context &context,
+                                            const string &name
+                                            ) {
+    model::TypeDefPtr result = createClass(context, name);
+    result->forward = true;
+    return result;
+}
+
+FuncDefPtr ModelBuilder::createFuncForward(Context &context,
+                                           FuncDef::Flags flags,
+                                           const string &name,
+                                           TypeDef *returnType,
+                                           const vector<ArgDefPtr> &args,
+                                           FuncDef *override
+                                           ) {
+    FuncDefPtr result = new ModelFuncDef(flags, name, args.size());
+    result->returnType = returnType;
+    result->args = args;
+    result->type = getFuncType(context, returnType, args);
+    if (!(flags & FuncDef::abstract))
+        result->flags = flags | FuncDef::forward;
+    result->ns = context.ns;
+    if (override)
+        result->receiverType = override->receiverType;
+    else if (flags & FuncDef::method)
+        result->receiverType =
+            TypeDefPtr::arcast(context.getClassContext()->ns);
+    return result;
+}
+
+namespace {
+    void addImplToArgs(const vector<ArgDefPtr> &args) {
+        SPUG_FOR(vector<ArgDefPtr>, iter, args)
+            (*iter)->impl = new VarDefImplImpl();
+    }
+}
+
+FuncDefPtr ModelBuilder::emitBeginFunc(
+    Context &context,
+    FuncDef::Flags flags,
+    const string &name,
+    TypeDef *returnType,
+    const vector<ArgDefPtr> &args,
+    FuncDef *existing
+) {
+    assert(returnType);
+
+    // TODO: need cleaner ways to express these relationships (e.g. "is
+    // implementation of forward", "is override of ...") built into to the
+    // model objects.
+
+    // If this is a forward definition from the same context, just
+    // un-forward it.
+    if (existing && existing->flags & FuncDef::forward &&
+        existing->getOwner() == context.getParent()->getDefContext()->ns
+        ) {
+        addImplToArgs(existing->args);
+        existing->flags = static_cast<FuncDef::Flags>(existing->flags &
+                                                    ~FuncDef::forward
+                                                    );
+        return existing;
+    }
+
+    model::FuncDefPtr func = new ModelFuncDef(flags, name, args.size());
+    func->args = args;
+    func->returnType = returnType;
+    func->type = getFuncType(context, returnType, args);
+
+    addImplToArgs(func->args);
+
+    if (existing && existing->flags & FuncDef::virtualized) {
+        func->receiverType = existing->receiverType;
+        func->vtableSlot = existing->vtableSlot;
+    } else if (flags & FuncDef::method) {
+        func->receiverType = TypeDefPtr::arcast(context.getClassContext()->ns);
+        if (flags & FuncDef::virtualized)
+            // TODO: move nextVTableSlot into TypeDef.
+            func->vtableSlot = 0; // func->receiverType->nextVTableSlot++;
+    }
+    return func;
+}
+
+model::TypeDefPtr ModelBuilder::emitBeginClass(Context &context,
+                                               const string &name,
+                                               const vector<TypeDefPtr> &bases,
+                                               TypeDef *forwardDef
+                                               ) {
+    TypeDefPtr result;
+    if (forwardDef) {
+        result = forwardDef;
+        result->forward = false;
+    } else {
+        result = createClass(context, name);
+    }
+    SPUG_FOR(vector<TypeDefPtr>, iter, bases)
+        result->addBaseClass(iter->get());
+
+    context.ns = result;
+    return result;
+}
+
+VarDefPtr ModelBuilder::emitVarDef(
+    Context &container,
+    TypeDef *type,
+    const string &name,
+    Expr *initializer,
+    bool staticScope
+) {
+    VarDefPtr result;
+    ContextPtr defCtx = container.getDefContext();
+    if (defCtx->scope == Context::instance) {
+        TypeDef *ownerType = TypeDefPtr::arcast(defCtx->ns);
+        result =  new InstVarDef(type, name,
+                                 initializer ? initializer :
+                                               type->defaultInitializer.get()
+                                 );
+        result->impl = new VarDefImplImpl(ownerType->fieldCount++);
+    } else {
+        result = new VarDef(type, name);
+        result->impl = new VarDefImplImpl();
+    }
+    return result;
+}
+
+ModuleDefPtr ModelBuilder::createModule(Context &context, const string &name,
+                                        const string &path,
+                                        ModuleDef *owner
+                                        ) {
+    ModuleDefPtr result = new ModelModuleDef(name, context.ns.get());
+
+    // Add __CrackBadCast.
+    FuncDefPtr func = new ModelFuncDef(FuncDef::builtin, "__CrackBadCast",
+                                       2
+                                       );
+    func->args[0] = new ArgDef(context.construct->classType.get(), "curType");
+    func->args[1] = new ArgDef(context.construct->classType.get(), "newType");
+    func->returnType = context.construct->voidType;
+    context.addDef(func.get(), result.get());
+
+    return result;
+}
+
+namespace {
+
+    void dumpLineMode(Namespace *modDef);
+
+    void dumpDefLM(VarDef *def) {
+        if (OverloadDef *ovld = OverloadDefPtr::cast(def)) {
+            for(OverloadDef::FuncList::iterator fi = ovld->beginTopFuncs();
+                fi != ovld->endTopFuncs();
+                ++fi
+                ) {
+                if ((*fi)->doc.size())
+                    cout << "/**\n" << (*fi)->doc << "\n*/" << endl;
+
+                if ((*fi)->flags & FuncDef::abstract)
+                    cout << "@abstract ";
+                if ( TypeDef *owner = TypeDefPtr::cast((*fi)->getOwner()) ) {
+
+                    if ((*fi)->isStatic())
+                        cout << "@static ";
+                    else if (owner->hasVTable &&
+                        !((*fi)->flags & FuncDef::virtualized)
+                        )
+                        cout << "@final ";
+                }
+
+                cout << (*fi)->returnType->getFullName() << " " <<
+                    (*fi)->name << "(";
+                SPUG_FOR(ArgVec, ai, (*fi)->args)
+                    cout << (*ai)->type->getFullName() << " " <<
+                        (*ai)->name << ", ";
+                cout << ")" << endl;
+            }
+        } else {
+            if (def->doc.size())
+                cout << "/**\n" << def->doc << "\n*/" << endl;
+            if (TypeDef *type = TypeDefPtr::cast(def)) {
+                if (type->abstract)
+                    cout << "@abstract ";
+                cout << "class " << type->name << " : ";
+                SPUG_FOR(TypeDef::TypeVec, ti, type->parents)
+                    cout << (*ti)->getFullName() << ", ";
+                cout << "{" << endl;
+                dumpLineMode(type);
+                cout << "}" << endl;
+            } else {
+                cout << def->type->getFullName() << " " <<
+                    def->name << endl;
+            }
+        }
+
+    }
+
+    void dumpLineMode(Namespace *modDef) {
+        for(Namespace::VarDefMap::iterator di = modDef->beginDefs();
+            di != modDef->endDefs();
+            ++di)
+            dumpDefLM(di->second.get());
+    }
+}
+
+void ModelBuilder::closeModule(model::Context &context,
+                               model::ModuleDef *modDef
+                               ) {
+    if (options->dumpMode && (spug::contains(options->optionMap, "all") ||
+                              modDef->name.find(".main.") == 0
+                              )
+        ) {
+        string mode;
+        BuilderOptions::StringMap::iterator cur =
+            options->optionMap.find("mode");
+        if (cur != options->optionMap.end())
+            mode = cur->second;
+        else
+            mode = "line";
+
+        if (mode == "debug")
+            cerr << static_cast<Namespace&>(*modDef) << endl;
+        else if (mode == "line")
+            dumpLineMode(modDef);
+    }
 }
 
 ModuleDefPtr ModelBuilder::registerPrimFuncs(Context &context) {
@@ -141,7 +427,11 @@ ModuleDefPtr ModelBuilder::registerPrimFuncs(Context &context) {
     context.addDef(newVoidPtrOpDef(type.get()).get(), type.get());
 
     // UNTs
-    TypeDef *boolType = (gd->boolType = typeBuilder.makeIntType("bool")).get();
+    TypeDef *boolType =
+        (gd->boolType = typeBuilder.makeType(
+            "bool",
+            PrimTypeBuilder::makeIntInitializer
+        )).get();
     TypeDef *byteType =
         (gd->byteType = typeBuilder.makeIntType("byte")).get();
     TypeDef *int16Type =
@@ -247,11 +537,11 @@ ModuleDefPtr ModelBuilder::registerPrimFuncs(Context &context) {
                    type);                                                     \
     context.addDef(newBinOpDef("oper <=", type, boolType, true, true).get(),  \
                    type);                                                     \
-    context.addDef(newBinOpDef("oper |", type, 0, true, true).get(), type);   \
-    context.addDef(newBinOpDef("oper &", type, 0, true, true).get(), type);   \
-    context.addDef(newBinOpDef("oper ^", type, 0, true, true).get(), type);   \
-    context.addDef(newBinOpDef("oper <<", type, 0, true, true).get(), type);  \
-    context.addDef(newBinOpDef("oper >>", type, 0, true, true).get(), type);
+    context.addDef(newBinOpDef("oper |", type, type, true, true).get(), type);\
+    context.addDef(newBinOpDef("oper &", type, type, true, true).get(), type);\
+    context.addDef(newBinOpDef("oper ^", type, type, true, true).get(), type);\
+    context.addDef(newBinOpDef("oper <<", type, type, true, true).get(), type);\
+    context.addDef(newBinOpDef("oper >>", type, type, true, true).get(), type);
 
 // reverse floating point operations
 #define REVFLOPS(type) \
@@ -339,6 +629,22 @@ ModuleDefPtr ModelBuilder::registerPrimFuncs(Context &context) {
     CONVERTER(uint32, int64);
     CONVERTER(uint32, float64);
     CONVERTER(float32, float64);
+
+    CONVERTER(byte, int);
+    CONVERTER(byte, uint);
+    CONVERTER(byte, intz);
+    CONVERTER(byte, uintz);
+    CONVERTER(byte, float);
+    CONVERTER(uint16, int);
+    CONVERTER(uint16, uint);
+    CONVERTER(uint16, intz);
+    CONVERTER(uint16, uintz);
+    CONVERTER(uint16, float);
+    CONVERTER(int16, int);
+    CONVERTER(int16, uint);
+    CONVERTER(int16, intz);
+    CONVERTER(int16, uintz);
+    CONVERTER(int16, float);
 
     CONVERTER(int32, int);
     CONVERTER(uint32, uint);
@@ -570,6 +876,53 @@ ModuleDefPtr ModelBuilder::registerPrimFuncs(Context &context) {
     context.addDef(functionType.get());
     typeBuilder.deferMetaClass.push_back(functionType.get());
 
+    context.addDef(newBinOpDef("oper is", gd->voidptrType.get(),
+                               boolType).get()
+                   );
+    context.addDef(newBinOpDef("oper is", byteptrType, boolType).get());
+    context.addDef(newBinOpDef("oper is", classType, boolType).get());
+
+    // Create OverloadDef.
+    TypeDefPtr metaType = createMetaClass(context, "Overload");
+    TypeDefPtr overloadDef = new TypeDef(metaType.get(), "Overload", false);
+    metaType->meta = overloadDef.get();
+
+    context.addDef(
+        newVoidPtrOpDef(gd->voidptrType.get()).get(),
+        overloadDef.get()
+    );
+    context.addDef(overloadDef.get());
+
+    // Create VTableBase.
+    metaType = createMetaClass(context, "VTableBase");
+    TypeDef *vtableBaseType;
+    gd->vtableBaseType = vtableBaseType =
+        new TypeDef(metaType.get(), "VTableBase", true);
+    vtableBaseType->hasVTable = true;
+    vtableBaseType->defaultInitializer = new NullConst(vtableBaseType);
+    metaType->meta = vtableBaseType;
+    context.addDef(vtableBaseType);
+    context.construct->registerDef(vtableBaseType);
+    ContextPtr classCtx =
+        context.createSubContext(Context::instance, vtableBaseType);
+    vtableBaseType->createOperClass(*classCtx);
+
+    context.addDef(newVoidPtrOpDef(gd->voidptrType.get()).get(),
+                   vtableBaseType
+                   );
+    vtableBaseType->complete = true;
+
+    context.addDef(newUnOpDef(boolType, "oper !", false).get());
+
+    ArrayTypeDef::addArrayMethods(context, byteptrType, byteType);
+    populateBaseMetaClass(context);
+
     return builtins;
 }
 
+void *ModelBuilder::loadSharedLibrary(const std::string &name) {
+    void *handle = dlopen(name.c_str(), RTLD_LAZY|RTLD_GLOBAL);
+    if (!handle)
+        throw spug::Exception(dlerror());
+    return handle;
+}

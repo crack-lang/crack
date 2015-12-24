@@ -22,6 +22,7 @@
 #include "ArgDef.h"
 #include "Branchpoint.h"
 #include "Context.h"
+#include "DummyModuleDef.h"
 #include "FuncDef.h"
 #include "Generic.h"
 #include "GlobalNamespace.h"
@@ -132,6 +133,13 @@ NamespacePtr TypeDef::getParent(unsigned i) {
         return parents[i];
     else
         return 0;
+}
+
+void TypeDef::addBaseClass(TypeDef *base) {
+    ++fieldCount;
+    parents.push_back(base);
+    if (base->hasVTable)
+        hasVTable = true;
 }
 
 NamespacePtr TypeDef::getNamespaceOwner() {
@@ -1035,20 +1043,9 @@ void instantiateGeneric(TypeDef *type, Context &context, Context &localCtx,
     localCtx.popErrorContext();
 }
 
-namespace {
-    class DummyModuleDef : public ModuleDef {
-        public:
-            DummyModuleDef(const string &name, Namespace *ns) :
-                ModuleDef(name, ns) {
-            }
-            virtual void callDestructor() {}
-            virtual void runMain(builder::Builder &builder) {}
-            virtual bool isHiddenScope() { return true; }
-    };
-}
-
 TypeDefPtr TypeDef::getSpecialization(Context &context, 
-                                      TypeDef::TypeVecObj *types
+                                      TypeDef::TypeVecObj *types,
+                                      bool checkCache
                                       ) {
     assert(genericInfo);
 
@@ -1087,7 +1084,7 @@ TypeDefPtr TypeDef::getSpecialization(Context &context,
     // modules: if there is an existing copy in the cache, we can't depend on 
     // it because it's from a non-copersistent version.
     ModuleDefPtr module;
-    if (!copersistent)
+    if (checkCache && !copersistent)
         module = context.construct->getCachedModule(moduleName);
 
     if (!module) {
@@ -1169,9 +1166,47 @@ TypeDefPtr TypeDef::getSpecialization(Context &context,
                                                          0
                                           );
         
-        // Add the modules of the parameter types as dependents.
-        SPUG_FOR(TypeVecObj, typeIter, *types)
+        // Add the path to the generic's variable to the module.
+        {
+            string sourceModFullName = getModule()->getFullName();
+            string typeFullName = getFullName();
+            SPUG_CHECK(typeFullName.substr(0, sourceModFullName.size() + 1) ==
+                       sourceModFullName + ".",
+                       SPUG_FSTR("Type " << typeFullName <<
+                                 " is not qualified by its module " <<
+                                 sourceModFullName
+                                 )
+                       );
+            typeFullName = typeFullName.substr(sourceModFullName.size() + 1);
+
+            int startOfLastWord = 0;
+            for (int i = 0; i < typeFullName.size(); ++i) {
+                if (typeFullName[i] == '.') {
+                    module->genericName.push_back(
+                        typeFullName.substr(startOfLastWord, i)
+                    );
+                    startOfLastWord = i + 1;
+                }
+            }
+
+            // Add the last part of the name.
+            module->genericName.push_back(
+                typeFullName.substr(startOfLastWord)
+            );
+
+            module->genericModule = sourceModFullName;
+        }
+
+        // The type module's compile-time dependencies are its
+        // specialization's compile-time dependencies.
+        module->copyCompileTimeDepsFrom(getModule().get());
+
+        // Add the modules of the parameter types as dependents and also add
+        // them to the generic params for the module.
+        SPUG_FOR(TypeVecObj, typeIter, *types) {
             module->addDependency((*typeIter)->getModule().get());
+            module->genericParams.push_back(*typeIter);
+        }
         
         // XXX this is confusing: there's a "owner" that's part of some kinds of 
         // ModuleDef that's different from VarDef::owner - we set VarDef::owner 
@@ -1200,6 +1235,7 @@ TypeDefPtr TypeDef::getSpecialization(Context &context,
 
         module->cacheable = true;    
         module->close(*modContext);
+        module->finished = true;
 
         // store the module in the in-memory cache
         context.construct->registerModule(module.get());
@@ -1543,7 +1579,7 @@ namespace {
             // Deserialize optional fields.
             CRACK_PB_BEGIN(deser, 256, optional)
                 CRACK_PB_FIELD(2, ref) {
-                    ModuleDefPtr mod = deser.context->ns;
+                    ModuleDefPtr mod = deser.context->ns->getModule();
                     owner = mod->deserializeSlaveRef( optionalDeser);
                     break;
                 }

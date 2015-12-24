@@ -3,8 +3,8 @@ ascii module
 %%ARGS%%
 %%FILE%%
 import crack.io cout;
-import crack.ascii radix, strip, parseInt, toUpper, toLower, isSpace, isDigit,
-    fract10;
+import crack.ascii lstrip, radix, rstrip, strip, parseInt, toUpper, toLower,
+    isSpace, isDigit, fract10;
 
 if (radix(0, 10) != '0')
     cout `FAILED radix(0)\n`;
@@ -21,14 +21,38 @@ if (strip('  this is a test  \r\n') != 'this is a test')
 if (strip('  \t\n  \r') != '')
     cout `FAILED all whitespace strip()\n`;
 
-if (strip('') != '')
-    cout `FAILED empty strip\n`;
-
 if (strip('   leading') != 'leading')
     cout `FAILED strip() with only leading whitespace\n`;
 
 if (strip('trailing   ') != 'trailing')
     cout `FAILED strip() with only trailing whitespace\n`;
+
+if (rstrip(' test \t\r\n') != ' test')
+    cout `FAILED basic rstrip\n`;
+
+if (rstrip('    ') != '')
+    cout `FAILED rstrip to empty\n`;
+
+if (rstrip('test') != 'test')
+    cout `FAILED nop rstrip\n`;
+
+if (rstrip('') != '')
+    cout `FAILED rstrip('')\n`;
+
+if (lstrip(' \r\n test ') != 'test ')
+    cout `FAILED basic lstrip\n`;
+
+if (lstrip('    ') != '')
+    cout `FAILED lstrip to empty\n`;
+
+if (lstrip('test') != 'test')
+    cout `FAILED nop lstrip\n`;
+
+if (lstrip('') != '')
+    cout `FAILED lstrip('')\n`;
+
+if (strip('') != '')
+    cout `FAILED empty strip\n`;
 
 if (toUpper('This Is a Test') != 'THIS IS A TEST')
     cout `FAILED toUpper()\n`;

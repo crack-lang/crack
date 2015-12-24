@@ -85,13 +85,21 @@ Token Parser::getToken() {
    Token tok = toker.getToken();
    context->setLocation(tok.getLocation());
    
+   // Consume doc tokens and add them to the current doc string.
+   while (tok.isDoc()) {
+      doc << tok.getData();
+      tok = toker.getToken();
+   }
+   
    // short-circuit the parser for an annotation, which can occur anywhere.
    while (tok.isAnn() || tok.getType() == Token::popErrCtx) {
       if (tok.isAnn())
          parseAnnotation();
       else
          context->popErrorContext();
-      tok = toker.getToken();
+      
+      while ((tok = toker.getToken()).isDoc())
+         doc << tok.getData();
       context->setLocation(tok.getLocation());
    }
 
@@ -1830,6 +1838,9 @@ int Parser::parseFuncDef(TypeDef *returnType, const Token &nameTok,
          BSTATS_END
          OverloadDefPtr ovld = stub->getOwner()->replaceDef(funcDef.get());
          cstack.restore();
+         
+         funcDef->doc = consumeDocs();
+         
          // XXX this isn't quite right.  We really need to replace the stub in 
          // the context into which it was imported, which we're not tracking.
          context->getDefContext()->ns->addAlias(ovld.get());
@@ -1901,6 +1912,9 @@ int Parser::parseFuncDef(TypeDef *returnType, const Token &nameTok,
          runCallbacks(funcForward);
 
          cstack.restore();
+         
+         funcDef->doc = consumeDocs();
+         
          addFuncDef(funcDef.get());
          context->nextFuncFlags = FuncDef::noFlags;
 
@@ -1960,6 +1974,7 @@ int Parser::parseFuncDef(TypeDef *returnType, const Token &nameTok,
    context->vtableOffset = funcDef->getVTableOffset();
 
    BSTATS_END
+   funcDef->doc = consumeDocs();
 
    // store the new definition in the parent context if it's not already in 
    // there (if there was a forward declaration)
@@ -2168,7 +2183,7 @@ bool Parser::parseDef(TypeDef *type) {
             
             // Emit a variable definition and store it in the context (in a 
             // cleanup frame so transient initializers get destroyed here)
-            context->emitVarDef(type, tok, 0);
+            context->emitVarDef(type, tok, 0)->doc = consumeDocs();
             
             if (tok2.isSemi())
                return true;
@@ -2184,7 +2199,8 @@ bool Parser::parseDef(TypeDef *type) {
             checkForExistingDef(tok, tok.getData());
             
             initializer = parseInitializer(type, varName);
-            context->emitVarDef(type, tok, initializer.get());
+            context->emitVarDef(type, tok, initializer.get())->doc = 
+               consumeDocs();
    
             // if this is a comma, we need to go back and parse 
             // another definition for the type.
@@ -3174,7 +3190,7 @@ TypeDefPtr Parser::parseClassDef() {
    // parse base class list   
    vector<TypeDefPtr> bases;
    vector<TypeDefPtr> ancestors;  // keeps track of all ancestors
-   if (tok.isColon())
+   if (tok.isColon()) {
       while (true) {
          // parse the base class name
          TypeDefPtr baseClass = parseTypeSpec(0, generic);
@@ -3211,11 +3227,15 @@ TypeDefPtr Parser::parseClassDef() {
          else if (!tok.isComma())
             unexpected(tok, "expected comma or opening brace");
       }
-   else if (tok.isSemi())
+   } else if (tok.isSemi()) {
       // forward declaration
-      return context->getDefContext()->createForwardClass(className);
-   else if (!tok.isLCurly())
+      TypeDefPtr result =
+         context->getDefContext()->createForwardClass(className);
+      result->doc = consumeDocs();
+      return result;
+   } else if (!tok.isLCurly()) {
       unexpected(tok, "expected colon or opening brace.");
+   }
 
    // get any user flags
    TypeDef::Flags flags = context->nextClassFlags;
@@ -3233,6 +3253,7 @@ TypeDefPtr Parser::parseClassDef() {
       result->generic = new TypeDef::SpecializationCache();
       if (flags & TypeDef::abstractClass)
          result->abstract = true;
+      result->doc = consumeDocs();
       addDef(result.get());
       return result;
    }
@@ -3254,6 +3275,8 @@ TypeDefPtr Parser::parseClassDef() {
                                       existing.get()
                                       );
    BSTATS_END
+   
+   type->doc = consumeDocs();
 
    if (!existing)
       addDef(type.get());
@@ -3756,3 +3779,10 @@ Parser::Primary Parser::parsePrimary(Expr *implicitReceiver) {
 
    return Primary(expr.get(), type.get(), soleIdent);
 }
+
+string Parser::consumeDocs() {
+   string result = doc.str();
+   doc.str("");
+   return result;
+}
+

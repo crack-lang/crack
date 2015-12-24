@@ -26,72 +26,71 @@ ArrayTypeDef::ArrayTypeDef(TypeDef *metaType, const std::string &name) :
     generic = new SpecializationCache();
 }
 
-namespace {
-    void addArrayMethods(Context &context, TypeDef *arrayType,
-                         TypeDef *elemType
-                         ) {
-        Construct *gd = context.construct;
-        FuncDefPtr arrayGetItem =
-            newFuncDef(elemType, FuncDef::method, "oper []", 1);
-        arrayGetItem->args[0] = new ArgDef(gd->uintType.get(), "index");
-        context.addDef(arrayGetItem.get(), arrayType);
+void ArrayTypeDef::addArrayMethods(Context &context, TypeDef *arrayType,
+                                   TypeDef *elemType
+                                   ) {
+    Construct *gd = context.construct;
+    FuncDefPtr arrayGetItem =
+        newFuncDef(elemType, FuncDef::method, "oper []", 1);
+    arrayGetItem->args[0] = new ArgDef(gd->uintType.get(), "index");
+    context.addDef(arrayGetItem.get(), arrayType);
 
-        arrayGetItem =
-            newFuncDef(elemType, FuncDef::method, "oper []", 1);
-        arrayGetItem->args[0] = new ArgDef(gd->intType.get(), "index");
-        context.addDef(arrayGetItem.get(), arrayType);
+    arrayGetItem =
+        newFuncDef(elemType, FuncDef::method, "oper []", 1);
+    arrayGetItem->args[0] = new ArgDef(gd->intType.get(), "index");
+    context.addDef(arrayGetItem.get(), arrayType);
 
-        FuncDefPtr arraySetItem =
-            newFuncDef(elemType, FuncDef::method, "oper []=", 2);
-        arraySetItem->args[0] = new ArgDef(gd->uintType.get(), "index");
-        arraySetItem->args[1] = new ArgDef(elemType, "value");
-        context.addDef(arraySetItem.get(), arrayType);
+    FuncDefPtr arraySetItem =
+        newFuncDef(elemType, FuncDef::method, "oper []=", 2);
+    arraySetItem->args[0] = new ArgDef(gd->uintType.get(), "index");
+    arraySetItem->args[1] = new ArgDef(elemType, "value");
+    context.addDef(arraySetItem.get(), arrayType);
 
-        arraySetItem =
-            newFuncDef(elemType, FuncDef::method, "oper []=", 2);
-        arraySetItem->args[0] = new ArgDef(gd->intType.get(), "index");
-        arraySetItem->args[1] = new ArgDef(elemType, "value");
-        context.addDef(arraySetItem.get(), arrayType);
+    arraySetItem =
+        newFuncDef(elemType, FuncDef::method, "oper []=", 2);
+    arraySetItem->args[0] = new ArgDef(gd->intType.get(), "index");
+    arraySetItem->args[1] = new ArgDef(elemType, "value");
+    context.addDef(arraySetItem.get(), arrayType);
 
-        FuncDefPtr arrayOffset =
-            newFuncDef(arrayType, FuncDef::method, "oper +", 1);
-        arrayOffset->args[0] = new ArgDef(gd->uintType.get(), "offset");
-        context.addDef(arrayOffset.get(), arrayType);
+    FuncDefPtr arrayOffset =
+        newFuncDef(arrayType, FuncDef::method, "oper +", 1);
+    arrayOffset->args[0] = new ArgDef(gd->uintType.get(), "offset");
+    context.addDef(arrayOffset.get(), arrayType);
 
-        arrayOffset =
-            newFuncDef(arrayType, FuncDef::method, "oper +", 1);
-        arrayOffset->args[0] = new ArgDef(gd->intType.get(), "offset");
-        context.addDef(arrayOffset.get(), arrayType);
+    arrayOffset =
+        newFuncDef(arrayType, FuncDef::method, "oper +", 1);
+    arrayOffset->args[0] = new ArgDef(gd->intType.get(), "offset");
+    context.addDef(arrayOffset.get(), arrayType);
 
-        FuncDefPtr arrayAlloc =
-            newFuncDef(arrayType, FuncDef::noFlags, "oper new", 1);
-        arrayAlloc->args[0] = new ArgDef(gd->uintzType.get(), "size");
-        context.addDef(arrayAlloc.get(), arrayType);
+    FuncDefPtr arrayAlloc =
+        newFuncDef(arrayType, FuncDef::noFlags, "oper new", 1);
+    arrayAlloc->args[0] = new ArgDef(gd->uintzType.get(), "size");
+    context.addDef(arrayAlloc.get(), arrayType);
 
-        FuncDefPtr arrayFromVoidptr =
-            newFuncDef(arrayType, FuncDef::noFlags, "oper new", 1);
-        arrayFromVoidptr->args[0] = new ArgDef(gd->voidptrType.get(), "val");
-        context.addDef(arrayFromVoidptr.get(), arrayType);
+    FuncDefPtr arrayFromVoidptr =
+        newFuncDef(arrayType, FuncDef::noFlags, "oper new", 1);
+    arrayFromVoidptr->args[0] = new ArgDef(gd->voidptrType.get(), "val");
+    context.addDef(arrayFromVoidptr.get(), arrayType);
 
-        context.addDef(newUnOpDef(arrayType, "oper ++x", true).get(),
-                       arrayType
-                       );
-        context.addDef(newUnOpDef(arrayType, "oper --x", true).get(),
-                       arrayType
-                       );
-        context.addDef(newUnOpDef(arrayType, "oper x++", true).get(),
-                       arrayType
-                       );
-        context.addDef(newUnOpDef(arrayType, "oper x--", true).get(),
-                       arrayType
-                       );
-    }
+    context.addDef(newUnOpDef(arrayType, "oper ++x", true).get(),
+                   arrayType
+                   );
+    context.addDef(newUnOpDef(arrayType, "oper --x", true).get(),
+                   arrayType
+                   );
+    context.addDef(newUnOpDef(arrayType, "oper x++", true).get(),
+                   arrayType
+                   );
+    context.addDef(newUnOpDef(arrayType, "oper x--", true).get(),
+                   arrayType
+                   );
 }
 
 // specializations of array types actually create a new type
 // object.
 TypeDefPtr ArrayTypeDef::getSpecialization(Context &context,
-                                           TypeVecObj *types
+                                           TypeVecObj *types,
+                                           bool checkCache
                                            ) {
     // see if it already exists
     TypeDef *spec = findSpecialization(types);

@@ -224,6 +224,7 @@ noinst_HEADERS = \
     model/Annotation.h \
     model/ArgDef.h \
     model/AssignExpr.h \
+    model/BaseMetaClass.h \
     model/Branchpoint.h \
     model/BuilderContextData.h \
     model/CleanupFrame.h \
@@ -236,6 +237,7 @@ noinst_HEADERS = \
     model/Deref.h \
     model/DeserializationError.h \
     model/Deserializer.h \
+    model/DummyModuleDef.h \
     model/EphemeralImportDef.h \
     model/Expr.h \
     model/FloatConst.h \

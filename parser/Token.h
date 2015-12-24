@@ -50,7 +50,7 @@ class Token {
                      percent, plus, quest, rbracket, rcurly, rparen, semi, 
                      slash, string, tilde, istrBegin, istrEnd, logicAnd, 
                      logicOr, floatLit, octalLit, hexLit, binLit, scoping,
-                     doKw,
+                     doKw, doc,
                      
                      // these tokens are special - they are used to
                      // communicate actions that need to be performed in the
@@ -132,6 +132,7 @@ class Token {
       bool isColon() const { return type == colon; }
       bool isDecr() const { return type == decr; }
       bool isDefine() const { return type == define; }
+      bool isDoc() const { return type == doc; }
       bool isDot() const { return type == dot; }
       bool isIncr() const { return type == incr; }
       bool isAssign() const { return type == assign; }

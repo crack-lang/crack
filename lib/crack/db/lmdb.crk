@@ -364,7 +364,7 @@ class InnerDB {
         }
         return false;
     }
-    
+
     bool endReadTransaction() {
         if (reading) {
             mdb_txn_reset(_readTx);
@@ -373,7 +373,7 @@ class InnerDB {
         }
         return false;
     }
-    
+
 
     String get(String key, String default) {
         if (!reading) {
@@ -466,7 +466,7 @@ class InnerDB {
     @final void clear() {
         if ((_tmpTxn = mdb_txn_begin(_env, null, 0)) is null ||
             mdb_drop(_tmpTxn, _dbi, 0) ||
-            mdb_txn_commit(_tmpTxn) 
+            mdb_txn_commit(_tmpTxn)
             ) {
             _strException();
         }
@@ -692,7 +692,7 @@ class Lmdb {
             _dbs.delete(name);
         }
     }
-    
+
     /// Close the database environment
     oper del() {
         for (dbitem :in _dbs) {

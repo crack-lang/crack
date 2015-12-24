@@ -1,17 +1,17 @@
 # Copyright 2011-2012 Google Inc.
 # Copyright 2011-2012 Conrad Steenberg <conrad.steenberg@gmail.com>
-# 
+#
 #   This Source Code Form is subject to the terms of the Mozilla Public
 #   License, v. 2.0. If a copy of the MPL was not distributed with this
 #   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-# 
+#
 # Singly and Doubly Linked-list Generics
 
 import crack.io cerr, FStr;
 import crack.lang cmp, AssertionError, IndexError, InvalidArgumentError,
     Writer, Formatter;
 
-# we use poormac here because the standard macro mechanism depends on this 
+# we use poormac here because the standard macro mechanism depends on this
 # module.
 @import crack._poormac define;
 
@@ -29,7 +29,7 @@ bool _equal(Object a, Object b) {
     void _bind($1 i) { }
     void _release($1 i) { }
     bool _isObject($1 i) { return false; }
-    bool _isNull($1 i) { return false; } 
+    bool _isNull($1 i) { return false; }
     bool _equal($1 a, $1 b) { return a == b; }
 $$
 
@@ -54,51 +54,51 @@ class List[Elem] {
     class Node {
         Elem elem;
         Node next;
-        
+
         oper init(Elem elem) : elem = elem {}
     }
-    
+
     ## A linked list iterator.
     class Iter {
         Node _node;
         bool __first;
         oper init(Node node) : _node = node, __first = true {}
-        
+
         Elem elem() {
             if (_node)
                 return _node.elem;
             else
                 return null;
         }
-        
+
         bool next() {
             if (!_node)
                 return false;
-            
+
             _node = _node.next;
             return _node;
         }
-    
+
         bool nx() {
             if (!_node)
                 return false;
-            
+
             if (__first)
                 __first = false;
             else
                 _node = _node.next;
             return _node;
         }
-        
+
         bool isTrue() { return _node; }
     }
 
     Node head;
     Node tail;
     uint _count;
-    
+
     oper init() {}
-    
+
     @final Iter iter() {
         return Iter(head);
     }
@@ -126,7 +126,7 @@ class List[Elem] {
         }
         _count = _count + 1;
     }
-    
+
     ## Adds the element to the end of the list (equivalent to "append()")
     alias pushTail = append;
 
@@ -163,7 +163,7 @@ class List[Elem] {
             old = cur;
             cur = cur.next;
         }
-        
+
         elem := tail.elem;
         tail = old;
         old.next = null;
@@ -199,7 +199,7 @@ class List[Elem] {
         newNode := Node(elem);
         newNode.next = node.next;
         node.next = newNode;
-        
+
         # see if we need to fix the tail
         if (node is tail)
             tail = newNode;
@@ -214,11 +214,11 @@ class List[Elem] {
         if (index > 0) {
             # find the node before it.
             node := __findNode(index - 1);
-            
+
             # if the next node is the tail, reset the tail.
             if (node.next is tail)
                 tail = node;
-            
+
             # drop the current next node.
             tmp := node.next.next;
             node.next = tmp;
@@ -227,7 +227,7 @@ class List[Elem] {
             tmp := head.next;
             head = tmp;
         }
-        
+
         _count = _count - 1;
     }
 
@@ -318,7 +318,7 @@ class DList[Elem] {
     class Node {
         Elem elem;
         Node next, prev;
-    
+
         oper init(Elem elem, Node prev) :
             elem = elem,
             prev = prev {
@@ -329,36 +329,36 @@ class DList[Elem] {
         Node _node;
         bool __first;
         oper init(Node node) : _node = node, __first = true {}
-        
+
         Elem elem() {
             if (_node)
                 return _node.elem;
             else
                 return null;
         }
-        
+
         bool next() {
             if (!_node)
                 return false;
-            
+
             _node = _node.next;
             return _node;
         }
-    
+
         bool nx() {
             if (!_node)
                 return false;
-            
+
             if (__first)
                 __first = false;
             else
                 _node = _node.next;
             return _node;
         }
-        
+
         bool isTrue() { return _node; }
 
-        ## The opposite of next(): Back-up the iterator to the last node, 
+        ## The opposite of next(): Back-up the iterator to the last node,
         ## return true if it's valid.
         bool prev() { _node = _node.prev; return _node; }
     }
@@ -381,11 +381,11 @@ class DList[Elem] {
         __breakRefCycles();
     }
 
-    ## Insert the object at the iterator (after insertion, the iterator will 
+    ## Insert the object at the iterator (after insertion, the iterator will
     ## reference the new node with the element, the old node that
     ## iterator previously referenced will be the next node)
     @final void insert(Iter ix, Elem elem) {
-        
+
         # get what will be the next and previous node of the new node.
         next := ix._node;
         prev := next.prev;
@@ -406,7 +406,7 @@ class DList[Elem] {
         ++_count;
     }
 
-    ## Delete the object at the iterator.  After deletion, the iterator 
+    ## Delete the object at the iterator.  After deletion, the iterator
     ## will refer to what was originally the subsequent node.
     @final void delete(Iter ix) {
         node := Node.unsafeCast(ix._node);
@@ -414,16 +414,16 @@ class DList[Elem] {
             node.next.prev = node.prev;
         else
             tail = node.prev;
-        
+
         if (node.prev)
             node.prev.next = node.next;
         else
             head = node.next;
-        
+
         --_count;
         ix._node = node.next;
     }
-    
+
     ## Delete all elements from the list.
     @final void clear() {
         __breakRefCycles();
@@ -437,7 +437,7 @@ class DList[Elem] {
     }
 
     ## Returns an iterator.
-    ## if 'back' is true, initialize it to point to the last node on the 
+    ## if 'back' is true, initialize it to point to the last node on the
     ## list. Otherwise point it to the first node.
     @final Iter iter(bool back) {
         if (back)
@@ -474,7 +474,7 @@ class DList[Elem] {
     alias pushTail = append;
 
     @final Elem popHead() {
-        if (!head) 
+        if (!head)
             throw InvalidArgumentError('Attempting to pop from an empty list');
         elem := head.elem;
         if (head == tail)
@@ -535,7 +535,7 @@ class DList[Elem] {
         if (node.next)
             node.next.prev = newNode;
         node.next = newNode;
-        
+
         # see if we need to fix the tail
         if (node is tail)
             tail = newNode;
@@ -549,11 +549,11 @@ class DList[Elem] {
         if (index > 0) {
             # find the node before it.
             node := __findNode(index - 1);
-            
+
             # if the next node is the tail, reset the tail.
             if (node.next is tail)
                 tail = node;
-            
+
             # drop the current next node.
             tmp := node.next.next;
             node.next = tmp;
@@ -568,11 +568,11 @@ class DList[Elem] {
             if (tmp)
                 tmp.prev = null;
         }
-        
+
         _count = _count - 1;
     }
 
-    ## Removes the first matching element (by equality) from the list.  
+    ## Removes the first matching element (by equality) from the list.
     ## Returns true if the element was deleted, false if not found.
     @final bool remove(Elem elem) {
         node := head;

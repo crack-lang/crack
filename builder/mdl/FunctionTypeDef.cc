@@ -33,7 +33,8 @@ FunctionTypeDef::FunctionTypeDef(TypeDef *metaType, const std::string &name) :
 // specializations of function types actually create a new type
 // object, like array
 TypeDefPtr FunctionTypeDef::getSpecialization(Context &context,
-                                              TypeVecObj *types
+                                              TypeVecObj *types,
+                                              bool checkCache
                                               ) {
     // see if it already exists
     TypeDef *spec = findSpecialization(types);

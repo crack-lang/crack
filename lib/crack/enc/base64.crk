@@ -1,4 +1,4 @@
-/* 
+/*
    base64.cpp and base64.h
 
    Copyright (C) 2004-2008 René Nyffenegger
@@ -89,7 +89,7 @@ Buffer encode(Buffer inbuf, uint lineLength) {
     ManagedBuffer chars3 = {3};
     chars4.size = 4;
     chars3.size = 3;
-    
+
     char_array_4 := chars4.buffer;
     char_array_3 := chars3.buffer;
 
@@ -105,7 +105,7 @@ Buffer encode(Buffer inbuf, uint lineLength) {
             for (i = 0; i < 4; i++) {
                 ret.append(base64_chars[char_array_4[i]]);
                 if (split && lc%lineLength == 0) ret.extend(EOL);
-                lc++;  
+                lc++;
             }
             i = 0;
         }
@@ -149,7 +149,7 @@ Buffer decode(Buffer inbuf) {
     ManagedBuffer chars3 = {3};
     chars4.size = 4;
     chars3.size = 3;
-    
+
     char_array_4 := chars4.buffer;
     char_array_3 := chars3.buffer;
 

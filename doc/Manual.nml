@@ -5013,7 +5013,8 @@ mechanisms.  For example, here is a simple active thread counter:
 The only operations supported for #`atomic_int`# are:
 
 -   Augmented assignment for addition and subtraction: #count += 1#
--   Implicit conversion to #int#, #uint#, #intz# and #uintz#.
+-   Implicit conversion to #int#, #uint#, #intz# and #uintz#, #int64# and
+    #uint64#.
 
 Mutexes
 '''''''

@@ -15,6 +15,7 @@
 #include <stdlib.h>
 #include <sstream>
 #include <algorithm>
+#include "spug/stlutil.h"
 #include "spug/Tracer.h"
 #include "parser/Parser.h"
 #include "parser/ParseError.h"
@@ -23,6 +24,8 @@
 #include "builder/Builder.h"
 #include "ext/Module.h"
 #include "Context.h"
+#include "DummyModuleDef.h"
+#include "GenericModuleInfo.h"
 #include "GlobalNamespace.h"
 #include "ModuleDef.h"
 #include "StatState.h"
@@ -535,6 +538,43 @@ ModuleDefPtr Construct::getCachedModule(const string &canonicalName) {
     return modDef;
 }
 
+namespace {
+
+    // Utility for printing out an array of strings as a dot-seperated name.
+    class Dotted {
+        const vector<string> &name;
+        vector<string>::const_iterator end;
+
+        public:
+            Dotted(const vector<string> &name,
+                   vector<string>::const_iterator end
+                   ) :
+                name(name),
+                end(end) {
+            }
+
+            Dotted(const vector<string> &name) :
+                name(name),
+                end(name.end()) {
+            }
+
+            void writeTo(ostream &out) const {
+                for (vector<string>::const_iterator iter = name.begin();
+                    iter != end;
+                    ++iter
+                    ) {
+                    out << *iter;
+                    if (iter != end) out << ".";
+                }
+            }
+    };
+
+    ostream &operator <<(ostream &out, const Dotted &dotted) {
+        dotted.writeTo(out);
+        return out;
+    }
+}
+
 ModuleDefPtr Construct::getModule(Construct::StringVecIter moduleNameBegin,
                                   Construct::StringVecIter moduleNameEnd,
                                   string &canonicalName
@@ -581,20 +621,21 @@ ModuleDefPtr Construct::getModule(Construct::StringVecIter moduleNameBegin,
         builderStack.push(builder);
         ContextPtr context =
             new Context(*builder, Context::module, rootContext.get(),
-                        new GlobalNamespace(rootContext->ns.get(), 
-                                            canonicalName
+                        new DummyModuleDef(canonicalName,
+                                            rootContext->ns.get()
                                             ),
-                        new GlobalNamespace(rootContext->compileNS.get(),
-                                            canonicalName
-                                            )
+                        new DummyModuleDef(canonicalName,
+                                           rootContext->compileNS.get()
+                                           )
                         );
         context->toplevel = true;
 
         // before parsing the module from scratch, check the persistent cache 
         // for it.
         bool cached = false;
+        GenericModuleInfo genModInfo;
         if (rootContext->construct->cacheMode)
-            modDef = context->materializeModule(canonicalName);
+            modDef = context->materializeModule(canonicalName, &genModInfo);
         if (modDef) {
             if (traceCaching) 
                 cerr << "Reusing cached module " << canonicalName << endl;
@@ -602,6 +643,66 @@ ModuleDefPtr Construct::getModule(Construct::StringVecIter moduleNameBegin,
             if (rootBuilder->options->statsMode)
                 stats->incCached();
         } else {
+            size_t lbrackPos = canonicalName.find('[');
+            if (lbrackPos != string::npos && genModInfo.present) {
+                // This is a generic instantiation ephemeral module.  Don't
+                // try to lookup the source file, try to instantiate it from
+                // the module that defines it.
+
+                if (traceCaching)
+                    cerr << "Trying to recompile " << canonicalName <<
+                        " from its origin module." << endl;
+
+                // Get the source module.
+                NamespacePtr ns = getModule(genModInfo.module);
+                if (!ns) {
+                    if (traceCaching)
+                        cerr << "  Unable to get origin module " <<
+                            canonicalName.substr(0, lbrackPos) << endl;
+                    return 0;
+                }
+
+                // Lookup the generic.
+                SPUG_FOR(vector<string>, iter, genModInfo.name) {
+                    ns = ns->lookUp(*iter, false);
+                    if (!ns) {
+                        if (traceCaching) {
+                            cerr << "  Unable to lookup name " <<
+                                *iter << " in " <<
+                                Dotted(genModInfo.name, iter) << endl;
+                            cerr << endl;
+                        }
+                        return 0;
+                    }
+                }
+
+                // Make sure we got a generic type.
+                TypeDefPtr sourceType = TypeDefPtr::rcast(ns);
+                if (!sourceType) {
+                    if (traceCaching)
+                        cerr << "  Generic name " << Dotted(genModInfo.name) <<
+                            " is not a type " << endl;
+                    return 0;
+                }
+                if (!sourceType->genericInfo) {
+                    if (traceCaching)
+                        cerr << "  Type " << Dotted(genModInfo.name) <<
+                            " is not a generic.";
+                    return 0;
+                }
+
+                // Return the module of the specialization.
+                TypeDef::TypeVecObjPtr typeVec =
+                    new TypeDef::TypeVecObj(genModInfo.params);
+                TypeDefPtr specialization =
+                    sourceType->getSpecialization(*context, typeVec.get(),
+                                                  false);
+                ModuleDefPtr result = specialization->getModule();
+                if (traceCaching)
+                    cerr << "  Rebuilt " << result->getFullName() << endl;
+                return result;
+            }
+
             modPath = searchPath(sourceLibPath, moduleNameBegin, 
                                  moduleNameEnd, ".crk", 
                                  rootBuilder->options->verbosity

@@ -12,7 +12,7 @@ import crack.runtime TimeVal, floor;
 @import crack.ann define, interface, impl, struct;
 import crack.cont.list List;
 import crack.math cos, sin, sqrt;
-import crack.ext._sdl SDL_Event, SDL_EventNew, SDL_Event_GetType, 
+import crack.ext._sdl SDL_Event, SDL_EventNew, SDL_Event_GetType,
     SDL_Event_GetKey,
     SDL_Event_GetMotion,
     SDL_Event_GetJoyAxisEvent,
@@ -23,32 +23,32 @@ import crack.ext._sdl SDL_Event, SDL_EventNew, SDL_Event_GetType,
     SDL_Joystick,
     SDL_JoystickOpen,
     SDL_JoystickClose,
-    SDL_keysym_GetSym, 
+    SDL_keysym_GetSym,
     SDL_MouseMotionEvent_GetX,
     SDL_MouseMotionEvent_GetY,
-    SDL_GL_SetAttribute, SDL_GL_SwapBuffers, SDL_Init, SDL_PollEvent, 
-    SDL_Quit, SDL_SetVideoMode, SDL_GL_RED_SIZE, SDL_GL_GREEN_SIZE, 
-    SDL_GL_BLUE_SIZE, SDL_INIT_EVERYTHING, SDL_FULLSCREEN, SDL_JOYAXISMOTION, 
-    SDL_JOYBUTTONDOWN, SDL_JOYBUTTONUP, SDL_KEYDOWN, SDL_KEYUP, 
-    SDL_MOUSEBUTTONDOWN, SDL_MOUSEBUTTONUP, SDL_MOUSEMOTION, SDL_OPENGL, 
+    SDL_GL_SetAttribute, SDL_GL_SwapBuffers, SDL_Init, SDL_PollEvent,
+    SDL_Quit, SDL_SetVideoMode, SDL_GL_RED_SIZE, SDL_GL_GREEN_SIZE,
+    SDL_GL_BLUE_SIZE, SDL_INIT_EVERYTHING, SDL_FULLSCREEN, SDL_JOYAXISMOTION,
+    SDL_JOYBUTTONDOWN, SDL_JOYBUTTONUP, SDL_KEYDOWN, SDL_KEYUP,
+    SDL_MOUSEBUTTONDOWN, SDL_MOUSEBUTTONUP, SDL_MOUSEMOTION, SDL_OPENGL,
     SDL_QUIT, SDL_RESIZABLE;
-import crack.ext._gl glBegin, glBindTexture, glBlendFunc, glClear, glClearColor, 
-    glClearDepth, glColor3d, glColor3fv, glDepthFunc, glDepthMask, glFlush, 
+import crack.ext._gl glBegin, glBindTexture, glBlendFunc, glClear, glClearColor,
+    glClearDepth, glColor3d, glColor3fv, glDepthFunc, glDepthMask, glFlush,
     glGenTextures, glGetError,
-    glHint, glEnable, glEnd, glFrustum, glLightfv, glLoadIdentity, 
-    glMatrixMode, glMultMatrixf, glNormal3f, glNormal3fv, glPolygonMode, 
-    glShadeModel, glTexCoord2f, glTexImage2D, glTexParameteri, glTranslatef, 
-    glVertex3d, glVertex3f, glVertex3fv, glViewport, GL_AMBIENT, 
-    GL_BLEND, GL_COLOR_BUFFER_BIT, GL_CONSTANT_ATTENUATION, GL_DEPTH_BUFFER_BIT, 
-    GL_DEPTH_TEST, GL_FILL, GL_DIFFUSE, GL_FRONT_AND_BACK, GL_LEQUAL, 
-    GL_LIGHTING, GL_LIGHT0, GL_LINEAR, GL_LINEAR_ATTENUATION, GL_MODELVIEW, 
-    GL_NICEST, GL_PERSPECTIVE_CORRECTION_HINT, GL_POLYGON, GL_POSITION, 
-    GL_PROJECTION, GL_SPECULAR, GL_SRC_ALPHA, GL_TRIANGLES, 
-    GL_ONE_MINUS_SRC_ALPHA, GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, 
-    GL_TEXTURE_MAG_FILTER, GL_QUADRATIC_ATTENUATION, GL_QUADS, GL_RGB, 
+    glHint, glEnable, glEnd, glFrustum, glLightfv, glLoadIdentity,
+    glMatrixMode, glMultMatrixf, glNormal3f, glNormal3fv, glPolygonMode,
+    glShadeModel, glTexCoord2f, glTexImage2D, glTexParameteri, glTranslatef,
+    glVertex3d, glVertex3f, glVertex3fv, glViewport, GL_AMBIENT,
+    GL_BLEND, GL_COLOR_BUFFER_BIT, GL_CONSTANT_ATTENUATION, GL_DEPTH_BUFFER_BIT,
+    GL_DEPTH_TEST, GL_FILL, GL_DIFFUSE, GL_FRONT_AND_BACK, GL_LEQUAL,
+    GL_LIGHTING, GL_LIGHT0, GL_LINEAR, GL_LINEAR_ATTENUATION, GL_MODELVIEW,
+    GL_NICEST, GL_PERSPECTIVE_CORRECTION_HINT, GL_POLYGON, GL_POSITION,
+    GL_PROJECTION, GL_SPECULAR, GL_SRC_ALPHA, GL_TRIANGLES,
+    GL_ONE_MINUS_SRC_ALPHA, GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
+    GL_TEXTURE_MAG_FILTER, GL_QUADRATIC_ATTENUATION, GL_QUADS, GL_RGB,
     GL_RGBA, GL_RGB8, GL_RGBA8, GL_SMOOTH, GL_UNSIGNED_BYTE;
-import crack.ext._png png_get_io_ptr, png_get_IHDR, png_get_rows, 
-    png_set_read_fn, png_struct, png_create_read_struct, 
+import crack.ext._png png_get_io_ptr, png_get_IHDR, png_get_rows,
+    png_set_read_fn, png_struct, png_create_read_struct,
     png_create_info_struct, png_read_png, PNG_COLOR_TYPE_RGB,
     PNG_COLOR_TYPE_RGBA;
 
@@ -56,7 +56,7 @@ import crack.ext._png png_get_io_ptr, png_get_IHDR, png_get_rows,
 @define arr(row, col) { matrix[col * 4 + row] }
 
 class FileReader : FDReader {
-    oper init(int fd) : FDReader(fd) {}   
+    oper init(int fd) : FDReader(fd) {}
     oper del() { close(fd); }
 }
 
@@ -77,53 +77,53 @@ INFINITY := 1e+100;
 ## A three coordinate vector.
 class Vector {
     array[float32] raw;
-    
+
     oper init(float x, float y, float z) : raw(3) {
         raw[0] = float32(x);
         raw[1] = float32(y);
         raw[2] = float32(z);
     }
-    
+
     oper init() : raw(3) {
         raw[0] = 0;
         raw[1] = 0;
         raw[2] = 0;
     }
-    
+
     ## Copy the three vector values into the array.
     @final void copy(array[float] vals) {
         vals[0] = raw[0];
         vals[1] = raw[1];
         vals[2] = raw[2];
     }
-    
+
     ## Copy the three vector values into the array.
     @final void copy(array[float32] vals) {
         vals[0] = raw[0];
         vals[1] = raw[1];
         vals[2] = raw[2];
     }
-    
+
     ## set values from the other vector.
     void set(Vector other) {
         raw[0] = other.raw[0];
         raw[1] = other.raw[1];
         raw[2] = other.raw[2];
     }
-    
+
     ## Set the vector from three values
     void set(float x, float y, float z) {
         raw[0] = float32(x);
         raw[1] = float32(y);
         raw[2] = float32(z);
     }
-    
+
     @final float oper [](uint index) { return raw[index]; }
-    @final float oper []=(uint index, float val) { 
-        raw[index] = float32(val); 
+    @final float oper []=(uint index, float val) {
+        raw[index] = float32(val);
         return val;
     }
-    
+
     @final Vector copy() {
         return Vector(raw[0], raw[1], raw[2]);
     }
@@ -136,7 +136,7 @@ class Vector {
             raw[2] = raw[2] op other.raw[2];
             return this;
         }
-        
+
         @final Vector oper op(Vector other) {
             Vector result = copy();
             result op$$= other;
@@ -145,16 +145,16 @@ class Vector {
     }
     @additiveOp(+)
     @additiveOp(-)
-    
+
     @final float oper *(Vector other) {
-        return raw[0] * other.raw[0] + raw[1] * other.raw[1] + 
+        return raw[0] * other.raw[0] + raw[1] * other.raw[1] +
                raw[2] * other.raw[2];
     }
-    
+
     @final Vector oper *(float factor) {
         return Vector(raw[0] * factor, raw[1] * factor, raw[2] * factor);
     }
-    
+
     @final Vector oper /(float divisor) {
         return Vector(raw[0] / divisor, raw[1] / divisor, raw[2] / divisor);
     }
@@ -162,7 +162,7 @@ class Vector {
     float size() {
         return sqrt(raw[0] * raw[0] + raw[1] * raw[1] + raw[2] * raw[2]);
     }
-    
+
     ## Normalizes the vector.  Converts it to a vector in the same
     ## direction but with a distance of 1.
     void normalize() {
@@ -177,11 +177,11 @@ class Vector {
     ## Returns the cross product of this vector and the other.
     Vector crossProduct(Vector other) {
         return Vector(raw[1] * other.raw[2] - raw[2] * other.raw[1],
-                      raw[2] * other.raw[0] - raw[0] * other.raw[2], 
+                      raw[2] * other.raw[0] - raw[0] * other.raw[2],
                       raw[0] * other.raw[1] - raw[1] * other.raw[0]
 		      );
     }
-    
+
     int cmp(Object other) {
         if (other.class.isSubclass(Vector)) {
             o := Vector.unsafeCast(other);
@@ -193,11 +193,11 @@ class Vector {
             return Object.cmp(other);
         }
     }
-    
+
     void formatTo(Formatter out) {
         out `$(this.class.name)($(this[0]), $(this[1]), $(this[2]))`;
     }
-    
+
     bool isTrue() {
         return !(isZero(raw[0]) && isZero(raw[1]) && isZero(raw[2]));
     }
@@ -207,7 +207,7 @@ class Vector {
 class Coord {
     float x, y;
     oper init(float x, float y) : x = x, y = y {}
-    
+
     int cmp(Object other) {
         if (o := Coord.cast(other)) {
             d := cmp(x, o.x);
@@ -223,7 +223,7 @@ class RotMatrix {
     array[float32] matrix;
 
     oper init() : matrix(16) {}
-    
+
     oper del() { free(matrix); }
 
     void formatTo(Formatter out) {
@@ -245,8 +245,8 @@ class RotMatrix {
               $(matrix[3 * 4 + 3])
               `;
     }
-              
-    ## Sets row 3 and column 3 of the matrix to the values of the identity 
+
+    ## Sets row 3 and column 3 of the matrix to the values of the identity
     ## matrix.
     @final void _setIdentVecs() {
         @set(0, 3, 0);
@@ -270,7 +270,7 @@ class RotMatrix {
         @set(2, 2, cos(yaw));
         _setIdentVecs();
     }
-        
+
     void makePitch(float pitch) {
         @set(0, 0, 1);
         @set(0, 1, 0);
@@ -283,7 +283,7 @@ class RotMatrix {
         @set(2, 2, cos(pitch));
         _setIdentVecs();
     }
-        
+
     void makeRoll(float roll) {
         @set(0, 0, cos(roll));
         @set(0, 1, sin(roll));
@@ -296,18 +296,18 @@ class RotMatrix {
         @set(2, 2, 1);
         _setIdentVecs();
     }
-        
+
     void makeIdent() {
         @set(0, 0, 1);
         @set(0, 1, 0);
         @set(0, 2, 0);
         @set(0, 3, 0);
-        
+
         @set(1, 0, 0);
         @set(1, 1, 1);
         @set(1, 2, 0);
         @set(1, 3, 0);
-        
+
         @set(2, 0, 0);
         @set(2, 1, 0);
         @set(2, 2, 1);
@@ -318,7 +318,7 @@ class RotMatrix {
         @set(3, 2, 0);
         @set(3, 3, 1);
     }
-    
+
     ## convert the matrix to the rotation matrix for the direction vector.
     ## After this, matrix.rotate([0, 0, 1], result); result == direction.
     ## 'direction' must be normalized.
@@ -343,14 +343,14 @@ class RotMatrix {
 
         _setIdentVecs();
     }
-    
-    ## Make the receiver the cross-product of a and b.  (Currently ignores the 
+
+    ## Make the receiver the cross-product of a and b.  (Currently ignores the
     ## alpha and doesn't use the GL funcs.
     void makeProduct(RotMatrix a, RotMatrix b) {
         if (this is a || this is b)
             throw Exception(FStr() `makeProduct() target is also a source!`);
 
-        @arr(0, 0) = 
+        @arr(0, 0) =
             a.@arr(0, 0) * b.@arr(0, 0) +
             a.@arr(0, 1) * b.@arr(1, 0) +
             a.@arr(0, 2) * b.@arr(2, 0);
@@ -362,8 +362,8 @@ class RotMatrix {
             a.@arr(0, 0) * b.@arr(0, 2) +
             a.@arr(0, 1) * b.@arr(1, 2) +
             a.@arr(0, 2) * b.@arr(2, 2);
-        
-        @arr(1, 0) = 
+
+        @arr(1, 0) =
             a.@arr(1, 0) * b.@arr(0, 0) +
             a.@arr(1, 1) * b.@arr(1, 0) +
             a.@arr(1, 2) * b.@arr(2, 0);
@@ -375,8 +375,8 @@ class RotMatrix {
             a.@arr(1, 0) * b.@arr(0, 2) +
             a.@arr(1, 1) * b.@arr(1, 2) +
             a.@arr(1, 2) * b.@arr(2, 2);
-        
-        @arr(2, 0) = 
+
+        @arr(2, 0) =
             a.@arr(2, 0) * b.@arr(0, 0) +
             a.@arr(2, 1) * b.@arr(1, 0) +
             a.@arr(2, 2) * b.@arr(2, 0);
@@ -389,26 +389,26 @@ class RotMatrix {
             a.@arr(2, 1) * b.@arr(1, 2) +
             a.@arr(2, 2) * b.@arr(2, 2);
     }
-        
+
     ## Make the receiver the inverse of the other matrix.
     void makeInverse(RotMatrix other) {
         for (int i = 0; i < 3; ++i)
             for (int j = 0; j < 3; ++j)
                 @arr(i, j) = other.@arr(j, i);
         }
-    
+
     ## Rotate 'point' with this matrix and put the output into 'result'
     void rotate(Vector point, Vector result) {
-        result[0] = 
-            point[0] * @arr(0, 0) + 
+        result[0] =
+            point[0] * @arr(0, 0) +
             point[1] * @arr(1, 0) +
             point[2] * @arr(2, 0);
         result[1] =
-            point[0] * @arr(0, 1) + 
+            point[0] * @arr(0, 1) +
             point[1] * @arr(1, 1) +
             point[2] * @arr(2, 1);
         result[2] =
-            point[0] * @arr(0, 2) + 
+            point[0] * @arr(0, 2) +
             point[1] * @arr(1, 2) +
             point[2] * @arr(2, 2);
     }
@@ -435,12 +435,12 @@ uint loadPNGMaterial(Reader src) {
                                   );
     if (png is null)
         throw Exception(FStr() `Failed to create PNG read structure.`);
-    
+
     begin_info := png_create_info_struct(png);
     end_info := png_create_info_struct(png);
     if (begin_info is null || end_info is null)
         throw Exception(FStr() `Failed to create PNG info structure.`);
-    
+
     # read PNG
     png_set_read_fn(png, src, _pngRead);
     png_read_png(png, begin_info, 0, null);
@@ -450,8 +450,8 @@ uint loadPNGMaterial(Reader src) {
     array[int] vals = {2}; # depth, colorType
     png_get_IHDR(png, begin_info,
                  rect,
-                 rect + 1, 
-                 vals, 
+                 rect + 1,
+                 vals,
                  vals + 1,
                  null,
                  null,
@@ -462,13 +462,13 @@ uint loadPNGMaterial(Reader src) {
     depth := vals[0];
     colorType := vals[1];
     free(vals);
-    
-    if (depth != 8 || (colorType != PNG_COLOR_TYPE_RGB && 
+
+    if (depth != 8 || (colorType != PNG_COLOR_TYPE_RGB &&
                        colorType != PNG_COLOR_TYPE_RGBA
                        )
         )
         throw Exception(FStr() `Invalid depth ($depth) or color type ($colorType)\n`);
-    
+
     # set the variables based on whether we have an alpha channel or not.
     uint chs, format;
     int internalFormat;
@@ -490,7 +490,7 @@ uint loadPNGMaterial(Reader src) {
             cell := uint(row * width * chs  + col * chs);
             for (uint ch; ch < chs; ++ch)
                 raw[cell + ch] = rows[row][col * chs + ch]
-        }    
+        }
 
    # generate a new texture id and make it the current texture
    array[uint] textureIdArr = {1};
@@ -499,7 +499,7 @@ uint loadPNGMaterial(Reader src) {
    cout `texture id is $textureId, error is $(glGetError())\n`;
    glBindTexture(GL_TEXTURE_2D, textureId);
    free(textureIdArr);
-   
+
    # set the image data
    glTexImage2D(GL_TEXTURE_2D, 0, internalFormat, width, height, 0, format,
 		GL_UNSIGNED_BYTE,
@@ -507,14 +507,14 @@ uint loadPNGMaterial(Reader src) {
 		);
    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-   
+
    return textureId;
 }
 
 class Material {
     void makeCurrent() {}
     void pin(float s, float t) {}
-}       
+}
 
 class ColorMaterial : Material {
     Vector vec;
@@ -524,23 +524,23 @@ class ColorMaterial : Material {
         glBindTexture(GL_TEXTURE_2D, 0);
         glColor3fv(vec.raw);
     }
-    
+
     void pin(float s, float t) {
     }
 }
 
 class TextureMaterial : Material {
     uint materialId;
-    
+
     oper init(Reader src) : materialId = loadPNGMaterial(src) {}
-    
+
     oper init(uint materialId) : materialId = materialId {}
 
     void makeCurrent() {
         glColor3d(1, 1, 1);
         glBindTexture(GL_TEXTURE_2D, materialId);
     }
-    
+
     void pin(float s, float t) {
         glTexCoord2f(float32(s), float32(t));
     }
@@ -555,29 +555,29 @@ class Prim : Renderable {
 
     oper init(Material material) : material = material {}
 
-    ## Emit a vertex given a position and coordinate expressed as an array of 
-    ## five floats - the first three are the position, the last two are the 
+    ## Emit a vertex given a position and coordinate expressed as an array of
+    ## five floats - the first three are the position, the last two are the
     ## s, t coordinates of the material
     @final void vertex(array[float32] posAndCoord) {
         material.pin(posAndCoord[3], posAndCoord[4]);
         glVertex3fv(posAndCoord);
     }
-    
+
     @final void vertex(float x, float y, float z, float s, float t) {
         material.pin(s, t);
         glVertex3f(float32(x), float32(y), float32(z));
     }
-    
+
     @final void vertex(Vector pos, float s, float t) {
         material.pin(s, t);
         glVertex3fv(pos.raw);
     }
-    
+
     @final void vertex(Vector pos, Coord texturePos) {
         material.pin(texturePos.x, texturePos.y);
         glVertex3f(float32(pos[0]), float32(pos[1]), float32(pos[2]));
     }
-    
+
     @final void normal(float x, float y, float z) {
         glNormal3f(float32(x), float32(y), float32(z));
     }
@@ -591,7 +591,7 @@ class Prim : Renderable {
     }
 }
 
-## Vertex aggregates a 3D coordinate vector, a 2D texture coordinate and a 
+## Vertex aggregates a 3D coordinate vector, a 2D texture coordinate and a
 ## normal, which is everything we need to describe a vertex.
 @struct Vertex {
     Vector pos;
@@ -602,17 +602,17 @@ class Prim : Renderable {
 #alias Face = Array[Vertex];
 class Face : Array[Vertex] {}
 
-## A multi-faceted object consisting of multiple polygon faces with per-vertex 
+## A multi-faceted object consisting of multiple polygon faces with per-vertex
 ## normals and texture coordinates.
 class MFObj : Prim {
-    
+
     Array[Face] faces = {};
-    
-    oper init(Material material, Array[Face] faces) : 
+
+    oper init(Material material, Array[Face] faces) :
         Prim(material),
         faces = faces {
     }
-    
+
     @final void __renderFace(Face face) {
         if (face.count() == 3)
             glBegin(GL_TRIANGLES);
@@ -620,15 +620,15 @@ class MFObj : Prim {
             glBegin(GL_QUADS);
         else
             glBegin(GL_POLYGON);
-        
+
         for (vert :in face) {
             normal(vert.normal);
             vertex(vert.pos, vert.textureCoord);
         }
-        
+
         glEnd();
     }
-    
+
     void render() {
         material.makeCurrent();
         for (face :in faces)
@@ -658,11 +658,11 @@ class Quad : Prim {
         glVertex3fv(d.raw);
         glEnd();
     }
-    
+
     @static void begin() {
         glBegin(GL_QUADS);
     }
-    
+
     @static void end() {
         glEnd();
     }
@@ -680,23 +680,23 @@ class Light : Renderable {
         color = color,
         diffuse = diffuse {
     }
-    
+
     void render() {
         array[float32] vals = {4};
         vals[0] = 1;
         vals[1] = 1;
-        vals[2] = 1; 
+        vals[2] = 1;
         vals[3] = 1.0;
         glLightfv(id, GL_SPECULAR, vals);
 
-        # we need to copy these into the vals array because the fourth element 
+        # we need to copy these into the vals array because the fourth element
         # needs to be 1.
         color.copy(vals);
         glLightfv(id, diffuse ? GL_DIFFUSE : GL_AMBIENT, vals);
-        
+
         pos.copy(vals);
         glLightfv(id, GL_POSITION, vals);
-        
+
         vals[0] = 0;
         glLightfv(id, GL_CONSTANT_ATTENUATION, vals);
         vals[0] = 0.0001;
@@ -716,7 +716,7 @@ class Light : Renderable {
 class Camera : Renderable {
     Vector pos = {0, 0, 0};
     RotMatrix rotMatrix = {};
-    
+
     oper init() {
         rotMatrix.makeIdent();
     }
@@ -725,7 +725,7 @@ class Camera : Renderable {
         pos = pos,
         rotMatrix = rotMatrix {
     }
-    
+
     void render() {
 
         // translate and rotate the camera view
@@ -734,7 +734,7 @@ class Camera : Renderable {
         glFrustum(-0.1, 0.1, -0.1, 0.1, 0.1, 1000);
         glMultMatrixf(rotMatrix.matrix);
         glTranslatef(float32(-pos[0]), float32(-pos[1]), float32(-pos[2]));
-   
+
         # restore the model view.
         glMatrixMode(GL_MODELVIEW);
     }
@@ -744,7 +744,7 @@ class Camera : Renderable {
 class Graphics {
     @static void initialize(int width, int height) {
         glViewport(0, 0, width, height);
-        
+
         glClearColor(0, 0, 0, 0);
         glClearDepth(1);
         glShadeModel(GL_SMOOTH);
@@ -759,30 +759,30 @@ class Graphics {
         glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     }
-    
+
     ## Call this before you start rendering a frame.
     @static void begin() {
         glMatrixMode(GL_MODELVIEW);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     }
-    
+
     ## Call this after you're done rendering a frame.
     @static void end() {
         glFlush();
     }
-    
+
     ## Load the identity matrix.
     @static void loadIdentity() {
         glLoadIdentity();
     }
-    
-    ## Offset all subsequent shapes by the specified position.  Call this 
+
+    ## Offset all subsequent shapes by the specified position.  Call this
     ## before "rotate()" unless you want the translation rotated.
     @static void translate(Vector pos) {
         glTranslatef(float32(pos[0]), float32(pos[1]), float32(pos[2]));
     }
 
-    ## Rotate subsequent shapes by the specified rotation matrix.    
+    ## Rotate subsequent shapes by the specified rotation matrix.
     @static void rotate(RotMatrix rot) {
         glMultMatrixf(rot.matrix);
     }
@@ -790,12 +790,12 @@ class Graphics {
 
 class MouseMotionEvent {
     uint x, y;
-    
+
     oper init(uint x, uint y) : x = x, y = y {}
 }
 
 @interface MouseMotionHandler {
-    bool onMouseMotion(MouseMotionEvent evt) { 
+    bool onMouseMotion(MouseMotionEvent evt) {
         throw Exception(FStr() `MouseHandler.onMouseMotion() not implemented`);
     }
 }
@@ -810,7 +810,7 @@ class MouseButtonEvent {}
 
 class KeyboardEvent {
     uint sym;
-    
+
     oper init(uint sym) : sym = sym {}
 }
 
@@ -821,10 +821,10 @@ class KeyboardEvent {
 }
 
 class RenderFrameEvent {
-    
+
     ## time since the last render frame in microseconds.
     int deltaUSecs;
-    
+
     oper init(int deltaUSecs) : deltaUSecs = deltaUSecs {}
 }
 
@@ -859,7 +859,7 @@ class JoyButtonEvent : Object, SDL_JoyButtonEvent {
     @abstract bool onJoyButtonUp(JoyButtonEvent event);
 }
 
-## A g3d application.  Takes care of initialization shutdown and provides the 
+## A g3d application.  Takes care of initialization shutdown and provides the
 ## application event loop.
 class App {
 
@@ -868,47 +868,47 @@ class App {
 
     ## if true, run in a resizable window and trigger an event when resized.
     bool resizable;
-    
+
     int width = 640, height = 480;
-    
-    ## The application only renders one thing - this is that thing.  Everytime 
+
+    ## The application only renders one thing - this is that thing.  Everytime
     ## through the main loop, we call renderable.render().
     Renderable renderable;
 
     ## The list of keyboard event handler.
     List[KeyboardHandler] keyboardHandlers = {};
-    
+
     ## The list of mouse motion event handlers.
     List[MouseMotionHandler] mouseMotionHandlers = {};
-    
+
     ## The list of mouse button event handlers.
     List[MouseButtonHandler] mouseButtonHandlers = {};
-    
+
     ## The list of handlers for joystick axis changes.
     List[JoyAxisHandler] joyAxisHandlers = {};
-    
+
     List[JoyButtonHandler] joyButtonHandlers = {};
 
-    ## The render frame handler, this handler gets called every render frame.    
+    ## The render frame handler, this handler gets called every render frame.
     RenderFrameHandler renderFrameHandler;
-    
-    TimeVal __now = {0, 0}, __lastEngineFrame = {0, 0}, 
+
+    TimeVal __now = {0, 0}, __lastEngineFrame = {0, 0},
             __lastRenderFrame = {0, 0};
-    
+
     # true until someone calls terminate()
     bool __active = true;
-    
+
     # Array of joysticks, null until there is a joystick opened.
     array[SDL_Joystick] __joysticks;
 
     oper init(int width, int height) : width = width, height = height {}
     oper init() {}
-    
+
     oper del() {
         SDL_Quit();
         free(__now);
         free(__lastEngineFrame);
-        
+
         # Free the joystick array.
         if (!(__joysticks is null)) {
             for (int i = 0; i < 8; ++i) {
@@ -918,7 +918,7 @@ class App {
             free(__joysticks);
         }
     }
-    
+
     ## Initialize the application (do all SDL and OpenGL initializations)
     void initialize() {
         cout `in initialize\n`;
@@ -931,15 +931,15 @@ class App {
         uint32 flags = (fullscreen ? SDL_FULLSCREEN : 0) |
                        (resizable ? SDL_RESIZABLE : 0);
         SDL_SetVideoMode(width, height, 24, flags | SDL_OPENGL);
-        
+
         cout `graphics initialize\n`;
         Graphics.initialize(width, height);
         cout `done\n`;
     }
-    
-    ## Open a joystick, returns true if successful.  If the joystick is 
+
+    ## Open a joystick, returns true if successful.  If the joystick is
     ## already opened, returns true.
-    ## Joystick devices can be 0-7, hopefully 8 joysticks should be enough for 
+    ## Joystick devices can be 0-7, hopefully 8 joysticks should be enough for
     ## anyone.
     bool openJoystick(uint deviceIndex) {
         if (__joysticks is null)
@@ -961,14 +961,14 @@ class App {
     void terminate() {
         __active = false;
     }
-    
+
     ## Returns true if terminate() has been called.
     bool getTerminated() {
         return !__active;
     }
 
     bool runOneCycle() {
-        
+
         # do the render.
         Graphics.begin();
         if (renderable)
@@ -982,12 +982,12 @@ class App {
         while (SDL_PollEvent(evt)) {
             evtType := SDL_Event_GetType(evt);
             if (evtType == SDL_KEYDOWN || evtType == SDL_KEYUP) {
-                
+
                 # get the key symbol
                 key := SDL_Event_GetKey(evt);
                 keysym := SDL_KeyboardEvent_GetKeysym(key);
                 sym := SDL_keysym_GetSym(keysym);
-                
+
                 KeyboardEvent kevt = {sym};
 
                 if (evtType == SDL_KEYDOWN) {
@@ -999,12 +999,12 @@ class App {
                         if (handler.onKeyUp(kevt))
                             break;
                 }
-    
+
             } else if (evtType == SDL_MOUSEMOTION) {
                 motion := SDL_Event_GetMotion(evt);
                 x := SDL_MouseMotionEvent_GetX(motion);
                 y := SDL_MouseMotionEvent_GetY(motion);
-                
+
                 MouseMotionEvent mevt = {x, y};
                 for (handler :in mouseMotionHandlers)
                     if (handler.onMouseMotion(mevt))
@@ -1041,9 +1041,9 @@ class App {
             } else {
                 cout `unknown event $evtType\n`;
             }
-            
+
         }
-        
+
         # get the current time
         __now.setToNow(null);
         diff := __getTimeDiff(__lastRenderFrame, __now);
@@ -1051,12 +1051,12 @@ class App {
             renderFrameHandler.onRenderFrame(RenderFrameEvent(diff));
         __lastRenderFrame.secs = __now.secs;
         __lastRenderFrame.nsecs = __now.nsecs;
-        
+
         free(evt);
-        
+
         return false;
     }
-    
+
     void mainloop() {
         while (__active)
             runOneCycle();
@@ -1065,15 +1065,15 @@ class App {
 
 class AxisBox {
     Vector min, max;
-    
+
     oper init(Vector min, Vector max) : min = min, max = max {}
 }
 
 class Sphere {
     Vector center;
     float radius;
-    
-    oper init(Vector center, float radius) : 
+
+    oper init(Vector center, float radius) :
         center = center,
         radius = radius {
     }
@@ -1096,8 +1096,8 @@ class Tri @impl Poly {
         coord2 = coord2 {
     }
 
-    ## Returns the normal of the triangle's plane.  We calculate the normal 
-    ## using the "left-hand rule" - the points of the triangle are considered 
+    ## Returns the normal of the triangle's plane.  We calculate the normal
+    ## using the "left-hand rule" - the points of the triangle are considered
     ## to be clockwise with the normal coming out of the face of the clock.
     Vector normal() {
         Vector result = (coord1 - coord0).crossProduct(coord2 - coord0);
@@ -1105,7 +1105,7 @@ class Tri @impl Poly {
         return result;
     }
 
-    ## Returns the normal of any three points.  Again, the normal is 
+    ## Returns the normal of any three points.  Again, the normal is
     ## calculated using the left-hand rule.
     @static Vector normal(Vector c0, Vector c1, Vector c2) {
         Vector result = (c1 - c0).crossProduct(c2 - c0);
@@ -1113,24 +1113,24 @@ class Tri @impl Poly {
         return result;
     }
 
-    ## If the ray from 'org' in direction 'dir' intersects the triangle, 
-    ## return true and set the intersection point and the distance from 'org' 
+    ## If the ray from 'org' in direction 'dir' intersects the triangle,
+    ## return true and set the intersection point and the distance from 'org'
     ## to the intersection point.
     ##
     ## org: the origin of the vector
     ## dir: the direction of the vector
     ## intersection: (output) the point where the ray intersects the vector
-    ## distance: (output) the distance from the point to where the ray 
+    ## distance: (output) the distance from the point to where the ray
     ##     intersects the vector.
     ##
-    ## This is based on the algorithm for calculating intersection of a point 
+    ## This is based on the algorithm for calculating intersection of a point
     ## and a triangle documented here:
     ##   http://softsurfer.com/Archive/algorithm_0105/algorithm_0105.htm#Segment-Plane
     ## the "point of intersection" code is largely ripped off from here:
     ##   http://nehe.gamedev.net/data/lessons/lesson.asp?lesson=30
-    ## 
-    ## The basic gist of this is 
-    ##   1) calculate the vector where the ray interesects the plane defined 
+    ##
+    ## The basic gist of this is
+    ##   1) calculate the vector where the ray interesects the plane defined
     ##   by the triangle
     ##   2) convert this vector to coordinates s & t which are in terms of the
     ##   edges of the triangle radiating from coord0 (so in terms of s & t,
@@ -1142,83 +1142,83 @@ class Tri @impl Poly {
     bool intersects(Vector org, Vector dir, Vector intersection,
                     array[float] distance
                     ) {
-    
+
         // get the "edge vectors" for the triangle
         Vector u = coord1 - coord0;
         Vector v = coord2 - coord0;
-        
+
         // calculate the point of intersection
-        
+
         // construct the normal
         Vector norm = u.crossProduct(v);
-        
+
         // calculate the dot-product
         float dotProduct = dir * norm;
-        
-        // if the dot-product is zero, the ray is parallel to the plane and 
-        // we will get division by zero errors if we proceed.  We know that a 
+
+        // if the dot-product is zero, the ray is parallel to the plane and
+        // we will get division by zero errors if we proceed.  We know that a
         // parallel ray won't intersect, so we can quit now.
         if (isZero(dotProduct))
             return false;
-        
+
         // calculate the distance from the origin of the ray to the point of
         // intersection
         distance[0] = (norm * (coord0 - org)) / dotProduct;
-        
+
         // if distance is < 0, the intersection is _behind_ the origin in the given
         // direction, so we do not intersect
         if (distance[0] < 0)
             return false;
-        
+
         // finally, the point of intersection
         intersection.set(org + dir * distance[0]);
-        
+
         Vector w = intersection - coord0;
-        
+
         // calculate the dot-products used for the determinations of s & v
         float uv = u * v,
                 wv = w * v,
                 wu = w * u,
                 vv = v * v,
                 uu = u * u;
-        
+
         // calculate s & t
         float divisor = (uv * uv) - uu * vv;
         float s = (uv * wv - vv * wu) / divisor;
         float t = (uv * wu - uu * wv) / divisor;
-        
+
         return s >= 0 && t >= 0 && s + t <= 1;
     }
 
     ## Returns true if the triangle contains 'intersection'
     ## intersection: A point on the triangle's plane
     bool contains(Vector intersection) {
-    
+
         // get the "edge vectors" for the triangle
         Vector u = coord1 - coord0;
         Vector v = coord2 - coord0;
-        
+
         // get the vector of the intersection point relative to a point on the
         // triangle
         Vector w = intersection - coord0;
-        
+
         // calculate the dot-products used for the determinations of s & v
         float uv = u * v,
                 wv = w * v,
                 wu = w * u,
                 vv = v * v,
                 uu = u * u;
-        
+
         // calculate s & t
         float divisor = (uv * uv) - uu * vv;
         float s = (uv * wv - vv * wu) / divisor;
         float t = (uv * wu - uu * wv) / divisor;
-        
+
         return s >= 0 && t >= 0 && s + t <= 1;
     }
 
     # Poly implementation
-    
+
     uint getSideCount() { return 3; }
 
     Vector getVertex(uint index) {
@@ -1231,11 +1231,11 @@ class Tri @impl Poly {
         else
             return null;
     }
-    
+
     @static void begin() {
         glBegin(GL_TRIANGLES);
     }
-    
+
     @static void end() {
         glEnd();
     }

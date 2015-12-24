@@ -12,7 +12,7 @@
 using namespace crack::util;
 
 Hasher::Hasher() {
-    md5_init(&state);
+    reset();
 }
 
 void Hasher::add(uint8_t byte) {
@@ -27,4 +27,8 @@ SourceDigest Hasher::getDigest() {
     SourceDigest result;
     md5_finish(&state, result.digest);
     return result;
+}
+
+void Hasher::reset() {
+    md5_init(&state);
 }

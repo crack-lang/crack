@@ -1057,3 +1057,20 @@ ResultExprPtr AtomicLoadTruncOpCall::emit(Context &context) {
     );
     return new BResultExpr(this, builder.lastValue);
 }
+
+ResultExprPtr AtomicLoadZExtOpCall::emit(Context &context) {
+    LLVMBuilder &builder = dynamic_cast<LLVMBuilder &>(context.builder);
+    Value *varAddr = getVarAddr(context, builder, receiver.get(),
+                                "conversion"
+                                );
+
+    LoadInst *loadInst;
+    builder.lastValue = loadInst = builder.builder.CreateLoad(varAddr);
+    loadInst->setAtomic(SequentiallyConsistent);
+    loadInst->setAlignment(sizeof(void *));
+    builder.lastValue = builder.builder.CreateZExt(
+        loadInst,
+        BTypeDefPtr::arcast(func->returnType)->rep
+    );
+    return new BResultExpr(this, builder.lastValue);
+}

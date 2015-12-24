@@ -271,6 +271,7 @@ Token Toker::readToken() {
                     buf << ch;
                     state = st_ident;
                 } else if (ch == '#') {
+                    symchars[0] = ch;
                     state = st_comment;
                 } else if (ch == ';') {
                     return Token(Token::semi, ";", getLocation());
@@ -521,6 +522,7 @@ Token Toker::readToken() {
    
             case st_slash:
                 if (ch == '/') {
+                    symchars[0] = ch;
                     state = st_comment;
                 } else if (ch == '=') {
                     state = st_none;
@@ -537,22 +539,48 @@ Token Toker::readToken() {
                 break;
             
             case st_comment:
-   
+                buf << ch;
                 // newline character takes us out of the comment state
-                if (ch == '\n')
-                   state = st_none;
+                if (ch == '\n') {
+                    state = st_none;
+                    string val = buf.str();
+                    
+                    // If the comment started with "///" or "##", it is a doc 
+                    // token.
+                    if (val[0] == symchars[0]) {
+                        return Token(Token::doc, val.substr(1), getLocation());
+                    } else {
+                        buf.str("");
+                    }
+                }
                 break;
             
             case st_ccomment:
                 if (ch == '*')
                     state = st_ccomment2;
+                else
+                    buf << ch;
                 break;
             
             case st_ccomment2:
-                if (ch == '/')
+                if (ch == '/') {
                     state = st_none;
-                else if (ch != '*')
+                    string val = buf.str();
+                    
+                    // If the comment started with "/**", this is a doc token.
+                    if (val[0] == '*') {
+                        return Token(Token::doc, val.substr(1), getLocation());
+                    } else {
+                        buf.str("");
+                    }
+                } else if (ch != '*') {
+                    // Preserve the preceeding '*' as well as the current char.
+                    buf << '*' << ch;
                     state = st_ccomment;
+                } else {
+                    // Preserve the preceeding '*' and the current one.
+                    buf << "**";
+                }
                 break;
    
             case st_string:
