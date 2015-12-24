@@ -33,6 +33,11 @@ public:
                                                 TypeVecObj *types,
                                                 bool checkCache
                                                 );
+
+    static void addArrayMethods(model::Context &context,
+                                model::TypeDef *arrayType,
+                                model::TypeDef *elemType
+                                );
 };
 
 

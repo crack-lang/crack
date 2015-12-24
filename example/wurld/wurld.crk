@@ -61,7 +61,7 @@ import crack.exp.g3d loadPNGMaterial, openRd, App, Camera, Coord, Light,
     Tri, Vector, Vertex, RenderFrameEvent, RenderFrameHandler;
 import crack.exp.g3d.wfobj readWFObj;
 import comm firstProxy, commInst = inst, proxies, CommManager, Proxy, WurldInst;
-import model SparseVoxelSpace;
+import model SparseVoxelSpace, VOXEL_UNIT;
 
 import crack.ext._gl glNormal3f, glVertex3f, GL_LIGHT0, GL_LIGHT1;
 
@@ -566,9 +566,9 @@ void renderCube(Vector org, byte materialId, int face) {
 
     @define Cube_vertex(x, y, z, s, t) {
         material.pin(s, t);
-        glVertex3f(float32(org.raw[0] + x * 0.125),
-                   float32(org.raw[1] + y * 0.125),
-                   float32(org.raw[2] + z * 0.125)
+        glVertex3f(float32(org.raw[0] + x * VOXEL_UNIT),
+                   float32(org.raw[1] + y * VOXEL_UNIT),
+                   float32(org.raw[2] + z * VOXEL_UNIT)
                    );
     }
 
@@ -894,7 +894,9 @@ commInst = myHandlers;
 for (int x = 0; x < 10; ++x) {
     for (int y = 0; y < 10; ++y) {
         for (int z = 0; z < 10; ++z) {
-            myHandlers.blockSpace[Vector(x, y, z)] = byte(random() % 3);
+            coord := Vector(float(x) * VOXEL_UNIT, float(y) * VOXEL_UNIT,
+                            float(z) * VOXEL_UNIT);
+            myHandlers.blockSpace[coord] = byte(random() % 3);
         }
     }
 }

@@ -68,6 +68,7 @@ class Token : public crack::ext::RCObj {
         static bool _isColon(Token *inst);
         static bool _isDecr(Token *inst);
         static bool _isDefine(Token *inst);
+        static bool _isDoc(Token *inst);
         static bool _isDot(Token *inst);
         static bool _isIncr(Token *inst);
         static bool _isAssign(Token *inst);
@@ -174,6 +175,7 @@ class Token : public crack::ext::RCObj {
         bool isColon();
         bool isDecr();
         bool isDefine();
+        bool isDoc();
         bool isDot();
         bool isIncr();
         bool isAssign();

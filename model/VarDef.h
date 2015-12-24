@@ -53,6 +53,9 @@ class VarDef : public virtual spug::RCBase {
         VarDefImplPtr impl;
         bool constant;
         
+        // The doc-string for the definition.
+        std::string doc;
+        
         // This flag is true for private defs that are exposed via an alias.  
         // (It should also be true for private types that are exposed as a 
         // return value).

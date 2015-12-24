@@ -1,0 +1,105 @@
+%%TEST%%
+basic docs functionality
+%%ARGS%%
+%%FILE%%
+
+# This is a function.
+## Isn't it great?
+void foo(int val) {
+    printint(val);
+}
+
+/**
+ * Another great function, brought to you by the letter C.
+ */
+void bar(String s) {}
+
+/// Third type of comment.
+int baz() { return 0; }
+
+## Documented class.
+class XXX : Object {
+
+    ## This is a method.
+    void f() {}
+
+    @final void finalMethod() {}
+    @static void staticMethod() {}
+}
+
+## Abstract class.
+@abstract class Abstract {
+    ## Abstract method.
+    @abstract int absmeth();
+}
+
+## Variable.
+int x;
+
+%%REXPECT%%
+/\*\*
+ Abstract class.
+
+\*/
+class Abstract : crack.lang.Object, {
+/\*\*
+ Abstract method.
+
+\*/
+@abstract .builtin.int absmeth\(\)
+.builtin.Class oper class\(\)
+.builtin.void oper del\(\)
+@final .builtin.void oper init\(\)
+@final .builtin.voidptr oper to .builtin.voidptr\(\)
+}
+class Abstract:meta : .builtin.Class, {
+@static .main.*.Abstract cast\(.builtin.VTableBase val, \)
+@static .main.*.Abstract cast\(.builtin.VTableBase val, .main.*.Abstract defaultValue, \)
+@static .main.*.Abstract unsafeCast\(.builtin.voidptr val, \)
+}
+/\*\*
+ Documented class.
+
+\*/
+class XXX : crack.lang.Object, \{
+/\*\*
+ This is a method.
+
+\*/
+.builtin.void f\(\)
+@final .builtin.void finalMethod\(\)
+.builtin.Class oper class\(\)
+.builtin.void oper del\(\)
+@final .builtin.void oper init\(\)
+@static .main.*.XXX oper new\(\)
+@final .builtin.voidptr oper to .builtin.voidptr\(\)
+@static .builtin.void staticMethod\(\)
+\}
+class XXX:meta : .builtin.Class, \{
+@static .main.*.XXX cast\(.builtin.VTableBase val, \)
+@static .main.*.XXX cast\(.builtin.VTableBase val, .main.*.XXX defaultValue, \)
+@static .main.*.XXX unsafeCast\(.builtin.voidptr val, \)
+\}
+.builtin.void __CrackBadCast\(.builtin.Class curType, .builtin.Class newType, \)
+/\*\*
+
+ \* Another great function, brought to you by the letter C.
+\s*
+\*/
+.builtin.void bar\(crack.lang.String s, \)
+/\*\*
+ Third type of comment.
+
+\*/
+.builtin.int baz\(\)
+/\*\*
+ Isn't it great\?
+
+\*/
+.builtin.void foo\(.builtin.int val, \)
+/\*\*
+ Variable.
+
+\*/
+.builtin.int x
+%%STDIN%%

@@ -15,6 +15,7 @@
 #include <vector>
 #include <map>
 #include <iostream>
+#include <sstream>
 #include <spug/Exception.h>
 
 #include "Toker.h"
@@ -99,6 +100,9 @@ class Parser {
       // callbacks for each event type.
       typedef std::vector<ParserCallback *> CallbackVec;
       CallbackVec callbacks[eventSentinel];
+
+      // The concatenation of all doc-strings discovered so far.
+      std::ostringstream doc;
 
       /**
        * Add a new definition to the current context or nearest definition
@@ -534,6 +538,12 @@ class Parser {
       Primary parsePrimary(model::Expr *implicitReceiver);
 
       model::ExprPtr parseDefine(const Token &ident);
+
+      /**
+       * Return the contents of all doc-strings consumed so far and reset the
+       * doc accumulator to empty.
+       */
+      std::string consumeDocs();
 };
 
 } // namespace parser

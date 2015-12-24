@@ -135,6 +135,13 @@ NamespacePtr TypeDef::getParent(unsigned i) {
         return 0;
 }
 
+void TypeDef::addBaseClass(TypeDef *base) {
+    ++fieldCount;
+    parents.push_back(base);
+    if (base->hasVTable)
+        hasVTable = true;
+}
+
 NamespacePtr TypeDef::getNamespaceOwner() {
     return getOwner();
 }

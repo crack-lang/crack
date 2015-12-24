@@ -161,6 +161,10 @@ class TypeDef : public VarDef, public Namespace {
         // so don't generate them for any more of the init methods.
         bool gotExplicitOperNew;
         
+        // Number of fields in an instance of the object, including base
+        // classes.
+        unsigned fieldCount;
+
         // If an instance of a class is used in a way that would have made
         // use of "oper bind" or "oper release", this is the location where
         // the first such use occurred.  We store this so that we can generate
@@ -185,7 +189,8 @@ class TypeDef : public VarDef, public Namespace {
             forward(false),
             initializersEmitted(false),
             abstract(false),
-            gotExplicitOperNew(false) {
+            gotExplicitOperNew(false),
+            fieldCount(0) {
         }
         
         ~TypeDef() { if (generic) delete generic; }
@@ -199,6 +204,9 @@ class TypeDef : public VarDef, public Namespace {
 
         /** required implementation of Namespace::getParent() */
         virtual NamespacePtr getParent(unsigned i);
+
+        /** Add a base class to the type. */
+        void addBaseClass(TypeDef *base);
 
         virtual NamespacePtr getNamespaceOwner();
 

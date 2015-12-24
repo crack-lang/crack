@@ -123,13 +123,6 @@ void BTypeDef::createAllVTables(VTableBuilder &vtb, const string &name,
     extendVTables(vtb);
 }
 
-void BTypeDef::addBaseClass(BTypeDef *base) {
-    ++fieldCount;
-    parents.push_back(base);
-    if (base->hasVTable)
-        hasVTable = true;
-}
-
 void BTypeDef::addPlaceholder(PlaceholderInstruction *inst) {
     assert(!complete && "Adding placeholder to a completed class");
     placeholders.push_back(inst);

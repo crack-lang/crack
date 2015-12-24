@@ -19,6 +19,8 @@ class B {
         indent := Indenter.wrap(out);
         indent `first line\nsecondline\n`;
         (++indent) `indented line\n`;
+        indent `another indented `;
+        indent `line\n`;
         indent `and here's A:\n`;
         (++indent) `$(A())\n`;
         indent -= 2;
@@ -33,6 +35,7 @@ Indenter.deleteField(cout);
 first line
 secondline
     indented line
+    another indented line
     and here's A:
         This is A
 
