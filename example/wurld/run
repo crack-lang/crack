@@ -1,5 +1,5 @@
 #!/bin/sh
 root=$(dirname $0)/../..
 
-$root/crack -Cl $root/lib --new-parser wurld.crk  "$@"
+$root/crack -Cl $root/lib wurld.crk  "$@"
 
