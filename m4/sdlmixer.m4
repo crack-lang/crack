@@ -8,8 +8,8 @@
 
 AC_DEFUN([AM_PATH_SDL_MIXER], [dnl
     AC_MSG_CHECKING(for SDL Mixer)
-    SDL_MIXER_LIBS=`pkg-config --libs SDL_mixer`
-    SDL_MIXER_CPPFLAGS=`pkg-config --cflags SDL_mixer` 
+    SDL_MIXER_LIBS=`pkg-config --libs SDL2_mixer`
+    SDL_MIXER_CPPFLAGS=`pkg-config --cflags SDL2_mixer` 
     ac_save_LIBS="$LIBS"
     ac_save_CPPFLAGS="$CPPFLAGS"
     LIBS="$LIBS $SDL_MIXER_LIBS"
@@ -18,10 +18,9 @@ AC_DEFUN([AM_PATH_SDL_MIXER], [dnl
         #include <SDL_mixer.h>
         
         int main() {
-            if (SDL_MIXER_MAJOR_VERSION != 1 ||
-                SDL_MIXER_MINOR_VERSION < 2
-                ) {
-                printf("Wrong jack version\n");
+            if (SDL_MIXER_MAJOR_VERSION < 1 ||
+                SDL_MIXER_MAJOR_VERSION > 2) {
+                printf("Wrong sdl mixer version\n");
                 return 1;
             } else {
                 return 0;
