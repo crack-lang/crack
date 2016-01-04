@@ -9,6 +9,7 @@
 
 #include <dlfcn.h>
 
+#include "spug/check.h"
 #include "spug/stlutil.h"
 #include "spug/Exception.h"
 
@@ -252,6 +253,14 @@ FuncDefPtr ModelBuilder::emitBeginFunc(
             // TODO: move nextVTableSlot into TypeDef.
             func->vtableSlot = 0; // func->receiverType->nextVTableSlot++;
     }
+
+    // Set the receiver's impl if we've got one.
+    if (func->receiverType) {
+        VarDefPtr receiver = context.ns->lookUp("this");
+        SPUG_CHECK(receiver, "Missing receiver for method " << name);
+        receiver->impl = new VarDefImplImpl();
+    }
+
     return func;
 }
 
