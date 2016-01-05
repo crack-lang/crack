@@ -321,6 +321,21 @@ ModuleDefPtr ModelBuilder::createModule(Context &context, const string &name,
     func->returnType = context.construct->voidType;
     context.addDef(func.get(), result.get());
 
+    func = new ModelFuncDef(FuncDef::builtin, "__getArgv", 0);
+    {
+        TypeDefPtr arrayType = context.ns->lookUp("array");
+        TypeDef::TypeVecObjPtr types = new TypeDef::TypeVecObj();
+        types->push_back(context.construct->byteptrType.get());
+        TypeDefPtr arrayOfByteptr =
+            arrayType->getSpecialization(context, types.get());
+        func->returnType = arrayOfByteptr;
+    }
+    context.addDef(func.get(), result.get());
+
+    func = new ModelFuncDef(FuncDef::builtin, "__getArgc", 0);
+    func->returnType = context.construct->intType;
+    context.addDef(func.get(), result.get());
+
     return result;
 }
 
