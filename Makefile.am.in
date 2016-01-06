@@ -405,6 +405,7 @@ testbed: runtime.la $(extlib_LTLIBRARIES)
 check: testbed
 	./unittests
 	BUILD_ROOT=`pwd` $(srcdir)/test/screen
+	BUILD_ROOT=`pwd` $(srcdir)/test/screen -d screen/tests/model_builder_pre_bs
 	BUILD_ROOT=`pwd` $(srcdir)/test/screen -d screen/tests/caching
 	BUILD_ROOT=`pwd` $(srcdir)/test/screen -d screen/tests/caching
 	BUILD_ROOT=`pwd` $(srcdir)/test/screen -d screen/tests/compound
