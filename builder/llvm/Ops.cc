@@ -417,8 +417,8 @@ ResultExprPtr LogicOrOpCall::emit(Context &context) {
 
 }
 
-// NegOpCall
-ResultExprPtr NegOpCall::emit(Context &context) {
+// BNegOpCall
+ResultExprPtr BNegOpCall::emit(Context &context) {
     if (receiver)
         receiver->emit(context)->handleTransient(context);
     else
@@ -436,34 +436,6 @@ ResultExprPtr NegOpCall::emit(Context &context) {
                     builder.lastValue
                     );
     return new BResultExpr(this, builder.lastValue);
-}
-
-ExprPtr NegOpCall::foldConstants() {
-    ExprPtr val;
-    if (receiver)
-        val = receiver;
-    else
-        val = args[0];
-
-    IntConstPtr v = IntConstPtr::rcast(val);
-    if (v)
-        return v->foldNeg();
-    else
-        return this;
-}
-
-// NegOpDef
-NegOpDef::NegOpDef(BTypeDef *resultType, const std::string &name,
-                   bool isMethod
-                   ) :
-        OpDef(resultType,
-              FuncDef::builtin |
-               (isMethod ? FuncDef::method : FuncDef::noFlags),
-              name,
-              isMethod ? 0 : 1
-              ) {
-    if (!isMethod)
-        args[0] = new ArgDef(resultType, "operand");
 }
 
 // FNegOpCall

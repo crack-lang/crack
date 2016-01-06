@@ -261,6 +261,8 @@ noinst_HEADERS = \
     model/NamespaceStub.h \
     model/NestedDeserializer.h \
     model/NullConst.h \
+    model/OpDef.h \
+    model/ops.h \
     model/Options.h \
     model/OverloadDef.h \
     model/PrimFuncAnnotation.h \

@@ -286,9 +286,7 @@ class ModelBuilder : public builder::Builder {
 
         virtual model::FuncCallPtr createFuncCall(model::FuncDef *func,
                                                   bool squashVirtual = false
-                                                  ) {
-            return new model::FuncCall(func, squashVirtual);
-        }
+                                                  );
 
         virtual model::VarRefPtr createVarRef(model::VarDef *varDef) {
             return new model::VarRef(varDef);

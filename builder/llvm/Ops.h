@@ -12,7 +12,11 @@
 #include "model/FuncCall.h"
 #include "model/FuncDef.h"
 #include "model/Context.h"
+#include "model/OpDef.h"
+#include "model/ops.h"
 #include "model/ResultExpr.h"
+
+#include "BTypeDef.h"
 
 namespace model {
     class TypeDef;
@@ -23,30 +27,7 @@ namespace mvll {
 
 class BTypeDef;
 
-// primitive operations
-SPUG_RCPTR(OpDef);
-
-class OpDef : public model::FuncDef {
-    public:
-
-        OpDef(model::TypeDef *resultType, model::FuncDef::Flags flags,
-              const std::string &name,
-              size_t argCount
-              ) :
-            FuncDef(flags, name, argCount) {
-
-            // XXX we don't have a function type for these
-            returnType = resultType;
-        }
-
-        virtual model::FuncCallPtr createFuncCall() = 0;
-
-        virtual void *getFuncAddr(Builder &builder) {
-            return 0;
-        }
-};
-
-class BinOpDef : public OpDef {
+class BinOpDef : public model::OpDef {
     public:
         BinOpDef(model::TypeDef *argType,
                  model::TypeDef *resultType,
@@ -58,13 +39,14 @@ class BinOpDef : public OpDef {
         virtual model::FuncCallPtr createFuncCall() = 0;
 };
 
-class UnOpDef : public OpDef {
+class UnOpDef : public model::OpDef {
     public:
     UnOpDef(model::TypeDef *resultType, const std::string &name) :
-            OpDef(resultType, model::FuncDef::builtin | model::FuncDef::method,
-                  name,
-                  0
-                  ) {
+            model::OpDef(resultType,
+                         model::FuncDef::builtin | model::FuncDef::method,
+                         name,
+                         0
+                         ) {
         }
 };
 
@@ -85,7 +67,7 @@ public:
     virtual model::ExprPtr foldConstants();
 };
 
-class BitNotOpDef : public OpDef {
+class BitNotOpDef : public model::OpDef {
 public:
     BitNotOpDef(BTypeDef *resultType, const std::string &name,
                 bool isMethod = false
@@ -133,23 +115,23 @@ public:
     }
 };
 
-class NegOpCall : public model::FuncCall {
+class BNegOpCall : public model::NegOpCall {
 public:
-    NegOpCall(model::FuncDef *def) : FuncCall(def) {}
+    BNegOpCall(model::FuncDef *def) : NegOpCall(def) {}
 
     virtual model::ResultExprPtr emit(model::Context &context);
-
-    virtual model::ExprPtr foldConstants();
 };
 
-class NegOpDef : public OpDef {
+class BNegOpDef : public model::NegOpDef {
 public:
-    NegOpDef(BTypeDef *resultType, const std::string &name,
-             bool isMethod
-             );
+    BNegOpDef(BTypeDef *resultType, const std::string &name,
+              bool isMethod
+              ) :
+        model::NegOpDef(resultType, name, isMethod) {
+    }
 
     virtual model::FuncCallPtr createFuncCall() {
-        return new NegOpCall(this);
+        return new BNegOpCall(this);
     }
 };
 
@@ -161,7 +143,7 @@ public:
     virtual model::ExprPtr foldConstants();
 };
 
-class FNegOpDef : public OpDef {
+class FNegOpDef : public model::OpDef {
 public:
     FNegOpDef(BTypeDef *resultType, const std::string &name, bool isMethod);
 
@@ -170,13 +152,13 @@ public:
     }
 };
 
-class FunctionPtrOpDef : public OpDef {
+class FunctionPtrOpDef : public model::OpDef {
 public:
     FunctionPtrOpDef(model::TypeDef *resultType,
                      size_t argCount) :
-    OpDef(resultType, FuncDef::builtin | FuncDef::method, "oper call",
-          argCount
-          ) {
+    model::OpDef(resultType, FuncDef::builtin | FuncDef::method, "oper call",
+                 argCount
+                 ) {
         type = resultType;
     }
 
@@ -194,13 +176,14 @@ public:
 };
 
 template<class T>
-class GeneralOpDef : public OpDef {
+class GeneralOpDef : public model::OpDef {
 public:
     GeneralOpDef(model::TypeDef *resultType, model::FuncDef::Flags flags,
                  const std::string &name,
                  size_t argCount
                  ) :
-    OpDef(resultType, flags, name, argCount) {
+        model::OpDef(resultType, flags, name, argCount) {
+
         type = resultType;
     }
 
@@ -336,7 +319,7 @@ public:
     }
 };
 
-class UnsafeCastDef : public OpDef {
+class UnsafeCastDef : public model::OpDef {
 public:
     UnsafeCastDef(model::TypeDef *resultType);
 

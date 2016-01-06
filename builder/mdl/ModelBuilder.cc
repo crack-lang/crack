@@ -15,6 +15,7 @@
 
 #include "model/BaseMetaClass.h"
 #include "model/InstVarDef.h"
+#include "model/ops.h"
 #include "model/OverloadDef.h"
 #include "model/VarDefImpl.h"
 #include "ArrayTypeDef.h"
@@ -157,6 +158,26 @@ namespace {
                 return hasInstSlot();
             }
 
+    };
+
+    class BNegOpCall : public NegOpCall {
+        public:
+            BNegOpCall(FuncDef *def) : NegOpCall(def) {}
+            virtual ResultExprPtr emit(Context &context) {
+                return new ResultExprImpl(this);
+            }
+    };
+
+    class BNegOpDef : public NegOpDef {
+        public:
+            BNegOpDef(TypeDef *resultType, const std::string &name,
+                      bool isMethod) :
+                NegOpDef(resultType, name, isMethod) {
+            }
+
+            FuncCallPtr createFuncCall() {
+                return new BNegOpCall(this);
+            }
     };
 }
 
@@ -304,6 +325,16 @@ VarDefPtr ModelBuilder::emitVarDef(
         result->impl = new VarDefImplImpl();
     }
     return result;
+}
+
+FuncCallPtr ModelBuilder::createFuncCall(model::FuncDef *func,
+                                         bool squashVirtual
+                                         ) {
+    OpDefPtr opDef = OpDefPtr::cast(func);
+    if (opDef)
+        return opDef->createFuncCall();
+    else
+        return new FuncCall(func, squashVirtual);
 }
 
 ModuleDefPtr ModelBuilder::createModule(Context &context, const string &name,
@@ -506,9 +537,9 @@ ModuleDefPtr ModelBuilder::registerPrimFuncs(Context &context) {
     context.addDef(newBinOpDef("oper !=", type, boolType, ns).get(), ns);     \
     context.addDef(newBinOpDef("oper >", type, boolType, ns).get(), ns);      \
     context.addDef(newBinOpDef("oper <", type, boolType, ns).get(), ns);      \
-    context.addDef(newBinOpDef("oper >=", type, boolType, ns).get(), ns);    \
+    context.addDef(newBinOpDef("oper >=", type, boolType, ns).get(), ns);     \
     context.addDef(newBinOpDef("oper <=", type, boolType, ns).get(), ns);     \
-    context.addDef(newUnOpDef(type, "oper -", ns).get(), ns);                 \
+    context.addDef(new BNegOpDef(type, "oper -", ns), ns);              \
     context.addDef(newUnOpDef(type, "oper ~", ns).get(), ns);                 \
     context.addDef(newBinOpDef("oepr |", type, type, ns).get(), ns);          \
     context.addDef(newBinOpDef("oper &", type, type, ns).get(), ns);          \

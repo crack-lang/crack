@@ -2652,7 +2652,7 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
     context.addDef(new ICmp##signed##LTOpDef(type, boolType, ns), ns);                     \
     context.addDef(new ICmp##signed##GEOpDef(type, boolType, ns), ns);                     \
     context.addDef(new ICmp##signed##LEOpDef(type, boolType, ns), ns);                     \
-    context.addDef(new NegOpDef(type, "oper -", ns), ns);                         \
+    context.addDef(new BNegOpDef(type, "oper -", ns), ns);                         \
     context.addDef(new BitNotOpDef(type, "oper ~", ns), ns);                      \
     context.addDef(new OrOpDef(type, 0, ns), ns);                                 \
     context.addDef(new AndOpDef(type, 0, ns), ns);                                \

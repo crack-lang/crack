@@ -1,0 +1,11 @@
+%%TEST%%
+const folding
+%%ARGS%%
+%%FILE%%
+int32 i = -123;
+%%EXPECT%%
+.builtin.void __CrackBadCast(.builtin.Class curType, .builtin.Class newType, )
+.builtin.int __getArgc()
+.builtin.array[.builtin.byteptr] __getArgv()
+.builtin.int32 i
+%%STDIN%%

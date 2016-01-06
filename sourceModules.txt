@@ -36,6 +36,7 @@ model/LocalNamespace.cc
 model/MultiExpr.cc
 model/NullConst.cc
 model/Namespace.cc
+model/ops.cc
 model/Serializer.cc
 model/CleanupFrame.cc
 model/TernaryExpr.cc
