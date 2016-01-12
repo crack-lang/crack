@@ -168,15 +168,11 @@ namespace {
             }
     };
 
-    class BNegOpDef : public NegOpDef {
+    class BBitNotOpCall : public BitNotOpCall {
         public:
-            BNegOpDef(TypeDef *resultType, const std::string &name,
-                      bool isMethod) :
-                NegOpDef(resultType, name, isMethod) {
-            }
-
-            FuncCallPtr createFuncCall() {
-                return new BNegOpCall(this);
+            BBitNotOpCall(FuncDef *def) : BitNotOpCall(def) {}
+            virtual ResultExprPtr emit(Context &context) {
+                return new ResultExprImpl(this);
             }
     };
 }
@@ -539,8 +535,8 @@ ModuleDefPtr ModelBuilder::registerPrimFuncs(Context &context) {
     context.addDef(newBinOpDef("oper <", type, boolType, ns).get(), ns);      \
     context.addDef(newBinOpDef("oper >=", type, boolType, ns).get(), ns);     \
     context.addDef(newBinOpDef("oper <=", type, boolType, ns).get(), ns);     \
-    context.addDef(new BNegOpDef(type, "oper -", ns), ns);              \
-    context.addDef(newUnOpDef(type, "oper ~", ns).get(), ns);                 \
+    context.addDef(new MixedModeOpDef<BNegOpCall>(type, "oper -", ns), ns);   \
+    context.addDef(new MixedModeOpDef<BBitNotOpCall>(type, "oper ~", ns), ns);\
     context.addDef(newBinOpDef("oepr |", type, type, ns).get(), ns);          \
     context.addDef(newBinOpDef("oper &", type, type, ns).get(), ns);          \
     context.addDef(newBinOpDef("oper ^", type, type, ns).get(), ns);          \
@@ -967,7 +963,9 @@ ModuleDefPtr ModelBuilder::registerPrimFuncs(Context &context) {
                    );
     vtableBaseType->complete = true;
 
-    context.addDef(newUnOpDef(boolType, "oper !", false).get());
+    context.addDef(
+        new MixedModeOpDef<BBitNotOpCall>(boolType, "oper !", false)
+    );
 
     ArrayTypeDef::addArrayMethods(context, byteptrType, byteType);
     populateBaseMetaClass(context);

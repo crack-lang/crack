@@ -3,6 +3,7 @@ const folding
 %%ARGS%%
 %%FILE%%
 int32 i = -123;
+i = ~100;
 %%EXPECT%%
 .builtin.void __CrackBadCast(.builtin.Class curType, .builtin.Class newType, )
 .builtin.int __getArgc()

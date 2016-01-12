@@ -2652,8 +2652,8 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
     context.addDef(new ICmp##signed##LTOpDef(type, boolType, ns), ns);                     \
     context.addDef(new ICmp##signed##GEOpDef(type, boolType, ns), ns);                     \
     context.addDef(new ICmp##signed##LEOpDef(type, boolType, ns), ns);                     \
-    context.addDef(new BNegOpDef(type, "oper -", ns), ns);                         \
-    context.addDef(new BitNotOpDef(type, "oper ~", ns), ns);                      \
+    context.addDef(new MixedModeOpDef<BNegOpCall>(type, "oper -", ns), ns);      \
+    context.addDef(new MixedModeOpDef<BBitNotOpCall>(type, "oper ~", ns), ns);   \
     context.addDef(new OrOpDef(type, 0, ns), ns);                                 \
     context.addDef(new AndOpDef(type, 0, ns), ns);                                \
     context.addDef(new XorOpDef(type, 0, ns), ns);                                \
@@ -3245,7 +3245,7 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
     vtableBaseType->fixIncompletes(context);
 
     // boolean not
-    context.addDef(new BitNotOpDef(boolType, "oper !"));
+    context.addDef(new MixedModeOpDef<BBitNotOpCall>(boolType, "oper !"));
 
     // bind the module to the execution engine
     engineBindModule(builtinMod.get());

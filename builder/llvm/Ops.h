@@ -41,12 +41,13 @@ class BinOpDef : public model::OpDef {
 
 class UnOpDef : public model::OpDef {
     public:
-    UnOpDef(model::TypeDef *resultType, const std::string &name) :
-            model::OpDef(resultType,
-                         model::FuncDef::builtin | model::FuncDef::method,
-                         name,
-                         0
-                         ) {
+        UnOpDef(model::TypeDef *resultType, const std::string &name) :
+                model::OpDef(
+                    resultType,
+                    model::FuncDef::builtin | model::FuncDef::method,
+                    name,
+                    0
+                    ) {
         }
 };
 
@@ -59,24 +60,11 @@ public:
     virtual model::ResultExprPtr emit(model::Context &context);
 };
 
-class BitNotOpCall : public model::FuncCall {
+class BBitNotOpCall : public model::BitNotOpCall {
 public:
-    BitNotOpCall(model::FuncDef *def) : FuncCall(def) {}
+    BBitNotOpCall(model::FuncDef *def) : model::BitNotOpCall(def) {}
 
     virtual model::ResultExprPtr emit(model::Context &context);
-    virtual model::ExprPtr foldConstants();
-};
-
-class BitNotOpDef : public model::OpDef {
-public:
-    BitNotOpDef(BTypeDef *resultType, const std::string &name,
-                bool isMethod = false
-                );
-
-    virtual model::FuncCallPtr createFuncCall() {
-        return new BitNotOpCall(this);
-    }
-
 };
 
 class LogicAndOpCall : public model::FuncCall {
@@ -122,19 +110,6 @@ public:
     virtual model::ResultExprPtr emit(model::Context &context);
 };
 
-class BNegOpDef : public model::NegOpDef {
-public:
-    BNegOpDef(BTypeDef *resultType, const std::string &name,
-              bool isMethod
-              ) :
-        model::NegOpDef(resultType, name, isMethod) {
-    }
-
-    virtual model::FuncCallPtr createFuncCall() {
-        return new BNegOpCall(this);
-    }
-};
-
 class FNegOpCall : public model::FuncCall {
 public:
     FNegOpCall(model::FuncDef *def) : FuncCall(def) {}
@@ -156,9 +131,10 @@ class FunctionPtrOpDef : public model::OpDef {
 public:
     FunctionPtrOpDef(model::TypeDef *resultType,
                      size_t argCount) :
-    model::OpDef(resultType, FuncDef::builtin | FuncDef::method, "oper call",
-                 argCount
-                 ) {
+        model::OpDef(resultType,
+                    FuncDef::builtin | FuncDef::method, "oper call",
+                    argCount
+                    ) {
         type = resultType;
     }
 

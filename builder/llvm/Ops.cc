@@ -280,8 +280,8 @@ ResultExprPtr NoOpCall::emit(Context &context) {
         return args[0]->emit(context);
 }
 
-// BitNotOpCall
-ResultExprPtr BitNotOpCall::emit(Context &context) {
+// BBitNotOpCall
+ResultExprPtr BBitNotOpCall::emit(Context &context) {
     if (receiver)
         receiver->emit(context)->handleTransient(context);
     else
@@ -299,33 +299,6 @@ ResultExprPtr BitNotOpCall::emit(Context &context) {
                     );
 
     return new BResultExpr(this, builder.lastValue);
-}
-
-ExprPtr BitNotOpCall::foldConstants() {
-    ExprPtr val;
-    if (receiver)
-        val = receiver;
-    else
-        val = args[0];
-
-    IntConstPtr v = IntConstPtr::rcast(val);
-    if (v)
-        return v->foldBitNot();
-    else
-        return this;
-}
-
-// BitNotOpDef
-BitNotOpDef::BitNotOpDef(BTypeDef *resultType, const std::string &name,
-                         bool isMethod
-                         ) :
-    OpDef(resultType,
-          FuncDef::builtin | (isMethod ? FuncDef::method : FuncDef::noFlags),
-          name,
-          isMethod ? 0 : 1
-          ) {
-    if (!isMethod)
-        args[0] = new ArgDef(resultType, "operand");
 }
 
 // LogicAndOpCall

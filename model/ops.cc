@@ -25,15 +25,16 @@ model::ExprPtr NegOpCall::foldConstants() {
         return this;
 }
 
-NegOpDef::NegOpDef(TypeDef *resultType, const std::string &name,
-                   bool isMethod
-                   ) :
-        OpDef(resultType,
-              FuncDef::builtin |
-               (isMethod ? FuncDef::method : FuncDef::noFlags),
-              name,
-              isMethod ? 0 : 1
-              ) {
-    if (!isMethod)
-        args[0] = new ArgDef(resultType, "operand");
+ExprPtr BitNotOpCall::foldConstants() {
+    ExprPtr val;
+    if (receiver)
+        val = receiver;
+    else
+        val = args[0];
+
+    IntConstPtr v = IntConstPtr::rcast(val);
+    if (v)
+        return v->foldBitNot();
+    else
+        return this;
 }

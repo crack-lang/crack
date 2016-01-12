@@ -19,12 +19,37 @@ class NegOpCall : public model::FuncCall {
         virtual model::ExprPtr foldConstants();
 };
 
-class NegOpDef : public OpDef {
-    public:
-        NegOpDef(TypeDef *resultType, const std::string &name,
-                 bool isMethod
-                 );
+class BitNotOpCall : public model::FuncCall {
+public:
+    BitNotOpCall(model::FuncDef *def) : FuncCall(def) {}
+
+    virtual model::ExprPtr foldConstants();
 };
+
+// An OpDef for operators that can serve as both functions and methods, e.g.
+// arithmetic and bitwise negation.  'OpCall' is the FuncCall class
+// instantiated by the createFuncCall() method.
+template <class OpCall>
+class MixedModeOpDef : public OpDef {
+    public:
+        MixedModeOpDef(TypeDef *resultType, const std::string &name,
+                       bool isMethod = false
+                       ) :
+            OpDef(resultType,
+                  FuncDef::builtin |
+                  (isMethod ? FuncDef::method : FuncDef::noFlags),
+                  name,
+                  isMethod ? 0 : 1
+                  ) {
+            if (!isMethod)
+                args[0] = new ArgDef(resultType, "operand");
+        }
+
+    virtual model::FuncCallPtr createFuncCall() {
+        return new OpCall(this);
+    }
+};
+
 
 }  // namespace model
 

@@ -17,7 +17,7 @@ SPUG_RCPTR(FuncCall);
 SPUG_RCPTR(OpDef);
 
 // Base class for primitive operations.
-class OpDef : public model::FuncDef {
+class OpDef : public FuncDef {
     public:
 
         OpDef(model::TypeDef *resultType, model::FuncDef::Flags flags,
