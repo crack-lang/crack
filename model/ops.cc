@@ -7,6 +7,7 @@
 
 #include "ops.h"
 
+#include "FloatConst.h"
 #include "IntConst.h"
 
 using namespace model;
@@ -35,6 +36,14 @@ ExprPtr BitNotOpCall::foldConstants() {
     IntConstPtr v = IntConstPtr::rcast(val);
     if (v)
         return v->foldBitNot();
+    else
+        return this;
+}
+
+ExprPtr FNegOpCall::foldConstants() {
+    FloatConstPtr fc = FloatConstPtr::rcast(receiver ? receiver : args[0]);
+    if (fc)
+        return fc->foldNeg();
     else
         return this;
 }

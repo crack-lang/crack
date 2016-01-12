@@ -412,7 +412,7 @@ ResultExprPtr BNegOpCall::emit(Context &context) {
 }
 
 // FNegOpCall
-ResultExprPtr FNegOpCall::emit(Context &context) {
+ResultExprPtr BFNegOpCall::emit(Context &context) {
     if (receiver)
         receiver->emit(context)->handleTransient(context);
     else
@@ -430,28 +430,6 @@ ResultExprPtr FNegOpCall::emit(Context &context) {
                     );
 
     return new BResultExpr(this, builder.lastValue);
-}
-
-ExprPtr FNegOpCall::foldConstants() {
-    FloatConstPtr fc = FloatConstPtr::rcast(receiver ? receiver : args[0]);
-    if (fc)
-        return fc->foldNeg();
-    else
-        return this;
-}
-
-// FNegOpDef
-FNegOpDef::FNegOpDef(BTypeDef *resultType, const std::string &name,
-                     bool isMethod
-                     ) :
-        OpDef(resultType,
-              FuncDef::builtin |
-               (isMethod ? FuncDef::method : FuncDef::noFlags),
-              name,
-              isMethod ? 0 : 1
-              ) {
-    if (!isMethod)
-        args[0] = new ArgDef(resultType, "operand");
 }
 
 // FunctionPtrCall

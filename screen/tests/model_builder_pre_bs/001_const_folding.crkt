@@ -4,9 +4,11 @@ const folding
 %%FILE%%
 int32 i = -123;
 i = ~100;
+float32 f = -1.0;
 %%EXPECT%%
 .builtin.void __CrackBadCast(.builtin.Class curType, .builtin.Class newType, )
 .builtin.int __getArgc()
 .builtin.array[.builtin.byteptr] __getArgv()
+.builtin.float32 f
 .builtin.int32 i
 %%STDIN%%

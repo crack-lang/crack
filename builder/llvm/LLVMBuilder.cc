@@ -2681,7 +2681,7 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
     context.addDef(new FCmpOLTOpDef(type, boolType, ns), ns);                 \
     context.addDef(new FCmpOGEOpDef(type, boolType, ns), ns);                 \
     context.addDef(new FCmpOLEOpDef(type, boolType, ns), ns);                 \
-    context.addDef(new FNegOpDef(type, "oper -", ns), ns);
+    context.addDef(new MixedModeOpDef<BFNegOpCall>(type, "oper -", ns), ns);
 
     FLOPS(float32Type, 0)
     FLOPS(float64Type, 0)

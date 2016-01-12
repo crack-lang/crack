@@ -20,10 +20,15 @@ class NegOpCall : public model::FuncCall {
 };
 
 class BitNotOpCall : public model::FuncCall {
-public:
-    BitNotOpCall(model::FuncDef *def) : FuncCall(def) {}
+    public:
+        BitNotOpCall(model::FuncDef *def) : FuncCall(def) {}
+        virtual model::ExprPtr foldConstants();
+};
 
-    virtual model::ExprPtr foldConstants();
+class FNegOpCall : public model::FuncCall {
+    public:
+        FNegOpCall(model::FuncDef *def) : FuncCall(def) {}
+        virtual model::ExprPtr foldConstants();
 };
 
 // An OpDef for operators that can serve as both functions and methods, e.g.

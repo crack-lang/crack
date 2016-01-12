@@ -175,6 +175,14 @@ namespace {
                 return new ResultExprImpl(this);
             }
     };
+
+    class BFNegOpCall : public FNegOpCall {
+        public:
+            BFNegOpCall(FuncDef *def) : FNegOpCall(def) {}
+            virtual ResultExprPtr emit(Context &context) {
+                return new ResultExprImpl(this);
+            }
+    };
 }
 
 model::TypeDefPtr ModelBuilder::getFuncType(
@@ -564,7 +572,7 @@ ModuleDefPtr ModelBuilder::registerPrimFuncs(Context &context) {
     context.addDef(newBinOpDef("oper <", type, boolType, ns).get(), ns);      \
     context.addDef(newBinOpDef("oper >=", type, boolType, ns).get(), ns);     \
     context.addDef(newBinOpDef("oper <=", type, boolType, ns).get(), ns);     \
-    context.addDef(newUnOpDef(type, "oper -", ns).get(), ns);
+    context.addDef(new MixedModeOpDef<BFNegOpCall>(type, "oper -", ns), ns);
 
     FLOPS(gd->float32Type.get(), 0)
     FLOPS(gd->float64Type.get(), 0)

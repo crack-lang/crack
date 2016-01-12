@@ -110,21 +110,11 @@ public:
     virtual model::ResultExprPtr emit(model::Context &context);
 };
 
-class FNegOpCall : public model::FuncCall {
+class BFNegOpCall : public model::FNegOpCall {
 public:
-    FNegOpCall(model::FuncDef *def) : FuncCall(def) {}
+    BFNegOpCall(model::FuncDef *def) : model::FNegOpCall(def) {}
 
     virtual model::ResultExprPtr emit(model::Context &context);
-    virtual model::ExprPtr foldConstants();
-};
-
-class FNegOpDef : public model::OpDef {
-public:
-    FNegOpDef(BTypeDef *resultType, const std::string &name, bool isMethod);
-
-    virtual model::FuncCallPtr createFuncCall() {
-        return new FNegOpCall(this);
-    }
 };
 
 class FunctionPtrOpDef : public model::OpDef {
