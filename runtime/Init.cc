@@ -819,6 +819,15 @@ extern "C" void crack_runtime_cinit(Module *mod) {
     f->addArg(byteptrType, "buf");
     f->addArg(uintType, "count");
 
+    f = mod->addFunc(intType, "lseek", (void *)lseek, "lseek");
+    f->addArg(intType, "fd");
+    f->addArg(intzType, "offset");
+    f->addArg(intType, "whence");
+    
+    mod->addConstant(intType, "SEEK_SET", SEEK_SET);
+    mod->addConstant(intType, "SEEK_CUR", SEEK_CUR);
+    mod->addConstant(intType, "SEEK_END", SEEK_END);
+
     f = mod->addFunc(intType, "utimes", (void *)crack::runtime::setUtimes);
     f->addArg(byteptrType, "path");
     f->addArg(int64Type, "atime");
@@ -1060,9 +1069,10 @@ extern "C" void crack_runtime_cinit(Module *mod) {
     siginfoType->addInstVar(intType, "si_fd",
                             CRACK_OFFSET(siginfo_t, si_fd)
                             );
-    siginfoType->addInstVar(int16Type, "si_addr_lsb",
-                            CRACK_OFFSET(siginfo_t, si_addr_lsb)
-                            );
+// This doesn't appear to always be defined.
+//    siginfoType->addInstVar(int16Type, "si_addr_lsb",
+//                            CRACK_OFFSET(siginfo_t, si_addr_lsb)
+//                            );
     siginfoType->addConstructor();
     siginfoType->finish();
 

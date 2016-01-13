@@ -1,0 +1,30 @@
+%%TEST%%
+file IO
+%%ARGS%%
+%%FILE%%
+import crack.io cerr, SEEK_CUR, SEEK_SET, SEEK_END;
+import crack.fs makePath;
+
+@import crack.ann assert;
+
+path := makePath('/tmp/foo');
+out := path.writer();
+out.write('test of seekability');
+dst := path.reader();
+@assert(dst.seek(4, SEEK_SET) == 4);
+@assert(dst.read(4) == ' of ');
+@assert(dst.seek(4, SEEK_CUR) == 12);
+@assert(dst.read(4) == 'abil');
+@assert(dst.seek(-11, SEEK_END) == 8);
+@assert(dst.read(4) == 'seek');
+
+# Verify that it works for write.
+@assert(out.seek(4, SEEK_SET) == 4);
+out.write('ing');
+@assert(dst.seek(0, SEEK_SET) == 0);
+@assert(dst.read(7) == 'testing');
+
+cerr `ok\n`;
+%%EXPECT%%
+ok
+%%STDIN%%

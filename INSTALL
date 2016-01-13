@@ -83,6 +83,7 @@ To build from the repository (not a release tarball):
 
 Special requirements for extensions (this list is probably incomplete):
     sdl: libsdl1.2-dev
+    sdl-mixer (audio): libsdl2-mixer-dev
     gtk: ??? tbd libgtk2.0-dev
     ssl: libssl-dev
 

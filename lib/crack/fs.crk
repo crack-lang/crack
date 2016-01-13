@@ -13,7 +13,8 @@ import crack.runtime basename, chdir, closedir, dirname, errno, fileExists,
     EEXIST, O_CREAT, O_TRUNC, O_RDONLY, O_WRONLY, O_APPEND, PATH_MAX,
     S_IFDIR, S_IFLNK;
 import crack.sys strerror;
-import crack.io cout, FStr, OwningFDReader, OwningFDWriter, Reader, Writer;
+import crack.io cout, FStr, OwningFDReader, OwningFDWriter, Reader,
+    SeekableReader, SeekableWriter, Writer;
 import crack.lang AssertionError, Buffer, CString, Exception,
     InvalidArgumentError, InvalidStateError, ManagedBuffer, Formatter;
 import crack.lang SystemError;
@@ -46,15 +47,15 @@ class Path;
 @abstract class Path {
 
     ## Returns a reader for the path.  The path must be readable.
-    @abstract Reader reader();
+    @abstract SeekableReader reader();
     alias makeReader = reader;
 
     ## Returns a writer for the path.  The path must be writable.
-    @abstract Writer writer();
+    @abstract SeekableWriter writer();
     alias makeWriter = writer;
 
     ## Returns a writer that appends to the file defined by the path.
-    @abstract Writer appender();
+    @abstract SeekableWriter appender();
     alias makeAppender = appender;
 
     ## Truncate the file to the specified size.
@@ -254,14 +255,14 @@ class RealPath : Path {
     @__stater(isDir, S_IFDIR)
     @__stater(isLink, S_IFLNK)
 
-    Reader reader() {
+    SeekableReader reader() {
         fd := open(__path.buffer, O_RDONLY, 0);
         if (fd == -1)
             throw SystemError('Opening ' + __path);
         return OwningFDReader(fd);
     }
 
-    Writer writer() {
+    SeekableWriter writer() {
         fd := open(__path.buffer, O_CREAT | O_WRONLY | O_TRUNC, 0666);
         if (fd == -1)
             throw SystemError(FStr() `opening $__path`);
@@ -274,7 +275,7 @@ class RealPath : Path {
             throw SystemError(FStr() `truncating $__path`);
     }
 
-    Writer appender() {
+    SeekableWriter appender() {
         fd := open(__path.buffer, O_APPEND | O_WRONLY, 0666);
         if (fd == -1)
             throw SystemError(FStr() `opening $__path`);
@@ -367,9 +368,9 @@ class _CWD : Path {
         set(other.getFullName());
     }
 
-    Reader reader() { return __path.reader(); }
-    Writer writer() { return __path.writer(); }
-    Writer appender() { return __path.appender(); }
+    SeekableReader reader() { return __path.reader(); }
+    SeekableWriter writer() { return __path.writer(); }
+    SeekableWriter appender() { return __path.appender(); }
     void truncate(uint64 size) { __path.truncate(size); }
     void makeDir(bool errorOnExists) { __path.makeDir(errorOnExists); }
     Path oper [](String child) { return __path[child]; }

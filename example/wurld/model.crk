@@ -3,7 +3,7 @@
 import crack.cont.array Array;
 import crack.cont.hashmap HashMap;
 import crack.exp.g3d Vector;
-import crack.io cout, Formatter;
+import crack.io cerr, cout, Formatter;
 import crack.math floor;
 import crack.runtime free;
 
@@ -11,6 +11,7 @@ import crack.runtime free;
 
 # Size of a leaf block (this is size of a voxel * 8).
 const float LEAF_UNIT = 1;
+const float VOXEL_UNIT = LEAF_UNIT / 8;
 
 ## Returns the integer "corner coordinate" for any point in space, for example
 ## for {1.4, 2.5, 3.7}, returns {1, 2, 3}.
@@ -267,6 +268,10 @@ class LeafBlock : Block {
     #       Where the face axes are the axes of the normals of that face,
     #       "low" means a negative normal, "high" a positive normal
     void render(Vector orig, function[void, Vector, byte, int] renderer) {
+        @define offset(x, y, z) {
+            Vector(float(x) * VOXEL_UNIT, float(y) * VOXEL_UNIT,
+                   float(z) * VOXEL_UNIT)
+        }
         for (int i; i < 512; ++i) {
             if (contents := __contents[i]) {
                 x := i / 64;
@@ -275,17 +280,17 @@ class LeafBlock : Block {
                 // XXX need to check the adjacent block for voxels adjacent to
                 // the outside of the block (e.g. x == 0)
                 if (x == 0 || !_get(x - 1, y, z))
-                    renderer(_origin + Vector(x, y, z), contents, 0);
+                    renderer(_origin + @offset(x, y, z), contents, 0);
                 if (y == 0 || !_get(x, y - 1, z))
-                    renderer(_origin + Vector(x, y, z), contents, 1);
+                    renderer(_origin + @offset(x, y, z), contents, 1);
                 if (z == 0 || !_get(x, y, z - 1))
-                    renderer(_origin + Vector(x, y, z), contents, 2);
+                    renderer(_origin + @offset(x, y, z), contents, 2);
                 if (x == 7 || !_get(x + 1, y, z))
-                    renderer(_origin + Vector(x, y, z), contents, 3);
+                    renderer(_origin + @offset(x, y, z), contents, 3);
                 if (y == 7 || !_get(x, y + 1, z))
-                    renderer(_origin + Vector(x, y, z), contents, 4);
+                    renderer(_origin + @offset(x, y, z), contents, 4);
                 if (z == 7 || !_get(x, y, z + 1))
-                    renderer(_origin + Vector(x, y, z), contents, 5);
+                    renderer(_origin + @offset(x, y, z), contents, 5);
             }
         }
     }
@@ -314,6 +319,7 @@ class SparseVoxelSpace {
                 # so that we don't just expand into one quadrant.  We want
                 # the current top cube to be in the middle of the new top
                 # cube, not its corner.
+                cerr `creating new top for $top to contain $pos\n`;
                 u := top.unit;
                 newUnit := 8 * u;
                 newTop := ContainerBlock(corner(top._origin - Vector(u, u, u), newUnit), newUnit);
