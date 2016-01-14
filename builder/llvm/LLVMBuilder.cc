@@ -2641,24 +2641,24 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
 
     // create integer operations
 #define INTOPS(type, signed, shift, ns) \
-    context.addDef(new AddOpDef(type, 0, ns), ns);                                \
-    context.addDef(new SubOpDef(type, 0, ns), ns);                                \
-    context.addDef(new MulOpDef(type, 0, ns), ns);                                \
-    context.addDef(new signed##DivOpDef(type, 0, ns), ns);                        \
-    context.addDef(new signed##RemOpDef(type, 0, ns), ns);                        \
-    context.addDef(new ICmpEQOpDef(type, boolType, ns), ns);                      \
-    context.addDef(new ICmpNEOpDef(type, boolType, ns), ns);                      \
-    context.addDef(new ICmp##signed##GTOpDef(type, boolType, ns), ns);                     \
-    context.addDef(new ICmp##signed##LTOpDef(type, boolType, ns), ns);                     \
-    context.addDef(new ICmp##signed##GEOpDef(type, boolType, ns), ns);                     \
-    context.addDef(new ICmp##signed##LEOpDef(type, boolType, ns), ns);                     \
-    context.addDef(new MixedModeOpDef<BNegOpCall>(type, "oper -", ns), ns);      \
-    context.addDef(new MixedModeOpDef<BBitNotOpCall>(type, "oper ~", ns), ns);   \
-    context.addDef(new OrOpDef(type, 0, ns), ns);                                 \
-    context.addDef(new AndOpDef(type, 0, ns), ns);                                \
-    context.addDef(new XorOpDef(type, 0, ns), ns);                                \
-    context.addDef(new ShlOpDef(type, 0, ns), ns);                                \
-    context.addDef(new shift##ShrOpDef(type, 0, ns), ns);
+    context.addDef(new BAddOpDef(type, 0, ns), ns);                             \
+    context.addDef(new BSubOpDef(type, 0, ns), ns);                             \
+    context.addDef(new BMulOpDef(type, 0, ns), ns);                             \
+    context.addDef(new B##signed##DivOpDef(type, 0, ns), ns);                   \
+    context.addDef(new B##signed##RemOpDef(type, 0, ns), ns);                   \
+    context.addDef(new ICmpEQOpDef(type, boolType, ns), ns);                    \
+    context.addDef(new ICmpNEOpDef(type, boolType, ns), ns);                    \
+    context.addDef(new ICmp##signed##GTOpDef(type, boolType, ns), ns);          \
+    context.addDef(new ICmp##signed##LTOpDef(type, boolType, ns), ns);          \
+    context.addDef(new ICmp##signed##GEOpDef(type, boolType, ns), ns);          \
+    context.addDef(new ICmp##signed##LEOpDef(type, boolType, ns), ns);          \
+    context.addDef(new MixedModeOpDef<BNegOpCall>(type, "oper -", ns), ns);     \
+    context.addDef(new MixedModeOpDef<BBitNotOpCall>(type, "oper ~", ns), ns);  \
+    context.addDef(new BOrOpDef(type, 0, ns), ns);                              \
+    context.addDef(new BAndOpDef(type, 0, ns), ns);                             \
+    context.addDef(new BXorOpDef(type, 0, ns), ns);                             \
+    context.addDef(new BShlOpDef(type, 0, ns), ns);                             \
+    context.addDef(new B##shift##ShrOpDef(type, 0, ns), ns);
 
     INTOPS(byteType, U, L, 0)
     INTOPS(int16Type, S, A, 0)
@@ -2670,11 +2670,11 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
 
     // float operations
 #define FLOPS(type, ns) \
-    context.addDef(new FAddOpDef(type, 0, ns), ns);                           \
-    context.addDef(new FSubOpDef(type, 0, ns), ns);                           \
-    context.addDef(new FMulOpDef(type, 0, ns), ns);                           \
-    context.addDef(new FDivOpDef(type, 0, ns), ns);                           \
-    context.addDef(new FRemOpDef(type, 0, ns), ns);                           \
+    context.addDef(new BFAddOpDef(type, 0, ns), ns);                           \
+    context.addDef(new BFSubOpDef(type, 0, ns), ns);                           \
+    context.addDef(new BFMulOpDef(type, 0, ns), ns);                           \
+    context.addDef(new BFDivOpDef(type, 0, ns), ns);                           \
+    context.addDef(new BFRemOpDef(type, 0, ns), ns);                           \
     context.addDef(new FCmpOEQOpDef(type, boolType, ns), ns);                 \
     context.addDef(new FCmpONEOpDef(type, boolType, ns), ns);                 \
     context.addDef(new FCmpOGTOpDef(type, boolType, ns), ns);                 \
@@ -2688,30 +2688,30 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
 
 // Reverse integer operations
 #define REVINTOPS(type, signed, shift) \
-    context.addDef(new AddROpDef(type, 0, true, true), type);               \
-    context.addDef(new SubROpDef(type, 0, true, true), type);               \
-    context.addDef(new MulROpDef(type, 0, true, true), type);               \
-    context.addDef(new signed##DivROpDef(type, 0, true, true), type);       \
-    context.addDef(new signed##RemROpDef(type, 0, true, true), type);       \
+    context.addDef(new BAddROpDef(type, 0, true, true), type);              \
+    context.addDef(new BSubROpDef(type, 0, true, true), type);              \
+    context.addDef(new BMulROpDef(type, 0, true, true), type);              \
+    context.addDef(new B##signed##DivROpDef(type, 0, true, true), type);    \
+    context.addDef(new B##signed##RemROpDef(type, 0, true, true), type);    \
     context.addDef(new ICmpEQROpDef(type, boolType, true, true), type);     \
     context.addDef(new ICmpNEROpDef(type, boolType, true, true), type);     \
     context.addDef(new ICmpSGTROpDef(type, boolType, true, true), type);    \
     context.addDef(new ICmpSLTROpDef(type, boolType, true, true), type);    \
     context.addDef(new ICmpSGEROpDef(type, boolType, true, true), type);    \
     context.addDef(new ICmpSLEROpDef(type, boolType, true, true), type);    \
-    context.addDef(new OrROpDef(type, 0, true, true), type);                \
-    context.addDef(new AndROpDef(type, 0, true, true), type);               \
-    context.addDef(new XorROpDef(type, 0, true, true), type);               \
-    context.addDef(new ShlROpDef(type, 0, true, true), type);               \
-    context.addDef(new shift##ShrROpDef(type, 0, true, true), type);
+    context.addDef(new BOrROpDef(type, 0, true, true), type);               \
+    context.addDef(new BAndROpDef(type, 0, true, true), type);              \
+    context.addDef(new BXorROpDef(type, 0, true, true), type);              \
+    context.addDef(new BShlROpDef(type, 0, true, true), type);              \
+    context.addDef(new B##shift##ShrROpDef(type, 0, true, true), type);
 
 // reverse floating point operations
 #define REVFLOPS(type) \
-    context.addDef(new FAddROpDef(type, 0, true, true), type);               \
-    context.addDef(new FSubROpDef(type, 0, true, true), type);               \
-    context.addDef(new FMulROpDef(type, 0, true, true), type);               \
-    context.addDef(new FDivROpDef(type, 0, true, true), type);               \
-    context.addDef(new FRemROpDef(type, 0, true, true), type);               \
+    context.addDef(new BFAddROpDef(type, 0, true, true), type);              \
+    context.addDef(new BFSubROpDef(type, 0, true, true), type);              \
+    context.addDef(new BFMulROpDef(type, 0, true, true), type);              \
+    context.addDef(new BFDivROpDef(type, 0, true, true), type);              \
+    context.addDef(new BFRemROpDef(type, 0, true, true), type);              \
     context.addDef(new FCmpOEQROpDef(type, boolType, true, true), type);     \
     context.addDef(new FCmpONEROpDef(type, boolType, true, true), type);     \
     context.addDef(new FCmpOGTROpDef(type, boolType, true, true), type);     \

@@ -5,6 +5,7 @@ ext/Type.cc
 model/Annotation.cc
 model/ArgDef.cc
 model/BaseMetaClass.cc
+model/BinOpDef.cc
 model/Construct.cc
 model/ConstSequenceExpr.cc
 model/ConstVarDef.cc

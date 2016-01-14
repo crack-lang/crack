@@ -9,6 +9,7 @@
 #ifndef _builder_llvm_Ops_h_
 #define _builder_llvm_Ops_h_
 
+#include "model/BinOpDef.h"
 #include "model/FuncCall.h"
 #include "model/FuncDef.h"
 #include "model/Context.h"
@@ -26,18 +27,6 @@ namespace builder {
 namespace mvll {
 
 class BTypeDef;
-
-class BinOpDef : public model::OpDef {
-    public:
-        BinOpDef(model::TypeDef *argType,
-                 model::TypeDef *resultType,
-                 const std::string &name,
-                 bool isMethod = false,
-                 bool reversed = false
-                 );
-
-        virtual model::FuncCallPtr createFuncCall() = 0;
-};
 
 class UnOpDef : public model::OpDef {
     public:
@@ -74,10 +63,10 @@ public:
     virtual model::ResultExprPtr emit(model::Context &context);
 };
 
-class LogicAndOpDef : public BinOpDef {
+class LogicAndOpDef : public model::BinOpDef {
 public:
     LogicAndOpDef(model::TypeDef *argType, model::TypeDef *resultType) :
-            BinOpDef(argType, resultType, "oper &&") {
+            model::BinOpDef(argType, resultType, "oper &&") {
     }
 
     virtual model::FuncCallPtr createFuncCall() {
@@ -92,10 +81,10 @@ public:
     virtual model::ResultExprPtr emit(model::Context &context);
 };
 
-class LogicOrOpDef : public BinOpDef {
+class LogicOrOpDef : public model::BinOpDef {
 public:
     LogicOrOpDef(model::TypeDef *argType, model::TypeDef *resultType) :
-            BinOpDef(argType, resultType, "oper ||") {
+            model::BinOpDef(argType, resultType, "oper ||") {
     }
 
     virtual model::FuncCallPtr createFuncCall() {
@@ -330,14 +319,14 @@ public:
     };
 
 #define BINOP_DEF(prefix, op) \
-    class prefix##OpDef : public BinOpDef {                                 \
+    class prefix##OpDef : public model::BinOpDef {                          \
         public:                                                             \
             prefix##OpDef(model::TypeDef *argType,                          \
                           model::TypeDef *resultType = 0,                   \
                           bool isMethod = false,                            \
                           bool reversed = false                             \
                           ) :                                               \
-                BinOpDef(argType, resultType ? resultType : argType,        \
+                model::BinOpDef(argType, resultType ? resultType : argType, \
                          "oper " op,                                        \
                          isMethod,                                          \
                          reversed                                           \
@@ -349,6 +338,7 @@ public:
             }                                                               \
     };
 
+// Binary operations that don't do const folding.
 #define BINOPD(prefix, op) \
     class prefix##OpCall : public model::FuncCall {                         \
         public:                                                             \
@@ -360,45 +350,64 @@ public:
     };                                                                      \
     BINOP_DEF(prefix, op)
 
-#define BINOPDF(prefix, op) \
-    class prefix##OpCall : public model::FuncCall {                         \
+// Binary operations that do const folding.  These are all derived from model
+// OpCall classes that handle the const folding across all builders.
+#define B_BINOPDF(prefix, op) \
+    class B##prefix##OpCall : public model::prefix##OpCall {                \
         public:                                                             \
-            prefix##OpCall(model::FuncDef *def) :                           \
-                FuncCall(def) {                                             \
+            B##prefix##OpCall(model::FuncDef *def) :                        \
+                prefix##OpCall(def) {                                       \
             }                                                               \
                                                                             \
             virtual model::ResultExprPtr emit(model::Context &context);     \
-            virtual model::ExprPtr foldConstants();                         \
     };                                                                      \
-    BINOP_DEF(prefix, op)
+    class B##prefix##OpDef : public model::BinOpDef {                       \
+        public:                                                             \
+            B##prefix##OpDef(model::TypeDef *argType,                       \
+                          model::TypeDef *resultType = 0,                   \
+                          bool isMethod = false,                            \
+                          bool reversed = false                             \
+                          ) :                                               \
+                model::BinOpDef(argType, resultType ? resultType : argType, \
+                         "oper " op,                                        \
+                         isMethod,                                          \
+                         reversed                                           \
+                         ) {                                                \
+            }                                                               \
+                                                                            \
+            virtual model::FuncCallPtr createFuncCall() {                   \
+                return new B##prefix##OpCall(this);                         \
+            }                                                               \
+    };
+
 
 // Binary Ops
-BINOPDF(Add, "+");
-BINOPDF(Sub, "-");
-BINOPDF(Mul, "*");
-BINOPDF(SDiv, "/");
-BINOPDF(UDiv, "/");
-BINOPDF(SRem, "%");  // Note: C'99 defines '%' as the remainder, not modulo
-BINOPDF(URem, "%");  // the sign is that of the dividend, not divisor.
-BINOPDF(Or, "|");
-BINOPDF(And, "&");
-BINOPDF(Xor, "^");
-BINOPDF(Shl, "<<");
-BINOPDF(LShr, ">>");
-BINOPDF(AShr, ">>");
-BINOPDF(AddR, "r+");
-BINOPDF(SubR, "r-");
-BINOPDF(MulR, "r*");
-BINOPDF(SDivR, "r/");
-BINOPDF(UDivR, "r/");
-BINOPDF(SRemR, "r%");
-BINOPDF(URemR, "r%");
-BINOPDF(OrR, "r|");
-BINOPDF(AndR, "r&");
-BINOPDF(XorR, "r^");
-BINOPDF(ShlR, "r<<");
-BINOPDF(LShrR, "r>>");
-BINOPDF(AShrR, "r>>");
+B_BINOPDF(Add, "+");
+B_BINOPDF(Sub, "-");
+B_BINOPDF(Mul, "*");
+B_BINOPDF(SDiv, "/");
+B_BINOPDF(UDiv, "/");
+B_BINOPDF(SRem, "%");  // Note: C'99 defines '%' as the remainder, not modulo
+B_BINOPDF(URem, "%");  // the sign is that of the dividend, not divisor.
+B_BINOPDF(Or, "|");
+B_BINOPDF(And, "&");
+B_BINOPDF(Xor, "^");
+B_BINOPDF(Shl, "<<");
+B_BINOPDF(LShr, ">>");
+B_BINOPDF(AShr, ">>");
+B_BINOPDF(AddR, "r+");
+B_BINOPDF(SubR, "r-");
+B_BINOPDF(MulR, "r*");
+B_BINOPDF(SDivR, "r/");
+B_BINOPDF(UDivR, "r/");
+B_BINOPDF(SRemR, "r%");
+B_BINOPDF(URemR, "r%");
+B_BINOPDF(OrR, "r|");
+B_BINOPDF(AndR, "r&");
+B_BINOPDF(XorR, "r^");
+B_BINOPDF(ShlR, "r<<");
+B_BINOPDF(LShrR, "r>>");
+B_BINOPDF(AShrR, "r>>");
 
 BINOPD(ICmpEQ, "==");
 BINOPD(ICmpNE, "!=");
@@ -421,16 +430,16 @@ BINOPD(ICmpULTR, "r<");
 BINOPD(ICmpUGER, "r>=");
 BINOPD(ICmpULER, "r<=");
 
-BINOPDF(FAdd, "+");
-BINOPDF(FSub, "-");
-BINOPDF(FMul, "*");
-BINOPDF(FDiv, "/");
-BINOPDF(FRem, "%");
-BINOPDF(FAddR, "r+");
-BINOPDF(FSubR, "r-");
-BINOPDF(FMulR, "r*");
-BINOPDF(FDivR, "r/");
-BINOPDF(FRemR, "r%");
+B_BINOPDF(FAdd, "+");
+B_BINOPDF(FSub, "-");
+B_BINOPDF(FMul, "*");
+B_BINOPDF(FDiv, "/");
+B_BINOPDF(FRem, "%");
+B_BINOPDF(FAddR, "r+");
+B_BINOPDF(FSubR, "r-");
+B_BINOPDF(FMulR, "r*");
+B_BINOPDF(FDivR, "r/");
+B_BINOPDF(FRemR, "r%");
 
 BINOPD(Is, "is");
 BINOPD(FCmpOEQ, "==");

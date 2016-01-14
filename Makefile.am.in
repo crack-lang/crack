@@ -225,6 +225,7 @@ noinst_HEADERS = \
     model/ArgDef.h \
     model/AssignExpr.h \
     model/BaseMetaClass.h \
+    model/BinOpDef.h \
     model/Branchpoint.h \
     model/BuilderContextData.h \
     model/CleanupFrame.h \

@@ -531,12 +531,19 @@ ModuleDefPtr ModelBuilder::registerPrimFuncs(Context &context) {
     funcDef->args[0] = new ArgDef(gd->voidptrType.get(), "val");
     context.addDef(funcDef.get(), uintzType);
 
+    // Convert arithmetic and logical shift operator call names into something
+    // that is friendly to the signed/unsigned macro arguments.
+    typedef AShrOpCall SShrOpCall;
+    typedef LShrOpCall UShrOpCall;
+
 #define INTOPS(type, signed, shift, ns) \
-    context.addDef(newBinOpDef("oper +", type, type, ns).get(), ns);          \
-    context.addDef(newBinOpDef("oper -", type, type, ns).get(), ns);          \
-    context.addDef(newBinOpDef("oper *", type, type, ns).get(), ns);          \
-    context.addDef(newBinOpDef("oper /", type, type, ns).get(), ns);          \
-    context.addDef(newBinOpDef("oper %", type, type, ns).get(), ns);          \
+    context.addDef(new GBinOpDef<AddOpCall>(type, type, "oper +", ns), ns);   \
+    context.addDef(new GBinOpDef<SubOpCall>(type, type, "oper -", ns), ns);   \
+    context.addDef(new GBinOpDef<MulOpCall>(type, type, "oper *", ns), ns);   \
+    context.addDef(                                                           \
+        new GBinOpDef<signed##DivOpCall>(type, type, "oper /", ns), ns);      \
+    context.addDef(                                                           \
+        new GBinOpDef<signed##RemOpCall>(type, type, "oper %", ns), ns);      \
     context.addDef(newBinOpDef("oper ==", type, boolType, ns).get(), ns);     \
     context.addDef(newBinOpDef("oper !=", type, boolType, ns).get(), ns);     \
     context.addDef(newBinOpDef("oper >", type, boolType, ns).get(), ns);      \
@@ -545,11 +552,13 @@ ModuleDefPtr ModelBuilder::registerPrimFuncs(Context &context) {
     context.addDef(newBinOpDef("oper <=", type, boolType, ns).get(), ns);     \
     context.addDef(new MixedModeOpDef<BNegOpCall>(type, "oper -", ns), ns);   \
     context.addDef(new MixedModeOpDef<BBitNotOpCall>(type, "oper ~", ns), ns);\
-    context.addDef(newBinOpDef("oepr |", type, type, ns).get(), ns);          \
-    context.addDef(newBinOpDef("oper &", type, type, ns).get(), ns);          \
-    context.addDef(newBinOpDef("oper ^", type, type, ns).get(), ns);          \
-    context.addDef(newBinOpDef("oper <<", type, type, ns).get(), ns);         \
-    context.addDef(newBinOpDef("oper >>", type, type, ns).get(), ns);
+    context.addDef(new GBinOpDef<OrOpCall>(type, type, "oper |", ns), ns);    \
+    context.addDef(new GBinOpDef<AndOpCall>(type, type, "oper &", ns), ns);   \
+    context.addDef(new GBinOpDef<XorOpCall>(type, type, "oper ^", ns), ns);   \
+    context.addDef(new GBinOpDef<ShlOpCall>(type, type, "oper <<", ns), ns);  \
+    context.addDef(                                                           \
+        new GBinOpDef<signed##ShrOpCall>(type, type, "oper >>", ns),          \
+        ns);
 
     INTOPS(byteType, U, L, 0)
     INTOPS(int16Type, S, A, 0)
@@ -561,11 +570,11 @@ ModuleDefPtr ModelBuilder::registerPrimFuncs(Context &context) {
 
     // float operations
 #define FLOPS(type, ns) \
-    context.addDef(newBinOpDef("oper +", type, type, ns).get(), ns);          \
-    context.addDef(newBinOpDef("oper -", type, type, ns).get(), ns);          \
-    context.addDef(newBinOpDef("oper *", type, type, ns).get(), ns);          \
-    context.addDef(newBinOpDef("oper /", type, type, ns).get(), ns);          \
-    context.addDef(newBinOpDef("oper %", type, type, ns).get(), ns);          \
+    context.addDef(new GBinOpDef<FAddOpCall>(type, type, "oper +", ns), ns);  \
+    context.addDef(new GBinOpDef<FSubOpCall>(type, type, "oper -", ns), ns);  \
+    context.addDef(new GBinOpDef<FMulOpCall>(type, type, "oper *", ns), ns);  \
+    context.addDef(new GBinOpDef<FDivOpCall>(type, type, "oper /", ns), ns);  \
+    context.addDef(new GBinOpDef<FRemOpCall>(type, type, "oper %", ns), ns);  \
     context.addDef(newBinOpDef("oper ==", type, boolType, ns).get(), ns);     \
     context.addDef(newBinOpDef("oper !=", type, boolType, ns).get(), ns);     \
     context.addDef(newBinOpDef("oper >", type, boolType, ns).get(), ns);      \
@@ -579,11 +588,18 @@ ModuleDefPtr ModelBuilder::registerPrimFuncs(Context &context) {
 
 // Reverse integer operations
 #define REVINTOPS(type, signed, shift) \
-    context.addDef(newBinOpDef("oper +", type, type, true, true).get(), type);\
-    context.addDef(newBinOpDef("oper -", type, type, true, true).get(), type);\
-    context.addDef(newBinOpDef("oper *", type, type, true, true).get(), type);\
-    context.addDef(newBinOpDef("oper /", type, type, true, true).get(), type);\
-    context.addDef(newBinOpDef("oper %", type, type, true, true).get(), type);\
+    context.addDef(new GBinOpDef<AddOpCall>(type, type, "oper +", true, true),\
+                   type);                                                     \
+    context.addDef(new GBinOpDef<SubOpCall>(type, type, "oper -", true, true),\
+                   type);                                                     \
+    context.addDef(new GBinOpDef<MulOpCall>(type, type, "oper *", true, true),\
+                   type);                                                     \
+    context.addDef(                                                           \
+        new GBinOpDef<signed## DivOpCall>(type, type, "oper /", true, true),  \
+        type);                                                                \
+    context.addDef(                                                           \
+        new GBinOpDef<signed##RemOpCall>(type, type, "oper %", true, true),   \
+        type);                                                                \
     context.addDef(newBinOpDef("oper ==", type, boolType, true, true).get(),  \
                    type);                                                     \
     context.addDef(newBinOpDef("oper !=", type, boolType, true, true).get(),  \
@@ -596,19 +612,31 @@ ModuleDefPtr ModelBuilder::registerPrimFuncs(Context &context) {
                    type);                                                     \
     context.addDef(newBinOpDef("oper <=", type, boolType, true, true).get(),  \
                    type);                                                     \
-    context.addDef(newBinOpDef("oper |", type, type, true, true).get(), type);\
-    context.addDef(newBinOpDef("oper &", type, type, true, true).get(), type);\
-    context.addDef(newBinOpDef("oper ^", type, type, true, true).get(), type);\
-    context.addDef(newBinOpDef("oper <<", type, type, true, true).get(), type);\
-    context.addDef(newBinOpDef("oper >>", type, type, true, true).get(), type);
+    context.addDef(new GBinOpDef<OrOpCall>(type, type, "oper |", true, true), \
+                   type);                                                     \
+    context.addDef(new GBinOpDef<AndOpCall>(type, type, "oper &", true, true),\
+                   type);                                                     \
+    context.addDef(new GBinOpDef<XorOpCall>(type, type, "oper ^", true, true),\
+                   type);                                                     \
+    context.addDef(                                                           \
+        new GBinOpDef<ShlOpCall>(type, type, "oper <<", true, true),          \
+        type);                                                                \
+    context.addDef(                                                           \
+        new GBinOpDef<signed##ShrOpCall>(type, type, "oper >>", true, true),  \
+        type);
 
 // reverse floating point operations
 #define REVFLOPS(type) \
-    context.addDef(newBinOpDef("oper +", type, type, true, true).get(), type);\
-    context.addDef(newBinOpDef("oper -", type, type, true, true).get(), type);\
-    context.addDef(newBinOpDef("oper *", type, type, true, true).get(), type);\
-    context.addDef(newBinOpDef("oper /", type, type, true, true).get(), type);\
-    context.addDef(newBinOpDef("oper %", type, type, true, true).get(), type);\
+    context.addDef(                                                           \
+        new GBinOpDef<FAddOpCall>(type, type, "oper +", true, true), type);   \
+    context.addDef(                                                           \
+        new GBinOpDef<FSubOpCall>(type, type, "oper -", true, true), type);   \
+    context.addDef(                                                           \
+        new GBinOpDef<FMulOpCall>(type, type, "oper *", true, true), type);   \
+    context.addDef(                                                           \
+        new GBinOpDef<FDivOpCall>(type, type, "oper /", true, true), type);   \
+    context.addDef(                                                           \
+        new GBinOpDef<FRemOpCall>(type, type, "oper %", true, true), type);   \
     context.addDef(newBinOpDef("oper ==", type, boolType, true, true).get(),  \
                    type);                                                     \
     context.addDef(newBinOpDef("oper !=", type, boolType, true, true).get(),  \
