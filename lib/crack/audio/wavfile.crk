@@ -1,9 +1,11 @@
 ## Wave files.
 
 import crack.io FStr, Reader;
-import crack.io cerr;
-import crack.lang Exception, ManagedBuffer, WriteBuffer;
+import crack.io cerr, SeekableWriter, Writer, SEEK_SET;
+import crack.lang AppendBuffer, Buffer, Exception, ManagedBuffer, WriteBuffer;
 import crack.runtime free, malloc;
+
+@import crack.ann assert;
 
 ## Like a standard Buffer, but holds 16 bit samples instead of bytes.
 ## Likewise, 'size' and 'cap' are in terms of samples.
@@ -15,6 +17,12 @@ class WaveBuffer {
     ## have n channels, you'll need to specify n * number_of_samples to hold
     ## them.
     oper init(uintz cap) : cap = cap, buffer = array[int16](malloc(cap * 2)) {}
+
+    void append(int16 sample) {
+        @assert(size < cap);
+        buffer[size] = sample;
+        ++size;
+    }
 
     oper del() { free(buffer); }
 }
@@ -32,6 +40,9 @@ class WaveDef {
         ## Number of bits per sample.
         bitsPerSample;
 
+    ## The number of frames in the wave.
+    uint frameCount;
+
     oper init(int channels, int rate, int bitsPerSample) :
         channels = channels,
         rate = rate,
@@ -44,7 +55,66 @@ class WaveDef {
             throw Exception("crack.wavfile can't deal with samples size "
                              "other than 16 bits."
                             );
-        return src.read(WriteBuffer(byteptr(buf.buffer), buf.cap * 2)) / 2;
+        return buf.size =
+            src.read(WriteBuffer(byteptr(buf.buffer), buf.cap * 2)) / 2;
+    }
+
+    @static void __add32BE(AppendBuffer buf, uint32 data) {
+        buf.append(byte(data >> 24));
+        buf.append(byte(data >> 16));
+        buf.append(byte(data >> 8));
+        buf.append(byte(data));
+    }
+
+    @static void __add32LE(AppendBuffer buf, uint32 data) {
+        buf.append(byte(data));
+        buf.append(byte(data >> 8));
+        buf.append(byte(data >> 16));
+        buf.append(byte(data >> 24));
+    }
+
+    @static void __add16LE(AppendBuffer buf, uint16 data) {
+        buf.append(byte(data));
+        buf.append(byte(data >> 8));
+    }
+
+    ## Write the file header for the wave.
+    void writeHeader(Writer out) {
+        AppendBuffer buf = {44};
+        __add32BE(buf, i'RIFF');
+        __add32LE(buf, 0);  # Chunk size, fill in later.
+        __add32BE(buf, i'WAVE');
+        __add32BE(buf, i'fmt ');
+        __add32LE(buf, 16);  # Size of format chunk.
+        __add16LE(buf, 1);   # PCM Format.
+        __add16LE(buf, uint16(channels));
+        __add32LE(buf, uint32(rate));
+        __add32LE(buf, uint32(rate * channels * bitsPerSample / 8));  # Byte rate.
+        __add16LE(buf, uint16(channels * bitsPerSample / 8));  # Block align.
+        __add16LE(buf, uint16(bitsPerSample));
+
+        __add32BE(buf, i'data');
+        __add32LE(buf, 0);         # chunk size, fill in later.
+        out.write(buf);
+    }
+
+    ## Write a wave buffer to the file.
+    void writeData(Writer out, WaveBuffer buf) {
+        frameCount += buf.size / channels;
+        out.write(Buffer(byteptr(buf.buffer), buf.size * 2));
+    }
+
+    ## Finish the wave (writes the sizes to the RIFF and data chunks).
+    void finish(SeekableWriter out) {
+        AppendBuffer buf = {4};
+        out.seek(40, SEEK_SET);
+        buf = AppendBuffer(4);
+        __add32LE(buf, uint32(frameCount * channels * bitsPerSample / 8));
+        out.write(buf);
+        buf.size = 0;
+        __add32LE(buf, uint32(frameCount * channels * bitsPerSample / 8 + 36));
+        out.seek(4, SEEK_SET);
+        out.write(buf);
     }
 }
 
@@ -79,7 +149,6 @@ WaveDef readWave(Reader src) {
         throw FormatError('File is not even big enough to be a wave file.');
 
     if ((x := _read32BE(header.buffer)) != i'RIFF') {
-        cerr `got $x\n`;
         throw FormatError('Not a RIFF file');
     }
 
@@ -118,6 +187,7 @@ WaveDef readWave(Reader src) {
 
     return WaveDef(channels, rate, bitsPerSample);
 }
+
 
 /*
 import crack.fs makePath;

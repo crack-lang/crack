@@ -1,0 +1,35 @@
+%%TEST%%
+wavfile
+%%ARGS%%
+%%FILE%%
+import crack.fs makePath;
+import crack.io cout;
+import crack.audio.wavfile readWave, WaveBuffer, WaveDef;
+
+@import crack.ann assert;
+
+def := WaveDef(2, 44100, 16);
+WaveBuffer buf = {10};
+wavefile := makePath('/tmp/test.wav');
+out := wavefile.writer();
+def.writeHeader(out);
+for (int i = 0; i < 10; ++i)
+    buf.append(int16(i));
+def.writeData(out, buf);
+def.finish(out);
+
+src := wavefile.reader();
+def = readWave(src);
+@assert(def.channels == 2);
+@assert(def.rate == 44100);
+@assert(def.bitsPerSample == 16);
+buf = WaveBuffer(10);
+def.read(src, buf);
+@assert(buf.size == 10);
+for (int i = 0; i < 10; ++i)
+    @assert(buf.buffer[i] == i);
+
+cout `ok\n`;
+%%EXPECT%%
+ok
+%%STDIN%%
