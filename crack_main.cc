@@ -10,6 +10,8 @@
 #include <fstream>
 #include <getopt.h>
 #include <libgen.h>
+#include <vector>
+#include "spug/stlutil.h"
 #include "spug/Tracer.h"
 #include "parser/ParseError.h"
 #include "parser/Parser.h"
@@ -41,6 +43,7 @@ typedef enum {
     modelBuilder,
     doubleBuilder = 1001,
     dumpFuncTable = 1002,
+    dumpMeta = 1003
 } builderType;
 
 struct option longopts[] = {
@@ -62,6 +65,7 @@ struct option longopts[] = {
     {"stats", false, 0, 0},
     {"dump-func-table", false, 0, dumpFuncTable},
     {"trace", true, 0, 't'},
+    {"dump-meta", false, 0, dumpMeta},
     {0, 0, 0, 0}
 };
 
@@ -107,6 +111,7 @@ void usage(int retval) {
     cout << " --dump-func-table\n    Dump the debug function table." << endl;
     cout << " -t <module> --trace <module>\n    Turn tracing on for the "
             "module." << endl;
+    cout << " --dump-meta\n    Dump executor meta-data and exit." << endl;
     cout << "    Modules supporting tracing:" << endl;
     map<string, string> traceModules = Tracer::getTracers();
     for (map<string, string>::iterator i = traceModules.begin();
@@ -158,6 +163,7 @@ int main(int argc, char **argv) {
     bool optionsError = false;
     bool useDoubleBuilder = false;
     bool doDumpFuncTable = false;
+    bool doDumpMeta = false;
     while ((opt = getopt_long(argc, argv, "+B:b:dgO:nCKGml:vqt:", longopts,
                               &idx
                               )
@@ -280,6 +286,9 @@ int main(int argc, char **argv) {
             case dumpFuncTable:
                 doDumpFuncTable = true;
                 break;
+            case dumpMeta:
+                doDumpMeta = true;
+                break;
             case 't':
                 if (!Tracer::parse(optarg))
                     exit(1);
@@ -312,6 +321,23 @@ int main(int argc, char **argv) {
 
     if (!libPath.empty())
         crack.addToSourceLibPath(libPath);
+
+    if (doDumpMeta) {
+        crack.init();
+        version();
+        cout << "CRACK_LIB_PATH ";
+        const vector<string> &libs = crack.getSourceLibPath();
+        bool first = true;
+        SPUG_FOR(vector<string>, iter, libs) {
+            if (!first)
+                cout << ':';
+            else
+                first = false;
+            cout << *iter;
+        }
+        cout << endl;
+        exit(0);
+    }
 
     // are there any more arguments?
     if (optind == argc) {
