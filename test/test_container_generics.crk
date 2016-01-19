@@ -107,6 +107,8 @@ if (1) {
         cout `FAILED tree locking, got $result\n`;
 }
 
+# --- Array Tests ---
+
 # test negative indexing
 if (true) {
     Array[String] a = ['first', 'second', 'wrong'];
@@ -379,6 +381,31 @@ if (stringA.count() != 0)
     cout `FAILED clear() count\n`;
 if (stringA != Array[String]![])
     cout `FAILED clear() equality with empty array\n`;
+
+# Test initialization constructor.
+if (true) {
+    Array[int] ar = {10, 5};
+    if (ar.count() != 10)
+        cout `FAILED sized array initialization.\n`;
+    for (elem :in ar) {
+        if (elem != 5)
+            cout `FAILED sized array initialization, item != 5: $elem\n`;
+    }
+}
+
+# Test binding in initialization constructor.
+if (true) {
+    Foo inst = {};
+    if (int(inst.refCount) != 1)
+        cout `FAILED refcount assumption.`;
+    Array[Foo] ar = {10, inst};
+    if (ar.count() != 10)
+        cout I`FAILED sized array initialization count, count = \
+            $(ar.count())\n`;
+    if (int(inst.refCount) != 11)
+        cout I`FAILED binding in sized initialization, refcount = \
+            $(inst.refCount)\n`;
+}
 
 # --- List tests ---
 
