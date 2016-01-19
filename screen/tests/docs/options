@@ -1,0 +1,2 @@
+%%OPTS%%
+-q -G -l %SOURCEDIR%:%SOURCEDIR%/lib:%SOURCEDIR%/.libs:%BUILDDIR%/lib -K -B model -d
