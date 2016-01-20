@@ -429,8 +429,13 @@ namespace {
     void dumpLineMode(Namespace *modDef) {
         for(Namespace::VarDefMap::iterator di = modDef->beginDefs();
             di != modDef->endDefs();
-            ++di)
-            dumpDefLM(di->second.get());
+            ++di) {
+            if (di->second->getOwner() != modDef)
+                cout << "alias " << di->first << " = " <<
+                    di->second->getFullName() << endl;
+            else
+                dumpDefLM(di->second.get());
+        }
     }
 }
 
