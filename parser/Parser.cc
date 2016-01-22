@@ -3372,7 +3372,21 @@ Parser::Parser(Toker &toker, model::Context *context) :
 }   
 
 void Parser::parse() {
-   // outer parser just parses an un-nested block
+   state = st_base;
+   
+   // Check for a "module;" statement, which consumes all doc-comments and 
+   // adds them to the module.
+   Token tok = getToken();
+   if (tok.isModule()) {
+      tok = getToken();
+      if (!tok.isSemi())
+         error(tok, "Semicolon expected after module token.");
+      context->ns->getModule()->doc = consumeDocs();
+   } else {
+      toker.putBack(tok);
+   }
+   
+   // parse an un-nested block
    parseBlock(false, noCallbacks);
 }
 

@@ -1,0 +1,26 @@
+%%TEST%%
+module docs
+%%ARGS%%
+%%FILE%%
+## This is module documentation.
+## So is this.
+module;
+
+## This is function documentation.
+void foo(int a) {}
+%%EXPECT%%
+/**
+ This is module documentation.
+ So is this.
+
+*/
+module
+.builtin.void __CrackBadCast(.builtin.Class curType, .builtin.Class newType, )
+.builtin.int __getArgc()
+.builtin.array[.builtin.byteptr] __getArgv()
+/**
+ This is function documentation.
+
+*/
+.builtin.void foo(.builtin.int a, )
+%%STDIN%%

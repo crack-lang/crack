@@ -456,8 +456,12 @@ void ModelBuilder::closeModule(model::Context &context,
 
         if (mode == "debug")
             cerr << static_cast<Namespace&>(*modDef) << endl;
-        else if (mode == "line")
+        else if (mode == "line") {
+            if (!modDef->doc.empty()) {
+                cout << "/**\n" << modDef->doc << "\n*/\nmodule" << endl;
+            }
             dumpLineMode(modDef);
+        }
     }
 }
 
