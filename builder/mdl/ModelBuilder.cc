@@ -376,7 +376,7 @@ ModuleDefPtr ModelBuilder::createModule(Context &context, const string &name,
 
 namespace {
 
-    void dumpLineMode(Namespace *modDef);
+    void dumpLineMode(Namespace *ns);
 
     void dumpDefLM(VarDef *def) {
         if (OverloadDef *ovld = OverloadDefPtr::cast(def)) {
@@ -389,13 +389,18 @@ namespace {
 
                 if ((*fi)->flags & FuncDef::abstract)
                     cout << "@abstract ";
-                if ( TypeDef *owner = TypeDefPtr::cast((*fi)->getOwner()) ) {
+
+                Namespace *owner = (*fi)->getOwner();
+                if (owner != ovld->getOwner())
+                    cout << "alias ";
+
+                if ( TypeDef *cls = TypeDefPtr::cast(owner) ) {
 
                     if ((*fi)->isStatic())
                         cout << "@static ";
-                    else if (owner->hasVTable &&
-                        !((*fi)->flags & FuncDef::virtualized)
-                        )
+                    else if (cls->hasVTable &&
+                             !((*fi)->flags & FuncDef::virtualized)
+                             )
                         cout << "@final ";
                 }
 
@@ -426,11 +431,11 @@ namespace {
 
     }
 
-    void dumpLineMode(Namespace *modDef) {
-        for(Namespace::VarDefMap::iterator di = modDef->beginDefs();
-            di != modDef->endDefs();
+    void dumpLineMode(Namespace *ns) {
+        for(Namespace::VarDefMap::iterator di = ns->beginDefs();
+            di != ns->endDefs();
             ++di) {
-            if (di->second->getOwner() != modDef)
+            if (di->second->getOwner() != ns)
                 cout << "alias " << di->first << " = " <<
                     di->second->getFullName() << endl;
             else
