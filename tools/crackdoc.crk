@@ -1,0 +1,599 @@
+## crackdoc - Generates documentation from crack source code.
+module;
+
+import crack.ascii isSpace, rstrip, strip;
+import crack.cmdline CmdOptions, Option, CMD_BOOL, CMD_STR;
+import crack.cont.array Array;
+import crack.fs makePath, Path;
+import crack.io cerr, cout, Formatter, StringFormatter;
+import crack.io.fmtutil Indenter;
+import crack.lang AppendBuffer, Buffer, IndexError;
+import crack.process Process, ProcessHandlerImpl, CRK_PIPE_STDIN,
+    CRK_PIPE_STDOUT;
+import crack.regex Regex;
+import crack.strutil StringArray;
+import crack.sys argv, exit;
+
+@import crack.ann assert;
+
+debug := cerr;
+
+const String
+    BHDR = '\033[37;44m',
+    EHDR = '\033[0m',
+    BH2 = '\033[1m',
+    EH2 = '\033[0m';
+
+class Arg {
+    String name;
+    String type;
+
+    oper init(String name, String type) : name = name, type = type {}
+
+    void formatTo(Formatter out) {
+        out `Arg($name, $type)`;
+    }
+}
+
+## This is a little different from strutil.split(), adjacent delimiters
+## will result in empty strings in the returned array.
+## TODO: make strutil.split() do this instead.
+StringArray split(String s, byte sep) {
+    StringArray result = {};
+    int pos;
+    while (true) {
+        end := s.lfind(sep, uint(pos));
+        if (end != -1) {
+            result.append(s.slice(pos, end));
+        } else {
+            result.append(s.slice(pos));
+            break;
+        }
+        pos = end + 1;
+    }
+
+    return result;
+}
+
+class FuncDoc {
+    String name;
+    String doc;
+    Array[Arg] args;
+    String returnType;
+
+    oper init(String name, String doc, Array[Arg] args, String returnType) :
+        name = name,
+        doc = doc,
+        args = args,
+        returnType = returnType {
+    }
+
+    void formatTo(Formatter out) {
+        o := Indenter.wrap(out);
+        o `$returnType $name(`;
+        first := true;
+        for (arg :in args) {
+            if (!first)
+                o `, `;
+            else
+                first = false;
+            o `$(arg.type) $(arg.name)`;
+        }
+        o `)\n`;
+        if (doc) {
+            ++o;
+            o `$doc\n\n`;
+            --o;
+        }
+    }
+}
+
+class VarDoc {
+    String name;
+    String doc;
+    String type;
+
+    oper init(String name, String doc, String type) :
+        name = name,
+        doc = doc,
+        type = type {
+    }
+
+    void formatTo(Formatter out) {
+        o := Indenter.wrap(out);
+        o `$type $name\n`;
+        if (doc) {
+            ++o;
+            o `$doc\n\n`;
+            --o;
+        }
+    }
+}
+
+class NamespaceDoc {
+    Array[NamespaceDoc] classes = {};
+    Array[FuncDoc] funcs = {};
+    Array[VarDoc] vars = {};
+
+    String doc;
+
+    oper init() {}
+    oper init(String doc) : doc = doc {}
+
+    bool isPublic(String name) { return !name.startsWith('_'); }
+    String functionsHeader() { return 'Functions'; }
+
+    void formatTo(Formatter out) {
+        o := Indenter.wrap(out);
+        if (classes)
+            o `\n$(BH2)Classes$(EH2)\n`;
+        ++o;
+        for (cls :in classes)
+            o `$cls`;
+
+        if (funcs) {
+            --o;
+            o `\n$(BH2)$(functionsHeader())$(EH2)\n`;
+            ++o;
+        }
+
+        for (func :in funcs)
+            o `$func`;
+
+        if (vars) {
+            --o;
+            o `\n$(BH2)Variables$(EH2)\n`;
+            ++o;
+        }
+
+        for (var :in vars)
+            o `$var`;
+        --o;
+    }
+}
+
+class ClassDoc : NamespaceDoc {
+
+    String name;
+
+    oper init(String name, String doc) : NamespaceDoc(doc), name = name {}
+
+    void formatTo(Formatter out) {
+        o := Indenter.wrap(out);
+        o `\n$(BHDR)Class $name$(EHDR)\n`;
+        if (doc) {
+            ++o;
+            o `$doc\n\n`;
+            --o;
+        }
+
+        NamespaceDoc.formatTo(out);
+    }
+
+    bool isPublic(String name) { return !name.startsWith('__'); }
+    String functionsHeader() { return 'Methods'; }
+}
+
+class ModuleDoc : NamespaceDoc {
+    String name;
+
+    oper init(String name, String doc) :
+        NamespaceDoc(doc),
+        name = name {
+    }
+
+    void formatTo(Formatter out) {
+        o := Indenter.wrap(out);
+        o `$(BHDR)Module $name$(EHDR)\n`;
+        if (doc)
+            o `\n$doc\n`;
+        NamespaceDoc.formatTo(out);
+    }
+}
+
+const int
+    _MD_BASE = 0,
+    _MD_DOC = 1;
+
+const Regex
+    WS_RX = {r'\s+'},
+    CLASS_RX = {r'class (\S+) : (.*)\{'},
+    NAME_RX = {r'[\.\w]+'},
+    FUNC_NAME_RX = {r'[^\(]+'};
+
+## Splits a regex off of the the beginning of a string.
+class Splitter {
+    String first, rest;
+
+    oper init(String first, String rest) : first = first, rest = rest {}
+
+    oper init(Regex rx, String text) {
+        if (m := rx.match(text)) {
+            first = m.group();
+            rest = text.substr(m.end());
+        } else {
+            first = null;
+            rest = String(text);
+        }
+    }
+
+    ## Consume the regular expression, move the matching prefix to 'first' and
+    ## everything after it into 'rest'.  Returns true if there was a match,
+    ## false if not (sets 'first' to null if there was no match).
+    bool consume(Regex rx) {
+        if (m := rx.match(rest)) {
+            first = m.group();
+            rest = rest.substr(m.end());
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    ## Equivalent to consume(Regex) only matches a string instead of a regex.
+    bool consume(String prefix) {
+        if (rest.startsWith(prefix)) {
+            first = rest;
+            rest = rest.substr(prefix.size);
+            return true;
+        } else {
+            return false;
+        }
+    }
+}
+
+## Returns the amount of leading whitespace in the line.  Returns max uint if
+## the line consists entirely of whitespace.
+uint countWhitespace(String line) {
+    # This code doesn't make any assumptions about tabs, because we don't know
+    # where the comment text originally was in the line, therefore we can't
+    # decide how many spaces to translate a tab into.  Just treat them as a
+    # single space.
+    int pos;
+    bool knownTab;
+    for (int i = 0; i < line.size; ++i) {
+        if (!isSpace(line[i]))
+            return i;
+    }
+    return ~0;
+}
+
+## Parses the output of the model builder dump.
+class Parser {
+
+    Array[NamespaceDoc] contextStack = {};
+    int mode;
+    AppendBuffer docs = {1024};
+
+    oper init(String moduleName) {
+        contextStack.append(ModuleDoc(moduleName, null));
+    }
+
+    String consumeDocs() {
+        result := rstrip(String(docs, true));
+
+        # Reformat the docs.
+
+        # Remove all initial blank lines
+        lines := split(result, b'\n');
+        while (lines && !strip(lines[0]))
+            lines.delete(0);
+
+        # Calculate the minimal whitespace.
+        int minWS;
+        for (line :in lines) {
+            ws := countWhitespace(line);
+            if (ws < minWS)
+                minWS = ws;
+        }
+
+        # Remove the minimal whitespace.
+        AppendBuffer newDocs = {1024};
+        for (line :in lines) {
+            newDocs.extend(line.substr(minWS));
+            newDocs.append(b'\n');
+        }
+
+        docs = AppendBuffer(1024);
+        return rstrip(String(newDocs, true));
+    }
+
+    @static Splitter parseClassName(String text) {
+        s := Splitter(NAME_RX, text);
+        name := s.first;
+        if (name.startsWith('.builtin.')) {
+            name = name.substr(9);
+        } else if (name.startsWith('.main.')) {
+            pos := name.lfind(b'.', 6);
+            name = name.substr(pos + 1);
+        }
+        if (s.rest && s.rest[0] == b'[') {
+            s = parseClassName(s.rest.substr(1));
+            name += '[' + s.first;
+            while (s.rest[0] == b',') {
+                s = parseClassName(s.rest.substr(2));
+                name += ', ' + s.first;
+            }
+
+            # Deal with the trailing bracket.
+            @assert(s.rest[0] == b']');
+            s.rest = s.rest.substr(1);
+            name += ']';
+
+            # If the next character is a '.', there's more to this class name.
+            if (s.rest[0] == b'.') {
+                s = parseClassName(s.rest);
+                name += s.first;
+            }
+        }
+
+        return Splitter(name, s.rest);
+    }
+
+    void parseClass(String line, bool abstract) {
+        m := CLASS_RX.match(line);
+        @assert(m);
+        name := m.group(1);
+        bases := m.group(2);
+        StringArray base_list = {};
+        while (bases) {
+            s := parseClassName(bases);
+            base_list.append(s.first);
+            s.consume(', ');
+            bases = s.rest;
+        }
+
+        cls := ClassDoc(name, consumeDocs());
+        if (!name.endsWith(':meta') && contextStack[-1].isPublic(name))
+            contextStack[-1].classes.append(cls);
+        contextStack.append(cls);
+    }
+
+    void parseFunc(String line, bool abstract) {
+        String ln = line;
+        bool final, static;
+        if (ln.startsWith('@final ')) {
+            final = true;
+            ln = ln.substr(7);
+        }
+        if (ln.startsWith('@static ')) {
+            static = true;
+            ln = ln.substr(8);
+        }
+        s := parseClassName(ln);
+        returnType := s.first;
+        s.consume(WS_RX);
+        @assert(s.consume(FUNC_NAME_RX));
+        name := s.first;
+        @assert(s.consume('('));
+
+        # Parse the argument list.
+        Array[Arg] args = {};
+        while (s.rest[0] != b')') {
+            s = parseClassName(s.rest);
+            type := s.first;
+            @assert(s.consume(' '));
+            @assert(s.consume(NAME_RX));
+            args.append(Arg(s.first, type));
+            @assert(s.consume(', '));
+        }
+
+        docs := consumeDocs();
+        if (contextStack[-1].isPublic(name)) {
+            contextStack[-1].funcs.append(FuncDoc(name, docs, args,
+                                                  returnType
+                                                  )
+                                          );
+        }
+    }
+
+    void parseVar(String line) {
+        s := parseClassName(line);
+        type := s.first;
+        s.consume(' ');
+        name := rstrip(s.rest);
+        if (contextStack[-1].isPublic(name))
+            contextStack[-1].vars.append(VarDoc(name, consumeDocs(), type));
+    }
+
+    void processLine(Buffer line) {
+        Buffer tmp = line;
+        bool abstract;
+        if (tmp.startsWith('@abstract ')) {
+            tmp.buffer = tmp.buffer + 10;
+            tmp.size -= 10;
+            abstract = false;
+        }
+        if (tmp.startsWith('alias'))
+            consumeDocs();
+        else if (tmp.startsWith('class'))
+            parseClass(String(line), abstract);
+        else if (tmp.lfind(b'(') != -1)
+            parseFunc(String(line), abstract);
+        else if (tmp.startsWith('module'))
+            contextStack[-1].doc = consumeDocs();
+        else
+            parseVar(String(line));
+    }
+
+    void gotLine(Buffer line) {
+        if (mode == _MD_BASE) {
+            if (line == '/**\n')
+                mode = _MD_DOC;
+            else if (line == '}\n') {
+                contextStack.pop();
+            } else
+                processLine(line);
+        } else if (mode == _MD_DOC) {
+            if (line == '*/\n')
+                mode = _MD_BASE;
+            else
+                docs.extend(line);
+        }
+    }
+}
+
+## Finds a module on the crack library path.
+class ModuleResolver {
+    Array[Path] paths;
+
+    oper init(Array[Path] paths) : paths = paths {}
+
+    ## Find a module based on its canonical name.  Returns null if no
+    ## matching module name is found.
+    Path findModule(String name) {
+        relPath := split(name, b'.').join('/') + '.crk';
+        for (path :in paths) {
+            fullPath := path/relPath;
+            if (fullPath.exists())
+                return fullPath;
+        }
+
+        return null;
+    }
+}
+
+## Process handler that feeds crack executor output to the Parser.
+class Handler : ProcessHandlerImpl {
+    Parser parser;
+    int rc;
+
+    oper init(Parser parser) : parser = parser {}
+
+    void onOutLine(Buffer line) {
+        parser.gotLine(line);
+    }
+
+    void onTerminate(int resultCode) {
+        rc = resultCode & 0xff;
+    }
+}
+
+## Process handler that knows how to extract the lib path from the output of
+## --dump-meta.
+class DumpMetaHandler : ProcessHandlerImpl {
+    StringArray libPath;
+    void onOutLine(Buffer line) {
+        if (line.startsWith('CRACK_LIB_PATH')) {
+            libPath = split(rstrip(String(line)).substr(15), b':');
+        }
+    }
+}
+
+String crack;
+
+## Reads the library path from the crack executor.
+Array[Path] getLibPath() {
+
+    # First get the lib path.
+    proc := Process(StringArray![crack, '--dump-meta'], CRK_PIPE_STDOUT);
+    handler := DumpMetaHandler();
+    proc.run(handler);
+
+    if (handler.libPath is null)
+        return null;
+
+    Array[Path] result = {};
+    for (path :in handler.libPath)
+         result.append(makePath(path));
+    return result;
+}
+
+opts := CmdOptions![
+    Option('crack', 'c',
+           'The path to the crack executor to use to parse the file.',
+           'crack',
+           CMD_STR
+           ),
+    Option('help', 'h', 'Show this help text.', 'false', CMD_BOOL),
+    Option('lib', 'l',
+           I'The library path (by default this is extracted from the
+             crack executor found on the path.',
+           '',
+           CMD_STR
+           ),
+    Option('stdout', 's',
+           I'If specified, dump the formatted module documentation to standard
+             output instead of writing it through "less -R"',
+           'false',
+           CMD_BOOL
+           ),
+];
+
+void usage() {
+    cout `Usage: crackdoc [options] <module-name>\n`;
+    opts.printUsage('');
+}
+
+args := opts.parse(argv);
+lib := opts.getString('lib');
+stdout := opts.getBool('stdout');
+crack = opts.getString('crack');
+
+if (opts.getBool('help')) {
+    usage();
+    exit(0);
+}
+
+String objname;
+try {
+    objname = args[1];
+} catch (IndexError ex) {
+    cerr `Which module do you want to see the docs for?\n`;
+    usage();
+    exit(1);
+}
+
+Array[Path] libPath;
+if (lib) {
+    libPath = Array[Path]();
+    for (p :in split(lib, b':'))
+        libPath.append(makePath(p));
+} else {
+    libPath = getLibPath();
+    if (libPath is null) {
+        cerr I`No CRACK_LIB_PATH obtained from the crack executor.  Is
+               $crack a valid crack executor?\n`;
+        exit(1);
+    }
+}
+
+resolver := ModuleResolver(libPath);
+modPath := resolver.findModule(objname);
+if (modPath is null) {
+    cerr `module $objname not found\n`;
+    exit(1);
+}
+
+# Add the -n (pre-bootstrap) option for the two modules that require it.
+cmd := StringArray![crack, '-KdB', 'model', modPath.getFullName()];
+if (objname == 'crack.lang' || objname == 'crack._poormac')
+    cmd.insert(1, '-n');
+
+if (lib) {
+    cmd.insert(1, '-l');
+    cmd.insert(2, lib);
+}
+
+parser := Parser(objname);
+proc := Process(cmd, CRK_PIPE_STDOUT);
+handler := Handler(parser);
+result := proc.run(handler);
+if (handler.rc) {
+    cerr `Crack executor exited with rc $(handler.rc)\n`;
+    exit(1);
+}
+
+if (stdout) {
+    cout `$(parser.contextStack[0])\n`;
+} else {
+    # Write the output to "less -R"
+    StringFormatter out = {};
+    out `$(parser.contextStack[0])\n`;
+    proc = Process(StringArray!['less', '-R'], CRK_PIPE_STDIN);
+    proc.putStdIn(out.string());
+    proc.closeStdIn();
+    proc.run();
+}
+
+
