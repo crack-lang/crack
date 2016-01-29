@@ -1,0 +1,14 @@
+%%TEST%%
+forward declarations not overriden in a nested context.
+%%ARGS%%
+
+%%FILE%%
+void f();
+if (1) { void f() {puts('inner')}; f() }
+void f() { puts('outer'); }
+f();
+%%EXPECT%%
+inner
+outer
+%%STDIN%%
+

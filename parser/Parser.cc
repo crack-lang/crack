@@ -1954,13 +1954,9 @@ int Parser::parseFuncDef(TypeDef *returnType, const Token &nameTok,
                         )
                );
       
+      // If the function is from a different namespace, this isn't an override.
       if (override->getOwner() != context->getParent()->getDefContext()->ns.get())
-         error(tok3,
-               SPUG_FSTR("Function " << name << 
-                          " can not be defined in a different namespace from "
-                          "its forward declaration."
-                         )
-               );
+         override = 0;
    }
 
    // parse the body
