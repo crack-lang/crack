@@ -175,9 +175,8 @@ Crack permits the use of C, C++ and shell style comments:
     # shell style comment
 }}
 
-For code that you hope to get a lot of re-use out of, we recommend the
-convention of Doxygen-style doc-comments for classes, functions and global
-variables:
+Crack also supports Doxygen-style doc-comments for classes, functions, global
+and class-scoped variables:
 
 {{
     /** C-style doc-comment */
@@ -185,10 +184,29 @@ variables:
     ## shell-ish doc-comment
 }}
 
-These currently get treated the same as any other comments.  However, future
-versions of Crack will parse them and store them with the meta-data for the
-code, permitting the easy extraction of reference documentation from the
-source.
+These receive special treatment by the parser: their content is retained and
+can be emitted (along with a normalized format of the prototypes themselves)
+using the executor's model builder.  The output can then be processed by the
+"crackdoc" tool to produce documentation.
+
+The #module# keyword can be used to produce documentation for an entire
+module:
+
+{{
+    ## This documentation will be associated with the entire module.  Note
+    ## that the "module" statement must be the first thing in the module.
+    module;
+
+    /// This documentation is associated with the class Foo.
+    class Foo {}
+
+    /** And this with the function bar() */
+    void bar() {}
+}}
+
+The #module# keyword is necessary to prevent the doc-comment from being
+consumed by the next element in the code and to instead be associated with
+the module.
 
 Variables and Types
 -------------------
