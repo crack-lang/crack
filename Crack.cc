@@ -27,11 +27,48 @@ Crack::Crack(void) :
     useGlobalLibs(true) {
 }
 
+bool Crack::init() {
+    if (!initialized) {
+        assert(construct && "no call to setBuilder");
+        Construct *ctc = construct->compileTimeConstruct.get();
+
+        // finalize the search path
+        if (useGlobalLibs) {
+            construct->addToSourceLibPath(".");
+            construct->addToSourceLibPath(CRACKLIB);
+
+            // XXX please refactor me
+            if (ctc) {
+                ctc->addToSourceLibPath(".");
+                ctc->addToSourceLibPath(CRACKLIB);
+            }
+        }
+
+        // initialize the compile-time construct first
+        if (ctc) {
+            ctc->loadBuiltinModules();
+            if (!noBootstrap && !ctc->loadBootstrapModules())
+                return false;
+        }
+
+        construct->loadBuiltinModules();
+        if (!noBootstrap && !construct->loadBootstrapModules())
+            return false;
+        initialized = true;
+    }
+
+    return true;
+}
+
 void Crack::addToSourceLibPath(const string &path) {
     assert(construct && "no call to setBuilder");
     construct->addToSourceLibPath(path);
     if (construct->compileTimeConstruct)
         construct->compileTimeConstruct->addToSourceLibPath(path);
+}
+
+const vector<string> &Crack::getSourceLibPath() const {
+    return construct->getSourceLibPath();
 }
 
 void Crack::setArgv(int argc, char **argv) {
@@ -70,39 +107,6 @@ void Crack::setCompileTimeBuilder(Builder *builder) {
                     new GlobalNamespace(0, "")
                     );
     builder->initialize(context);
-}
-
-bool Crack::init() {
-    if (!initialized) {
-        assert(construct && "no call to setBuilder");
-        Construct *ctc = construct->compileTimeConstruct.get();
-
-        // finalize the search path
-        if (useGlobalLibs) {
-            construct->addToSourceLibPath(".");
-            construct->addToSourceLibPath(CRACKLIB);
-
-            // XXX please refactor me
-            if (ctc) {
-                ctc->addToSourceLibPath(".");
-                ctc->addToSourceLibPath(CRACKLIB);
-            }
-        }
-
-        // initialize the compile-time construct first
-        if (ctc) {
-            ctc->loadBuiltinModules();
-            if (!noBootstrap && !ctc->loadBootstrapModules())
-                return false;
-        }
-
-        construct->loadBuiltinModules();
-        if (!noBootstrap && !construct->loadBootstrapModules())
-            return false;
-        initialized = true;
-    }
-
-    return true;
 }
 
 int Crack::runScript(std::istream &src, const std::string &name, bool notAFile) {

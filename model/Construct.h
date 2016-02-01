@@ -283,6 +283,13 @@ class Construct : public spug::RCBase, public Options {
         void addToSourceLibPath(const std::string &path);
 
         /**
+         * Returns the source library path.
+         * Note that this returns a reference to an internal variable: it must
+         * be used while the object is still in existence.
+         */
+        const std::vector<std::string> &getSourceLibPath() const;
+
+        /**
          * Loads the built-in modules (should be called prior to attempting to 
          * load or run anything else).
          */

@@ -271,6 +271,10 @@ void Construct::addToSourceLibPath(const string &path) {
         sourceLibPath.push_back(path.substr(pos));
 }
 
+const vector<string> &Construct::getSourceLibPath() const {
+    return sourceLibPath;
+}
+
 ContextPtr Construct::createRootContext() {
 
     rootContext = new Context(*rootBuilder, Context::module, this,

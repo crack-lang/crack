@@ -9,10 +9,15 @@
 #ifndef _builder_llvm_Ops_h_
 #define _builder_llvm_Ops_h_
 
+#include "model/BinOpDef.h"
 #include "model/FuncCall.h"
 #include "model/FuncDef.h"
 #include "model/Context.h"
+#include "model/OpDef.h"
+#include "model/ops.h"
 #include "model/ResultExpr.h"
+
+#include "BTypeDef.h"
 
 namespace model {
     class TypeDef;
@@ -23,48 +28,15 @@ namespace mvll {
 
 class BTypeDef;
 
-// primitive operations
-SPUG_RCPTR(OpDef);
-
-class OpDef : public model::FuncDef {
+class UnOpDef : public model::OpDef {
     public:
-
-        OpDef(model::TypeDef *resultType, model::FuncDef::Flags flags,
-              const std::string &name,
-              size_t argCount
-              ) :
-            FuncDef(flags, name, argCount) {
-
-            // XXX we don't have a function type for these
-            returnType = resultType;
-        }
-
-        virtual model::FuncCallPtr createFuncCall() = 0;
-
-        virtual void *getFuncAddr(Builder &builder) {
-            return 0;
-        }
-};
-
-class BinOpDef : public OpDef {
-    public:
-        BinOpDef(model::TypeDef *argType,
-                 model::TypeDef *resultType,
-                 const std::string &name,
-                 bool isMethod = false,
-                 bool reversed = false
-                 );
-
-        virtual model::FuncCallPtr createFuncCall() = 0;
-};
-
-class UnOpDef : public OpDef {
-    public:
-    UnOpDef(model::TypeDef *resultType, const std::string &name) :
-            OpDef(resultType, model::FuncDef::builtin | model::FuncDef::method,
-                  name,
-                  0
-                  ) {
+        UnOpDef(model::TypeDef *resultType, const std::string &name) :
+                model::OpDef(
+                    resultType,
+                    model::FuncDef::builtin | model::FuncDef::method,
+                    name,
+                    0
+                    ) {
         }
 };
 
@@ -77,24 +49,11 @@ public:
     virtual model::ResultExprPtr emit(model::Context &context);
 };
 
-class BitNotOpCall : public model::FuncCall {
+class BBitNotOpCall : public model::BitNotOpCall {
 public:
-    BitNotOpCall(model::FuncDef *def) : FuncCall(def) {}
+    BBitNotOpCall(model::FuncDef *def) : model::BitNotOpCall(def) {}
 
     virtual model::ResultExprPtr emit(model::Context &context);
-    virtual model::ExprPtr foldConstants();
-};
-
-class BitNotOpDef : public OpDef {
-public:
-    BitNotOpDef(BTypeDef *resultType, const std::string &name,
-                bool isMethod = false
-                );
-
-    virtual model::FuncCallPtr createFuncCall() {
-        return new BitNotOpCall(this);
-    }
-
 };
 
 class LogicAndOpCall : public model::FuncCall {
@@ -104,10 +63,10 @@ public:
     virtual model::ResultExprPtr emit(model::Context &context);
 };
 
-class LogicAndOpDef : public BinOpDef {
+class LogicAndOpDef : public model::BinOpDef {
 public:
     LogicAndOpDef(model::TypeDef *argType, model::TypeDef *resultType) :
-            BinOpDef(argType, resultType, "oper &&") {
+            model::BinOpDef(argType, resultType, "oper &&") {
     }
 
     virtual model::FuncCallPtr createFuncCall() {
@@ -122,10 +81,10 @@ public:
     virtual model::ResultExprPtr emit(model::Context &context);
 };
 
-class LogicOrOpDef : public BinOpDef {
+class LogicOrOpDef : public model::BinOpDef {
 public:
     LogicOrOpDef(model::TypeDef *argType, model::TypeDef *resultType) :
-            BinOpDef(argType, resultType, "oper ||") {
+            model::BinOpDef(argType, resultType, "oper ||") {
     }
 
     virtual model::FuncCallPtr createFuncCall() {
@@ -133,50 +92,28 @@ public:
     }
 };
 
-class NegOpCall : public model::FuncCall {
+class BNegOpCall : public model::NegOpCall {
 public:
-    NegOpCall(model::FuncDef *def) : FuncCall(def) {}
+    BNegOpCall(model::FuncDef *def) : NegOpCall(def) {}
 
     virtual model::ResultExprPtr emit(model::Context &context);
-
-    virtual model::ExprPtr foldConstants();
 };
 
-class NegOpDef : public OpDef {
+class BFNegOpCall : public model::FNegOpCall {
 public:
-    NegOpDef(BTypeDef *resultType, const std::string &name,
-             bool isMethod
-             );
-
-    virtual model::FuncCallPtr createFuncCall() {
-        return new NegOpCall(this);
-    }
-};
-
-class FNegOpCall : public model::FuncCall {
-public:
-    FNegOpCall(model::FuncDef *def) : FuncCall(def) {}
+    BFNegOpCall(model::FuncDef *def) : model::FNegOpCall(def) {}
 
     virtual model::ResultExprPtr emit(model::Context &context);
-    virtual model::ExprPtr foldConstants();
 };
 
-class FNegOpDef : public OpDef {
-public:
-    FNegOpDef(BTypeDef *resultType, const std::string &name, bool isMethod);
-
-    virtual model::FuncCallPtr createFuncCall() {
-        return new FNegOpCall(this);
-    }
-};
-
-class FunctionPtrOpDef : public OpDef {
+class FunctionPtrOpDef : public model::OpDef {
 public:
     FunctionPtrOpDef(model::TypeDef *resultType,
                      size_t argCount) :
-    OpDef(resultType, FuncDef::builtin | FuncDef::method, "oper call",
-          argCount
-          ) {
+        model::OpDef(resultType,
+                    FuncDef::builtin | FuncDef::method, "oper call",
+                    argCount
+                    ) {
         type = resultType;
     }
 
@@ -194,13 +131,14 @@ public:
 };
 
 template<class T>
-class GeneralOpDef : public OpDef {
+class GeneralOpDef : public model::OpDef {
 public:
     GeneralOpDef(model::TypeDef *resultType, model::FuncDef::Flags flags,
                  const std::string &name,
                  size_t argCount
                  ) :
-    OpDef(resultType, flags, name, argCount) {
+        model::OpDef(resultType, flags, name, argCount) {
+
         type = resultType;
     }
 
@@ -336,7 +274,7 @@ public:
     }
 };
 
-class UnsafeCastDef : public OpDef {
+class UnsafeCastDef : public model::OpDef {
 public:
     UnsafeCastDef(model::TypeDef *resultType);
 
@@ -381,14 +319,14 @@ public:
     };
 
 #define BINOP_DEF(prefix, op) \
-    class prefix##OpDef : public BinOpDef {                                 \
+    class prefix##OpDef : public model::BinOpDef {                          \
         public:                                                             \
             prefix##OpDef(model::TypeDef *argType,                          \
                           model::TypeDef *resultType = 0,                   \
                           bool isMethod = false,                            \
                           bool reversed = false                             \
                           ) :                                               \
-                BinOpDef(argType, resultType ? resultType : argType,        \
+                model::BinOpDef(argType, resultType ? resultType : argType, \
                          "oper " op,                                        \
                          isMethod,                                          \
                          reversed                                           \
@@ -400,6 +338,7 @@ public:
             }                                                               \
     };
 
+// Binary operations that don't do const folding.
 #define BINOPD(prefix, op) \
     class prefix##OpCall : public model::FuncCall {                         \
         public:                                                             \
@@ -411,45 +350,64 @@ public:
     };                                                                      \
     BINOP_DEF(prefix, op)
 
-#define BINOPDF(prefix, op) \
-    class prefix##OpCall : public model::FuncCall {                         \
+// Binary operations that do const folding.  These are all derived from model
+// OpCall classes that handle the const folding across all builders.
+#define B_BINOPDF(prefix, op) \
+    class B##prefix##OpCall : public model::prefix##OpCall {                \
         public:                                                             \
-            prefix##OpCall(model::FuncDef *def) :                           \
-                FuncCall(def) {                                             \
+            B##prefix##OpCall(model::FuncDef *def) :                        \
+                prefix##OpCall(def) {                                       \
             }                                                               \
                                                                             \
             virtual model::ResultExprPtr emit(model::Context &context);     \
-            virtual model::ExprPtr foldConstants();                         \
     };                                                                      \
-    BINOP_DEF(prefix, op)
+    class B##prefix##OpDef : public model::BinOpDef {                       \
+        public:                                                             \
+            B##prefix##OpDef(model::TypeDef *argType,                       \
+                          model::TypeDef *resultType = 0,                   \
+                          bool isMethod = false,                            \
+                          bool reversed = false                             \
+                          ) :                                               \
+                model::BinOpDef(argType, resultType ? resultType : argType, \
+                         "oper " op,                                        \
+                         isMethod,                                          \
+                         reversed                                           \
+                         ) {                                                \
+            }                                                               \
+                                                                            \
+            virtual model::FuncCallPtr createFuncCall() {                   \
+                return new B##prefix##OpCall(this);                         \
+            }                                                               \
+    };
+
 
 // Binary Ops
-BINOPDF(Add, "+");
-BINOPDF(Sub, "-");
-BINOPDF(Mul, "*");
-BINOPDF(SDiv, "/");
-BINOPDF(UDiv, "/");
-BINOPDF(SRem, "%");  // Note: C'99 defines '%' as the remainder, not modulo
-BINOPDF(URem, "%");  // the sign is that of the dividend, not divisor.
-BINOPDF(Or, "|");
-BINOPDF(And, "&");
-BINOPDF(Xor, "^");
-BINOPDF(Shl, "<<");
-BINOPDF(LShr, ">>");
-BINOPDF(AShr, ">>");
-BINOPDF(AddR, "r+");
-BINOPDF(SubR, "r-");
-BINOPDF(MulR, "r*");
-BINOPDF(SDivR, "r/");
-BINOPDF(UDivR, "r/");
-BINOPDF(SRemR, "r%");
-BINOPDF(URemR, "r%");
-BINOPDF(OrR, "r|");
-BINOPDF(AndR, "r&");
-BINOPDF(XorR, "r^");
-BINOPDF(ShlR, "r<<");
-BINOPDF(LShrR, "r>>");
-BINOPDF(AShrR, "r>>");
+B_BINOPDF(Add, "+");
+B_BINOPDF(Sub, "-");
+B_BINOPDF(Mul, "*");
+B_BINOPDF(SDiv, "/");
+B_BINOPDF(UDiv, "/");
+B_BINOPDF(SRem, "%");  // Note: C'99 defines '%' as the remainder, not modulo
+B_BINOPDF(URem, "%");  // the sign is that of the dividend, not divisor.
+B_BINOPDF(Or, "|");
+B_BINOPDF(And, "&");
+B_BINOPDF(Xor, "^");
+B_BINOPDF(Shl, "<<");
+B_BINOPDF(LShr, ">>");
+B_BINOPDF(AShr, ">>");
+B_BINOPDF(AddR, "r+");
+B_BINOPDF(SubR, "r-");
+B_BINOPDF(MulR, "r*");
+B_BINOPDF(SDivR, "r/");
+B_BINOPDF(UDivR, "r/");
+B_BINOPDF(SRemR, "r%");
+B_BINOPDF(URemR, "r%");
+B_BINOPDF(OrR, "r|");
+B_BINOPDF(AndR, "r&");
+B_BINOPDF(XorR, "r^");
+B_BINOPDF(ShlR, "r<<");
+B_BINOPDF(LShrR, "r>>");
+B_BINOPDF(AShrR, "r>>");
 
 BINOPD(ICmpEQ, "==");
 BINOPD(ICmpNE, "!=");
@@ -472,16 +430,16 @@ BINOPD(ICmpULTR, "r<");
 BINOPD(ICmpUGER, "r>=");
 BINOPD(ICmpULER, "r<=");
 
-BINOPDF(FAdd, "+");
-BINOPDF(FSub, "-");
-BINOPDF(FMul, "*");
-BINOPDF(FDiv, "/");
-BINOPDF(FRem, "%");
-BINOPDF(FAddR, "r+");
-BINOPDF(FSubR, "r-");
-BINOPDF(FMulR, "r*");
-BINOPDF(FDivR, "r/");
-BINOPDF(FRemR, "r%");
+B_BINOPDF(FAdd, "+");
+B_BINOPDF(FSub, "-");
+B_BINOPDF(FMul, "*");
+B_BINOPDF(FDiv, "/");
+B_BINOPDF(FRem, "%");
+B_BINOPDF(FAddR, "r+");
+B_BINOPDF(FSubR, "r-");
+B_BINOPDF(FMulR, "r*");
+B_BINOPDF(FDivR, "r/");
+B_BINOPDF(FRemR, "r%");
 
 BINOPD(Is, "is");
 BINOPD(FCmpOEQ, "==");

@@ -34,7 +34,7 @@ using namespace builder::mvll;
 typedef spug::RCPtr<builder::mvll::BFieldRef> BFieldRefPtr;
 
 #define UNOP(opCode) \
-    model::ResultExprPtr opCode##OpCall::emit(model::Context &context) {    \
+    model::ResultExprPtr opCode##OpCall::emit(model::Context &context) { \
         if (receiver)                                                       \
             receiver->emit(context)->handleTransient(context);              \
         else                                                                \
@@ -79,8 +79,8 @@ typedef spug::RCPtr<builder::mvll::BFieldRef> BFieldRefPtr;
     }
 
 // reverse binary operators, must be run as methods.
-#define REV_BINOP(opCode) \
-    ResultExprPtr opCode##ROpCall::emit(Context &context) {                 \
+#define QUAL_REV_BINOP(prefix, opCode) \
+    ResultExprPtr prefix##ROpCall::emit(Context &context) {                 \
         LLVMBuilder &builder =                                              \
             dynamic_cast<LLVMBuilder &>(context.builder);                   \
         receiver->emit(context)->handleTransient(context);                  \
@@ -94,66 +94,38 @@ typedef spug::RCPtr<builder::mvll::BFieldRef> BFieldRefPtr;
         return new BResultExpr(this, builder.lastValue);                    \
     }                                                                       \
 
-#define REV_BINOPF(opCode, cls) \
-    REV_BINOP(opCode)                                                       \
-    ExprPtr opCode##ROpCall::foldConstants() {                              \
-        ExprPtr rval = receiver.get();                                      \
-        ExprPtr lval = args[0].get();                                       \
-        cls##ConstPtr ci = cls##ConstPtr::rcast(lval);                      \
-        ExprPtr result;                                                     \
-        if (ci)                                                             \
-            result = ci->fold##opCode(rval.get());                          \
-        return result ? result : this;                                      \
-    }
-
-
+#define BINOPF(opCode, op) QUAL_BINOP(B##opCode, opCode, op)
+#define REV_BINOPF(opCode) QUAL_REV_BINOP(B##opCode, opCode)
+#define REV_BINOP(opCode) QUAL_REV_BINOP(opCode, opCode)
 #define BINOP(opCode, op) QUAL_BINOP(opCode, opCode, op)
 
-// binary operation with folding
-#define BINOPF(prefix, op, cls) \
-    BINOP(prefix, op)                                                       \
-    ExprPtr prefix##OpCall::foldConstants() {                               \
-        ExprPtr lval = receiver ? receiver.get() : args[0].get();           \
-        ExprPtr rval = receiver ? args[0].get() : args[1].get();            \
-        cls##ConstPtr ci = cls##ConstPtr::rcast(lval);                      \
-        ExprPtr result;                                                     \
-        if (ci)                                                             \
-            result = ci->fold##prefix(rval.get());                          \
-        return result ? result : this;                                      \
-    }
-
-#define BINOPIF(prefix, op) BINOPF(prefix, op, Int)
-#define REV_BINOPIF(prefix) REV_BINOPF(prefix, Int)
-#define BINOPFF(prefix, op) BINOPF(prefix, op, Float)
-#define REV_BINOPFF(prefix) REV_BINOPF(prefix, Float)
-
 // Binary Ops
-BINOPIF(Add, "+");
-BINOPIF(Sub, "-");
-BINOPIF(Mul, "*");
-BINOPIF(SDiv, "/");
-BINOPIF(UDiv, "/");
-BINOPIF(SRem, "%");  // Note: C'99 defines '%' as the remainder, not modulo
-BINOPIF(URem, "%");  // the sign is that of the dividend, not divisor.
-BINOPIF(Or, "|");
-BINOPIF(And, "&");
-BINOPIF(Xor, "^");
-BINOPIF(Shl, "<<");
-BINOPIF(LShr, ">>");
-BINOPIF(AShr, ">>");
-REV_BINOPIF(Add)
-REV_BINOPIF(Sub)
-REV_BINOPIF(Mul)
-REV_BINOPIF(SDiv)
-REV_BINOPIF(UDiv)
-REV_BINOPIF(SRem)
-REV_BINOPIF(URem)
-REV_BINOPIF(Or)
-REV_BINOPIF(And)
-REV_BINOPIF(Xor)
-REV_BINOPIF(Shl)
-REV_BINOPIF(LShr)
-REV_BINOPIF(AShr)
+BINOPF(Add, "+");
+BINOPF(Sub, "-");
+BINOPF(Mul, "*");
+BINOPF(SDiv, "/");
+BINOPF(UDiv, "/");
+BINOPF(SRem, "%");  // Note: C'99 defines '%' as the remainder, not modulo
+BINOPF(URem, "%");  // the sign is that of the dividend, not divisor.
+BINOPF(Or, "|");
+BINOPF(And, "&");
+BINOPF(Xor, "^");
+BINOPF(Shl, "<<");
+BINOPF(LShr, ">>");
+BINOPF(AShr, ">>");
+REV_BINOPF(Add)
+REV_BINOPF(Sub)
+REV_BINOPF(Mul)
+REV_BINOPF(SDiv)
+REV_BINOPF(UDiv)
+REV_BINOPF(SRem)
+REV_BINOPF(URem)
+REV_BINOPF(Or)
+REV_BINOPF(And)
+REV_BINOPF(Xor)
+REV_BINOPF(Shl)
+REV_BINOPF(LShr)
+REV_BINOPF(AShr)
 
 BINOP(ICmpEQ, "==");
 BINOP(ICmpNE, "!=");
@@ -176,16 +148,16 @@ REV_BINOP(ICmpULT)
 REV_BINOP(ICmpUGE)
 REV_BINOP(ICmpULE)
 
-BINOPFF(FAdd, "+");
-BINOPFF(FSub, "-");
-BINOPFF(FMul, "*");
-BINOPFF(FDiv, "/");
-BINOPFF(FRem, "%");
-REV_BINOPFF(FAdd)
-REV_BINOPFF(FSub)
-REV_BINOPFF(FMul)
-REV_BINOPFF(FDiv)
-REV_BINOPFF(FRem)
+BINOPF(FAdd, "+");
+BINOPF(FSub, "-");
+BINOPF(FMul, "*");
+BINOPF(FDiv, "/");
+BINOPF(FRem, "%");
+REV_BINOPF(FAdd)
+REV_BINOPF(FSub)
+REV_BINOPF(FMul)
+REV_BINOPF(FDiv)
+REV_BINOPF(FRem)
 
 BINOP(FCmpOEQ, "==");
 BINOP(FCmpONE, "!=");
@@ -232,28 +204,6 @@ FPTRUNCOP(FPTrunc);
 FPTRUNCOP(FPToSI);
 FPTRUNCOP(FPToUI);
 
-// BinOpDef
-BinOpDef::BinOpDef(TypeDef *argType,
-                   TypeDef *resultType,
-                   const string &name,
-                   bool isMethod,
-                   bool reversed
-                   ) :
-    OpDef(resultType,
-          (isMethod ? FuncDef::method : FuncDef::noFlags) |
-           (reversed ? FuncDef::reverse : FuncDef::noFlags) |
-           FuncDef::builtin,
-          name,
-          isMethod ? 1 : 2
-          ) {
-
-    int arg = 0;
-    if (!isMethod)
-        args[arg++] = new ArgDef(argType, "lhs");
-    args[arg] = new ArgDef(argType, "rhs");
-}
-
-
 // TruncOpCall
 ResultExprPtr TruncOpCall::emit(Context &context) {
     if (receiver)
@@ -280,8 +230,8 @@ ResultExprPtr NoOpCall::emit(Context &context) {
         return args[0]->emit(context);
 }
 
-// BitNotOpCall
-ResultExprPtr BitNotOpCall::emit(Context &context) {
+// BBitNotOpCall
+ResultExprPtr BBitNotOpCall::emit(Context &context) {
     if (receiver)
         receiver->emit(context)->handleTransient(context);
     else
@@ -299,33 +249,6 @@ ResultExprPtr BitNotOpCall::emit(Context &context) {
                     );
 
     return new BResultExpr(this, builder.lastValue);
-}
-
-ExprPtr BitNotOpCall::foldConstants() {
-    ExprPtr val;
-    if (receiver)
-        val = receiver;
-    else
-        val = args[0];
-
-    IntConstPtr v = IntConstPtr::rcast(val);
-    if (v)
-        return v->foldBitNot();
-    else
-        return this;
-}
-
-// BitNotOpDef
-BitNotOpDef::BitNotOpDef(BTypeDef *resultType, const std::string &name,
-                         bool isMethod
-                         ) :
-    OpDef(resultType,
-          FuncDef::builtin | (isMethod ? FuncDef::method : FuncDef::noFlags),
-          name,
-          isMethod ? 0 : 1
-          ) {
-    if (!isMethod)
-        args[0] = new ArgDef(resultType, "operand");
 }
 
 // LogicAndOpCall
@@ -417,8 +340,8 @@ ResultExprPtr LogicOrOpCall::emit(Context &context) {
 
 }
 
-// NegOpCall
-ResultExprPtr NegOpCall::emit(Context &context) {
+// BNegOpCall
+ResultExprPtr BNegOpCall::emit(Context &context) {
     if (receiver)
         receiver->emit(context)->handleTransient(context);
     else
@@ -438,36 +361,8 @@ ResultExprPtr NegOpCall::emit(Context &context) {
     return new BResultExpr(this, builder.lastValue);
 }
 
-ExprPtr NegOpCall::foldConstants() {
-    ExprPtr val;
-    if (receiver)
-        val = receiver;
-    else
-        val = args[0];
-
-    IntConstPtr v = IntConstPtr::rcast(val);
-    if (v)
-        return v->foldNeg();
-    else
-        return this;
-}
-
-// NegOpDef
-NegOpDef::NegOpDef(BTypeDef *resultType, const std::string &name,
-                   bool isMethod
-                   ) :
-        OpDef(resultType,
-              FuncDef::builtin |
-               (isMethod ? FuncDef::method : FuncDef::noFlags),
-              name,
-              isMethod ? 0 : 1
-              ) {
-    if (!isMethod)
-        args[0] = new ArgDef(resultType, "operand");
-}
-
 // FNegOpCall
-ResultExprPtr FNegOpCall::emit(Context &context) {
+ResultExprPtr BFNegOpCall::emit(Context &context) {
     if (receiver)
         receiver->emit(context)->handleTransient(context);
     else
@@ -485,28 +380,6 @@ ResultExprPtr FNegOpCall::emit(Context &context) {
                     );
 
     return new BResultExpr(this, builder.lastValue);
-}
-
-ExprPtr FNegOpCall::foldConstants() {
-    FloatConstPtr fc = FloatConstPtr::rcast(receiver ? receiver : args[0]);
-    if (fc)
-        return fc->foldNeg();
-    else
-        return this;
-}
-
-// FNegOpDef
-FNegOpDef::FNegOpDef(BTypeDef *resultType, const std::string &name,
-                     bool isMethod
-                     ) :
-        OpDef(resultType,
-              FuncDef::builtin |
-               (isMethod ? FuncDef::method : FuncDef::noFlags),
-              name,
-              isMethod ? 0 : 1
-              ) {
-    if (!isMethod)
-        args[0] = new ArgDef(resultType, "operand");
 }
 
 // FunctionPtrCall

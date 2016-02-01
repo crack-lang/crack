@@ -1954,13 +1954,9 @@ int Parser::parseFuncDef(TypeDef *returnType, const Token &nameTok,
                         )
                );
       
+      // If the function is from a different namespace, this isn't an override.
       if (override->getOwner() != context->getParent()->getDefContext()->ns.get())
-         error(tok3,
-               SPUG_FSTR("Function " << name << 
-                          " can not be defined in a different namespace from "
-                          "its forward declaration."
-                         )
-               );
+         override = 0;
    }
 
    // parse the body
@@ -3372,7 +3368,21 @@ Parser::Parser(Toker &toker, model::Context *context) :
 }   
 
 void Parser::parse() {
-   // outer parser just parses an un-nested block
+   state = st_base;
+   
+   // Check for a "module;" statement, which consumes all doc-comments and 
+   // adds them to the module.
+   Token tok = getToken();
+   if (tok.isModule()) {
+      tok = getToken();
+      if (!tok.isSemi())
+         error(tok, "Semicolon expected after module token.");
+      context->ns->getModule()->doc = consumeDocs();
+   } else {
+      toker.putBack(tok);
+   }
+   
+   // parse an un-nested block
    parseBlock(false, noCallbacks);
 }
 

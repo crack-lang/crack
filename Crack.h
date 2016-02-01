@@ -9,6 +9,8 @@
 #ifndef _Crack_h_
 #define _Crack_h_
 
+#include <vector>
+
 #include <spug/RCPtr.h>
 
 #include "builder/BuilderOptions.h"
@@ -36,8 +38,6 @@ class Crack : public model::Options {
         // keeps init() from doing its setup stuff twice.
         bool initialized;
 
-        bool init();
-
     public:
 
         // builder specific options
@@ -63,11 +63,18 @@ class Crack : public model::Options {
 
     public:
 
+        bool init();
+
         /**
          * Adds the given path to the source library path - 'path' is a
          * colon separated list of directories.
          */
         void addToSourceLibPath(const std::string &path);
+
+        /**
+         * Returns the source library path.
+         */
+        const std::vector<std::string> &getSourceLibPath() const;
 
         /**
          * Set the program's arg list (this should be done prior to calling

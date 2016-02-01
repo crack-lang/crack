@@ -1,4 +1,3 @@
-// Command line argument processor
 // Copyright 2011-2012 Google Inc.
 // Copyright 2012 Conrad Steenberg <conrad.steenberg@gmail.com>
 //
@@ -6,6 +5,23 @@
 //   License, v. 2.0. If a copy of the MPL was not distributed with this
 //   file, You can obtain one at http://mozilla.org/MPL/2.0/.
 //
+/// Command line argument processor.
+/// Example usage:
+///      import crack.cmdline CmdOptions, Option, CMD_BOOL, CMD_STR;
+///
+///      opts := CmdOption![
+///          Option('filename', 'f', 'a file name', 'default.txt', CMD_STR),
+///          Option('verbose', 'v', 'show verbose output', 'false', CMD_BOOL)
+///      ];
+///
+///      otherArgs := opts.parse();
+///      bool verbose = opts.getBool('verbose);
+///      string filename = opts.getString('filename');
+///
+/// Values are always specified as strings.  For booleans, the values "true",
+/// "t", and "1" all may be used to represent a default of true, and "false",
+/// "f", and "0" may be used to represent a default of false.
+module;
 
 import crack.ascii wsplit;
 import crack.cont.array Array;
@@ -154,7 +170,7 @@ class CmdOptions {
     oper init() {}
 
     /// Create a new CmdOptions object filled in with keys/values/types from the
-    /// provided string
+    /// provided string.
     oper init(String createOpts) {
         newArgs := wsplit(createOpts);
         parse(newArgs, true);
@@ -439,12 +455,17 @@ class CmdOptions {
         }
     }
 
-    /// Parse options out of 'args'.
+    /// Parse options out of 'args'.  Returns the list of unparsed arguments.
     StringArray parse(StringArray args){
         return parse(args, false);
     }
 
-    /// Parse options out of 'args'.
+    /// Parse options out of sys.argv. Returns the list of unparsed arguments.
+    StringArray parse() {
+        return parse(argv);
+    }
+
+    /// Parse options out of 'args'.  Returns the list of unparsed arguments.
     /// If 'createUnknown' is true, allow unknown options and add them to the
     /// result.
     StringArray parse(StringArray args, bool createUnknown){

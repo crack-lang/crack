@@ -10,11 +10,12 @@
 
 import crack.lang die, AppendBuffer, Buffer, CString, FieldSet, WriteBuffer,
     ManagedBuffer, Writer, Exception, Formatter;
-import crack.runtime close, float_str, strlen, write, malloc, memcpy, free,
-    read, c_strerror, setNonBlocking, errno, EAGAIN, EWOULDBLOCK;
+import crack.runtime close, float_str, lseek, strlen, write, malloc, memcpy,
+    free, read, c_strerror, setNonBlocking, errno, EAGAIN, EWOULDBLOCK,
+    SEEK_SET, SEEK_CUR, SEEK_END;
 
 # we need Writer and Formatter to be in crack.lang, but they belongs here.
-@export_symbols Writer, Formatter;
+@export_symbols Writer, Formatter, SEEK_SET, SEEK_CUR, SEEK_END;
 
 ## Wraps a file handle and provides methods common to all file handles.
 class FileHandle : Object {
@@ -41,10 +42,27 @@ class FileHandle : Object {
 
 }
 
+## "Random access writer."  Adds "seek()" to the write methods
+@abstract class Seekable : VTableBase {
+
+    ## Seek the given offset from 'whence' (where 'whence' is SEEK_SET,
+    ## SEEK_CUR, or SEEK END
+    @abstract intz seek(intz offset, int whence);
+
+    # Since we can't load crack.ann yet, add the interface plumbing manually
+    @abstract Object oper from Seekable();
+    oper bind() { if (!(this is null)) this.oper from Seekable().oper bind(); }
+    oper release() {
+        if (!(this is null)) this.oper from Seekable().oper release();
+    }
+}
+
+@abstract class SeekableWriter : Writer, Seekable {}
+
 ## Writer for a file descriptor.
 ## Unless you are managing the file descriptor elsewhere, you probably want
 ## to use OwningFDWriter instead.
-class FDWriter : FileHandle, Writer {
+class FDWriter : FileHandle, SeekableWriter {
 
     ## Constructs an FDWriter from a plain file descriptor.
     oper init(int fd) : FileHandle(fd) {}
@@ -57,7 +75,12 @@ class FDWriter : FileHandle, Writer {
         write(fd, cstr, strlen(cstr));
     }
 
+    intz seek(intz offset, int whence) {
+        return lseek(fd, offset, whence);
+    }
+
     Object oper from Writer() { return this; }
+    Object oper from Seekable() { return this; }
 };
 
 ## Writer for a file descriptor that closes the file descriptor upon
@@ -98,10 +121,12 @@ class OwningFDWriter : FDWriter {
     }
 };
 
+@abstract class SeekableReader : Reader, Seekable {}
+
 ## Reader to read from a file descriptor.
 ## Unless you are managing the file descriptor elsewhere, you probably want to
 ## use OwningFDReader instead.
-class FDReader : FileHandle, Reader {
+class FDReader : FileHandle, SeekableReader {
 
     oper init(int fd) : FileHandle(fd) {}
 
@@ -119,7 +144,12 @@ class FDReader : FileHandle, Reader {
         return rc;
     }
 
+    intz seek(intz offset, int whence) {
+        return lseek(fd, offset, whence);
+    }
+
     Object oper from Reader() { return this; }
+    Object oper from Seekable() { return this; }
 };
 
 ## Reader for a file descriptor that closes the file descriptor upon

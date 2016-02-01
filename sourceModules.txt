@@ -5,6 +5,7 @@ ext/Type.cc
 model/Annotation.cc
 model/ArgDef.cc
 model/BaseMetaClass.cc
+model/BinOpDef.cc
 model/Construct.cc
 model/ConstSequenceExpr.cc
 model/ConstVarDef.cc
@@ -36,6 +37,7 @@ model/LocalNamespace.cc
 model/MultiExpr.cc
 model/NullConst.cc
 model/Namespace.cc
+model/ops.cc
 model/Serializer.cc
 model/CleanupFrame.cc
 model/TernaryExpr.cc
