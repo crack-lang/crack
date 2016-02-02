@@ -245,6 +245,17 @@ if (true) {
         cout `FAILED array insertion\n`;
 }
 
+# Cloning.
+if (true) {
+    class Foo {}
+    Array[Foo] foos = [Foo(), Foo(), Foo()];
+    other := foos.clone();
+    
+    for (elem :in other)
+        if (elem.refCount != 3)
+            cout `Bad ref-count after clone: $(elem.refCount)\n`;
+}
+
 # test contains()
 if (!stringA.contains('string'))
     cout `FAILED contains(member) is true\n`;

@@ -294,8 +294,10 @@ class Array[Elem] {
         newRep := array[Elem](__cap);
 
         # move all of the entries to the new array.
-        for (uint i; i < __size; ++i)
+        for (uint i; i < __size; ++i) {
             newRep[i] = __rep[i];
+            _bind(newRep[i]);
+        }
 
         return Array(newRep, __cap, __size, true);
     }
