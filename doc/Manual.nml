@@ -6009,6 +6009,10 @@ From 0.11 to 1.0
     StringWriter and StringFormatter have been removed.
 -   The "do" keyword has been reserved and can no longer be used for variables.
 -   the crack.exp.error module has been removed.
+-   The #split()# functions in #crack.strutil# now treat adjacent delimiters
+    as independent separators (e.g. "split('foo..bar', b'.') -> ['foo', '',
+    'bar']" instead of ['foo', 'bar']).  The #tsplit()# functions preserve the
+    original behavior.
 
 From 0.10 to 0.11
 -----------------

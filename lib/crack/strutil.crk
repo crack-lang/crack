@@ -102,7 +102,7 @@ class StringArray : Array[String] {
 ## Split the string into an array of words delimited by one or more of the 
 ## given array of bytes.  For example, split('foo-bar/.baz', '-./') would 
 ## return ['foo', 'bar', 'baz'].
-StringArray split(String val, String delims) {
+StringArray tsplit(String val, String delims) {
 
     # rule out the simple case
     if (val.size == 0)
@@ -151,9 +151,39 @@ StringArray split(String val, String delims) {
     return result;
 }
 
-## Split the string into an array of words delimited by the given byte.
-StringArray split(String val, byte c) {
-    return split(val, String(byteptr(array[byte]![c]), 1, true));
+## Split the string into an array of words delimited by on or more instances
+## of the given byte.
+StringArray tsplit(String val, byte c) {
+    return tsplit(val, String(byteptr(array[byte]![c]), 1, true));
+}
+
+## Split a the string into an array of words delimited by a single instance of
+## the string.
+StringArray split(String val, String delim) {
+    int pos, last;
+    StringArray result = {};
+    while ((pos = val.lfind(delim, pos)) != -1) {
+        result.append(val.slice(last, pos));
+        last = pos + delim.size;
+        ++pos;
+    }
+
+    result.append(val.slice(last));
+    return result;
+}
+
+## Split the string into an array of words delimited by the given one byte
+## delimiter.
+StringArray split(String val, byte delim) {
+    int pos, last;
+    StringArray result = {};
+    while ((pos = val.lfind(delim, pos)) != -1) {
+        result.append(val.slice(last, pos));
+        last = ++pos;
+    }
+
+    result.append(val.slice(last));
+    return result;
 }
 
 ## Pads a string with the provided bytes so it has the given width

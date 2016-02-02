@@ -12,7 +12,8 @@ import crack.cont.array Array;
 import crack.io cout, FStr;
 import crack.lang cmp, die, slice, substr, Buffer, CString, ManagedBuffer,
     SubString;
-import crack.strutil center, ljust, remove, replace, rjust, split, StringArray;
+import crack.strutil center, ljust, remove, replace, rjust, split, tsplit,
+    StringArray;
 
 if ('test' >= 'test string')
     die('test >= test string');
@@ -158,6 +159,42 @@ if (1) {
 
     if (split('amount|reason', b'|') != StringArray!['amount','reason'])
         cout `FAILED ws-splitting string with non-whitespace\n`;
+
+    if (split('', b'.') != StringArray![''])
+        cout `FAILED split of empty string.\n`;
+
+    if (split('', '.') != StringArray![''])
+        cout `FAILED split of empty string with string delim.\n`;
+
+    if (split('foo..baz', b'.') != StringArray!['foo', '', 'baz'])
+        cout `FAILED empty strings between adjacent delims.\n`;
+
+    if (split('foo/./.baz', '/.') != StringArray!['foo', '', 'baz'])
+        cout `FAILED empty strings between adjacent string delims.\n`;
+
+    if (split('foo.bar.', b'.') != StringArray!['foo', 'bar', ''])
+        cout `FAILED split with empty segment at end\n`;
+
+    if (split('foo//bar//', '//') != StringArray!['foo', 'bar', ''])
+        cout `FAILED split of string delim with empty segment at end\n`;
+
+    if (split('.foo.bar', b'.') != StringArray!['', 'foo', 'bar'])
+        cout `FAILED split with empty segment at beginning\n`;
+
+    if (split('//foo//bar', '//') != StringArray!['', 'foo', 'bar'])
+        cout `FAILED split of string delim with empty segment at beginning\n`;
+
+    if (tsplit('foo..bar', b'.') != StringArray!['foo', 'bar'])
+        cout `FAILED tsplit of adjacent tokens\n`;
+
+    if (tsplit('foo..bar', b'.') != StringArray!['foo', 'bar'])
+        cout `FAILED tsplit of adjacent tokens\n`;
+
+    if (tsplit('foo..bar', b'.') != StringArray!['foo', 'bar'])
+        cout `FAILED tsplit of adjacent tokens\n`;
+
+    if (tsplit('foo.bar/baz', './') != StringArray!['foo', 'bar', 'baz'])
+        cout `FAILED tsplit with multiple delims\n`;
 }
 
 # String padding function tests

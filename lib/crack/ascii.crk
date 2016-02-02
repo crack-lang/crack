@@ -9,7 +9,7 @@
 
 import crack.io cout, FStr;
 import crack.lang AppendBuffer, Buffer, InvalidArgumentError, ManagedBuffer;
-import crack.strutil split, StringArray;
+import crack.strutil tsplit, StringArray;
 
 @import crack.ann define;
 
@@ -228,7 +228,7 @@ String toLower(String text){
 ## Split the string into an array of words delimited by a sequence of
 ## ascii whitespace characters.
 StringArray wsplit(String val) {
-    return split(val, ' \t\n\r');
+    return tsplit(val, ' \t\n\r');
 }
 
 ## Capitalize the initial character of numWords words in a string
