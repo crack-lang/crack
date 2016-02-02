@@ -8,14 +8,37 @@ import crack.lang AppendBuffer, Buffer;
 import crack.process Process, ProcessHandlerImpl, CRK_PIPE_STDOUT,
     CRK_PIPE_STDERR;
 import crack.strutil StringArray;
+import crack.net Poller, PollEvent, PollEventCallback, POLLIN;
+
+@import crack.ann impl;
 
 class Event {
 }
 
+const int
+    KEY_UP = 256,
+    KEY_DOWN = 257,
+    KEY_LEFT = 258,
+    KEY_RIGHT = 259,
+    KEY_ESC = 27,
+    KEY_SPACE = b' ';
+
 class KeyEvent : Event {
     String data;
+    int key;
 
-    oper init(String data) : data = data {}
+    oper init(String data) : data = data {
+        if (data == '\033[A')
+            key = KEY_UP;
+        else if (data == '\033[B')
+            key = KEY_DOWN;
+        else if (data == '\033[D')
+            key = KEY_LEFT;
+        else if (data == '\033[C')
+            key = KEY_RIGHT;
+        else
+            key = data[0];
+    }
 }
 
 class Coord {
@@ -189,6 +212,11 @@ Array[uint16] _makeArray(Coord size) {
     return result;
 }
 
+@abstract class BaseWindow {
+    @abstract void paint();
+    @abstract bool onEvent(Event event);
+}
+
 class TermApp {
 
     SimpleTermUI __term;
@@ -201,6 +229,14 @@ class TermApp {
     Array[uint16] __cur, __new;
 
     int __width, __height;
+
+    # Lets the application signal termination.
+    bool __terminate;
+
+    # Toplevel windows.
+    Array[BaseWindow] __toplevels = {};
+
+    BaseWindow __focus;
 
     oper init() :
         __term = ANSITermUI(FDWriter.cast(cout.rep.oper from Writer()),
@@ -221,6 +257,40 @@ class TermApp {
         __term.setRawMode(true);
         inRawMode = true;
         __term.clear(0);
+    }
+
+    void onEvent(Event event) {
+        if (__focus)
+            __focus.onEvent(event);
+    }
+
+    class EventHandler @impl PollEventCallback {
+        TermApp app;
+        oper init(TermApp app) : app = app {}
+
+        int oper call(Poller poller, PollEvent event) {
+            if (event.events & POLLIN)
+                app.onEvent(KeyEvent(cin.read(16)));
+            return POLLIN;
+        }
+    }
+
+    void flush();
+
+    ## Run the event loop.
+    ## At the end of this, all toplevel windows are removed to break the
+    ## reference cycle.
+    void run() {
+        Poller poller = {};
+        poller.add(cin, EventHandler(this));
+        while (!__terminate) {
+            for (toplevel :in __toplevels)
+                toplevel.paint();
+            flush();
+            poller.waitAndProcess(null);
+        }
+
+        __toplevels = null;
     }
 
     void stop() {
@@ -321,6 +391,24 @@ class TermApp {
     Coord getSize() {
         return Coord(__width, __height);
     }
+
+    ## Shutdown the app.
+    void terminate() {
+        __terminate = true;
+    }
+
+    ## Returns true if the app is terminated.
+    bool terminated() {
+        return __terminate;
+    }
+
+    ## Add a toplevel window.  This is called automatically by the Window
+    ## constructor.
+    void _addToplevel(BaseWindow toplevel) {
+        __toplevels.append(toplevel);
+        if (!__focus)
+            __focus = toplevel;
+    }
 }
 
 class GraphicsContext {
@@ -368,10 +456,13 @@ class GraphicsContext {
                   byte char
                   ) {
     }
+
+    @final uint getWidth() { return __width; }
+    @final uint getHeight() { return __height; }
 }
 
 
-class Window {
+class Window : BaseWindow {
     Window __parent;
     TermApp __app;
 
@@ -382,14 +473,12 @@ class Window {
         __app = parent.__app;
     }
 
-    ## Constructor for the root window.
-    oper init(TermApp app) : __app = app {}
-
     ## Creates the top-level window, which occupies the entire screen.
     oper init(TermApp app) : __app = app, x = 0, y = 0 {
         size := app.getSize();
         width = size.x;
         height = size.y;
+        app._addToplevel(this);
     }
 
     ## Called when the window is resized.  This will be followed by a call to
@@ -414,9 +503,11 @@ class Window {
         return Coord(absX, absY);
     }
 
+    @final TermApp getApp() { return __app; }
+
     GraphicsContext getGraphicsContext() {
         absPos := getAbsPos();
-        return null; # GraphicsContext(getApp(),
+        return GraphicsContext(__app, absPos.x, absPos.y, width, height);
     }
 
     ## Repaint the entire window.
