@@ -9,7 +9,7 @@
 AC_DEFUN([AM_PATH_PTHREAD], [dnl
     AC_MSG_CHECKING(for pthread)
     PTHREAD_LIBS=
-    PTHREAD_CPPFLAGS=-pthread
+    PTHREAD_CPPFLAGS="-pthread -DPTHREAD"
     PTHREAD_LDFLAGS=-pthread
     ac_save_LIBS="$LIBS"
     LIBS="$LIBS $PTHREAD_LIBS"
