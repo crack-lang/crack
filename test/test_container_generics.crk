@@ -418,6 +418,24 @@ if (true) {
             $(inst.refCount)\n`;
 }
 
+# Test 'index' attribute.
+if (true) {
+    Array[int] ar = [0, 1, 2, 3];
+    for (iter :on ar) {
+        if (iter.elem() != iter.index) {
+            cout I`FAILED array 'index' check, $(iter.elem()) != \
+                   $(iter.index)\n`;
+        }
+    }
+    
+    # try setting it.
+    iter := ar.iter();
+    iter.index = 3;
+    if (iter.elem() != 3)
+        cout I`FAILED array 'index' repositioning, $(iter.elem()) != 3`;
+}
+        
+
 # --- List tests ---
 
 @define concat(Type) {

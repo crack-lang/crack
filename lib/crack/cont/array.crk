@@ -176,35 +176,32 @@ class Array[Elem] {
     ## The iterator class.
     class ArrayIter {
         Array __arr;
-        uint __index;
-        bool __first = true;
+
+        ## The array index.
+        uint index;
 
         oper init(Array arr) : __arr = arr {}
 
         ## Returns the element referenced by the iterator.
         Elem elem() {
-            return __arr[__index];
+            return __arr[index];
         }
 
         ## Forwards the iterator to the next element, returns true if it is
         ## still valid, false if it has fallen off the end.
         @final bool next() {
             cnt := __arr.count();
-            if (__index < cnt) {
-                __index = __index + 1;
-                return __index < cnt;
+            if (index < cnt) {
+                index = index + 1;
+                return index < cnt;
             } else {
                 return false;
             }
         }
 
-        ## Returns the index of the element currently referenced by the
-        ## iterator.
-        @final uint _getIndex() { return __index; }
-
         ## Returns true if the iterator is valid.
         bool isTrue() {
-            return __index < __arr.count();
+            return index < __arr.count();
         }
     }
 
@@ -654,7 +651,7 @@ class Array[Elem] {
 
     ## Insert the element at the position of the iterator.
     @final void insert(ArrayIter i, Elem elem) {
-        insert(i._getIndex(), elem);
+        insert(i.index, elem);
     }
 
     ## Empty arrays are false, non-empty arrays are true.
