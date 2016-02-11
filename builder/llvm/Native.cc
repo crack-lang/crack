@@ -813,6 +813,12 @@ void nativeCompile(llvm::Module *module,
 
     // native runtime lib is required
     NativeLinkItems.push_back(pair<string,bool>("CrackNativeRuntime",true));
+
+#ifdef PTHREAD
+    // Add pthread if it's configured.
+    NativeLinkItems.push_back(pair<string,bool>("pthread",true));
+#endif
+
 #ifdef __APPLE__
     // osx requires explicit link to debug
     NativeLinkItems.push_back(pair<string,bool>("CrackDebugTools",true));
