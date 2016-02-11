@@ -1416,9 +1416,7 @@ void Parser::parseMethodArgs(FuncCall::ExprVec &args, Token::Type terminator) {
 
 // type [ subtype, ... ]
 //       ^              ^
-TypeDefPtr Parser::parseSpecializer(const Token &lbrack, TypeDef *typeDef,
-                                    Generic *generic
-                                    ) {
+TypeDefPtr Parser::parseSpecializer(const Token &lbrack, TypeDef *typeDef) {
    if (typeDef && !typeDef->generic)
       error(lbrack, 
             SPUG_FSTR("You cannot specialize non-generic type " <<
@@ -1429,11 +1427,10 @@ TypeDefPtr Parser::parseSpecializer(const Token &lbrack, TypeDef *typeDef,
    TypeDef::TypeVecObjPtr types = new TypeDef::TypeVecObj();
    Token tok;
    while (true) {      
-      TypeDefPtr subType = parseTypeSpec(0, generic);
+      TypeDefPtr subType = parseTypeSpec(0);
       types->push_back(subType);
       
       tok = getToken();
-      if (generic) generic->addToken(tok);
       if (tok.isRBracket())
          break;
       else if (!tok.isComma())
@@ -1441,10 +1438,10 @@ TypeDefPtr Parser::parseSpecializer(const Token &lbrack, TypeDef *typeDef,
    }
 
    // XXX needs to verify the numbers and types of specializers
-   if (typeDef && !generic)
+   if (typeDef)
       return typeDef->getSpecialization(*context, types.get());
    else
-      return typeDef;
+      return 0;
 }
 
 // Class( arg, arg )
@@ -1466,52 +1463,85 @@ ExprPtr Parser::parseConstructor(const Token &tok, TypeDef *type,
    return funcCall;
 }
 
-TypeDefPtr Parser::parseTypeSpec(const char *errorMsg, Generic *generic) {
+// This should be consolidated with parsePrimary().
+VarDefPtr Parser::parseAnyDef() {
+   VarDefPtr var;
+   Namespace *ns;
+   TypeDef *type;
+   
    Token tok = getToken();
-   TypeDefPtr typeofType;
    if (tok.isTypeof()) {
-      if (generic) {
-         // record the typeof expression, return a bogus type
-         generic->addToken(tok);
-         recordParenthesized(generic);
-         return context->construct->voidType;
-      } else {
-         typeofType = parseTypeof();
-      }
+      TypeDefPtr typeofType = parseTypeof();
+      var = typeofType;
+      ns = type = typeofType.get();
    } else if (!tok.isIdent()) {
-      unexpected(tok, "type identifier expected");
-   }
-   if (generic) generic->addToken(tok);
-   
-   // save the ident source location for subsequent parse errors
-   identLoc = tok.getLocation();
-
-   TypeDefPtr typeDef = typeofType;
-   if (!typeDef && (!generic || !generic->getParm(tok.getData()))) {
-      VarDefPtr def = context->ns->lookUp(tok.getData());
-      typeDef = TypeDefPtr::rcast(def);
-      if (!typeDef)
-         error(tok, SPUG_FSTR(tok.getData() <<
-                               (errorMsg ? errorMsg : " is not a type.")
-                              )
-               );
-   }
-   
-   // see if there's a bracket operator   
-   tok = getToken();
-   if (tok.isLBracket()) {
-      if (generic) generic->addToken(tok);
-      typeDef = parseSpecializer(tok, typeDef.get(), generic);
+      unexpected(tok, "name expected");
    } else {
-      toker.putBack(tok);
+      var = context->lookUp(tok.getData());
+      if (!var)
+         error(tok, SPUG_FSTR("Undefined name: " << tok.getData()));
+      
+      ns = type = TypeDefPtr::rcast(var);
    }
    
+   // Store the location of the first token of the type in case there's an 
+   // error.
+   identLoc = tok.getLocation();;
+   
+   bool checkAgain;
+   do {
+      checkAgain = false;
+
+      // see if there's a bracket operator   
+      tok = getToken();
+      if (tok.isLBracket()) {
+         if (!type || !type->generic)
+            error(tok,
+                  SPUG_FSTR(var->getDisplayName() << " is not a generic type.")
+                  );
+         TypeDefPtr temp = parseSpecializer(tok, type);
+         var = type = temp.get();
+         ns = type;
+      } else {
+         toker.putBack(tok);
+      }
+      
+      tok = getToken();
+      if (tok.isDot() || tok.isScoping()) {
+         Token ident = getToken();
+         if (!ident.isIdent())
+            error(ident, "Identifier expected.");
+         var = ns->lookUp(ident.getData());
+         if (!var)
+            error(ident,
+                  SPUG_FSTR("Identifier " << ident.getData() <<
+                             " is not a member of " << ns->getNamespaceName()
+                            )
+                  );
+         ns = type = TypeDefPtr::rcast(var);
+         context->checkAccessible(type, ident.getData());
+         checkAgain = true;
+      } else {
+         toker.putBack(tok);
+      }
+   } while (checkAgain);
+
+   return var;
+}
+
+TypeDefPtr Parser::parseTypeSpec(const char *errorMsg) {
+
+   VarDefPtr varDef = parseAnyDef();
+   TypeDefPtr typeDef = varDef;
+   if (!typeDef)
+      context->error(SPUG_FSTR(varDef->getDisplayName() << " is not a type."));
+
    // make sure this isn't an unspecialized generic
-   if (!generic && typeDef->generic)
-      error(tok, SPUG_FSTR("Generic type " << typeDef->name <<
-                            " must be specialized to be used."
-                           )
-            );
+   if (typeDef->generic)
+      context->error(SPUG_FSTR("Generic type " << typeDef->name <<
+                                " must be specialized to be used."
+                               )
+                     );
    
    return typeDef;
 }
@@ -2085,8 +2115,9 @@ void Parser::parseAlias() {
 
       // get the context where we're going to define the alias
       ContextPtr defContext = context->getDefContext();
-        
+
       VarDefPtr existing;
+#if 0
       tok = getToken();
       if (tok.isTypeof()) {
          // parse the typeof
@@ -2112,6 +2143,9 @@ void Parser::parseAlias() {
       } else {
          unexpected(tok, "Identifier expected after alias definition.");
       }
+#else
+      existing = parseAnyDef();
+#endif
       
       OverloadDefPtr ovld =
          defContext->ns->addAlias(aliasName, existing.get());
@@ -3134,24 +3168,6 @@ void Parser::recordBlock(Generic *generic) {
    }
 }
 
-void Parser::recordParenthesized(Generic *generic) {
-   Token tok = getToken();
-   if (!tok.isLParen())
-      unexpected(tok, "left parenthesis expected");
-   generic->addToken(tok);
-   int parenCount = 1;
-   
-   while (parenCount) {
-      tok = getToken();
-      if (tok.isLParen())
-         ++parenCount;
-      else if (tok.isRParen())
-         --parenCount;
-      
-      generic->addToken(tok);
-   }         
-}
-
 // class name : base, base { ... }
 //      ^                         ^
 // class name;
@@ -3163,9 +3179,14 @@ TypeDefPtr Parser::parseClassDef() {
    if (!tok.isIdent())
       unexpected(tok, "Expected class name");
    string className = tok.getData();
+   Token nameTok = tok;
    
    // check for an existing definition of the symbol
    TypeDefPtr existing = checkForExistingDef(tok, className);
+   
+   // get any user flags
+   TypeDef::Flags flags = context->nextClassFlags;
+   context->nextClassFlags = TypeDef::noFlags;
    
    // check for a generic parameter list
    tok = getToken();
@@ -3181,6 +3202,40 @@ TypeDefPtr Parser::parseClassDef() {
       generic->seedCompileNS(*context);
       tok = getToken();
       generic->addToken(tok);
+      
+      // Continue recording tokens until we come to the opening curly brace.
+      while (!tok.isLCurly() && !tok.isEnd()) {
+         tok = getToken();
+         generic->addToken(tok);
+         
+         // Special case i-strings because they can really mess up the parsing.
+         if (tok.isIstrBegin())
+            error(tok, 
+                  "Interpolation string has no business being in a class "
+                   "statement."
+                  );
+      }
+      
+      if (tok.isEnd())
+         error(nameTok,
+               SPUG_FSTR("No opening bracket found for generic class " <<
+                         className
+                         )
+               );
+
+      // Record the rest of the block, create the generic and quit.
+      recordBlock(generic);
+      TypeDefPtr result = new TypeDef(context->construct->classType.get(),
+                                      className,
+                                      true
+                                      );
+      result->genericInfo = generic;
+      result->generic = new TypeDef::SpecializationCache();
+      if (flags & TypeDef::abstractClass)
+         result->abstract = true;
+      result->doc = consumeDocs();
+      addDef(result.get());
+      return result;
    }
    
    // parse base class list   
@@ -3189,7 +3244,7 @@ TypeDefPtr Parser::parseClassDef() {
    if (tok.isColon()) {
       while (true) {
          // parse the base class name
-         TypeDefPtr baseClass = parseTypeSpec(0, generic);
+         TypeDefPtr baseClass = parseTypeSpec(0);
          // subsequent parse errors should note the location of ident
          context->setLocation(identLoc);
          if (!generic) {
@@ -3233,27 +3288,6 @@ TypeDefPtr Parser::parseClassDef() {
       unexpected(tok, "expected colon or opening brace.");
    }
 
-   // get any user flags
-   TypeDef::Flags flags = context->nextClassFlags;
-   context->nextClassFlags = TypeDef::noFlags;
-   
-   // if we're recording a generic definition, just record the rest of the 
-   // block, create a generic type and quit.
-   if (generic) {
-      recordBlock(generic);
-      TypeDefPtr result = new TypeDef(context->construct->classType.get(),
-                                      className,
-                                      true
-                                      );
-      result->genericInfo = generic;
-      result->generic = new TypeDef::SpecializationCache();
-      if (flags & TypeDef::abstractClass)
-         result->abstract = true;
-      result->doc = consumeDocs();
-      addDef(result.get());
-      return result;
-   }
-   
    // if no base classes were specified, and Object has been defined, make 
    // Object the implicit base class.
    if (!bases.size() && context->construct->objectType)

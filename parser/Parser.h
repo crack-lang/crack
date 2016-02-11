@@ -310,8 +310,7 @@ class Parser {
        * @param generic defined when doing this within a generic definition.
        */
       model::TypeDefPtr parseSpecializer(const Token &tok,
-                                         model::TypeDef *typeDef,
-                                         model::Generic *generic = 0
+                                         model::TypeDef *typeDef
                                          );
 
 
@@ -319,9 +318,12 @@ class Parser {
                                       Token::Type terminator
                                       );
 
-      model::TypeDefPtr parseTypeSpec(const char *errorMsg = 0,
-                                      model::Generic *generic = 0
-                                      );
+      /**
+       * Parse any definition name and return it.
+       */
+      model::VarDefPtr parseAnyDef();
+
+      model::TypeDefPtr parseTypeSpec(const char *errorMsg = 0);
       void parseModuleName(std::vector<std::string> &moduleName);
       void parseArgDefs(std::vector<model::ArgDefPtr> &args, bool isMethod);
 
@@ -438,7 +440,6 @@ class Parser {
 
       void recordIStr(model::Generic *generic);
       void recordBlock(model::Generic *generic);
-      void recordParenthesized(model::Generic *generic);
 
       model::TypeDefPtr parseClassDef();
 

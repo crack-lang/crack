@@ -1,0 +1,52 @@
+%%TEST%%
+compound definitions for aliases and types
+%%ARGS%%
+%%FILE%%
+class G[T] {
+    class H {
+        @static void f() {
+            puts('G[T].H');
+        }
+    }
+}
+void f(G[int].H h) {
+    h.f();
+}
+f(G[int].H());
+
+alias I = G[int].H;
+I.f();
+
+class C : G[int].H {}
+C().f();
+
+class A {
+    class B {
+        @static void f() {
+            puts('A.B');
+        }
+    }
+}
+
+void g(A.B b) {
+    b.f();
+}
+g(A.B());
+
+alias B = A.B;
+B.f();
+
+class D : A.B {}
+D.f();
+
+alias BF = A.B.f;
+BF();
+%%EXPECT%%
+G[T].H
+G[T].H
+G[T].H
+A.B
+A.B
+A.B
+A.B
+%%STDIN%%
