@@ -1,0 +1,18 @@
+%%TEST%%
+aliased external types
+%%ARGS%%
+%%FILE%%
+class G[T] {
+    class H {
+        @static void f() { puts('ok') }
+    }
+}
+
+class A {
+    alias h = G[int].H;
+}
+
+A.h.f();
+%%EXPECT%%
+ok
+%%STDIN%%

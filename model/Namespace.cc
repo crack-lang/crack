@@ -75,9 +75,7 @@ void Namespace::getTypeDefs(std::vector<TypeDef*> &typeDefs,
         TypeDef *def = TypeDefPtr::rcast(iter->second);
         if (def) {
             // Ignore types we don't own or are not serializable.
-            if (def->getModule()->getMaster() == master && 
-                def->isSerializable()
-                )
+            if (def->getOwner() == this && def->isSerializable())
                 typeDefs.push_back(def);
         } else {
             SPUG_CHECK(!NamespacePtr::rcast(iter->second), 
