@@ -1030,13 +1030,10 @@ void instantiateGeneric(TypeDef *type, Context &context, Context &localCtx,
                                             )
                                   );
     else
-        // XXX I think we should never get here now that we're 
-        // materializing generic modules.
-        localCtx.pushErrorContext(SPUG_FSTR("In generic instantiation "
-                                            "from compiled module "
-                                            "(this should never "
-                                            "happen!)"
-                                            )
+        // We can get here if we need to recompile a compiled generic because
+        // its source has changed.
+        localCtx.pushErrorContext("In generic instantiation from compiled "
+                                   "module."
                                   );
     Parser parser(toker, &localCtx);
     parser.parse();
