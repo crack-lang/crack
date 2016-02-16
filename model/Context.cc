@@ -781,7 +781,8 @@ ExprPtr Context::createVarRef(VarDef *varDef) {
     // verify that the variable is reachable
     
     // functions and types don't have reachability issues
-    if (TypeDefPtr::cast(varDef) || FuncDefPtr::cast(varDef)) {
+    if (TypeDefPtr::cast(varDef) || FuncDefPtr::cast(varDef) || 
+        OverloadDefPtr::cast(varDef)) {
         return builder.createVarRef(varDef);
     
     // if the variable is in a module context, it is accessible

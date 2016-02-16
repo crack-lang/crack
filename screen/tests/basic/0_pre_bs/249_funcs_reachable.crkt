@@ -1,0 +1,17 @@
+%%TEST%%
+funcs reachable during construction
+%%ARGS%%
+%%FILE%%
+int f() { return 100 }
+
+class A {
+    int val = f();
+}
+
+if (A().val == 100)
+    puts('ok');
+else
+    puts('FAIL');
+%%EXPECT%%
+ok
+%%STDIN%%
