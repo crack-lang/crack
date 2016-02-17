@@ -60,6 +60,8 @@ ExprPtr VarRef::convert(Context &context, TypeDef *type) {
         } else if (FuncDefPtr funcDef = ovld->getSingleFunction()) {
             VarRefPtr varRef = context.createVarRef(funcDef.get());
             return varRef->convert(context, type);
+        } else {
+            return 0;
         }
     } else {
         return Expr::convert(context, type);
