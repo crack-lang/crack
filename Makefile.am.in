@@ -336,7 +336,7 @@ EXTRA_DIST = $(srcdir)/test/*.crk $(srcdir)/test/bad_extension.so \
     $(srcdir)/screen/tests $(srcdir)/screen/systest.crk $(srcdir)/opt/*.crk \
     $(srcdir)/doc $(srcdir)/lib
 
-bin_PROGRAMS = crack tools/crackdoc$(EXEEXT)
+bin_PROGRAMS = crack
 
 crack_SOURCES = crack_main.cc
 crack_LDADD = libCrackLang.la libCrackDebugTools.la $(LDFLAGS)
@@ -382,6 +382,9 @@ install-data-local: doc/Manual.html
 install-exec-local: install-binPROGRAMS
 	ln -f $(DESTDIR)$(bindir)/crack $(DESTDIR)$(bindir)/crack-$(VERSION)
 	ln -sf $(DESTDIR)$(bindir)/crack-$(VERSION) $(DESTDIR)$(bindir)/crackc
+	./crack -B llvm-native -l $(srcdir)/lib:./lib:.libs \
+	    -b out=$(DESTDIR)$(bindir)/crackdoc$(EXEEXT) \
+	    $(srcdir)/tools/crackdoc.crk
 
 uninstall-local:
 	rm -r $(DESTDIR)$(cracklib)
