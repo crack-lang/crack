@@ -783,6 +783,7 @@ ExprPtr Context::createVarRef(VarDef *varDef) {
     // functions and types don't have reachability issues
     if (TypeDefPtr::cast(varDef) || FuncDefPtr::cast(varDef) || 
         OverloadDefPtr::cast(varDef)) {
+
         return builder.createVarRef(varDef);
     
     // if the variable is in a module context, it is accessible
@@ -1243,13 +1244,23 @@ void Context::checkAccessible(VarDef *var, const string &name) {
 
         if (nameSize > 1 && name[1] == '_') {
 
-            // private variable: if it is owned by a class, we must be 
-            // in the scope of that class.
+            // This is harder for an overload.  Fail if any of the functions
+            // are from another scope.
+            if (OverloadDef *ovld = OverloadDefPtr::cast(var)) {
+                if (!ovld->privateVisibleTo(ns.get()))
+                    error(SPUG_FSTR(name <<
+                                    " is private and not acessible in this "
+                                    "context."
+                                    )
+                          );
+                else
+                    return;
+            }
+
             TypeDef *varClass = TypeDefPtr::cast(var->getOwner());
             if (!varClass)
                 return;
-            ContextPtr myClassCtx = getClassContext();
-            if (!myClassCtx || TypeDefPtr::rcast(myClassCtx->ns) != varClass)
+            if (!ns->isScopedTo(varClass))
                 error(SPUG_FSTR(name << " is private to class " <<
                                  varClass->name << " and not acessible in this "
                                  "context."

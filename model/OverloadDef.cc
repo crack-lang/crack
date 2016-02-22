@@ -204,6 +204,23 @@ bool OverloadDef::getSecondOrderImports(OverloadDef::FuncList &results,
     return gotMix;
 }
 
+bool OverloadDef::privateVisibleTo(Namespace *ns) const {
+    SPUG_FOR(FuncList, iter, funcs) {
+        // If the function is owned by a type but the namespace isn't scoped
+        // to the type, we fail.
+        Namespace *owner = (*iter)->getOwner();
+        if (TypeDefPtr::cast(owner) && !ns->isScopedTo(owner))
+            return false;
+    }
+
+    SPUG_FOR(ParentVec, parent, parents) {
+        if (!(*parent)->privateVisibleTo(ns))
+            return false;
+    }
+
+    return true;
+}
+
 pair<bool, bool> OverloadDef::hasAliasesAndNonAliases() const {
     bool gotAliases = false, gotNonAliases = false;
     SPUG_FOR(FuncList, iter, funcs) {

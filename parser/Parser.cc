@@ -1482,6 +1482,7 @@ VarDefPtr Parser::parseAnyDef() {
          error(tok, SPUG_FSTR("Undefined name: " << tok.getData()));
       
       ns = type = TypeDefPtr::rcast(var);
+      context->checkAccessible(var.get(), tok.getData());
    }
    
    // Store the location of the first token of the type in case there's an 

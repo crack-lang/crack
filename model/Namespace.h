@@ -305,6 +305,11 @@ class Namespace : public virtual spug::RCBase {
          * Returns the next object id after deserialization.
          */
         static void deserializeTypeDecls(Deserializer &deser);
+
+        /**
+         * Returns true if this namespace is lexically scoped to 'other'.
+         */
+        bool isScopedTo(Namespace *other);
 };
 
 inline std::ostream &operator <<(std::ostream &out, const Namespace &ns) {

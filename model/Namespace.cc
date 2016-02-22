@@ -506,3 +506,12 @@ void Namespace::deserializeDefs(Deserializer &deser) {
     }
     deser.readString(64, "optional");
 }
+
+bool Namespace::isScopedTo(Namespace *other) {
+    if (this == other)
+        return true;
+    else if (NamespacePtr owner = getNamespaceOwner())
+        return owner->isScopedTo(other);
+    else
+        return false;
+}

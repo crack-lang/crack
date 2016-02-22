@@ -182,6 +182,12 @@ class OverloadDef : public VarDef {
                                            ) const;
 
         /**
+         * Returns true if all private functions in the overload are visible
+         * to 'ns'.
+         */
+        bool privateVisibleTo(Namespace *ns) const;
+
+        /**
          * Returns information on whether the overload contains aliases and 
          * non-aliased overloads.  The first boolean in the pair is true if 
          * there are aliases, the second is true if there are non-aliased 

@@ -7,5 +7,5 @@ class A {
 }
 A::__privateMethod();
 %%REXPECT%%
-ParseError: .*/205_scoping_op_private_methods.crk:4:4: __privateMethod is private to class A and not acessible in this context.
+ParseError: .*/205_scoping_op_private_methods.crk:4:4: __privateMethod is private and not acessible in this context.
 %%STDIN%%
