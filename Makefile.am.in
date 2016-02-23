@@ -52,7 +52,8 @@ testext_la_LDFLAGS = -avoid-version -module $(AM_LDFLAGS)
 testext_la_SOURCES = test/testext.cc
 
 EXTENSIONS = _cairo _gl _gtk _pcre _sdl _sdl_mixer _alsa_midi _sdlgfx \
-             _fluidsynth _cairosdl _xs _ssl _png _curl _jack _pthread _fuse
+             _fluidsynth _cairosdl _xs _ssl _png _curl _jack _pthread _fuse \
+             _readline
 
 if HAVE_GTK
 extlib_LTLIBRARIES += _gtk.la
@@ -173,6 +174,12 @@ extlib_LTLIBRARIES += _fuse.la
 _fuse_la_LDFLAGS = -avoid-version -module @FUSE_LIBS@ $(AM_LDFLAGS)
 _fuse_la_CPPFLAGS = @FUSE_CPPFLAGS@
 _fuse_la_SOURCES = opt/_fuse.cc
+endif
+
+if HAVE_READLINE
+extlib_LTLIBRARIES += _readline.la
+_readline_la_LDFLAGS = -avoid-version -module @READLINE_LIBS@
+_readline_la_SOURCES = opt/_readline.cc
 endif
 
 noinst_HEADERS = \

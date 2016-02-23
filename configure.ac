@@ -96,4 +96,7 @@ AM_CONDITIONAL(HAVE_PTHREAD, [test "x$got_pthread" = xyes])
 AM_PATH_FUSE
 AM_CONDITIONAL(HAVE_FUSE, [test "x$got_fuse" = xyes])
 
+AM_PATH_READLINE
+AM_CONDITIONAL(HAVE_READLINE, [test "x$got_readline" = xyes])
+
 AC_OUTPUT
