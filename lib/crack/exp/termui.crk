@@ -1,16 +1,23 @@
 ## Terminal based user-interface. Like curses but hopefully with a cleaner
 ## interface.
 
-import crack.ascii parseInt, wsplit;
+import crack.ascii parseInt, wsplit, strip;
 import crack.cont.array Array;
+import crack.fs makePath;
 import crack.io cin, cout, FDReader, FDWriter, Formatter, FStr, Writer;
 import crack.lang AppendBuffer, Buffer;
 import crack.process Process, ProcessHandlerImpl, CRK_PIPE_STDOUT,
     CRK_PIPE_STDERR;
+import crack.runtime sigaction, SigAction, SigInfo, SA_SIGINFO, SIGWINCH;
 import crack.strutil StringArray;
 import crack.net Poller, PollEvent, PollEventCallback, POLLIN;
 
 @import crack.ann impl;
+
+bool _gotSigwinch;
+void _sigwinchHandler(int signal, SigInfo si, voidptr data) {
+    _gotSigwinch = true;
+}
 
 class Event {
 }
@@ -20,6 +27,8 @@ const int
     KEY_DOWN = 257,
     KEY_LEFT = 258,
     KEY_RIGHT = 259,
+    KEY_BACKSPACE = 8,
+    KEY_ENTER = 13,
     KEY_ESC = 27,
     KEY_SPACE = b' ';
 
@@ -123,7 +132,10 @@ class ANSITermUI : SimpleTermUI {
     }
 
     Coord getSize() {
-        p := Process(StringArray!['/bin/stty', 'size'], CRK_PIPE_STDOUT | CRK_PIPE_STDERR);
+        # TODO: we need to do this by repositioning far off-screen and then
+        # getting the current cursor pos.
+        p := Process(StringArray!['/bin/stty', 'size'],
+                     CRK_PIPE_STDOUT | CRK_PIPE_STDERR);
         data := p.getStdOut();
         fields := wsplit(data);
         return Coord(parseInt(fields[1]), parseInt(fields[0]));
@@ -215,6 +227,14 @@ Array[uint16] _makeArray(Coord size) {
 @abstract class BaseWindow {
     @abstract void paint();
     @abstract bool onEvent(Event event);
+    @abstract void onResize(uint width, uint height);
+}
+
+## Returns the TermUI object for a given named terminal device.
+ANSITermUI getTermUI(String ttyName) {
+    reader := makePath(ttyName).reader();
+    writer := makePath(ttyName).writer();
+    return ANSITermUI(FDWriter.cast(writer), FDReader.cast(reader));
 }
 
 class TermApp {
@@ -243,20 +263,28 @@ class TermApp {
                             cin
                             ) {
     }
+    oper init(String ttyName) : __term = getTermUI(ttyName) {}
 
     ## Construct from your own term instance.
     oper init(SimpleTermUI term) : __term = term {}
 
-    ## Start running the app.
-    void start() {
-        size := __term.getSize();
+    @final void __resize(Coord size) {
         __width = size.x;
         __height = size.y;
         __cur = _makeArray(size);
         __new = _makeArray(size);
+    }
+
+    ## Start running the app.
+    void start() {
+        __resize(__term.getSize());
         __term.setRawMode(true);
         inRawMode = true;
-        __term.clear(0);
+
+        sa := SigAction();
+        sa.sa_sigaction = _sigwinchHandler;
+        sa.sa_flags = SA_SIGINFO;
+        sigaction(SIGWINCH, sa, null);
     }
 
     void onEvent(Event event) {
@@ -276,6 +304,7 @@ class TermApp {
     }
 
     void flush();
+    void write(int x, int y, int attr, Buffer text);
 
     ## Run the event loop.
     ## At the end of this, all toplevel windows are removed to break the
@@ -288,6 +317,17 @@ class TermApp {
                 toplevel.paint();
             flush();
             poller.waitAndProcess(null);
+
+            if (_gotSigwinch) {
+                _gotSigwinch = false;
+
+                size := __term.getSize();
+                __resize(size);
+                __term.clear(0);
+
+                for (toplevel :in __toplevels)
+                    toplevel.onResize(size.x, size.y);
+            }
         }
 
         __toplevels = null;
@@ -377,6 +417,24 @@ class TermApp {
             __new[y * __width + x + i] = uint16((attr << 8) | text[i]);
     }
 
+    ## Fill the rectangle with the given character and attribute.
+    void fillRect(int x, int y, int width, int height, byte attr, byte char) {
+        # Clip to the screen size.
+        x1 := x + width;
+        if (x1 > __width)
+            x1 = __width;
+        y1 := y + height;
+        if (y1 > __height)
+            y1 = __height;
+
+        uint16 word = uint16((attr << 8) | char);
+        orgx := x;
+        for (; y < y1; ++y) {
+            for (x = orgx; x < x1; ++x)
+                __new[y * __width + x] = word;
+        }
+    }
+
     void showCursor(bool show) {
         # XXX should probably hold onto this until the next flush, just for
         # consistency.
@@ -452,9 +510,20 @@ class GraphicsContext {
         __app.write(x, y, attr, text.substr(0, count));
     }
 
+    ## Fill the specified rectangle with the given attribute and character.
     void fillRect(uint x, uint y, uint width, uint height, byte attr,
                   byte char
                   ) {
+        if (width + x > __width)
+            width = __width - x;
+        if (height + y > __height)
+            height = __height - y;
+        __app.fillRect(x + __xoff, y + __yoff, width, height, attr, char);
+    }
+
+    ## Clear the entire context the specified color.
+    void clear(byte attr) {
+        fillRect(0, 0, __width, __height, attr, b' ');
     }
 
     @final uint getWidth() { return __width; }
@@ -481,9 +550,24 @@ class Window : BaseWindow {
         app._addToplevel(this);
     }
 
+    ## Creates a window, initially invisible.  This should generally be the
+    ## base constructor called by derived classes.
+    oper init(Window parent) : __parent = parent {
+        __app = parent.__app;
+    }
+
     ## Called when the window is resized.  This will be followed by a call to
-    ## paint(), so it's not necessary for the handler to do this itself.
-    void onResize(uint width, uint height) {}
+    ## paint(), so it's not necessary for the window to repaint here.
+    void onResize(uint width, uint height) {
+        this.width = width;
+        this.height = height;
+    }
+
+    ## Called when the window is moved.  Semantics are similar to onResize().
+    void onMove(uint x, uint y) {
+        this.x = x;
+        this.y = y;
+    }
 
     bool onEvent(Event event) { return false; }
 
@@ -512,6 +596,12 @@ class Window : BaseWindow {
 
     ## Repaint the entire window.
     void paint() {
+    }
+
+    ## Returns the minimum required size of the window.  Layout controls may
+    ## not necessarily respect this.
+    Coord getMinSize() {
+        return Coord(1, 1);
     }
 }
 
