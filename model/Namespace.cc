@@ -273,6 +273,7 @@ OverloadDefPtr Namespace::addAlias(const string &name, VarDef *def) {
     Namespace *owner = def->getOwner();
     assert(owner);
 
+    // See if the alias name exposes any private members of the overload.
     bool exposes = def->isImportable(this, name);
 
     // overloads should never be aliased - otherwise the new context could 
@@ -425,9 +426,6 @@ void Namespace::serializeNonTypeDefs(const vector<const Namespace *>& namespaces
                 }
                 
                 // Is it an overload?
-                // XXX I'm pretty sure that the way we're dealing with privates 
-                // needs to change because I don't think an alias to a private 
-                // will result in the private being serialized.
                 if (OverloadDefPtr ovld = OverloadDefPtr::rcast(i->second)) {
                     pair<bool, bool> gotAliasGotNon = 
                         ovld->hasAliasesAndNonAliases();

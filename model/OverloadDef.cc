@@ -119,7 +119,7 @@ FuncDef *OverloadDef::getMatch(TypeDef *funcType) const {
         if ((*iter)->type->isDerivedFrom(funcType))
             return iter->get();
     }
-    
+
     SPUG_FOR(ParentVec, iter, parents) {
         FuncDef *result = (*iter)->getMatch(funcType);
         if (result)
@@ -179,7 +179,7 @@ OverloadDefPtr OverloadDef::createAlias(bool exposeAll) {
     alias->impl = impl;
     flatten(alias->funcs);
     if (exposeAll) {
-        SPUG_FOR(FuncList, iter, funcs) {
+        SPUG_FOR(FuncList, iter, alias->funcs) {
             if (!(*iter)->isImportable(owner, (*iter)->name))
                 (*iter)->exposed = true;
         }
@@ -281,8 +281,15 @@ void OverloadDef::addParent(OverloadDef *parent, bool before) {
 }
 
 void OverloadDef::collectAncestors(Namespace *ns) {
+    bool classPrivate = name.substr(0, 2) == "__" && TypeDefPtr::cast(ns);
     NamespacePtr parent;
     for (unsigned i = 0; parent = ns->getParent(i++);) {
+
+        // If the overload is private and the parent is a type, ignore the
+        // parent (we don't want to absorb his overloads).
+        if (classPrivate && TypeDefPtr::rcast(parent))
+            continue;
+
         VarDefPtr var = parent->lookUp(name, false);
         OverloadDefPtr parentOvld;
         if (!var) {
@@ -386,9 +393,15 @@ bool OverloadDef::isImportable(const Namespace *ns,
     for (FuncList::const_iterator iter = funcs.begin();
          iter != funcs.end();
          ++iter
-         )
+         ) {
         if ((*iter)->isImportable(ns, name))
             return true;
+    }
+
+    SPUG_FOR(ParentVec, iter, parents) {
+        if ((*iter)->isImportable(ns, name))
+            return true;
+    }
 
     return false;
 }
