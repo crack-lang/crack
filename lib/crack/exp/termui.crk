@@ -27,6 +27,8 @@ const int
     KEY_DOWN = 257,
     KEY_LEFT = 258,
     KEY_RIGHT = 259,
+    KEY_PGUP = 260,
+    KEY_PGDN = 261,
     KEY_BACKSPACE = 8,
     KEY_ENTER = 13,
     KEY_ESC = 27,
@@ -45,6 +47,15 @@ class KeyEvent : Event {
             key = KEY_LEFT;
         else if (data == '\033[C')
             key = KEY_RIGHT;
+        else if (data == '\033[5~')
+            key = KEY_PGUP;
+        else if (data == '\033[6~')
+            key = KEY_PGDN;
+
+        # Add this just to key escape sequences from being treated as a naked
+        # escape.
+        else if (data == '\033')
+            key = KEY_ESC;
         else
             key = data[0];
     }
