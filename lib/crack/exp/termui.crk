@@ -27,6 +27,8 @@ const int
     KEY_DOWN = 257,
     KEY_LEFT = 258,
     KEY_RIGHT = 259,
+    KEY_PGUP = 260,
+    KEY_PGDN = 261,
     KEY_BACKSPACE = 8,
     KEY_ENTER = 13,
     KEY_ESC = 27,
@@ -45,6 +47,15 @@ class KeyEvent : Event {
             key = KEY_LEFT;
         else if (data == '\033[C')
             key = KEY_RIGHT;
+        else if (data == '\033[5~')
+            key = KEY_PGUP;
+        else if (data == '\033[6~')
+            key = KEY_PGDN;
+
+        # Add this just to key escape sequences from being treated as a naked
+        # escape.
+        else if (data == '\033')
+            key = KEY_ESC;
         else
             key = data[0];
     }
@@ -85,8 +96,10 @@ class Coord {
 }
 
 @abstract class SimpleTermUI {
+    ## Clear clears the buffer as well as the screen.
     @abstract void clear(uint backgroundColor);
     @abstract void scrollUp(uint lines);
+    @abstract void scrollDown(uint lines);
     @abstract void write(Coord pos, String text);
     @abstract void setPos(int x, int y);
     @abstract void setAttr(int i);
@@ -95,6 +108,8 @@ class Coord {
     @abstract Event getEvent();
     @abstract void setRawMode(bool rawMode);
     @abstract void showCursor(bool show);
+    @abstract void saveScreen();
+    @abstract void restoreScreen();
 }
 
 
@@ -113,6 +128,10 @@ class ANSITermUI : SimpleTermUI {
 
     void scrollUp(uint lines) {
         __dst.write(FStr() `\033[$(lines)S`);
+    }
+
+    void scrollDown(uint lines) {
+        __dst.write(FStr() `\033[$(lines)T`);
     }
 
     void write(Coord pos, String text) {
@@ -161,6 +180,19 @@ class ANSITermUI : SimpleTermUI {
         else
             __dst.write('\033[?25l');
     }
+
+    void saveScreen() {
+        # The "ti" sequence for the termcap entry, preceded by Esc-7 to save
+        # the cursor position.
+        __dst.write('\0337\033[?1048h\033[?1047h');
+    }
+
+    void restoreScreen() {
+        # The "te" sequence for the termcap entry, followed by Esc-8 to
+        # restore the cursor position.
+        __dst.write('\033[?1047l\033[?1048l\0338');
+    }
+
 }
 
 ## Terminal interface that writes information instead of escape sequences so
@@ -176,6 +208,10 @@ class TestTermUI : SimpleTermUI {
 
     void scrollUp(uint lines) {
         __out `scroll up $lines\n`;
+    }
+
+    void scrollDown(uint lines) {
+        __out `scroll down $lines\n`;
     }
 
     void write(Coord pos, String text) {
@@ -206,6 +242,14 @@ class TestTermUI : SimpleTermUI {
 
     void showCursor(bool show) {
         __out `showCursor: $show\n`;
+    }
+
+    void saveScreen() {
+        __out `save screen\n`;
+    }
+
+    void restoreScreen() {
+        __out `restore screen\n`;
     }
 }
 
@@ -269,6 +313,7 @@ class TermApp {
     oper init(SimpleTermUI term) : __term = term {}
 
     @final void __resize(Coord size) {
+        # resizes the underlying canvas.
         __width = size.x;
         __height = size.y;
         __cur = _makeArray(size);
@@ -278,6 +323,7 @@ class TermApp {
     ## Start running the app.
     void start() {
         __resize(__term.getSize());
+        __term.saveScreen();
         __term.setRawMode(true);
         inRawMode = true;
 
@@ -323,7 +369,6 @@ class TermApp {
 
                 size := __term.getSize();
                 __resize(size);
-                __term.clear(0);
 
                 for (toplevel :in __toplevels)
                     toplevel.onResize(size.x, size.y);
@@ -336,6 +381,8 @@ class TermApp {
     void stop() {
         if (inRawMode) {
             inRawMode = false;
+            __term.setPos(0, 0);
+            __term.restoreScreen();
             __term.setRawMode(false);
         }
     }
