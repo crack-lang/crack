@@ -20,10 +20,12 @@ import crack.strutil StringArray;
     # line numbers.
     #debug
 
+    ## The Bar message.
     message Bar {
         repeated string name = 1;
     }
 
+    ## The Foo message.
     message Foo {
         optional Bar bar = 1;
         required int32 field = 100;
