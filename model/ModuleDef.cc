@@ -13,7 +13,7 @@
 #include "spug/stlutil.h"
 #include "builder/Builder.h"
 #include "util/SourceDigest.h"
-#include "AliasTreeNode.h"
+#include "NamespaceAliasTreeNode.h"
 #include "Context.h"
 #include "Deserializer.h"
 #include "GenericModuleInfo.h"

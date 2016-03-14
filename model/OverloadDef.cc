@@ -16,7 +16,7 @@
 #include "Deserializer.h"
 #include "Expr.h"
 #include "FuncCall.h"  // just so we can "out << args"
-#include "AliasTreeNode.h"
+#include "OverloadAliasTreeNode.h"
 #include "Serializer.h"
 #include "TypeDef.h"
 #include "VarDefImpl.h"

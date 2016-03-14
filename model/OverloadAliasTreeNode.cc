@@ -5,31 +5,16 @@
 //   file, You can obtain one at http://mozilla.org/MPL/2.0/.
 //
 
-#include "AliasTreeNode.h"
+#include "OverloadAliasTreeNode.h"
 
 #include "spug/stlutil.h"
 
-#include "Namespace.h"
 #include "OverloadDef.h"
 #include "Serializer.h"
 #include "VarDef.h"
 
 using namespace model;
 using namespace std;
-
-void NamespaceAliasTreeNode::serialize(Serializer &serializer) const {
-    if (Serializer::trace)
-        cerr << "# begin namespace " << ns->getNamespaceName() << endl;
-    ns->serializeHeader(serializer);
-    serializer.write(children.size(), "#children");
-    SPUG_FOR(vector<AliasTreeNodePtr>, i, children)
-        (*i)->serialize(serializer);
-    serializer.write(aliases.size(), "#defs");
-    SPUG_FOR(VarDefMap, i, aliases)
-        i->second->serializeAlias(serializer, i->first, true);
-    if (Serializer::trace)
-        cerr << "# end namespace " << ns->getNamespaceName() << endl;
-}
 
 void OverloadAliasTreeNode::addAlias(FuncDef *func) {
     aliases.push_back(func);

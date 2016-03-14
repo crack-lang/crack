@@ -2,7 +2,6 @@ ext/Module.cc
 ext/Func.cc
 ext/RCObj.cc
 ext/Type.cc
-model/AliasTreeNode.cc
 model/Annotation.cc
 model/ArgDef.cc
 model/BaseMetaClass.cc
@@ -21,6 +20,8 @@ model/SetRegisterExpr.cc
 model/FuncCall.cc
 model/Expr.cc
 model/Generic.cc
+model/NamespaceAliasTreeNode.cc
+model/OverloadAliasTreeNode.cc
 model/OverloadDef.cc
 model/ResultExpr.cc
 model/Import.cc
