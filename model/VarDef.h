@@ -220,7 +220,8 @@ class VarDef : public virtual spug::RCBase {
          * Serialize the definition as an alias. "AliasDef"
          */
         virtual void serializeAlias(Serializer &serializer, 
-                                    const std::string &alias
+                                    const std::string &alias,
+                                    bool newAlgo = false
                                     ) const;
 
         /**

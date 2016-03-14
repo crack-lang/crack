@@ -85,8 +85,17 @@ So given this, our meta-data format is:
         # module (second-order imports)
         array[blob] exports
 
-        # reserved for future optional data
-        blob optional
+        # All of the aliases for the module and all slave modules.
+        optional AliasTreeNode aliasTree = 1
+
+        # --- end of signed meta-data ---
+        # Note that fields after this are in their own optional blob, more
+        # funny biz to represent.
+
+        blob optionalPostDigest {
+            # Private aliases for the module.
+            optional AliasTreeNode privateAliasTree = 1
+        }
     }
 
     Header {
@@ -171,11 +180,7 @@ So given this, our meta-data format is:
     Definitions {
         # The public definitions, excluding types.  (Types have special
         # ordering considerations across slave modules so all of them are
-        # serialized at the module level.
-        # Definitions are current in order of: non-alias symbols, and aliases.
-        # Overload definitions may be included more than once, with the
-        # aliases in a set of overloads serialized separately from the
-        # non-aliased functions.
+        # serialized at the module level.)
         array[Def] defs
 
         # Private definitions need only be specified if the namespace contains
@@ -187,34 +192,59 @@ So given this, our meta-data format is:
         blob optional
     }
 
+    # "kind" determines which "subclass" of VarDef this entry actually is
+    # so we can correctly parse the remainder of it.
+    enum ObjectType {
+        variableId = 1,
+        typeId = 2,
+        genericId = 3,
+        overloadId = 4,
+        aliasId = 5,
+        typeAliasId = 6,
+        constVarId = 7,
+        slaveModuleId = 8
+    }
+
     Def {
-        # the kind of definition:
-        #  1 a variable
-        #  2 a type
-        #  3 a generic
-        #  4 a function overload group
-        #  5 an alias
-        # "kind" determines which "subclass" of VarDef this entry actually is
-        # so we can correctly parse the remainder of it.
-        enum {
-            variableId = 1,
-            typeId = 2,
-            genericId = 3,
-            overloadId = 4,
-            aliasId = 5,
-            typeAliasId = 6,
-            constVarId = 7
-        }
-        uint kind;
+        ObjectType kind;
 
         switch (kind) {
-            case aliasId: AliasDef
             case variableId: VarDef
             case typeId: TypeDef
             case overloadId: OverloadDef
             case constVar: ConstVarDef
+            case constVarId: ConstVarDef
+
+            # Aliases are not valid here.
+            case aliasId:
+            case typeAliasId:
+            case slaveModuleId:
+                error
         }
     }
+
+
+    OverloadAliasTreeNode {
+        array[FuncAlias] defs
+    }
+
+    NamespaceAliasTreeNode {
+        array[AliasTreeNode] children
+        array[AliasDef] aliases
+    }
+
+    AliasTreeNode {
+        ObjectType kind
+
+        # For slave modules, this is the canonical name.  For all other
+        # aliases, this is the short name.
+        blob name
+
+        switch (kind) {
+            case typeAliasId: NamespaceAliasTreeNode
+            case slaveModuleId: NamespaceAliasTreeNode
+            case overloadId: OverloadAliasTreeNode
+        }
 
     AliasDef {
         blob alias

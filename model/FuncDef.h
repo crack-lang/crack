@@ -191,6 +191,11 @@ class FuncDef : public VarDef {
         /** Serialize an aliased function. */        
         void serializeAlias(Serializer &serializer) const;
 
+        virtual void serializeAlias(Serializer &serializer,
+                                    const std::string &alias,
+                                    bool newAlgo
+                                    ) const;
+
         // This should never be called, functions are never directly 
         // serialized.
         virtual void serialize(Serializer &serializer, bool writeKind,

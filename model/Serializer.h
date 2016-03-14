@@ -73,7 +73,8 @@ class Serializer {
             overloadId = 4,
             aliasId = 5,
             typeAliasId = 6,
-            constVarId = 7
+            constVarId = 7,
+            slaveModuleId = 8
         };
 
         static const int

@@ -18,6 +18,7 @@ class Context;
 class Deserializer;
 SPUG_RCPTR(Expr);
 SPUG_RCPTR(Namespace);
+SPUG_RCPTR(OverloadAliasTreeNode);
 class Serializer;
 SPUG_RCPTR(TypeDef);
 
@@ -266,10 +267,6 @@ class OverloadDef : public VarDef {
          */
         bool hasSerializableFuncs() const;
 
-        virtual void serializeAlias(Serializer &serializer, 
-                                    const std::string &alias
-                                    ) const;
-
         virtual void serialize(Serializer &serializer, bool writeKind,
                                const Namespace *ns
                                ) const;
@@ -277,6 +274,22 @@ class OverloadDef : public VarDef {
         static OverloadDefPtr deserialize(Deserializer &deser,
                                           Namespace *owner
                                           );
+
+        /**
+         * Returns the alias tree for the overload or null if the overload 
+         * contains no aliases.  Alias trees contain all 
+         * aliases for the overload.
+         * @param privateAliases If true, return the private alias tree.  
+         *                       Otherwise return the public alias tree.
+         */
+        OverloadAliasTreeNodePtr getAliasTree(bool privateAliases);
+
+        /**
+         * Returns true if the overload contains aliases of the given type.  
+         * If 'privateAliases' is true, returns true if there are private 
+         * aliases, otherwise returns true if there are public aliases.
+         */
+        bool containsAliases(bool privateAliases) const;
 };
 
 } // namespace model

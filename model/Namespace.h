@@ -17,6 +17,7 @@
 
 namespace model {
 
+SPUG_RCPTR(AliasTreeNode);
 class Context;
 class Deserializer;
 SPUG_RCPTR(Expr);
@@ -116,6 +117,14 @@ class Namespace : public virtual spug::RCBase {
         void deserializeDefs(Deserializer &deser, const char *countName,
                              bool publicDefs
                              );
+
+        /**
+         * Returns all of the aliases in the namespace in a hierarchy.
+         * @param privateAliases True if we are to obtain the alias tree for
+         *                       private aliases, false to obtain the tree for
+         *                       public aliases.
+         */
+        AliasTreeNodePtr getAliasTree(bool privateAliases);
 
     public:
         
@@ -294,6 +303,11 @@ class Namespace : public virtual spug::RCBase {
             serializeNonTypeDefs(namespaces, serializer);
         }
         
+        /**
+         * Serialize a definition header appropriate to the namespace type.
+         */
+        virtual void serializeHeader(Serializer &serializer) const = 0;
+
         /** 
          * Deserialize an array of definitions and store them in the 
          * namespace.
@@ -305,6 +319,11 @@ class Namespace : public virtual spug::RCBase {
          * Returns the next object id after deserialization.
          */
         static void deserializeTypeDecls(Deserializer &deser);
+
+        /**
+         * Deserialize aliases in the namespace serialized by AliasTreeNode.
+         */
+        void deserializeAliases(Deserializer &deser);
 
         /**
          * Returns true if this namespace is lexically scoped to 'other'.

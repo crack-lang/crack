@@ -1,0 +1,5 @@
+
+int i;
+class A {
+    alias i = i;
+}

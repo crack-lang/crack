@@ -2,6 +2,7 @@ ext/Module.cc
 ext/Func.cc
 ext/RCObj.cc
 ext/Type.cc
+model/AliasTreeNode.cc
 model/Annotation.cc
 model/ArgDef.cc
 model/BaseMetaClass.cc

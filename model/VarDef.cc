@@ -272,7 +272,10 @@ void VarDef::serializeExtern(Serializer &serializer) const {
     serializeExternCommon(serializer, 0);
 }
 
-void VarDef::serializeAlias(Serializer &serializer, const string &alias) const {
+void VarDef::serializeAlias(Serializer &serializer,
+                            const string &alias,
+                            bool newAlgo
+                            ) const {
     serializer.write(Serializer::aliasId, "kind");
     serializer.write(alias, "alias");
     serializeExternRef(serializer, 0);

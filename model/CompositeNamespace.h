@@ -37,6 +37,7 @@ class CompositeNamespace : public Namespace {
         virtual OverloadDefPtr addAlias(const std::string &name, VarDef *def);
         virtual void addUnsafeAlias(const std::string &name, VarDef *def);
         virtual OverloadDefPtr replaceDef(VarDef *def);
+        virtual void serializeHeader(Serializer &serializer) const;
 };
 
 } // namespace model

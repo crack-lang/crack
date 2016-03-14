@@ -314,6 +314,20 @@ void FuncDef::serializeAlias(Serializer &serializer) const {
     serializer.write(0, "optional");
 }
 
+void FuncDef::serializeAlias(Serializer &serializer,
+                             const std::string &alias,
+                             bool newAlgo
+                             ) const {
+    SPUG_CHECK(newAlgo,
+               "FuncDef::serializeAlias() called from old serialization code.");
+    if (Serializer::trace)
+        cerr << "# function " << *this << endl;
+    serializer.write(1, "isAlias");
+    serializeExtern(serializer);
+    serializeArgs(serializer);
+    serializer.write(0, "optional");
+}
+
 void FuncDef::serialize(Serializer &serializer, bool writeKind,
                         const Namespace *ns
                         ) const {

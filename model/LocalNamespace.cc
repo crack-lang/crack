@@ -7,6 +7,8 @@
 
 #include "LocalNamespace.h"
 
+#include "spug/check.h"
+
 #include "ModuleDef.h"
 #include "TypeDef.h"
 #include "VarDef.h"
@@ -19,4 +21,11 @@ ModuleDefPtr LocalNamespace::getModule() {
 
 NamespacePtr LocalNamespace::getParent(unsigned index) {
     return index ? NamespacePtr(0) : parent;
+}
+
+void LocalNamespace::serializeHeader(Serializer &serializer) const {
+    SPUG_CHECK(false,
+               "serializeHeader() called on LocalNamespace " <<
+                getNamespaceName()
+               );
 }

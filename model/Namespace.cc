@@ -17,6 +17,7 @@
 #include "Context.h"
 #include "Deserializer.h"
 #include "Expr.h"
+#include "AliasTreeNode.h"
 #include "OverloadDef.h"
 #include "ProtoBuf.h"
 #include "Serializer.h"
@@ -86,6 +87,22 @@ void Namespace::getTypeDefs(std::vector<TypeDef*> &typeDefs,
     getNestedTypeDefs(typeDefs, master);
 }
 
+namespace {
+    // Add an overload during deserialization.
+    void addOverload(Namespace *ns, OverloadDef *ovld) {
+        // Since overloads can be serialized more than once to deal
+        // with aliases, we only want to add it if it's not already
+        // registered.
+        if (!ovld->getOwner())
+            ns->addDef(ovld);
+        else
+            SPUG_CHECK(ovld->getOwner() == ns,
+                       "Reusing overload that is not owned by " <<
+                        ns->getNamespaceName()
+                       );
+    }
+}
+
 void Namespace::deserializeDefs(Deserializer &deser, const char *countName,
                                 bool publicDefs) {
     // read all of the symbols
@@ -124,22 +141,9 @@ void Namespace::deserializeDefs(Deserializer &deser, const char *countName,
                 SPUG_CHECK(false, "can't deserialize generics yet");
 //                addDef(Generic::deserialize(deser));
                 break;
-            case Serializer::overloadId: {
-                OverloadDefPtr ovld = 
-                    OverloadDef::deserialize(deser, this).get();
-                
-                // Since overloads can be serialized more than once to deal 
-                // with aliases, we only want to add it if it's not already 
-                // registered.
-                if (!ovld->getOwner())
-                    addDef(ovld.get());
-                else
-                    SPUG_CHECK(ovld->getOwner() == this,
-                               "Reusing overload that is not owned by " <<
-                                getNamespaceName()
-                               );
+            case Serializer::overloadId:
+                addOverload(this, OverloadDef::deserialize(deser, this).get());
                 break;
-            }
             case Serializer::typeId:
                 TypeDef::deserializeTypeDef(deser);
                 break;
@@ -457,32 +461,20 @@ void Namespace::serializeNonTypeDefs(const vector<const Namespace *>& namespaces
     }
 
     // write the count and the definitions
-    serializer.write(aliases.size() + others.size(), "#defs");
+    serializer.write(others.size(), "#defs");
     
     // then the owned definitions.
     SPUG_FOR(vector<VarDef *>, i, others)
         (*i)->serialize(serializer, true, this);
     
-    // and then the aliases.  (These have to come last because they may be 
-    // internal aliases, in which case the definitions must be defined before 
-    // we can resolve them).
-    SPUG_FOR(VarDefVec, i, aliases)
-        i->second->serializeAlias(serializer, i->first);
-    
     // now do the privates
     {
         Serializer::StackFrame<Serializer> digestState(serializer, false);
-        serializer.write(privateAliases.size() + otherPrivates.size(),
-                        "#privateDefs"
-                        );
+        serializer.write(otherPrivates.size(), "#privateDefs");
 
         // vars and functions
         SPUG_FOR(vector<VarDef *>, i, otherPrivates)
             (*i)->serialize(serializer, true, this);
-    
-        // aliases
-        SPUG_FOR(VarDefVec, i, privateAliases)
-            i->second->serializeAlias(serializer, i->first);
     }
 
     serializer.write(0, "optional");
@@ -496,6 +488,50 @@ void Namespace::deserializeTypeDecls(Deserializer &deser) {
         TypeDef::deserializeDecl(deser);
 }
 
+void Namespace::deserializeAliases(Deserializer &deser) {
+    if (Serializer::trace)
+        cerr << "# begin namespace " << getNamespaceName() << endl;
+
+    int count = deser.readUInt("#children");
+    for (int i = 0; i < count; ++i) {
+        int kind = deser.readUInt("kind");
+        if (kind == Serializer::slaveModuleId) {
+            string name = deser.readString(Serializer::modNameSize, "name");
+            ModuleDefPtr mod = deser.context->construct->getModule(name);
+            mod->deserializeAliases(deser);
+        } else if (kind == Serializer::typeId) {
+            string name = deser.readString(Serializer::varNameSize, "name");
+            TypeDefPtr type = lookUp(name, false);
+            type->deserializeAliases(deser);
+        } else if (kind == Serializer::overloadId) {
+            addOverload(this, OverloadDef::deserialize(deser, this).get());
+        }
+    }
+
+    count = deser.readUInt("#defs");
+    for (int i = 0; i < count; ++i) {
+        int kind = deser.readUInt("kind");
+        string name = deser.readString(Serializer::varNameSize, "alias");
+        VarDefPtr varDef;
+        switch (kind) {
+            case Serializer::aliasId:
+                varDef = VarDef::deserializeAlias(deser);
+                break;
+            case Serializer::typeAliasId:
+                varDef = TypeDef::deserializeRef(deser);
+                break;
+            default:
+                SPUG_CHECK(false,
+                           "Bad definition type id " << kind
+                           );
+        }
+        addAlias(name, varDef.get());
+    }
+
+    if (Serializer::trace)
+        cerr << "# end namespace " << getNamespaceName() << endl;
+}
+
 void Namespace::deserializeDefs(Deserializer &deser) {
     deserializeDefs(deser, "#defs", true);
     {
@@ -503,6 +539,52 @@ void Namespace::deserializeDefs(Deserializer &deser) {
         deserializeDefs(deser, "#privateDefs", false);
     }
     deser.readString(64, "optional");
+}
+
+namespace {
+    // These implement the check for whether an alias or overload should be
+    // included in a specific type of alias tree (private or importable).
+
+    bool shouldInclude(bool privateAliases, Namespace *ns,
+                       Namespace::VarDefMap::const_iterator entry
+                       ) {
+        bool importable = entry->second->isImportable(ns, entry->first);
+        if (privateAliases)
+            return !importable;
+        else
+            return importable;
+    }
+}
+
+AliasTreeNodePtr Namespace::getAliasTree(bool privateAliases) {
+    NamespaceAliasTreeNodePtr result;
+    SPUG_FOR(VarDefMap, i, defs) {
+        if (isAlias(i->second.get(), i->first)) {
+            if (shouldInclude(privateAliases, this, i)) {
+                if (!result)
+                    result = new NamespaceAliasTreeNode(this);
+                result->addAlias(i->first, i->second.get());
+            }
+        } else if (OverloadDef *ovld = OverloadDefPtr::rcast(i->second)) {
+            if (ovld->containsAliases(privateAliases)) {
+                AliasTreeNodePtr childNode = ovld->getAliasTree(privateAliases);
+                if (childNode) {
+                    if (!result)
+                        result = new NamespaceAliasTreeNode(this);
+                    result->addChild(childNode.get());
+                }
+            }
+        } else if (Namespace *child = NamespacePtr::rcast(i->second)) {
+            AliasTreeNodePtr childNode = child->getAliasTree(privateAliases);
+            if (childNode) {
+                if (!result)
+                    result = new NamespaceAliasTreeNode(this);
+                result->addChild(childNode.get());
+            }
+        }
+    }
+
+    return result;
 }
 
 bool Namespace::isScopedTo(Namespace *other) {

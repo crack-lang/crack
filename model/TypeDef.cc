@@ -1357,8 +1357,11 @@ void TypeDef::serializeDef(Serializer &serializer) const {
 }
 
 void TypeDef::serializeAlias(Serializer &serializer, 
-                             const string &alias
+                             const string &alias,
+                             bool newAlgo
                              ) const {
+    if (Serializer::trace)
+        cerr << "# type " << this->getFullName() << endl;
     serializer.write(Serializer::typeAliasId, "kind");
     serializer.write(alias, "alias");
     serializeExternRef(serializer, 0);
@@ -1394,6 +1397,11 @@ void TypeDef::serialize(Serializer &serializer, bool writeKind,
                        );
         }
     }
+}
+
+void TypeDef::serializeHeader(Serializer &serializer) const {
+    serializer.write(Serializer::typeId, "kind");
+    serializer.write(name, "name");
 }
 
 void TypeDef::serializeDecl(Serializer &serializer, ModuleDef *master) {

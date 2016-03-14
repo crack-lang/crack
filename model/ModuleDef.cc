@@ -13,10 +13,12 @@
 #include "spug/stlutil.h"
 #include "builder/Builder.h"
 #include "util/SourceDigest.h"
+#include "AliasTreeNode.h"
 #include "Context.h"
 #include "Deserializer.h"
 #include "GenericModuleInfo.h"
 #include "NestedDeserializer.h"
+#include "OverloadDef.h"
 #include "ProtoBuf.h"
 #include "Serializer.h"
 #include "StatState.h"
@@ -24,6 +26,46 @@
 using namespace std;
 using namespace model;
 using namespace crack::util;
+
+// Serialize all of the aliases in the module.  If 'privateAliases' is
+// true, just serialize the private aliases.  Otherwise just serialize the
+// public aliases.
+void ModuleDef::serializeAliases(Serializer &serializer,
+                                 bool privateAliases,
+                                 const char *optionalBlockName,
+                                 const char *aliasTreeName
+                                 ) {
+    NamespaceAliasTreeNodePtr aliasTree = getAliasTree(privateAliases);
+
+    // Add all of the slaves.
+    SPUG_FOR(vector<ModuleDefPtr>, slave, slaves) {
+        AliasTreeNodePtr slaveTree = (*slave)->getAliasTree(privateAliases);
+        if (slaveTree) {
+            if (!aliasTree)
+                aliasTree = new NamespaceAliasTreeNode(this);
+
+            aliasTree->addChild(slaveTree.get());
+        }
+    }
+
+    // If we have an alias tree, write an optional block for it.
+    if (aliasTree) {
+        ostringstream temp;
+        Serializer sub(serializer, temp);
+
+        ostringstream temp2;
+        Serializer sub2(sub, temp2);
+        aliasTree->serialize(sub2);
+        sub.write(CRACK_PB_KEY(1, string),
+                  (string(aliasTreeName) + ".header").c_str());
+        sub.write(temp2.str(), aliasTreeName);
+
+        serializer.write(temp.str(), optionalBlockName);
+    } else {
+        // No optional data.
+        serializer.write(0, optionalBlockName);
+    }
+}
 
 void ModuleDef::getNestedTypeDefs(std::vector<TypeDef*> &typeDefs,
                                   ModuleDef *master
@@ -301,11 +343,51 @@ void ModuleDef::serialize(Serializer &serializer) {
          )
         serializer.write(iter->first, "exports");
 
-    // Write optional data.
-    serializer.write(0, "optional");
+    // Write all of the public aliases.
+    serializeAliases(serializer, false, "optional", "aliasTree");
 
     // sign the metadata
+    serializer.digestEnabled = false;
     metaDigest = serializer.hasher.getDigest();
+
+    // Now write private aliases.
+    serializeAliases(serializer, true, "optionalPostDigest",
+                     "privateAliasTree"
+                     );
+}
+
+void ModuleDef::serializeHeader(Serializer &serializer) const {
+    if (Serializer::trace)
+        cerr << "# kind = module" << endl;
+    serializer.write(Serializer::slaveModuleId, "kind");
+    serializer.write(canonicalName, "name");
+}
+
+namespace {
+    void deserializeAliases(Deserializer &deser, ModuleDef *mod,
+                            const char *aliasTreeName) {
+        // Read optional data.
+        CRACK_PB_BEGIN(deser, 256, optional)
+            CRACK_PB_FIELD(1, string) {
+                string temp = optionalDeser.readString(256, aliasTreeName);
+                istringstream tempSrc(temp);
+                Deserializer tempDeser(optionalDeser, tempSrc);
+
+                // Aliases.
+                SPUG_CHECK(
+                    tempDeser.readUInt("kind") ==
+                     Serializer::slaveModuleId,
+                    "Bad 'kind' parameter in cached module alias section!"
+                );
+                SPUG_CHECK(
+                    tempDeser.readString(Serializer::varNameSize, "name") ==
+                     mod->getNamespaceName(),
+                    "Bad 'name' parameter in cached module alias section!"
+                );
+                mod->deserializeAliases(tempDeser);
+            }
+        CRACK_PB_END
+    }
 }
 
 ModuleDefPtr ModuleDef::deserialize(Deserializer &deser,
@@ -529,12 +611,15 @@ ModuleDefPtr ModuleDef::deserialize(Deserializer &deser,
         mod->exports[deser.readString(Serializer::varNameSize, "exports")] =
             true;
 
-    // Read optional data.
-    deser.readString(64, "optional");
+    // Deserialize the public aliases.
+    ::deserializeAliases(deser, mod.get(), "aliasTree");
 
     mod->metaDigest = deser.hasher.getDigest();
     mod->sourcePath = sourcePath;
     mod->sourceDigest = recordedSourceDigest;
+
+    // Now do the private aliases.
+    ::deserializeAliases(deser, mod.get(), "privateAliasTree");
 
     if (Serializer::trace)
         cerr << ">>>> Finished deserializing module " << canonicalName << endl;
