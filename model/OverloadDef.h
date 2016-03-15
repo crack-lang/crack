@@ -189,13 +189,10 @@ class OverloadDef : public VarDef {
         bool privateVisibleTo(Namespace *ns) const;
 
         /**
-         * Returns information on whether the overload contains aliases and 
-         * non-aliased overloads.  The first boolean in the pair is true if 
-         * there are aliases, the second is true if there are non-aliased 
-         * overloads.
+         * Returns true if the overload contains non-aliases.
          */
-        std::pair<bool, bool> hasAliasesAndNonAliases() const;
-        
+        bool hasNonAliases() const;
+
         /**
          * Returns true if the overload contains any exposed functions. (See 
          * VarDef, "exposed definitions" are private definitions exposed 

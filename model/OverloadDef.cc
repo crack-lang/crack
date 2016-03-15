@@ -222,18 +222,12 @@ bool OverloadDef::privateVisibleTo(Namespace *ns) const {
     return true;
 }
 
-pair<bool, bool> OverloadDef::hasAliasesAndNonAliases() const {
-    bool gotAliases = false, gotNonAliases = false;
+bool OverloadDef::hasNonAliases() const {
     SPUG_FOR(FuncList, iter, funcs) {
-        if ((*iter)->isAliasIn(*this)) {
-            gotAliases = true;
-            if (gotNonAliases) break;
-        } else {
-            gotNonAliases = true;
-            if (gotAliases) break;
-        }
+        if (!(*iter)->isAliasIn(*this))
+            return true;
     }
-    return std::make_pair(gotAliases, gotNonAliases);
+    return false;
 }
 
 bool OverloadDef::hasExposedFuncs() const {

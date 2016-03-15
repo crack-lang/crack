@@ -74,11 +74,9 @@ So given this, our meta-data format is:
         array[ref[TypeDecl]] decls
 
         # All of the types in the module and all slave modules.
-        # XXX fix Definitions to reflect the fact that types are not
-        # serialized there.
         array[TypeDef] types
 
-        # the module meta-data.
+        # All of the definitions in the module (excluding aliases).
         Definitions defs
 
         # symbols imported from other modules that can be imported from this
@@ -99,8 +97,8 @@ So given this, our meta-data format is:
     }
 
     Header {
-        # the hash of the string 'crack meta-data v1'
-        uint magic = 2271218416
+        # the hash of the string 'crack meta-data v1.0 pre 3'
+        uint magic = 471296821
 
         # If non-empty, this is the canonical name of the master module.  If
         # there is a master module, no further information is present in the

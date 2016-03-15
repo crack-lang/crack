@@ -409,44 +409,32 @@ void Namespace::serializeNonTypeDefs(const vector<const Namespace *>& namespaces
                                      ) const {
     // Count the number of definitions to serialize and separate out the 
     // types, other defs, and aliases.
-    int count = 0;
-    set<TypeDef *> types, privateTypes;
-    vector<VarDef *> others, otherPrivates;
-    typedef vector< pair<string, VarDefPtr> > VarDefVec;
-    VarDefVec aliases, privateAliases;
+    vector<VarDef *> defs, privateDefs;
     SPUG_FOR(vector<const Namespace *>, ns, namespaces) {
         // If the namespace has generics, we need to serialize private 
-        // definitions. TODO: this is likely no longer true, try removing 
-        // this.
+        // definitions.
         bool serializePrivates = (*ns)->hasGenerics();
         
         SPUG_FOR(VarDefMap, i, (*ns)->defs) {
             if (i->second->isSerializable()) {
                 
                 // is it an alias?
-                if (i->second->getOwner() != *ns || i->first != i->second->name) {
-                    if (i->second->isImportable(*ns, i->first))
-                        aliases.push_back(*i);
-                    else if (serializePrivates)
-                        privateAliases.push_back(*i);
+                if (isAlias(i->second.get(), i->first))
                     continue;
-                }
                 
                 // Is it an overload?
                 if (OverloadDefPtr ovld = OverloadDefPtr::rcast(i->second)) {
-                    pair<bool, bool> gotAliasGotNon = 
-                        ovld->hasAliasesAndNonAliases();
+
+                    // Ignore if the overload contains only aliases.
+                    if (!ovld->hasNonAliases())
+                        continue;
+
                     if (i->second->isImportable(*ns, i->first) || 
                         ovld->hasExposedFuncs()
-                        ) {
-                        if (gotAliasGotNon.first) aliases.push_back(*i);
-                        if (gotAliasGotNon.second) 
-                            others.push_back(i->second.get());
-                    } else if (serializePrivates) {
-                        if (gotAliasGotNon.first) privateAliases.push_back(*i);
-                        if (gotAliasGotNon.second) 
-                            otherPrivates.push_back(i->second.get());
-                    }
+                        )
+                        defs.push_back(i->second.get());
+                    else if (serializePrivates)
+                        privateDefs.push_back(i->second.get());
                     continue;
                 }
     
@@ -454,9 +442,10 @@ void Namespace::serializeNonTypeDefs(const vector<const Namespace *>& namespaces
                     if (i->second->isImportable(*ns, i->first) || 
                         i->second->exposed
                         ) {
-                        others.push_back(i->second.get());
-                    } else if (serializePrivates) {
-                        otherPrivates.push_back(i->second.get());
+                        defs.push_back(i->second.get());
+                    }
+                    else if (serializePrivates) {
+                        privateDefs.push_back(i->second.get());
                     }
                 }
             }
@@ -464,19 +453,17 @@ void Namespace::serializeNonTypeDefs(const vector<const Namespace *>& namespaces
     }
 
     // write the count and the definitions
-    serializer.write(others.size(), "#defs");
-    
-    // then the owned definitions.
-    SPUG_FOR(vector<VarDef *>, i, others)
+    serializer.write(defs.size(), "#defs");
+    SPUG_FOR(vector<VarDef *>, i, defs)
         (*i)->serialize(serializer, true, this);
     
     // now do the privates
     {
         Serializer::StackFrame<Serializer> digestState(serializer, false);
-        serializer.write(otherPrivates.size(), "#privateDefs");
+        serializer.write(privateDefs.size(), "#privateDefs");
 
         // vars and functions
-        SPUG_FOR(vector<VarDef *>, i, otherPrivates)
+        SPUG_FOR(vector<VarDef *>, i, privateDefs)
             (*i)->serialize(serializer, true, this);
     }
 
