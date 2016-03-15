@@ -1,9 +1,9 @@
 // Copyright 2016 Google Inc.
-//
+// 
 //   This Source Code Form is subject to the terms of the Mozilla Public
 //   License, v. 2.0. If a copy of the MPL was not distributed with this
 //   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-//
+// 
 
 @import crack.extgen generateExtension;
 
@@ -13,6 +13,66 @@
     @inject '#include <readline/readline.h>\n'
     @inject '#include <readline/history.h>\n'
     @crack_internal
-
+    
     byteptr readline(byteptr prompt);
+    
+    @cname histdata_t
+    class HistData {}
+    
+    @cname HIST_ENTRY
+    class HistEntry {
+        byteptr line;
+        byteptr timestamp;
+        HistData data;
+    }
+    
+    @cname HISTORY_STATE
+    class HistoryState {
+        array[HistEntry] entries;
+        int offset;
+        int length;
+        int size;
+        int flags;
+    }
+    
+    void using_history();
+    
+    HistoryState history_get_history_state();
+    
+    void add_history(byteptr string);
+    void add_history_time(byteptr string);
+    HistEntry remove_history(int which);
+    HistData free_history_entry(HistEntry histent);
+    HistEntry replace_history_entry(int which, byteptr line, HistData data);
+    void clear_history();
+    void stifle_history(int max);
+    int unstifle_history();
+    int history_is_stifled();
+    
+    array[HistEntry] history_list();
+    int where_history();
+    HistEntry current_history();
+    HistEntry history_get(int offset);
+    uint history_get_time(HistEntry entry);
+    int history_total_bytes();
+
+    int history_set_pos(int pos);
+    HistEntry previous_history ();
+    HistEntry next_history();
+
+    int history_search(byteptr string, int direction);
+    int history_search_prefix(byteptr string, int direction);
+    int history_search_pos(byteptr string, int direction, int pos);
+    
+    int read_history(byteptr filename);
+    int read_history_range(byteptr filename, int from, int to);
+    int write_history(byteptr filename);
+    int append_history(int nelements, byteptr filename);
+    int history_truncate_file(byteptr filename, int nlines);
+    
+    int history_expand(byteptr string, array[byteptr] output);
+    byteptr get_history_event(byteptr string, array[int] cindex, int qchar);
+    array[byteptr] history_tokenize(byteptr string);
+    byteptr history_arg_extract(int first, int last, byteptr string);
 }
+
