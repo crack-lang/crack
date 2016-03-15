@@ -29,7 +29,7 @@ void OverloadAliasTreeNode::serialize(Serializer &serializer) const {
     SPUG_FOR(vector<FuncDefPtr>, i, aliases)
         // XXX serializeAlias no longer needs to be virtual, we don't use the
         // name (i->first) in the overload version.
-        (*i)->serializeAlias(serializer, "", true);
+        (*i)->serializeAlias(serializer);
     if (Serializer::trace)
         cerr << "# end overload " << overload->name << endl;
 }

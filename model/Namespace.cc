@@ -143,7 +143,9 @@ void Namespace::deserializeDefs(Deserializer &deser, const char *countName,
 //                addDef(Generic::deserialize(deser));
                 break;
             case Serializer::overloadId:
-                addOverload(this, OverloadDef::deserialize(deser, this).get());
+                addOverload(this,
+                            OverloadDef::deserialize(deser, this, false).get()
+                            );
                 break;
             case Serializer::typeId:
                 TypeDef::deserializeTypeDef(deser);
@@ -505,7 +507,7 @@ void Namespace::deserializeAliases(Deserializer &deser) {
             TypeDefPtr type = lookUp(name, false);
             type->deserializeAliases(deser);
         } else if (kind == Serializer::overloadId) {
-            addOverload(this, OverloadDef::deserialize(deser, this).get());
+            addOverload(this, OverloadDef::deserialize(deser, this, true).get());
         }
     }
 

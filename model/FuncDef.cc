@@ -303,26 +303,10 @@ void FuncDef::serializeCommon(Serializer &serializer) const {
 }
 
 void FuncDef::serialize(Serializer &serializer) const { 
-    serializer.write(0, "isAlias");
     serializeCommon(serializer);
 }
 
 void FuncDef::serializeAlias(Serializer &serializer) const {
-    serializer.write(1, "isAlias");
-    serializeExtern(serializer);
-    serializeArgs(serializer);
-    serializer.write(0, "optional");
-}
-
-void FuncDef::serializeAlias(Serializer &serializer,
-                             const std::string &alias,
-                             bool newAlgo
-                             ) const {
-    SPUG_CHECK(newAlgo,
-               "FuncDef::serializeAlias() called from old serialization code.");
-    if (Serializer::trace)
-        cerr << "# function " << *this << endl;
-    serializer.write(1, "isAlias");
     serializeExtern(serializer);
     serializeArgs(serializer);
     serializer.write(0, "optional");
@@ -345,14 +329,14 @@ FuncDef::ArgVec FuncDef::deserializeArgs(Deserializer &deser) {
     return args;
 }
 
+FuncDefPtr FuncDef::deserializeAlias(Deserializer &deser) {
+    OverloadDefPtr ovld = deserializeOverloadAliasBody(deser);
+    FuncDef::ArgVec args = deserializeArgs(deser);
+    deser.readString(64, "optional");
+    return ovld->getSigMatch(args, true);
+}
+
 FuncDefPtr FuncDef::deserialize(Deserializer &deser, const string &name) {
-    bool alias = deser.readUInt("isAlias");
-    if (alias) {
-        OverloadDefPtr ovld = deserializeOverloadAliasBody(deser);
-        FuncDef::ArgVec args = deserializeArgs(deser);
-        deser.readString(64, "optional");
-        return ovld->getSigMatch(args, true);
-    }
     Spec spec;
     spec.deserialize(deser);
     

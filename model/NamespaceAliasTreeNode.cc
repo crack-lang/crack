@@ -26,7 +26,7 @@ void NamespaceAliasTreeNode::serialize(Serializer &serializer) const {
         (*i)->serialize(serializer);
     serializer.write(aliases.size(), "#defs");
     SPUG_FOR(VarDefMap, i, aliases)
-        i->second->serializeAlias(serializer, i->first, true);
+        i->second->serializeAlias(serializer, i->first);
     if (Serializer::trace)
         cerr << "# end namespace " << ns->getNamespaceName() << endl;
 }

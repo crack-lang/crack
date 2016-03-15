@@ -582,7 +582,8 @@ void OverloadDef::serialize(Serializer &serializer, bool writeKind,
 }
 
 OverloadDefPtr OverloadDef::deserialize(Deserializer &deser,
-                                        Namespace *owner
+                                        Namespace *owner,
+                                        bool aliases
                                         ) {
     string name = deser.readString(Serializer::modNameSize, "name");
     OverloadDefPtr ovld;
@@ -601,7 +602,11 @@ OverloadDefPtr OverloadDef::deserialize(Deserializer &deser,
     }
     int size = deser.readUInt("#overloads");
     for (int i = 0; i < size; ++i) {
-        FuncDefPtr func = FuncDef::deserialize(deser, name);
+        FuncDefPtr func;
+        if (aliases)
+            func = FuncDef::deserializeAlias(deser);
+        else
+            func = FuncDef::deserialize(deser, name);
         if (!func->getOwner())
             func->setOwner(owner);
         ovld->addFunc(func.get());

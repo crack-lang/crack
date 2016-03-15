@@ -336,15 +336,6 @@ So given this, our meta-data format is:
         optional ref[SlaveModule] owner
     }
 
-    // This appears to be unused.
-    FuncEntry {
-        uint isAlias
-        switch (isAlias) {
-            case true: FuncAlias
-            case false: FuncDef
-        }
-    }
-
     FuncAlias {
         Extern ext
         array[ArgDef] args
@@ -361,19 +352,12 @@ So given this, our meta-data format is:
         blob optional
     }
 
-    FuncDefBody {
+    FuncDef {
         ref[Type] returnType
         uint flags;
         array[ArgDef] args
         optional ref[Type] receiverType = 1
         optional uint vtableSlot = 2
-    }
-
-    FuncDef {
-        uint isAlias
-        switch (isAlias) {
-            case true: FuncAlias
-            case false: FuncDefBody
     }
 
     ConstVarDef {
