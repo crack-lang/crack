@@ -435,7 +435,7 @@ namespace {
                 0  // symbol name, need to persist.
             );
 
-            return stub->getOwner()->replaceDef(funcDef.get());
+            return stub->getOwner()->replaceDef(*deser.context, funcDef.get());
         }
 
         varDef = resolvePath(*deser.context, moduleName,

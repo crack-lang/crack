@@ -1867,7 +1867,8 @@ int Parser::parseFuncDef(TypeDef *returnType, const Token &nameTok,
                                               name.c_str()
                                               );
          BSTATS_END
-         OverloadDefPtr ovld = stub->getOwner()->replaceDef(funcDef.get());
+         OverloadDefPtr ovld =
+            stub->getOwner()->replaceDef(*context, funcDef.get());
          cstack.restore();
          
          funcDef->doc = consumeDocs();

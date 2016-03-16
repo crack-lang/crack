@@ -328,7 +328,7 @@ void Namespace::aliasAll(Namespace *other) {
     }
 }
 
-OverloadDefPtr Namespace::replaceDef(VarDef *def) {
+OverloadDefPtr Namespace::replaceDef(Context &context, VarDef *def) {
     SPUG_CHECK(!def->getOwner(), 
                "Namespace::replaceDef() called on " << def->getFullName() << 
                ", which already has an owner."
@@ -347,6 +347,7 @@ OverloadDefPtr Namespace::replaceDef(VarDef *def) {
                    " with a non function."
                    );
         ovld = new OverloadDef(def->name);
+        ovld->type = context.construct->overloadType;
         ovld->collectAncestors(this);
         ovld->addFunc(func.get());
         func->setOwner(this);
