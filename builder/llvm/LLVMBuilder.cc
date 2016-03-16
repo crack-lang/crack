@@ -3189,7 +3189,8 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
 
     // create OverloadDef's type
     metaType = createMetaClass(context, "Overload");
-    BTypeDefPtr overloadDef = new BTypeDef(metaType.get(), "Overload", 0);
+    BTypeDefPtr overloadDef;
+    gd->overloadType = overloadDef = new BTypeDef(metaType.get(), "Overload", 0);
     metaType->meta = overloadDef.get();
     createClassImpl(context, overloadDef.get());
 

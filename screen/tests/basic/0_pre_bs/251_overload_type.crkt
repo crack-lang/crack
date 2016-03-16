@@ -2,7 +2,8 @@
 overloads have types
 %%ARGS%%
 %%FILE%%
-class A { void f() {}  void g() { f.a(); } }
+void f() {}
+void g() { f.a(); }
 %%EXPECT%%
-ParseError: %SCRIPTNAME%:1:37: Instance of Overload has no member a
+ParseError: %SCRIPTNAME%:2:14: Instance of Overload has no member a
 %%STDIN%%
