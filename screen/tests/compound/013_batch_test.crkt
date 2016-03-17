@@ -424,6 +424,32 @@ test.mod('ann', "
     ");
 test.run();
 
+test.mod('mod', "
+    class A {
+        void __private() {
+            puts('privates not visible A');
+        }
+
+        alias f = __private;
+    }
+    ");
+test.main("
+    import mod A;
+    class B : A {
+        void __private() {
+            puts('privates not visible B');
+        }
+        alias f = __private;
+    }
+
+    A a = B();
+    a.f();
+    B().f();
+    ");
+test.run();
+test.rmCacheFiles('.main.*');
+test.run()
+
 %%REXPECT%%
 out: alias
 terminated: success
@@ -539,4 +565,10 @@ terminated: success
 err: ParseError: .*/main.crk:4:7: Instance of mod.A\[.builtin.int\].A has no member f
 err:\s*
 terminated, rc = 2049
+out: privates not visible A
+out: privates not visible B
+terminated: success
+out: privates not visible A
+out: privates not visible B
+terminated: success
 %%STDIN%%
