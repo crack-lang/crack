@@ -76,7 +76,7 @@ bool VarDef::hasInstSlot() const {
 }
 
 int VarDef::getInstSlot() const {
-    return impl->getInstSlot();
+    return impl ? impl->getInstSlot() : -1;
 }
 
 bool VarDef::isStatic() const {

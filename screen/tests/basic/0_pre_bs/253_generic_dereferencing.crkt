@@ -1,0 +1,14 @@
+%%TEST%%
+generic dereferencing
+%%ARGS%%
+%%FILE%%
+class A {
+    class G[T] {
+        void f() { puts('ok') }
+    }
+}
+
+A.G[int]().f();
+%%EXPECT%%
+ok
+%%STDIN%%
