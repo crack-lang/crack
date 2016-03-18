@@ -448,7 +448,13 @@ test.main("
     ");
 test.run();
 test.rmCacheFiles('.main.*');
-test.run()
+test.run();
+
+test.mod('mod', 'class GenericClassImpl[T] {}');
+test.main('import mod GenericClassImpl; puts(GenericClassImpl.name);');
+test.run();
+test.rmCacheFiles('.main.*');
+test.run();
 
 %%REXPECT%%
 out: alias
@@ -570,5 +576,9 @@ out: privates not visible B
 terminated: success
 out: privates not visible A
 out: privates not visible B
+terminated: success
+out: GenericClassImpl
+terminated: success
+out: GenericClassImpl
 terminated: success
 %%STDIN%%

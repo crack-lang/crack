@@ -289,6 +289,12 @@ FuncDefPtr ModelBuilder::emitBeginFunc(
     return func;
 }
 
+TypeDefPtr ModelBuilder::createGenericClass(Context &context,
+                                            const string &name
+                                            ) {
+    return createClass(context, name);
+}
+
 model::TypeDefPtr ModelBuilder::emitBeginClass(Context &context,
                                                const string &name,
                                                const vector<TypeDefPtr> &bases,

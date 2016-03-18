@@ -222,6 +222,10 @@ class ModelBuilder : public builder::Builder {
             return func;
         }
 
+        virtual model::TypeDefPtr createGenericClass(model::Context &context,
+                                                     const std::string &name
+                                                     );
+
         virtual model::TypeDefPtr emitBeginClass(
             model::Context &context,
             const std::string &name,

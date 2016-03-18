@@ -222,6 +222,16 @@ class MockBuilder : public builder::Builder {
             return func;
         }
 
+        virtual model::TypeDefPtr createGenericClass(
+            model::Context &context,
+            const std::string &name
+        ) {
+            return new model::TypeDef(context.construct->classType.get(),
+                                      name,
+                                      true
+                                      );
+        }
+
         virtual model::TypeDefPtr emitBeginClass(
             model::Context &context,
             const std::string &name,

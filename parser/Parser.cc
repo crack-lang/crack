@@ -3227,10 +3227,9 @@ TypeDefPtr Parser::parseClassDef() {
 
       // Record the rest of the block, create the generic and quit.
       recordBlock(generic);
-      TypeDefPtr result = new TypeDef(context->construct->classType.get(),
-                                      className,
-                                      true
-                                      );
+      TypeDefPtr result = context->builder.createGenericClass(*context,
+                                                              className
+                                                              );
       result->genericInfo = generic;
       result->generic = new TypeDef::SpecializationCache();
       if (flags & TypeDef::abstractClass)

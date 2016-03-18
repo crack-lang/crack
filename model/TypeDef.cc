@@ -1592,10 +1592,10 @@ namespace {
         
             TypeDefPtr type;
             if (isGeneric) {
-                type = new TypeDef(deser.context->construct->classType.get(), 
-                                   name, 
-                                   true
-                                   );
+                type = deser.context->builder.createGenericClass(
+                    *deser.context,
+                    name
+                );
                 
                 // We mainly initialize this here as an indicator that we 
                 // expect a generic for when we deserialize the full 

@@ -260,6 +260,13 @@ class Builder : public spug::RCBase {
                              ) = 0;
 
         /**
+         * Create a generic class.
+         */
+        virtual model::TypeDefPtr createGenericClass(model::Context &context,
+                                                     const std::string &name
+                                                     ) = 0;
+
+        /**
          * Emit the beginning of a class definition.
          * The context should be the context of the new class.
          */
