@@ -83,6 +83,10 @@ if (!(cwd/'tempdir').exists())
 if (foo.getSize() != 11)
     cout `FAILED file size() method\n`;
 
+foo.setMode(0777);
+if ((foo.getMode() & 0777) != 0777)
+    cout `FAILED setMode()\n`;
+
 resized := (tempDir/'resized');
 resized.writer().write('file to be resized');
 resized.truncate(10);

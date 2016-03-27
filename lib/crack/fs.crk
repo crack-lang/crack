@@ -7,11 +7,11 @@
 ##
 ## Crack Virtual Filesystem (it's not very virtual yet)
 
-import crack.runtime basename, chdir, closedir, dirname, errno, fileExists,
-    free, fileRemove, getcwd, getDirEntry, malloc, mkdir, open, opendir,
-    readdir, rename, stat, strcpy, strlen, truncate, Dir, DirEntry, Stat,
-    EEXIST, O_CREAT, O_TRUNC, O_RDONLY, O_WRONLY, O_APPEND, PATH_MAX,
-    S_IFDIR, S_IFLNK;
+import crack.runtime basename, chdir, chmod, closedir, dirname, errno,
+    fileExists, free, fileRemove, getcwd, getDirEntry, malloc, mkdir, open,
+    opendir, readdir, rename, stat, strcpy, strlen, truncate, Dir, DirEntry,
+    Stat, EEXIST, O_CREAT, O_TRUNC, O_RDONLY, O_WRONLY, O_APPEND, PATH_MAX, S_IFDIR,
+    S_IFLNK;
 import crack.sys strerror;
 import crack.io cout, FStr, OwningFDReader, OwningFDWriter, Reader,
     SeekableReader, SeekableWriter, Writer;
@@ -19,6 +19,7 @@ import crack.lang AssertionError, Buffer, CString, Exception,
     InvalidArgumentError, InvalidStateError, ManagedBuffer, Formatter;
 import crack.lang SystemError;
 import crack.io.readers FullReader;
+
 @import crack.ann define;
 
 ## This gets raised when referencing a path that doesn't exist.
@@ -31,6 +32,9 @@ class NoEntryError : Exception {
 class AccessDeniedError : Exception {
     oper init(String text) : Exception(text) {}
 }
+
+## Wrapper class for the runtime "Stat" class.
+class PathStat : Object, Stat {}
 
 class Path;
 
@@ -109,8 +113,48 @@ class Path;
     ## Returns the fully qualified name of the Path.
     @abstract String getFullName();
 
+    ## Returns the file object.  This is a very POSIX-specific function which
+    ## may not be well supported on other platforms.
+    @abstract PathStat getStat();
+
+    ## Sets the file mode (see getMode()).   Note that only the low 9 bits can
+    ## be set, and doing so requires owners permissions on the file.
+    @abstract void setMode(int mode);
+
     ## Returns the size of the object.
-    @abstract uint64 getSize();
+    uint64 getSize() {
+        return uint64(getStat().st_size);
+    }
+
+    ## Returns the last modification time of the object.
+    int getModTime() {
+        return getStat().st_mtime;
+    }
+
+    ## Returns the creation time of the object.
+    int getCreateTime() {
+        return getStat().st_ctime;
+    }
+
+    ## Returns the last access time of the object.
+    int getAccessTime() {
+        return getStat().st_atime;
+    }
+
+    ## Returns true if the file is executable (this doesn't check
+    ## executabiility for the current user, it will return true if the file is
+    ## executable
+    bool isExecutable() {
+        return getStat().st_mode & 0111;
+    }
+
+    ## Returns the file mode.  This is a very posix-specific function which
+    ## may not be well supported on other platforms.  See documentation on the
+    ## POSIX stat function and the st_mode parameter of the stat struct for
+    ## details.
+    int getMode() {
+        return getStat().st_mode;
+    }
 
     ## Returns an interator over the children of the path.  (Children may not
     ## be assumed to be in any particular order)
@@ -242,12 +286,24 @@ class RealPath : Path {
         return fileExists(__path.buffer);
     }
 
+    PathStat getStat() {
+        PathStat st = {};
+            rc := stat(__path.buffer, st);
+        if (rc)
+            throw SystemError('Stating ' + __path);
+        return st;
+    }
+
+    void setMode(int mode) {
+        rc := chmod(getFullName().buffer, mode);
+        if (rc)
+            throw Exception('Changing mode of ' + __path);
+    }
+
     @define __stater(funcName, constName) {
         bool funcName() {
-            Stat st = {};
-            rc := stat(__path.buffer, st);
-            result := !rc && st.st_mode & constName;
-            free(st);
+            PathStat st = getStat();
+            result := st.st_mode & constName;
             return result;
         }
     }
@@ -299,15 +355,6 @@ class RealPath : Path {
     PathIter children() { return RealPathIter(this); }
     String getFullName() { return __path; }
     String getName() { return String(basename(__path.buffer)); }
-    uint64 getSize() {
-        Stat st = {};
-        rc := stat(__path.buffer, st);
-        result := uint64(st.st_size);
-        free(st);
-        if (rc)
-            throw SystemError(FStr() `stating $__path`);
-        return result;
-    }
 
     Path parent() {
         if (__path == '/') {
@@ -383,6 +430,8 @@ class _CWD : Path {
     String getName() { return __path.getName(); }
     String getFullName() { return __path.getFullName(); }
     uint64 getSize() { return __path.getSize(); }
+    PathStat getStat() { return __path.getStat(); }
+    void setMode(int mode) { __path.setMode(mode); }
     PathIter children() { return __path.children(); }
     Path parent() { return __path.parent(); }
     void moveTo(Path other) { return __path.moveTo(other); }

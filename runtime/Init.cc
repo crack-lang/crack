@@ -352,6 +352,10 @@ extern "C" void crack_runtime_cinit(Module *mod) {
     f = mod->addFunc(intType, "chdir", (void *)chdir);
     f->addArg(byteptrType, "path");
 
+    f = mod->addFunc(intType, "chmod", (void *)chmod);
+    f->addArg(byteptrType, "path");
+    f->addArg(intType, "mode");
+
     f = mod->addFunc(intType, "fcntl", (void *)crack::runtime::crk_fcntl1);
     f->addArg(intType, "fd");
     f->addArg(intType, "cmd");
