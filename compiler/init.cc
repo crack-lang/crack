@@ -292,6 +292,9 @@ void init(Module *mod) {
     tokenType->addMethod(mod->getBoolType(), "isCase",
                          (void *)Token::_isCase
                          );
+    tokenType->addMethod(mod->getBoolType(), "isDoc",
+                         (void *)Token::_isDoc
+                         );
     tokenType->addMethod(mod->getBoolType(), "isIf", (void *)Token::_isIf);
     tokenType->addMethod(mod->getBoolType(), "isIn", (void *)Token::_isIn);
     tokenType->addMethod(mod->getBoolType(), "isImport",

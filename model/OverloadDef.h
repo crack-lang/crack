@@ -18,6 +18,7 @@ class Context;
 class Deserializer;
 SPUG_RCPTR(Expr);
 SPUG_RCPTR(Namespace);
+SPUG_RCPTR(OverloadAliasTreeNode);
 class Serializer;
 SPUG_RCPTR(TypeDef);
 
@@ -188,13 +189,10 @@ class OverloadDef : public VarDef {
         bool privateVisibleTo(Namespace *ns) const;
 
         /**
-         * Returns information on whether the overload contains aliases and 
-         * non-aliased overloads.  The first boolean in the pair is true if 
-         * there are aliases, the second is true if there are non-aliased 
-         * overloads.
+         * Returns true if the overload contains non-aliases.
          */
-        std::pair<bool, bool> hasAliasesAndNonAliases() const;
-        
+        bool hasNonAliases() const;
+
         /**
          * Returns true if the overload contains any exposed functions. (See 
          * VarDef, "exposed definitions" are private definitions exposed 
@@ -266,17 +264,30 @@ class OverloadDef : public VarDef {
          */
         bool hasSerializableFuncs() const;
 
-        virtual void serializeAlias(Serializer &serializer, 
-                                    const std::string &alias
-                                    ) const;
-
         virtual void serialize(Serializer &serializer, bool writeKind,
                                const Namespace *ns
                                ) const;
         
         static OverloadDefPtr deserialize(Deserializer &deser,
-                                          Namespace *owner
+                                          Namespace *owner,
+                                          bool alias
                                           );
+
+        /**
+         * Returns the alias tree for the overload or null if the overload
+         * contains no aliases.  Alias trees contain all
+         * aliases for the overload.
+         * @param privateAliases If true, return the private alias tree.
+         *                       Otherwise return the public alias tree.
+         */
+        OverloadAliasTreeNodePtr getAliasTree(bool privateAliases);
+
+        /**
+         * Returns true if the overload contains aliases of the given type.
+         * If 'privateAliases' is true, returns true if there are private
+         * aliases, otherwise returns true if there are public aliases.
+         */
+        bool containsAliases(bool privateAliases) const;
 };
 
 } // namespace model

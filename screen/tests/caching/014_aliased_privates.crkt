@@ -1,0 +1,19 @@
+%%TEST%%
+aliased privates
+%%ARGS%%
+%%FILE%%
+class B {
+    void __f() {}
+}
+
+class A : B {
+    void __f() { puts('ok'); }
+    alias g = __f;
+}
+
+A().g();
+
+# TODO: add a test of aliasing a module-private global from within a class.
+%%EXPECT%%
+ok
+%%STDIN%%

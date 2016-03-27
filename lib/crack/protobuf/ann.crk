@@ -34,7 +34,7 @@
 ## functionality.
 
 import crack.ascii parseInt, radix;
-import crack.compiler CrackContext;
+import crack.compiler CrackContext, Token;
 import crack.cont.array Array;
 import crack.cont.hashmap HashMap;
 import crack.io cerr, Formatter, FStr, StandardFormatter, StringWriter, Writer;
@@ -277,8 +277,15 @@ class Schema {
         types['bytes'] = BuiltinType('bytes', 'String', 'field.getString()');
     }
 
-    Field parseField(CrackContext ctx) {
+    Token getToken(CrackContext ctx) {
         tok := ctx.getToken();
+        while (tok.isDoc())
+            tok = ctx.getToken();
+        return tok;
+    }
+
+    Field parseField(CrackContext ctx) {
+        tok := getToken(ctx);
         field := Field();
 
         # Parse cardinality.
@@ -295,7 +302,7 @@ class Schema {
             ctx.error(tok, 'Expected required, optional or repeated.'.buffer);
 
         # Parse the type.
-        tok = ctx.getToken();
+        tok = getToken(ctx);
         if (!tok.isIdent())
             ctx.error(tok, 'Field type expected.'.buffer);
 
@@ -306,23 +313,23 @@ class Schema {
         field.type = type;
 
         # parse the name.
-        tok = ctx.getToken();
+        tok = getToken(ctx);
         if (!tok.isIdent())
             ctx.error(tok, 'Field name expected.'.buffer);
         field.name = String(tok.getText());
 
         # parse the tag.
-        tok = ctx.getToken();
+        tok = getToken(ctx);
         if (!tok.isAssign())
             ctx.error(tok, 'Expected assignment operator.'.buffer);
 
-        tok = ctx.getToken();
+        tok = getToken(ctx);
         if (!tok.isInteger())
             ctx.error(tok, 'Integer tag expected.'.buffer);
         field.tag = parseInt(String(tok.getText()));
 
         # parse closing semicolon
-        tok = ctx.getToken();
+        tok = getToken(ctx);
         if (!tok.isSemi())
             ctx.error(tok, 'Expected semicolon after field definition'.buffer);
 
@@ -330,19 +337,19 @@ class Schema {
     }
 
     Message parseMessage(CrackContext ctx) {
-        tok := ctx.getToken();
+        tok := getToken(ctx);
 
         if (!tok.isIdent())
             ctx.error(tok, 'Message name expceted.'.buffer);
         Message msg = {String(tok.getText())};
         types[msg.name] = msg;
 
-        tok = ctx.getToken();
+        tok = getToken(ctx);
         if (!tok.isLCurly())
             ctx.error(tok, 'Opening bracket expected.'.buffer);
 
         while (true) {
-            tok = ctx.getToken();
+            tok = getToken(ctx);
             if (tok.isRCurly())
                 break;
             ctx.putBack(tok);
@@ -355,12 +362,12 @@ class Schema {
     void parse(CrackContext ctx) {
 
         # Parse the opening curly brace.
-        tok := ctx.getToken();
+        tok := getToken(ctx);
         if (!tok.isLCurly())
             ctx.error(tok, 'Curly brace expected.'.buffer);
 
         while (true) {
-            tok = ctx.getToken();
+            tok = getToken(ctx);
             if (tok.isIdent() && tok.getText() == 'message') {
                 messages.append(parseMessage(ctx));
             } else if (tok.isRCurly()) {
@@ -403,4 +410,3 @@ void protobuf(CrackContext ctx) {
         schema.dump();
     schema.emit(ctx);
 }
-

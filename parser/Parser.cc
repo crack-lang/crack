@@ -1867,7 +1867,8 @@ int Parser::parseFuncDef(TypeDef *returnType, const Token &nameTok,
                                               name.c_str()
                                               );
          BSTATS_END
-         OverloadDefPtr ovld = stub->getOwner()->replaceDef(funcDef.get());
+         OverloadDefPtr ovld =
+            stub->getOwner()->replaceDef(*context, funcDef.get());
          cstack.restore();
          
          funcDef->doc = consumeDocs();
@@ -3226,10 +3227,9 @@ TypeDefPtr Parser::parseClassDef() {
 
       // Record the rest of the block, create the generic and quit.
       recordBlock(generic);
-      TypeDefPtr result = new TypeDef(context->construct->classType.get(),
-                                      className,
-                                      true
-                                      );
+      TypeDefPtr result = context->builder.createGenericClass(*context,
+                                                              className
+                                                              );
       result->genericInfo = generic;
       result->generic = new TypeDef::SpecializationCache();
       if (flags & TypeDef::abstractClass)

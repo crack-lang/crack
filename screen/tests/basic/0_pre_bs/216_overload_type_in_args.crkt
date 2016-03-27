@@ -9,7 +9,7 @@ class A {
     }
 }
 %%EXPECT%%
-ParseError: %SCRIPTNAME%:4:12: No method exists matching f(<Overload>)
+ParseError: %SCRIPTNAME%:4:12: No method exists matching f(Overload)
 Possible overloads for f:
   void A.f()
 

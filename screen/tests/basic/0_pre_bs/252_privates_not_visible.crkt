@@ -1,0 +1,16 @@
+%%TEST%%
+privates not visible to derived classes
+%%ARGS%%
+%%FILE%%
+# Verify that private methods are not visible to derived classes and also that
+# they're not virtual.
+class B : VTableBase { void __f() { puts('B'); } alias g = __f; }
+class A : B { void __f() { puts('A'); } alias g = __f; }
+
+B b = A();
+b.g();
+A().g();
+%%EXPECT%%
+B
+A
+%%STDIN%%

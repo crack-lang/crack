@@ -16,6 +16,7 @@
 #include "Deserializer.h"
 #include "Expr.h"
 #include "FuncCall.h"  // just so we can "out << args"
+#include "OverloadAliasTreeNode.h"
 #include "Serializer.h"
 #include "TypeDef.h"
 #include "VarDefImpl.h"
@@ -119,7 +120,7 @@ FuncDef *OverloadDef::getMatch(TypeDef *funcType) const {
         if ((*iter)->type->isDerivedFrom(funcType))
             return iter->get();
     }
-    
+
     SPUG_FOR(ParentVec, iter, parents) {
         FuncDef *result = (*iter)->getMatch(funcType);
         if (result)
@@ -179,7 +180,7 @@ OverloadDefPtr OverloadDef::createAlias(bool exposeAll) {
     alias->impl = impl;
     flatten(alias->funcs);
     if (exposeAll) {
-        SPUG_FOR(FuncList, iter, funcs) {
+        SPUG_FOR(FuncList, iter, alias->funcs) {
             if (!(*iter)->isImportable(owner, (*iter)->name))
                 (*iter)->exposed = true;
         }
@@ -221,18 +222,12 @@ bool OverloadDef::privateVisibleTo(Namespace *ns) const {
     return true;
 }
 
-pair<bool, bool> OverloadDef::hasAliasesAndNonAliases() const {
-    bool gotAliases = false, gotNonAliases = false;
+bool OverloadDef::hasNonAliases() const {
     SPUG_FOR(FuncList, iter, funcs) {
-        if ((*iter)->isAliasIn(*this)) {
-            gotAliases = true;
-            if (gotNonAliases) break;
-        } else {
-            gotNonAliases = true;
-            if (gotAliases) break;
-        }
+        if (!(*iter)->isAliasIn(*this))
+            return true;
     }
-    return std::make_pair(gotAliases, gotNonAliases);
+    return false;
 }
 
 bool OverloadDef::hasExposedFuncs() const {
@@ -281,8 +276,15 @@ void OverloadDef::addParent(OverloadDef *parent, bool before) {
 }
 
 void OverloadDef::collectAncestors(Namespace *ns) {
+    bool classPrivate = name.substr(0, 2) == "__" && TypeDefPtr::cast(ns);
     NamespacePtr parent;
     for (unsigned i = 0; parent = ns->getParent(i++);) {
+
+        // If the overload is private and the parent is a type, ignore the
+        // parent (we don't want to absorb his overloads).
+        if (classPrivate && TypeDefPtr::rcast(parent))
+            continue;
+
         VarDefPtr var = parent->lookUp(name, false);
         OverloadDefPtr parentOvld;
         if (!var) {
@@ -386,9 +388,15 @@ bool OverloadDef::isImportable(const Namespace *ns,
     for (FuncList::const_iterator iter = funcs.begin();
          iter != funcs.end();
          ++iter
-         )
+         ) {
         if ((*iter)->isImportable(ns, name))
             return true;
+    }
+
+    SPUG_FOR(ParentVec, iter, parents) {
+        if ((*iter)->isImportable(ns, name))
+            return true;
+    }
 
     return false;
 }
@@ -543,44 +551,6 @@ bool OverloadDef::hasSerializableFuncs() const {
     return false;
 }
 
-namespace {
-    template <void (*T)(Serializer &, const FuncDef &)>
-    void serializeFuncVec(Serializer &serializer, const vector<FuncDef *> &funcs, 
-                          bool writeKind,
-                          const string &name
-                          ) {
-        if (writeKind)
-            serializer.write(Serializer::overloadId, "kind");
-        serializer.write(name, "name");
-        serializer.write(funcs.size(), "#overloads");
-        SPUG_FOR(vector<FuncDef *>, iter, funcs)
-                T(serializer, **iter);
-    }
-    
-    void serializeFunc(Serializer &serializer, const FuncDef &funcDef) {
-        funcDef.serialize(serializer);
-    }
-    
-    void serializeFuncAlias(Serializer &serializer, const FuncDef &funcDef) {
-        funcDef.serializeAlias(serializer);
-    }
-}
-
-void OverloadDef::serializeAlias(Serializer &serializer,
-                                 const string &name
-                                 ) const {
-    // Build a list of the aliases up front
-    vector<FuncDef *> aliases;
-    SPUG_FOR(FuncList, iter, funcs) {
-        // We don't check for serializable here, aliases are assumed to always 
-        // be serializable.
-        if ((*iter)->isAliasIn(*this))
-            aliases.push_back(iter->get());
-    }
-
-    serializeFuncVec<serializeFuncAlias>(serializer, aliases, /* writeKind */ true, name);
-}
-
 void OverloadDef::serialize(Serializer &serializer, bool writeKind,
                             const Namespace *ns
                             ) const {
@@ -591,19 +561,30 @@ void OverloadDef::serialize(Serializer &serializer, bool writeKind,
          iter != funcs.end();
          ++iter
          ) {
+        // Aliases get serialized after everything else (see AliasTreeNode).
         if ((*iter)->isSerializable() && !(*iter)->isAliasIn(*this))
             overloads.push_back(iter->get());
     }
 
-    serializeFuncVec<serializeFunc>(serializer, overloads, writeKind, name);
+    if (writeKind)
+        serializer.write(Serializer::overloadId, "kind");
+    serializer.write(name, "name");
+    serializer.write(overloads.size(), "#overloads");
+
+    SPUG_FOR(vector<FuncDef *>, iter, overloads)
+        (*iter)->serialize(serializer);
 }
 
 OverloadDefPtr OverloadDef::deserialize(Deserializer &deser,
-                                        Namespace *owner
+                                        Namespace *owner,
+                                        bool aliases
                                         ) {
     string name = deser.readString(Serializer::modNameSize, "name");
     OverloadDefPtr ovld;
     
+    if (Serializer::trace)
+        cerr << "# begin overload " << name << endl;
+
     // In order to deal with local aliases (which need to be defined after the
     // functions they reference) overloads can be serialized multiple times, 
     // so if the overload is already defined in the namespace, just use the 
@@ -615,10 +596,63 @@ OverloadDefPtr OverloadDef::deserialize(Deserializer &deser,
     }
     int size = deser.readUInt("#overloads");
     for (int i = 0; i < size; ++i) {
-        FuncDefPtr func = FuncDef::deserialize(deser, name);
+        FuncDefPtr func;
+        if (aliases)
+            func = FuncDef::deserializeAlias(deser);
+        else
+            func = FuncDef::deserialize(deser, name);
         if (!func->getOwner())
             func->setOwner(owner);
         ovld->addFunc(func.get());
     }
+
+    if (Serializer::trace)
+        cerr << "# end overload " << name << endl;
+
     return ovld;
+}
+
+namespace {
+    // Returns true if the overload def should include the function in its 
+    // aliase tree node.
+    bool shouldInclude(bool privateAliases, const OverloadDef *ovld,
+                       OverloadDef::FuncList::const_iterator entry
+                       ) {
+
+        // No non-aliases or builtins ever.
+        if (!(*entry)->isAliasIn(*ovld) || (*entry)->flags & FuncDef::builtin)
+            return false;
+
+        bool importable = (*entry)->isImportable(ovld->getOwner(),
+                                                 ovld->name
+                                                 );
+        if (privateAliases)
+            return !importable;
+        else
+            return importable;
+    }
+}
+
+OverloadAliasTreeNodePtr OverloadDef::getAliasTree(bool privateAliases) {
+    OverloadAliasTreeNodePtr result;
+    SPUG_FOR(FuncList, iter, funcs) {
+        if (shouldInclude(privateAliases, this, iter)) {
+            if (!result)
+                result = new OverloadAliasTreeNode(this);
+            result->addAlias(iter->get());
+        }
+    }
+
+    // We don't need to collect aliases from parent contexts: those should get
+    // serialized in their own namespaces.
+    return result;
+}
+
+bool OverloadDef::containsAliases(bool privateAliases) const {
+    SPUG_FOR(FuncList, iter, funcs) {
+        if (shouldInclude(privateAliases, this, iter))
+            return true;
+    }
+
+    return false;
 }

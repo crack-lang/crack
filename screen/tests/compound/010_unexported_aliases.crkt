@@ -15,7 +15,7 @@ test.run();
 err: ParseError: %BUILDDIR%testout/%UNIQ%/main.crk:1:12: Name aint does not belong to module mod.  Second-order imports are not allowed.
 err:.
 terminated, rc = 2049
-err: ParseError: %BUILDDIR%testout/%UNIQ%/main.crk:1:12: name aint is not defined in module mod
+err: ParseError: %BUILDDIR%testout/%UNIQ%/main.crk:1:12: Name aint does not belong to module mod.  Second-order imports are not allowed.
 err:.
 terminated, rc = 2049
 %%STDIN%%

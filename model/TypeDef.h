@@ -420,11 +420,14 @@ class TypeDef : public VarDef, public Namespace {
         virtual void addDependenciesTo(ModuleDef *mod, Set &added) const;
         virtual void serializeExtern(Serializer &serializer) const;
         virtual void serializeAlias(Serializer &serializer,
-                                    const std::string &alias
+                                    const std::string &alias,
+                                    bool newAlgo
                                     ) const;
         virtual void serialize(Serializer &serializer, bool writeKind,
                                const Namespace *ns
                                ) const;
+
+        virtual void serializeHeader(Serializer &serializer) const;
 
         /** Serialize a type declaration. Returns the new object id. */
         void serializeDecl(Serializer &serializer, ModuleDef *master);

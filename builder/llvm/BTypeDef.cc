@@ -253,6 +253,11 @@ void BTypeDef::createBaseOffsets(Context &context) const {
     GlobalVariable *offsetsVar;
     ArrayType *offsetsArrayType =
         ArrayType::get(intzType, parents.size());
+
+    string fullName = owner ?
+        getFullName() :
+        context.parent->ns->getNamespaceName() + "." + name;
+
     if (this == context.construct->classType.get())
         // .builtin.Class - we have to create the global variable.
         offsetsVar =
@@ -265,9 +270,9 @@ void BTypeDef::createBaseOffsets(Context &context) const {
                                );
     else
         offsetsVar =
-            builder->module->getGlobalVariable(getFullName() + ":offsets");
+            builder->module->getGlobalVariable(fullName + ":offsets");
     SPUG_CHECK(offsetsVar,
-               "Offsets variable not found for type " << getFullName()
+               "Offsets variable not found for type " << fullName
                );
     Constant *offsetsArrayInit =
         ConstantArray::get(offsetsArrayType, offsetsVal);

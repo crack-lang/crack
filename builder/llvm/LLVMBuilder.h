@@ -479,6 +479,10 @@ class LLVMBuilder : public Builder {
                              const char *symbolName=0
                              );
 
+        virtual model::TypeDefPtr createGenericClass(model::Context &context,
+                                                     const std::string &name
+                                                     );
+
         virtual model::TypeDefPtr
             emitBeginClass(model::Context &context,
                            const std::string &name,

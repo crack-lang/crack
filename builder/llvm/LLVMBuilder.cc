@@ -1799,6 +1799,28 @@ FuncDefPtr LLVMBuilder::createExternFuncCommon(Context &context,
     return f.funcDef;
 }
 
+TypeDefPtr LLVMBuilder::createGenericClass(Context &context,
+                                           const string &name
+                                           ) {
+    BTypeDefPtr metaType = createMetaClass(context, name);
+    BTypeDefPtr result = new BTypeDef(context.construct->classType.get(),
+                                      name,
+                                      /* rep */ 0,
+                                      true
+                                      );
+    result->type = metaType;
+    {
+        // createClassImpl() needs to be run in a class context, so we create
+        // one.
+        ContextPtr classCtx = context.createSubContext(Context::instance,
+                                                       result.get()
+                                                       );
+        createClassImpl(*classCtx, result.get());
+        result->fixIncompletes(*classCtx);
+    }
+    return result;
+}
+
 TypeDefPtr LLVMBuilder::emitBeginClass(Context &context,
                                        const string &name,
                                        const vector<TypeDefPtr> &bases,
@@ -3189,7 +3211,8 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
 
     // create OverloadDef's type
     metaType = createMetaClass(context, "Overload");
-    BTypeDefPtr overloadDef = new BTypeDef(metaType.get(), "Overload", 0);
+    BTypeDefPtr overloadDef;
+    gd->overloadType = overloadDef = new BTypeDef(metaType.get(), "Overload", 0);
     metaType->meta = overloadDef.get();
     createClassImpl(context, overloadDef.get());
 

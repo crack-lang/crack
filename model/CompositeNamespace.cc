@@ -8,6 +8,8 @@
 
 #include "CompositeNamespace.h"
 
+#include "spug/check.h"
+
 #include "Expr.h"
 #include "VarDef.h"
 #include "ModuleDef.h"
@@ -66,3 +68,9 @@ OverloadDefPtr CompositeNamespace::replaceDef(VarDef *def) {
     assert(false && "composite namespace mutation replaceDef called");
 }
 
+void CompositeNamespace::serializeHeader(Serializer &serializer) const {
+    SPUG_CHECK(false,
+               "composite namespace serializeHaader() called  on namespace " <<
+                getNamespaceName()
+               );
+}

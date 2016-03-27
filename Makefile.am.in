@@ -227,6 +227,7 @@ noinst_HEADERS = \
     Crack.h \
     debug/DebugTools.h \
     ext/Stub.h \
+    model/AliasTreeNode.h \
     model/AllocExpr.h \
     model/Annotation.h \
     model/ArgDef.h \
@@ -266,12 +267,14 @@ noinst_HEADERS = \
     model/ModuleDefMap.h \
     model/MultiExpr.h \
     model/Namespace.h \
+    model/NamespaceAliasTreeNode.h \
     model/NamespaceStub.h \
     model/NestedDeserializer.h \
     model/NullConst.h \
     model/OpDef.h \
     model/ops.h \
     model/Options.h \
+    model/OverloadAliasTreeNode.h \
     model/OverloadDef.h \
     model/PrimFuncAnnotation.h \
     model/ProtoBuf.h \

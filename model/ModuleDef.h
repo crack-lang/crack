@@ -54,6 +54,12 @@ class ModuleDef : public VarDef, public Namespace {
 
         // Compile time dependencies.
         ModuleDefMap compileTimeDeps;
+
+        void serializeAliases(model::Serializer &serializer,
+                              bool privateAliases,
+                              const char *optionalBlockName,
+                              const char *aliasTreeName
+                              );
     
     protected:
         
@@ -230,6 +236,8 @@ class ModuleDef : public VarDef, public Namespace {
          * Write the module meta-data to the serializer.
          */
         void serialize(Serializer &serializer);
+
+        void serializeHeader(Serializer &serializer) const;
         
         /**
          * Deserialize the remainder of the module meta-data.

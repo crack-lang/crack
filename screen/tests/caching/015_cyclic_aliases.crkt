@@ -1,0 +1,31 @@
+%%TEST%%
+cyclic aliases
+%%ARGS%%
+%%FILE%%
+# Tests aliases across ephemeral module boundaries and types within a module.
+void f() { puts('in f()'); }
+void f1() {}
+
+class A {
+    @static void f(int i) { puts('in f(int)'); }
+    @static void g() {}
+    alias ff = f1;
+}
+
+class G[T] {
+    @static void h() {}
+}
+
+alias AA = A;
+alias GI = G[int];
+#alias ff = f;
+
+alias ff = A.f;
+ff(100);
+#ff();   # Doesn't work because ff doesn't get global f.
+
+int i;
+alias j = i;
+%%EXPECT%%
+in f(int)
+%%STDIN%%

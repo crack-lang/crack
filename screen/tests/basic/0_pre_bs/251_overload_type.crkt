@@ -1,0 +1,9 @@
+%%TEST%%
+overloads have types
+%%ARGS%%
+%%FILE%%
+void f() {}
+void g() { f.a(); }
+%%EXPECT%%
+ParseError: %SCRIPTNAME%:2:14: Instance of Overload has no member a
+%%STDIN%%

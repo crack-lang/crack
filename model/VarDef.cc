@@ -76,7 +76,7 @@ bool VarDef::hasInstSlot() const {
 }
 
 int VarDef::getInstSlot() const {
-    return impl->getInstSlot();
+    return impl ? impl->getInstSlot() : -1;
 }
 
 bool VarDef::isStatic() const {
@@ -150,7 +150,7 @@ bool VarDef::isImportable(const Namespace *ns, const string &name) const {
     //    (the "second order import" rules) or
     //  c) defined in a base class of the current class _and_
     // 2) It is either non-private (no leading underscore) or type-scoped and
-    //    not class-private.
+    //    not class-private or it is "exposed" by an alias.
     TypeDef *asType = TypeDefPtr::cast(owner);
     const TypeDef *nsAsType = dynamic_cast<const TypeDef *>(ns);
     return (owner->getRealModule() ==
@@ -158,7 +158,7 @@ bool VarDef::isImportable(const Namespace *ns, const string &name) const {
             asType && nsAsType && nsAsType->isDerivedFrom(asType) ||
             isExported(ns, name)
             ) &&
-           (name[0] != '_' ||
+           (exposed || name[0] != '_' ||
             (asType && name.substr(0, 2) != "__")
             );
 }
@@ -272,7 +272,9 @@ void VarDef::serializeExtern(Serializer &serializer) const {
     serializeExternCommon(serializer, 0);
 }
 
-void VarDef::serializeAlias(Serializer &serializer, const string &alias) const {
+void VarDef::serializeAlias(Serializer &serializer,
+                            const string &alias
+                            ) const {
     serializer.write(Serializer::aliasId, "kind");
     serializer.write(alias, "alias");
     serializeExternRef(serializer, 0);
@@ -433,7 +435,7 @@ namespace {
                 0  // symbol name, need to persist.
             );
 
-            return stub->getOwner()->replaceDef(funcDef.get());
+            return stub->getOwner()->replaceDef(*deser.context, funcDef.get());
         }
 
         varDef = resolvePath(*deser.context, moduleName,

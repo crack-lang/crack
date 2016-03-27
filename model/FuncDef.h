@@ -196,6 +196,7 @@ class FuncDef : public VarDef {
         virtual void serialize(Serializer &serializer, bool writeKind,
                                const Namespace *ns
                                ) const;
+        static FuncDefPtr deserializeAlias(Deserializer &deser);
         static FuncDefPtr deserialize(Deserializer &deser, 
                                       const std::string &funcName
                                       );

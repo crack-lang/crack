@@ -20,6 +20,8 @@ model/SetRegisterExpr.cc
 model/FuncCall.cc
 model/Expr.cc
 model/Generic.cc
+model/NamespaceAliasTreeNode.cc
+model/OverloadAliasTreeNode.cc
 model/OverloadDef.cc
 model/ResultExpr.cc
 model/Import.cc

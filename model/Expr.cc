@@ -21,10 +21,7 @@ Expr::Expr(TypeDef *type) : type(type) {}
 Expr::~Expr() {}
 
 string Expr::getTypeDisplayName() const {
-    if (type)
-        return type->getDisplayName();
-    else
-        return "<Overload>";
+    return type->getDisplayName();
 }
 
 void Expr::emitCond(Context &context) {

@@ -1,0 +1,11 @@
+%%TEST%%
+aliases within aliases
+%%ARGS%%
+%%FILE%%
+# Test to verify that an alias with a nested alias is not serialized as a
+# non-alias definition.
+import test.testmod_class_with_alias A;
+puts('ok');
+%%EXPECT%%
+ok
+%%STDIN%%
