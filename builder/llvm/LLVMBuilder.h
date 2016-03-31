@@ -255,7 +255,7 @@ class LLVMBuilder : public Builder {
 
         // the list of types that need to be fixed when the meta-class has
         // been defined.
-        std::vector<BTypeDefPtr> deferMetaClass;
+        std::vector<model::TypeDefPtr> deferMetaClass;
 
         /** Gets the _Unwind_Resume function. */
         llvm::Function *getUnwindResumeFunc();

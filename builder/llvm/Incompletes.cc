@@ -280,7 +280,7 @@ Value *IncompleteNarrower::emitGEP(IRBuilder<> &builder,
          )
         if ((*iter)->isDerivedFrom(ancestor)) {
             inst = builder.CreateStructGEP(inst, i);
-            BTypeDef *base = BTypeDefPtr::arcast(*iter);
+            BTypeDef *base = BTypeDef::get(*iter);
             return emitGEP(builder, base, ancestor, inst);
         }
     assert(false && "narrowing to non-ancestor!");
@@ -346,7 +346,7 @@ void IncompleteVTableInit::emitInitOfFirstVTable(IRBuilder<> &builder,
          ctxIter != parents.end();
          ++ctxIter, ++i
          ) {
-        BTypeDef *base = BTypeDefPtr::arcast(*ctxIter);
+        BTypeDef *base = BTypeDef::get(*ctxIter);
         if (base == vtableBaseType) {
             inst = builder.CreateStructGEP(inst, i);
 
@@ -395,7 +395,7 @@ void IncompleteVTableInit::emitVTableInit(IRBuilder<> &builder, BTypeDef *btype,
          ctxIter != parents.end();
          ++ctxIter, ++i
          ) {
-        BTypeDef *base = BTypeDefPtr::arcast(*ctxIter);
+        BTypeDef *base = BTypeDef::get(*ctxIter);
 
         // see if this class has a vtable in the aggregate type
         map<BTypeDef *, Constant *>::iterator vtableIter =
@@ -445,7 +445,7 @@ Value *IncompleteVirtualFunc::getVTableReference(IRBuilder<> &builder,
              baseIter != parents.end();
              ++baseIter, ++i
              ) {
-            BTypeDef *base = BTypeDefPtr::arcast(*baseIter);
+            BTypeDef *base = BTypeDef::get(*baseIter);
             if (base->hasVTable) {
                 Value *baseInst = builder.CreateStructGEP(inst, i);
                 Value *vtable =
@@ -471,8 +471,7 @@ Value *IncompleteVirtualFunc::innerEmitCall(IRBuilder<> &builder,
                                             BasicBlock *normalDest,
                                             BasicBlock *unwindDest
                                             ) {
-    BTypeDef *receiverType =
-            BTypeDefPtr::arcast(funcDef->receiverType);
+    BTypeDef *receiverType = BTypeDef::get(funcDef->receiverType);
     assert(receiver->getType() == receiverType->rep);
 
     // get the underlying vtable
@@ -509,7 +508,7 @@ IncompleteVirtualFunc::IncompleteVirtualFunc(
     BasicBlock *unwindDest
 ) :
     PlaceholderInstruction(
-        BTypeDefPtr::arcast(funcDef->returnType)->rep,
+        BTypeDef::get(funcDef->returnType)->rep,
         parent,
         OperandTraits<IncompleteVirtualFunc>::op_end(this) -
         (args.size() + 1),
@@ -533,7 +532,7 @@ IncompleteVirtualFunc::IncompleteVirtualFunc(
     Instruction *insertBefore
 ) :
     PlaceholderInstruction(
-        BTypeDefPtr::arcast(funcDef->returnType)->rep,
+        BTypeDef::get(funcDef->returnType)->rep,
         insertBefore,
         OperandTraits<IncompleteVirtualFunc>::op_end(this) -
         (args.size() + 1),
@@ -556,7 +555,7 @@ IncompleteVirtualFunc::IncompleteVirtualFunc(
     BasicBlock *unwindDest
 ) :
     PlaceholderInstruction(
-        BTypeDefPtr::arcast(funcDef->returnType)->rep,
+        BTypeDef::get(funcDef->returnType)->rep,
         static_cast<Instruction *>(0),
         operands,
         numOperands
@@ -604,8 +603,8 @@ Value *IncompleteVirtualFunc::emitCall(Context &context,
     LLVMBuilder &llvmBuilder =
             dynamic_cast<LLVMBuilder &>(context.builder);
     BTypeDef *vtableBaseType =
-            BTypeDefPtr::arcast(context.construct->vtableBaseType);
-    BTypeDef *type = BTypeDefPtr::acast(funcDef->getOwner());
+            BTypeDef::get(context.construct->vtableBaseType);
+    BTypeDef *type = BTypeDef::get(funcDef->getOwner());
 
     // if this is for a complete class, go ahead and emit the code.
     // Otherwise just emit a placeholder.
@@ -741,7 +740,7 @@ Value *IncompleteSpecialize::emitSpecialize(
     BTypeDef *ancestorType
 ) {
     LLVMBuilder &llvmBuilder = dynamic_cast<LLVMBuilder &>(context.builder);
-    Type *uintzType = BTypeDefPtr::arcast(context.construct->uintzType)->rep;
+    Type *uintzType = BTypeDef::get(context.construct->uintzType)->rep;
 
     if (type->complete) {
         return emitSpecializeInner(llvmBuilder.builder, type->rep,

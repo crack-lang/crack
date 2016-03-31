@@ -27,6 +27,7 @@
 #include "Deserializer.h"
 #include "DeserializationError.h"
 #include "FuncAnnotation.h"
+#include "GenericOverloadType.h"
 #include "StatState.h"
 #include "ArgDef.h"
 #include "Branchpoint.h"
@@ -37,6 +38,7 @@
 #include "ModuleDef.h"
 #include "NullConst.h"
 #include "OverloadDef.h"
+#include "OverloadType.h"
 #include "ResultExpr.h"
 #include "Serializer.h"
 #include "StrConst.h"
@@ -112,7 +114,7 @@ OverloadDefPtr Context::replicateOverload(const std::string &varName,
                                           Namespace *srcNs
                                           ) {
     OverloadDefPtr overload = new OverloadDef(varName);
-    overload->type = construct->overloadType;
+    overload->type = construct->overloadType->getSpecialization();
     
     // merge in the overloads from the parents
     overload->collectAncestors(srcNs);

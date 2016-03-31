@@ -137,7 +137,7 @@ void LLVMLinkerBuilder::finishBuild(Context &context) {
     // final IR generation: cleanup and main
     emitAggregateCleanup(finalir);
     BTypeDef *vtableType =
-        BTypeDefPtr::rcast(context.construct->vtableBaseType);
+        BTypeDef::get(context.construct->vtableBaseType);
     Value *vtableTypeBody =
         finalir->getGlobalVariable(vtableType->getFullName() + ":body");
     createMain(finalir, options.get(), vtableTypeBody, mainModuleName);

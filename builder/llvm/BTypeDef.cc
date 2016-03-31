@@ -12,8 +12,10 @@
 #include <llvm/IR/GlobalVariable.h>
 #include <llvm/IR/Module.h>
 #include "spug/stlutil.h"
+#include "model/GenericOverloadType.h"
 #include "model/Context.h"
 #include "model/OverloadDef.h"
+#include "model/OverloadType.h"
 #include "BFuncDef.h"
 #include "PlaceholderInstruction.h"
 #include "VTableBuilder.h"
@@ -78,7 +80,8 @@ void BTypeDef::extendVTables(VTableBuilder &vtb) {
  * @param firstVTable if true, we have not yet discovered the first
  *  vtable in the class schema.
  */
-void BTypeDef::createAllVTables(VTableBuilder &vtb, const string &name,
+void BTypeDef::createAllVTables(VTableBuilder &vtb,
+                                const string &name,
                                 bool firstVTable
                                 ) {
     // if this is VTableBase, we need to create the VTable.
@@ -93,7 +96,7 @@ void BTypeDef::createAllVTables(VTableBuilder &vtb, const string &name,
          baseIter != parents.end();
          ++baseIter
          ) {
-        BTypeDef *base = BTypeDefPtr::arcast(*baseIter);
+        BTypeDef *base = BTypeDef::get(*baseIter);
 
         // if the base class is VTableBase, we've hit bottom -
         // construct the initial vtable and store the first vtable
@@ -144,7 +147,7 @@ BTypeDef *BTypeDef::findFirstVTable(BTypeDef *vtableBaseType) {
         if (parent->get() == vtableBaseType) {
             return this;
         } else if ((*parent)->hasVTable) {
-            BTypeDef *par = BTypeDefPtr::arcast(*parent);
+            BTypeDef *par = BTypeDef::get(*parent);
             return par->findFirstVTable(vtableBaseType);
         }
     }
@@ -221,9 +224,11 @@ void BTypeDef::createEmptyOffsetsInitializer(Context &context) {
                            );
 }
 
-Constant *BTypeDef::getParentOffset(const LLVMBuilder &builder, int parentIndex) const {
+Constant *BTypeDef::getParentOffset(const LLVMBuilder &builder,
+                                    int parentIndex
+                                    ) const {
     // get the pointer to the inner "Class" object of "Class[BaseName]"
-    BTypeDefPtr base = BTypeDefPtr::arcast(parents[parentIndex]);
+    BTypeDefPtr base = BTypeDef::get(parents[parentIndex]);
 
     // calculate the offset from the beginning of the new classes
     // instance space to that of the base.
@@ -284,7 +289,7 @@ void BTypeDef::fixIncompletes(Context &context) {
     if (hasVTable) {
         VTableBuilder vtableBuilder(
             dynamic_cast<LLVMBuilder*>(&context.builder),
-            BTypeDefPtr::arcast(context.construct->vtableBaseType)
+            BTypeDef::get(context.construct->vtableBaseType)
         );
         createAllVTables(
             vtableBuilder,
@@ -318,7 +323,7 @@ void BTypeDef::fixIncompletes(Context &context) {
 void BTypeDef::materializeVTable(Context &context) {
     if (hasVTable) {
         VTableBuilder vtb(LLVMBuilderPtr::cast(&context.builder),
-                          BTypeDefPtr::arcast(context.construct->vtableBaseType)
+                          BTypeDef::get(context.construct->vtableBaseType)
                           );
         createAllVTables(vtb, ".vtable." + getFullName());
         vtb.materialize(this);
@@ -337,7 +342,39 @@ int BTypeDef::countAncestors() const {
     int result = 0;
     SPUG_FOR(TypeVec, iter, parents) {
         ++result;
-        result += BTypeDefPtr::rcast(*iter)->countAncestors();
+        result += BTypeDef::get(*iter)->countAncestors();
     }
+    return result;
+}
+
+BTypeDef *BTypeDef::maybeGet(TypeDef *type) {
+    if (!type)
+        return 0;
+
+    BTypeDef *result;
+    if (type->hasBuilderData) {
+        if (GenericOverloadType *t = GenericOverloadTypePtr::cast(type))
+            result = BTypeDefPtr::rcast(t->getBuilderType());
+        else if (OverloadType *t = OverloadTypePtr::cast(type))
+            return BTypeDefPtr::rcast(t->getBuilderType());
+        else
+            SPUG_CHECK(false,
+                        "Type " << type->getFullName() <<
+                         " should have builder data, but is not a known type "
+                         "with builder data."
+                        );
+    } else {
+        result = BTypeDefPtr::cast(type);
+    }
+
+    return result;
+}
+
+BTypeDef *BTypeDef::get(TypeDef *type) {
+    BTypeDef *result = maybeGet(type);
+    SPUG_CHECK(result,
+               "Ungable to obtain a class type from " <<
+                (type ? type->getFullName() : "null")
+               );
     return result;
 }

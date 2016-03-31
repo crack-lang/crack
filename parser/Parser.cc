@@ -2087,13 +2087,16 @@ ExprPtr Parser::parseInitializer(TypeDef *type, const std::string &varName) {
 
    // make sure the initializer matches the declared type.
    TypeDefPtr oldType = initializer->type;
+   ExprPtr oldVal = initializer;
    initializer = initializer->convert(*context, type);
-   if (!initializer)
+   if (!initializer) {
+//      cerr << *oldVal << endl;
       error(tok, SPUG_FSTR("Invalid type " << oldType->getDisplayName() << 
                             " for initializer for variable " << varName << 
                             " of type " << type->getDisplayName() << "."
                            )
             );
+   }
    
    return initializer;
 }   

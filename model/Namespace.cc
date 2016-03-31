@@ -17,9 +17,11 @@
 #include "Context.h"
 #include "Deserializer.h"
 #include "Expr.h"
+#include "GenericOverloadType.h"
 #include "NamespaceAliasTreeNode.h"
 #include "OverloadAliasTreeNode.h"
 #include "OverloadDef.h"
+#include "OverloadType.h"
 #include "ProtoBuf.h"
 #include "Serializer.h"
 #include "StubDef.h"
@@ -347,7 +349,7 @@ OverloadDefPtr Namespace::replaceDef(Context &context, VarDef *def) {
                    " with a non function."
                    );
         ovld = new OverloadDef(def->name);
-        ovld->type = context.construct->overloadType;
+        ovld->type = context.construct->overloadType->getSpecialization();
         ovld->collectAncestors(this);
         ovld->addFunc(func.get());
         func->setOwner(this);

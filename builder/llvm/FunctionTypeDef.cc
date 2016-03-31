@@ -48,14 +48,14 @@ TypeDefPtr FunctionTypeDef::getSpecialization(Context &context,
     int arity(types->size() - 1);
 
     // return type is always 0
-    BTypeDef *returnCType = BTypeDefPtr::rcast((*types)[0]);
+    BTypeDef *returnCType = BTypeDef::get((*types)[0]);
 
     // remaining types are function arguments
     std::vector<Type *> fun_args;
 
     if (arity) {
         for (int i = 1; i < arity+1; ++i) {
-            BTypeDef *argCType = BTypeDefPtr::rcast((*types)[i]);
+            BTypeDef *argCType = BTypeDef::get((*types)[i]);
             if (argCType == context.construct->voidType) {
                 context.error(context.getLocation(),
                           "Cannot specialize function type with void argument");

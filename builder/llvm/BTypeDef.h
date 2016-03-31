@@ -84,7 +84,8 @@ public:
      * @param firstVTable if true, we have not yet discovered the first
      *  vtable in the class schema.
      */
-    void createAllVTables(VTableBuilder &vtb, const std::string &name,
+    void createAllVTables(VTableBuilder &vtb,
+                          const std::string &name,
                           bool firstVTable = true
                           );
 
@@ -160,6 +161,26 @@ public:
      * times as it is inherited from.
      */
     int countAncestors() const;
+
+    static BTypeDef *maybeGet(model::TypeDef *type);
+
+    /**
+     * Gets the BTypeDef for a given type.  Use this in favor of
+     * the BTypeDefPtr::*cast() methods, as types now have their own hierarchy.
+     */
+    static BTypeDef *get(model::TypeDef *type);
+
+    static BTypeDef *get(const model::TypeDefPtr &type) {
+        return get(type.get());
+    }
+
+    static BTypeDef *get(Namespace *ns) {
+        return get(model::TypeDefPtr::acast(ns));
+    }
+
+    static BTypeDef *maybeGet(Namespace *ns) {
+        return maybeGet(model::TypeDefPtr::cast(ns));
+    }
 };
 
 } // end namespace builder::vmll

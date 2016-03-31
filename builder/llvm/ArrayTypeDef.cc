@@ -40,7 +40,7 @@ TypeDefPtr ArrayTypeDef::getSpecialization(Context &context,
 
     assert(types->size() == 1);
 
-    BTypeDef *parmType = BTypeDefPtr::rcast((*types)[0]);
+    BTypeDef *parmType = BTypeDef::get((*types)[0]);
 
     Type *llvmType = PointerType::getUnqual(parmType->rep);
     BTypeDefPtr tempSpec =

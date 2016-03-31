@@ -10,12 +10,14 @@
 #include <string.h>
 
 #include "model/Generic.h"
+#include "model/GenericOverloadType.h"
 #include "model/GlobalNamespace.h"
 #include "model/Serializer.h"
 #include "model/Deserializer.h"
 #include "model/ModuleDef.h"
 #include "model/ModuleDefMap.h"
 #include "model/OverloadDef.h"
+#include "model/OverloadType.h"
 #include "model/TypeDef.h"
 #include "parser/Toker.h"
 
@@ -80,8 +82,15 @@ struct DataSet {
 
     TypeDefPtr metaType, voidType, t0, t1;
     ModuleDefPtr builtins, dep0, dep1, mod;
+    GenericOverloadTypePtr genericOvldType;
+    MockBuilderPtr builder;
+    Construct construct;
+    ContextPtr context;
 
-    DataSet() {
+    DataSet() :
+        builder(new MockBuilder(new builder::BuilderOptions())),
+        construct(Options(), builder.get()) {
+
         metaType = new TypeDef(0, "Meta");
         metaType->type = metaType;
         builtins = new MockModuleDef(".builtins", 0);
@@ -89,6 +98,10 @@ struct DataSet {
         voidType = new TypeDef(metaType.get(), "void");
         builtins->addDef(voidType.get());
         builtins->finished = true;
+        context = new Context(*builder, Context::module, &construct,
+                              new GlobalNamespace(0, ""),
+                              new GlobalNamespace(0, "")
+                              );
     }
 
     void addTestModules() {
@@ -102,14 +115,25 @@ struct DataSet {
         dep1->addDef(t1.get());
         dep1->addAlias(t0.get());
         OverloadDefPtr ovld = new OverloadDef("func");
+        genericOvldType = new GenericOverloadType(
+            metaType.get(), new TypeDef(0, "BuilderType"), *context
+        );
+        ovld->type = new OverloadType(metaType.get(),
+                                      genericOvldType.get(),
+                                      builder->createGenericClass(*context,
+                                                                  "Overload"
+                                                                  ).get()
+                                      );
         FuncDefPtr f = new MockFuncDef(FuncDef::noFlags, "func", 1);
         f->args[0] = new ArgDef(t1.get(), "a");
         f->returnType = voidType;
+        f->type = new TypeDef(metaType.get(), "funcType");
         ovld->addFunc(f.get());
         f->setOwner(dep1.get());
         f = new MockFuncDef(FuncDef::noFlags, "func", 1);
         f->args[0] = new ArgDef(t0.get(), "x");
         f->returnType = t0;
+        f->type = new TypeDef(metaType.get(), "funcType");
         ovld->addFunc(f.get());
         f->setOwner(dep1.get());
         dep1->addDef(ovld.get());
@@ -165,10 +189,11 @@ bool moduleReload() {
     Serializer ser3(modData);
     ds.mod->serialize(ser3);
 
-    MockBuilder builder;
+    MockBuilder builder(new builder::BuilderOptions());
     builder.incref();
-    builder.options = new builder::BuilderOptions();
     Construct construct(Options(), &builder);
+    construct.overloadType = ds.genericOvldType;
+    construct.classType = ds.metaType;
     Context context(builder, Context::module, &construct,
                     0, // namespace, filled in by ModuleDef::deserialize()
                     new GlobalNamespace(0, "")
@@ -213,18 +238,25 @@ bool reloadOfSelfReferrentTypes() {
 
     // create "MyType MyType.func(MyType a)"
     OverloadDefPtr ovld = new OverloadDef("func");
+    ovld->type = new OverloadType(ds.metaType.get(),
+                                  ds.genericOvldType.get(),
+                                  ds.builder->createGenericClass(*ds.context,
+                                                                 "Overload"
+                                                                 ).get()
+                                  );
     FuncDefPtr f = new MockFuncDef(FuncDef::noFlags, "func", 1);
     f->args[0] = new ArgDef(myType.get(), "a");
     f->returnType = ds.voidType;
+    f->type = ds.metaType;
     ovld->addFunc(f.get());
     f->setOwner(myType.get());
     myType->addDef(ovld.get());
 
-    MockBuilder builder;
+    MockBuilder builder(new builder::BuilderOptions());
     builder.incref();
-    builder.options = new builder::BuilderOptions();
     Construct construct(Options(), &builder);
     construct.classType = new TypeDef(0, "Class");
+    construct.overloadType = ds.genericOvldType;
     Context context(builder, Context::module, &construct,
                     0, // namespace, filled in by ModuleDef::deserialize()
                     new GlobalNamespace(0, "")

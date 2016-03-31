@@ -33,6 +33,7 @@ SPUG_RCPTR(ModuleDef);
 SPUG_RCPTR(Construct);
 SPUG_RCPTR(StrConst);
 SPUG_RCPTR(ConstructStats);
+SPUG_RCPTR(GenericOverloadType);
 
 class ConstructStats : public spug::RCBase {
 
@@ -264,10 +265,10 @@ class Construct : public spug::RCBase, public Options {
                    objectType,
                    stringType,
                    staticStringType,
-                   overloadType,
                    crackContext,
                    arrayType,
                    functionType;
+        GenericOverloadTypePtr overloadType;
 
         // Size of these PDNTs in bits.
         int intSize, intzSize;
