@@ -16,7 +16,9 @@
 #include "Deserializer.h"
 #include "Expr.h"
 #include "FuncCall.h"  // just so we can "out << args"
+#include "GenericOverloadType.h"
 #include "OverloadAliasTreeNode.h"
+#include "OverloadType.h"
 #include "Serializer.h"
 #include "TypeDef.h"
 #include "VarDefImpl.h"
@@ -25,7 +27,6 @@ using namespace std;
 using namespace model;
 
 void OverloadDef::setImpl(FuncDef *func) {
-    type = func->type;
     impl = func->impl;
 }
 
@@ -241,9 +242,18 @@ bool OverloadDef::hasExposedFuncs() const {
 void OverloadDef::addFunc(FuncDef *func) {
     if (funcs.empty()) setImpl(func);
     funcs.push_back(func);
+
+    // During primitive registration, we may not have a type.
+    // XXX need to figure out a way to register these for later fixup.
+    if (type)
+        type = OverloadTypePtr::rcast(type)->addType(func->type.get());
 }
 
 void OverloadDef::addParent(OverloadDef *parent, bool before) {
+
+    // Add all of the types from the parent.
+    type = OverloadTypePtr::rcast(type)->addTypes(parent->funcs);
+
     // When inserting before, we don't check for intermediates.
     if (before) {
         vector<OverloadDefPtr> newParents;
@@ -591,7 +601,8 @@ OverloadDefPtr OverloadDef::deserialize(Deserializer &deser,
     // existing one.
     if (!(ovld = owner->lookUp(name, false))) {
         ovld = new OverloadDef(name);
-        ovld->type = deser.context->construct->overloadType;
+        ovld->type =
+            deser.context->construct->overloadType->getSpecialization();
         ovld->collectAncestors(owner);
     }
     int size = deser.readUInt("#overloads");

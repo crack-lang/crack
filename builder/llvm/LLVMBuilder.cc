@@ -61,6 +61,7 @@
 #include <model/BaseMetaClass.h>
 #include <model/CompositeNamespace.h>
 #include <model/Construct.h>
+#include <model/GenericOverloadType.h>
 #include <model/GlobalNamespace.h>
 #include <model/InstVarDef.h>
 #include <model/LocalNamespace.h>
@@ -167,13 +168,8 @@ namespace {
     unsigned wrapOverride(TypeDef *classType, BFuncDef *overriden,
                           FuncBuilder &funcBuilder
                           ) {
-        // find the path to the overriden's class
-        BTypeDef *overridenClass = BTypeDefPtr::acast(overriden->getOwner());
-
         // the type of the receiver is that of its first declaration
-        funcBuilder.setReceiverType(
-            BTypeDefPtr::arcast(overriden->receiverType)
-        );
+        funcBuilder.setReceiverType(BTypeDef::get(overriden->receiverType));
 
         funcBuilder.funcDef->vtableSlot = overriden->vtableSlot;
         return overriden->vtableSlot;
@@ -209,7 +205,7 @@ namespace {
         builder.builder.CreateRetVoid();
     }
 
-    void fixMeta(Context &context, BTypeDef *type) {
+    void fixMeta(Context &context, TypeDef *type) {
         SPUG_CHECK(type->parents.empty(),
                    "Meta-class fixup can only be applied to types without "
                     "a base class (trying to fixMeta on " <<
@@ -220,8 +216,9 @@ namespace {
         type->type = metaType = createMetaClass(context, type->name);
         context.construct->registerDef(metaType.get());
         metaType->meta = type;
-        createClassImpl(context, BTypeDefPtr::acast(type));
-        type->createEmptyOffsetsInitializer(context);
+        BTypeDef *llvmType = BTypeDef::get(type);
+        createClassImpl(context, llvmType);
+        llvmType->createEmptyOffsetsInitializer(context);
     }
 
     void addExplicitTruncate(Context &context, BTypeDef *sourceType,
@@ -423,7 +420,7 @@ void LLVMBuilder::initializeMethodInfo(Context &context, FuncDef::Flags flags,
     if (!classType) {
         ContextPtr classCtx = context.getClassContext();
         assert(classCtx && "method is not nested in a class context.");
-        classType = BTypeDefPtr::arcast(classCtx->ns);
+        classType = BTypeDef::get(classCtx->ns);
     }
 
     // create the vtable slot for a virtual function
@@ -519,8 +516,8 @@ void LLVMBuilder::narrow(TypeDef *curType, TypeDef *ancestor) {
 
     assert(curType->isDerivedFrom(ancestor));
 
-    BTypeDef *bcurType = BTypeDefPtr::acast(curType);
-    BTypeDef *bancestor = BTypeDefPtr::acast(ancestor);
+    BTypeDef *bcurType = BTypeDef::get(curType);
+    BTypeDef *bancestor = BTypeDef::get(ancestor);
     if (curType->complete) {
         lastValue = IncompleteNarrower::emitGEP(builder, bcurType, bancestor,
                                                 lastValue
@@ -628,7 +625,7 @@ BTypeDefPtr LLVMBuilder::getFuncType(Context &context,
     }
 
     BTypeDefPtr specFuncType =
-        BTypeDefPtr::arcast(function->getSpecialization(context, args.get()));
+        BTypeDef::get(function->getSpecialization(context, args.get()));
 
     specFuncType->defaultInitializer = new NullConst(specFuncType.get());
 
@@ -812,7 +809,7 @@ ResultExprPtr LLVMBuilder::emitFloatConst(Context &context, FloatConst *val) {
 ResultExprPtr LLVMBuilder::emitNull(Context &context,
                                     NullConst *nullExpr
                                     ) {
-    BTypeDef *btype = BTypeDefPtr::arcast(nullExpr->type);
+    BTypeDef *btype = BTypeDef::get(nullExpr->type);
     lastValue = Constant::getNullValue(btype->rep);
 
     return new BResultExpr(nullExpr, lastValue);
@@ -823,14 +820,14 @@ ResultExprPtr LLVMBuilder::emitAlloc(Context &context, AllocExpr *allocExpr,
                                      ) {
     // XXX need to be able to do this for an incomplete class when we
     // allow user defined oper new.
-    BTypeDef *btype = BTypeDefPtr::arcast(allocExpr->type);
+    BTypeDef *btype = BTypeDef::get(allocExpr->type);
     PointerType *tp = cast<PointerType>(btype->rep);
 
     // XXX mega-hack, clear the contents of the allocated memory (this is to
     // get around the temporary lack of automatic member initialization)
 
     // calculate the size of instances of the type
-    BTypeDef *uintzType = BTypeDefPtr::arcast(context.construct->uintzType);
+    BTypeDef *uintzType = BTypeDef::get(context.construct->uintzType);
     Value *size = IncompleteSizeOf::emitSizeOf(context, btype,
                                                uintzType->rep);
 
@@ -846,7 +843,7 @@ ResultExprPtr LLVMBuilder::emitAlloc(Context &context, AllocExpr *allocExpr,
 
     // construct a call to the "calloc" function
     BTypeDef *voidptrType =
-        BTypeDefPtr::arcast(context.construct->voidptrType);
+        BTypeDef::get(context.construct->voidptrType);
     vector<Value *> callocArgs(2);
     callocArgs[0] = countVal;
     callocArgs[1] = size;
@@ -858,7 +855,7 @@ ResultExprPtr LLVMBuilder::emitAlloc(Context &context, AllocExpr *allocExpr,
 
 void LLVMBuilder::emitTest(Context &context, Expr *expr) {
     expr->emit(context);
-    BTypeDef *exprType = BTypeDefPtr::arcast(expr->type);
+    BTypeDef *exprType = BTypeDef::get(expr->type);
     lastValue =
         builder.CreateICmpNE(lastValue,
                              Constant::getNullValue(exprType->rep)
@@ -1010,7 +1007,7 @@ ResultExprPtr LLVMBuilder::emitTernary(Context &context, TernaryExpr *expr) {
     builder.SetInsertPoint(postBlock);
     if (expr->falseVal) {
         PHINode *p = builder.CreatePHI(
-            BTypeDefPtr::arcast(expr->type)->rep, 2,
+            BTypeDef::get(expr->type)->rep, 2,
             "tern_R"
         );
         p->addIncoming(trueVal, trueBlock);
@@ -1115,7 +1112,7 @@ void LLVMBuilder::createSpecialVar(Namespace *ns,
                                    const string &name
                                    ) {
     Value *ptr;
-    BTypeDef *tp = BTypeDefPtr::cast(type);
+    BTypeDef *tp = BTypeDef::get(type);
     VarDefPtr varDef = new VarDef(tp, name);
     varDef->impl = createLocalVar(tp, ptr, name);
     ns->addDef(varDef.get());
@@ -1325,7 +1322,7 @@ BasicBlock *LLVMBuilder::createLandingPad(
 
     // look up the exception structure variable and get its type
     VarDefPtr exStructVar = context.ns->lookUp(":exStruct");
-    Type *exStructType = BTypeDefPtr::arcast(exStructVar->type)->rep;
+    Type *exStructType = BTypeDef::get(exStructVar->type)->rep;
 
     lp = BasicBlock::Create(getGlobalContext(), "lp", func);
     IRBuilder<> b(lp);
@@ -1432,7 +1429,7 @@ ExprPtr LLVMBuilder::emitCatch(Context &context,
     builder.SetInsertPoint(catchBlock);
 
     // store the type and the catch block for later fixup
-    BTypeDef *btype = BTypeDefPtr::cast(catchType);
+    BTypeDef *btype = BTypeDef::get(catchType);
     fixClassInstRep(btype);
     cdata->catches.push_back(
         BBuilderContextData::CatchBranch(btype, catchBlock)
@@ -1515,7 +1512,7 @@ FuncDefPtr LLVMBuilder::createFuncForward(Context &context,
     assert(flags & FuncDef::forward || flags & FuncDef::abstract);
 
     // create the function
-    FuncBuilder f(context, flags, BTypeDefPtr::cast(returnType), name,
+    FuncBuilder f(context, flags, BTypeDef::get(returnType), name,
                   args.size()
                   );
     f.setArgs(args);
@@ -1611,7 +1608,7 @@ FuncDefPtr LLVMBuilder::emitBeginFunc(Context &context,
     if (!existing || !(existing->flags & FuncDef::forward)) {
 
         // create the function
-        FuncBuilder f(context, flags, BTypeDefPtr::cast(returnType), name,
+        FuncBuilder f(context, flags, BTypeDef::get(returnType), name,
                       args.size()
                       );
         f.setArgs(args);
@@ -1637,7 +1634,7 @@ FuncDefPtr LLVMBuilder::emitBeginFunc(Context &context,
     } else {
         // 'existing' is a forward definition, fill it in.
         funcDef = BFuncDefPtr::acast(existing);
-        classType = BTypeDefPtr::cast(funcDef->getOwner());
+        classType = BTypeDef::maybeGet(funcDef->getOwner());
         funcDef->flags =
             static_cast<FuncDef::Flags>(
                 funcDef->flags &
@@ -1749,7 +1746,7 @@ FuncDefPtr LLVMBuilder::createExternFuncCommon(Context &context,
         context.createSubContext(Context::local, new
                                  LocalNamespace(context.ns.get(), name)
                                  );
-    FuncBuilder f(*funcCtx, flags, BTypeDefPtr::cast(returnType),
+    FuncBuilder f(*funcCtx, flags, BTypeDef::get(returnType),
                   name,
                   args.size(),
                   Function::ExternalLinkage,
@@ -1787,7 +1784,7 @@ FuncDefPtr LLVMBuilder::createExternFuncCommon(Context &context,
             receiverType = existingOwner;
         }
 
-        f.setReceiverType(BTypeDefPtr::acast(receiverType));
+        f.setReceiverType(BTypeDef::get(receiverType));
         ArgDefPtr thisDef =
             funcCtx->builder.createArgDef(receiverType, "this");
         funcCtx->addDef(thisDef.get());
@@ -1802,6 +1799,8 @@ FuncDefPtr LLVMBuilder::createExternFuncCommon(Context &context,
 TypeDefPtr LLVMBuilder::createGenericClass(Context &context,
                                            const string &name
                                            ) {
+    if (!BTypeDef::get(context.construct->classType)->impl)
+        return 0;
     BTypeDefPtr metaType = createMetaClass(context, name);
     BTypeDefPtr result = new BTypeDef(context.construct->classType.get(),
                                       name,
@@ -1836,7 +1835,7 @@ TypeDefPtr LLVMBuilder::emitBeginClass(Context &context,
         iter != bases.end();
         ++iter
         ) {
-        BTypeDef *base = BTypeDefPtr::rcast(*iter);
+        BTypeDef *base = BTypeDef::get(*iter);
         if (base->hasVTable) {
             baseWithVTable = base;
             break;
@@ -1850,7 +1849,7 @@ TypeDefPtr LLVMBuilder::emitBeginClass(Context &context,
                                 baseWithVTable->nextVTableSlot : 0
                            );
     } else {
-        type = BTypeDefPtr::acast(forwardDef);
+        type = BTypeDef::get(forwardDef);
         type->nextVTableSlot =
             baseWithVTable ? baseWithVTable->nextVTableSlot : 0;
         type->forward = false;
@@ -1861,7 +1860,7 @@ TypeDefPtr LLVMBuilder::emitBeginClass(Context &context,
          iter != bases.end();
          ++iter
          ) {
-        BTypeDef *base = BTypeDefPtr::rcast(*iter);
+        BTypeDef *base = BTypeDef::get(*iter);
         type->addBaseClass(base);
     }
 
@@ -1879,12 +1878,12 @@ void LLVMBuilder::emitEndClass(Context &context) {
     vector<Type *> members;
 
     // first the base classes
-    BTypeDef *type = BTypeDefPtr::arcast(context.ns);
+    BTypeDef *type = BTypeDef::get(context.ns);
     for (TypeDef::TypeVec::iterator baseIter = type->parents.begin();
          baseIter != type->parents.end();
          ++baseIter
          ) {
-        BTypeDef *typeDef = BTypeDefPtr::arcast(*baseIter);
+        BTypeDef *typeDef = BTypeDef::get(*baseIter);
         members.push_back(cast<PointerType>(typeDef->rep)->getElementType());
     }
 
@@ -1904,7 +1903,7 @@ void LLVMBuilder::emitEndClass(Context &context) {
                 members.resize(impl->index + 1, 0);
 
             // get the underlying type object, add it to the vector
-            BTypeDef *typeDef = BTypeDefPtr::rcast(iter->second->type);
+            BTypeDef *typeDef = BTypeDef::get(iter->second->type);
             members[impl->index] = typeDef->rep;
         }
     }
@@ -1954,7 +1953,7 @@ void LLVMBuilder::emitEndClass(Context &context) {
     // if we have an incomplete base, we have to defer placeholder instruction
     // resolution to the incomplete base class
     if (incompleteBase)
-        BTypeDefPtr::arcast(incompleteBase)->addDependent(type, &context);
+        BTypeDef::get(incompleteBase)->addDependent(type, &context);
     else
         type->fixIncompletes(context);
 }
@@ -1989,7 +1988,7 @@ VarDefPtr LLVMBuilder::emitVarDef(Context &context, TypeDef *type,
     // might work)
 
     // reveal our type object
-    BTypeDef *tp = BTypeDefPtr::cast(type);
+    BTypeDef *tp = BTypeDef::get(type);
 
     // get the definition context
     ContextPtr defCtx = context.getDefContext();
@@ -2025,7 +2024,7 @@ VarDefPtr LLVMBuilder::emitVarDef(Context &context, TypeDef *type,
             // to fall through to module scope
             if (!staticScope) {
                 // first, we need to determine the index of the new field.
-                BTypeDef *btype = BTypeDefPtr::arcast(defCtx->ns);
+                BTypeDef *btype = BTypeDef::get(defCtx->ns);
                 unsigned idx = btype->fieldCount++;
 
                 // instance variables are unlike the other stored types - we
@@ -2108,11 +2107,12 @@ IntConstPtr LLVMBuilder::createIntConst(model::Context &context, int64_t val,
     // XXX probably need to consider the simplest type that the constant can
     // fit into (compatibility rules will allow us to coerce it into another
     // type)
-    return new BIntConst(typeDef ? BTypeDefPtr::acast(typeDef) :
-                          BTypeDefPtr::acast(IntConst::selectType(context,
-                                                                  val
-                                                                  )
-                                              ),
+    return new BIntConst(typeDef ? BTypeDef::get(typeDef) :
+                                   BTypeDef::get(
+                                        IntConst::selectType(context,
+                                                             val
+                                                             )
+                                   ),
                          val
                          );
 }
@@ -2121,9 +2121,10 @@ IntConstPtr LLVMBuilder::createIntConst(model::Context &context, int64_t val,
 IntConstPtr LLVMBuilder::createUIntConst(model::Context &context, uint64_t val,
                                          TypeDef *typeDef
                                          ) {
-    return new BIntConst(typeDef ? BTypeDefPtr::acast(typeDef) :
-                         BTypeDefPtr::acast(
-                             context.construct->uint64Type.get()),
+    return new BIntConst(typeDef ? BTypeDef::get(typeDef) :
+                                   BTypeDef::get(
+                                       context.construct->uint64Type.get()
+                                   ),
                          val
                          );
 }
@@ -2134,8 +2135,10 @@ FloatConstPtr LLVMBuilder::createFloatConst(model::Context &context, double val,
     // XXX probably need to consider the simplest type that the constant can
     // fit into (compatibility rules will allow us to coerce it into another
     // type)
-    return new BFloatConst(typeDef ? BTypeDefPtr::acast(typeDef) :
-                           BTypeDefPtr::arcast(context.construct->floatType),
+    return new BFloatConst(typeDef ? BTypeDef::get(typeDef) :
+                                     BTypeDef::get(
+                                         context.construct->floatType
+                                     ),
                            val
                            );
 }
@@ -2180,7 +2183,7 @@ ResultExprPtr LLVMBuilder::emitFieldAssign(Context &context,
     aggregate->emit(context);
 
     // narrow to the type of the ancestor that owns the field.
-    BTypeDef *typeDef = BTypeDefPtr::acast(assign->var->getOwner());
+    BTypeDef *typeDef = BTypeDef::get(assign->var->getOwner());
     narrow(aggregate->type.get(), typeDef);
     Value *aggregateRep = lastValue;
 
@@ -2321,10 +2324,10 @@ FuncDefPtr LLVMBuilder::materializeFunc(Context &context, const string &name,
              iter != spec.args.end();
              ++iter
              )
-            argTypes.push_back(BTypeDefPtr::arcast((*iter)->type)->rep);
+            argTypes.push_back(BTypeDef::get((*iter)->type)->rep);
 
         FunctionType *funcType =
-            FunctionType::get(BTypeDefPtr::arcast(spec.returnType)->rep,
+            FunctionType::get(BTypeDef::get(spec.returnType)->rep,
                               argTypes,
                               false
                               );
@@ -2455,7 +2458,32 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
     context.addDef(voidptrType);
     deferMetaClass.push_back(voidptrType);
 
-    // now that we've got a voidptr type, give the class object a cast to it.
+    // create OverloadDef's type (this needs to be defined before we add any
+    // functions).
+    BTypeDefPtr overloadDef = new BTypeDef(context.construct->classType.get(),
+                                           "Overload",
+                                           Type::getVoidTy(lctx)
+                                           );
+    gd->overloadType = new GenericOverloadType(metaType.get(),
+                                               overloadDef.get(),
+                                               context
+                                               );
+    deferMetaClass.push_back(gd->overloadType.get());
+    context.addDef(gd->overloadType.get());
+
+    // create the raw function type
+    // "oper call" methods are added as this type is specialized during parse
+    TypeDefPtr functionType = new FunctionTypeDef(
+        context.construct->classType.get(),
+        "function",
+        0
+    );
+    context.addDef(functionType.get());
+    gd->functionType = functionType;
+    deferMetaClass.push_back(functionType);
+
+    // now that we've got a voidptr type and the types necessary to create
+    // functions, give the class object a cast to voidptr.
     context.addDef(new VoidPtrOpDef(voidptrType), classType);
 
     llvm::Type *llvmBytePtrType =
@@ -3159,17 +3187,6 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
     context.addDef(arrayType.get());
     deferMetaClass.push_back(arrayType);
 
-    // create the raw function type
-    // "oper call" methods are added as this type is specialized during parse
-    TypeDefPtr functionType = new FunctionTypeDef(
-                                            context.construct->classType.get(),
-                                            "function",
-                                            0
-                                            );
-    context.addDef(functionType.get());
-    gd->functionType = functionType;
-    deferMetaClass.push_back(functionType);
-
     {
         // add the exception structure type (this is required for creating any
         // kind of function)
@@ -3208,21 +3225,6 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
     for (int i = 0; i < deferMetaClass.size(); ++i)
         fixMeta(*classCtx, deferMetaClass[i].get());
     deferMetaClass.clear();
-
-    // create OverloadDef's type
-    metaType = createMetaClass(context, "Overload");
-    BTypeDefPtr overloadDef;
-    gd->overloadType = overloadDef = new BTypeDef(metaType.get(), "Overload", 0);
-    metaType->meta = overloadDef.get();
-    createClassImpl(context, overloadDef.get());
-
-    // Give it a context and an "oper to .builtin.voidptr" method.
-    context.addDef(
-        new VoidPtrOpDef(context.construct->voidptrType.get()),
-        overloadDef.get()
-    );
-    context.addDef(overloadDef.get());
-    overloadDef->createEmptyOffsetsInitializer(context);
 
     // create an empty structure type and its pointer for VTableBase
     // Actual type is {}** (another layer of pointer indirection) because
@@ -3327,24 +3329,24 @@ void LLVMBuilder::initializeImport(model::ModuleDef *imported,
 void LLVMBuilder::createModuleCommon(Context &context) {
 
     // name some structs in this module
-    BTypeDef *classType = BTypeDefPtr::arcast(context.construct->classType);
-    BTypeDef *vtableBaseType = BTypeDefPtr::arcast(
-                                  context.construct->vtableBaseType);
+    BTypeDef *classType = BTypeDef::get(context.construct->classType);
+    BTypeDef *vtableBaseType =
+        BTypeDef::get(context.construct->vtableBaseType);
 
     // all of the "extern" primitive functions have to be created in each of
     // the modules - we can not directly reference across modules.
 
-    //BTypeDef *int32Type = BTypeDefPtr::arcast(context.construct->int32Type);
-    //BTypeDef *int64Type = BTypeDefPtr::arcast(context.construct->int64Type);
-    //BTypeDef *uint64Type = BTypeDefPtr::arcast(context.construct->uint64Type);
-    BTypeDef *intType = BTypeDefPtr::arcast(context.construct->intType);
-    BTypeDef *uintzType = BTypeDefPtr::arcast(context.construct->uintzType);
-    BTypeDef *voidType = BTypeDefPtr::arcast(context.construct->voidType);
-    //BTypeDef *float32Type = BTypeDefPtr::arcast(context.construct->float32Type);
+    //BTypeDef *int32Type = BTypeDef::get(context.construct->int32Type);
+    //BTypeDef *int64Type = BTypeDef::get(context.construct->int64Type);
+    //BTypeDef *uint64Type = BTypeDef::get(context.construct->uint64Type);
+    BTypeDef *intType = BTypeDef::get(context.construct->intType);
+    BTypeDef *uintzType = BTypeDef::get(context.construct->uintzType);
+    BTypeDef *voidType = BTypeDef::get(context.construct->voidType);
+    //BTypeDef *float32Type = BTypeDef::get(context.construct->float32Type);
     BTypeDef *byteptrType =
-        BTypeDefPtr::arcast(context.construct->byteptrType);
+        BTypeDef::get(context.construct->byteptrType);
     BTypeDef *voidptrType =
-        BTypeDefPtr::arcast(context.construct->voidptrType);
+        BTypeDef::get(context.construct->voidptrType);
 
     // create "void *calloc(uint size)"
     {
@@ -3365,7 +3367,7 @@ void LLVMBuilder::createModuleCommon(Context &context) {
         TypeDefPtr arrayOfByteptr =
             array->getSpecialization(context, types.get());
         FuncBuilder f(context, FuncDef::builtin,
-                      BTypeDefPtr::arcast(arrayOfByteptr),
+                      BTypeDef::get(arrayOfByteptr),
                       "__getArgv",
                       0
                       );
@@ -3506,9 +3508,9 @@ void LLVMBuilder::emitArgVarRef(Context &context, Value *val) {
 }
 
 void LLVMBuilder::emitVTableInit(Context &context, TypeDef *typeDef) {
-    BTypeDef *btype = BTypeDefPtr::cast(typeDef);
+    BTypeDef *btype = BTypeDef::get(typeDef);
     BTypeDef *vtableBaseType =
-        BTypeDefPtr::arcast(context.construct->vtableBaseType);
+        BTypeDef::get(context.construct->vtableBaseType);
     PlaceholderInstruction *vtableInit =
         new IncompleteVTableInit(btype, lastValue, vtableBaseType,
                                  builder.GetInsertBlock()

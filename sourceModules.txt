@@ -11,6 +11,7 @@ model/ConstSequenceExpr.cc
 model/ConstVarDef.cc
 model/Deref.cc
 model/Deserializer.cc
+model/GenericOverloadType.cc
 model/GetRegisterExpr.cc
 model/StatState.cc
 model/StrConst.cc
@@ -23,6 +24,7 @@ model/Generic.cc
 model/NamespaceAliasTreeNode.cc
 model/OverloadAliasTreeNode.cc
 model/OverloadDef.cc
+model/OverloadType.cc
 model/ResultExpr.cc
 model/Import.cc
 model/ImportedDef.cc

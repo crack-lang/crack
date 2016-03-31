@@ -30,7 +30,7 @@ using namespace builder::mvll;
 VarDefImplPtr BArgVarDefImpl::promote(LLVMBuilder &builder, ArgDef *arg) {
     Value *var;
     BHeapVarDefImplPtr localVar =
-        builder.createLocalVar(BTypeDefPtr::arcast(arg->type),
+        builder.createLocalVar(BTypeDef::get(arg->type),
                                var,
                                "",
                                NULL,

@@ -44,7 +44,7 @@ typedef spug::RCPtr<builder::mvll::BFieldRef> BFieldRefPtr;
         builder.lastValue =                                                 \
             builder.builder.Create##opCode(                                 \
                 builder.lastValue,                                          \
-                BTypeDefPtr::arcast(func->returnType)->rep                  \
+                BTypeDef::get(func->returnType)->rep                        \
             );                                                              \
                                                                             \
         return new BResultExpr(this, builder.lastValue);                    \
@@ -193,7 +193,7 @@ UNOP(UIToFP);
         builder.lastValue =                                         \
             builder.builder.Create##opCode(                         \
                 builder.lastValue,                                  \
-                BTypeDefPtr::arcast(func->returnType)->rep          \
+                BTypeDef::get(func->returnType)->rep                \
             );                                                      \
                                                                     \
         return new BResultExpr(this, builder.lastValue);            \
@@ -216,7 +216,7 @@ ResultExprPtr TruncOpCall::emit(Context &context) {
     builder.lastValue =
             builder.builder.CreateTrunc(
                     builder.lastValue,
-                    BTypeDefPtr::arcast(func->returnType)->rep
+                    BTypeDef::get(func->returnType)->rep
                     );
 
     return new BResultExpr(this, builder.lastValue);
@@ -243,10 +243,10 @@ ResultExprPtr BBitNotOpCall::emit(Context &context) {
             builder.builder.CreateXor(
                     builder.lastValue,
                     ConstantInt::get(
-                            BTypeDefPtr::arcast(func->returnType)->rep,
-                            -1
-                            )
-                    );
+                        BTypeDef::get(func->returnType)->rep,
+                        -1
+                    )
+            );
 
     return new BResultExpr(this, builder.lastValue);
 }
@@ -280,9 +280,10 @@ ResultExprPtr LogicAndOpCall::emit(Context &context) {
 
     // now we phi for result
     PHINode* p = builder.builder.CreatePHI(
-            BTypeDefPtr::arcast(context.construct->boolType)->rep,
-            2,
-            "and_R");
+        BTypeDef::get(context.construct->boolType)->rep,
+        2,
+        "and_R"
+    );
     p->addIncoming(oVal, oBlock);
     p->addIncoming(tVal, tBlock);
     builder.lastValue = p;
@@ -328,10 +329,10 @@ ResultExprPtr LogicOrOpCall::emit(Context &context) {
     // now jump back to true and phi for result
     builder.builder.SetInsertPoint(tBlock);
     PHINode *p = builder.builder.CreatePHI(
-            BTypeDefPtr::arcast(context.construct->boolType)->rep,
-            2,
-            "or_R"
-            );
+        BTypeDef::get(context.construct->boolType)->rep,
+        2,
+        "or_R"
+    );
     p->addIncoming(oVal, oBlock);
     p->addIncoming(fVal, fBlock);
     builder.lastValue = p;
@@ -353,11 +354,11 @@ ResultExprPtr BNegOpCall::emit(Context &context) {
     builder.lastValue =
             builder.builder.CreateSub(
                     ConstantInt::get(
-                            BTypeDefPtr::arcast(func->returnType)->rep,
-                            0
-                            ),
+                        BTypeDef::get(func->returnType)->rep,
+                        0
+                    ),
                     builder.lastValue
-                    );
+            );
     return new BResultExpr(this, builder.lastValue);
 }
 
@@ -373,11 +374,12 @@ ResultExprPtr BFNegOpCall::emit(Context &context) {
 
     builder.lastValue =
             builder.builder.CreateFSub(
-                    ConstantFP::get(BTypeDefPtr::arcast(func->returnType)->rep,
-                                    0
-                                    ),
-                    builder.lastValue
-                    );
+                ConstantFP::get(
+                    BTypeDef::get(func->returnType)->rep,
+                    0
+                ),
+                builder.lastValue
+            );
 
     return new BResultExpr(this, builder.lastValue);
 }
@@ -457,7 +459,7 @@ ResultExprPtr ArrayAllocCall::emit(Context &context) {
 
     // get the BTypeDef from the return type, then get the pointer
     // type out of that
-    BTypeDef *retType = BTypeDefPtr::rcast(func->returnType);
+    BTypeDef *retType = BTypeDef::get(func->returnType);
     const PointerType *ptrType =
             cast<const PointerType>(retType->rep);
 
@@ -553,7 +555,7 @@ ResultExprPtr PtrToIntOpCall::emit(Context &context) {
 
     LLVMBuilder &builder =
         dynamic_cast<LLVMBuilder &>(context.builder);
-    BTypeDef *type = BTypeDefPtr::arcast(func->returnType);
+    BTypeDef *type = BTypeDef::get(func->returnType);
     builder.lastValue = builder.builder.CreatePtrToInt(builder.lastValue,
                                                        type->rep
                                                        );
@@ -567,7 +569,7 @@ ResultExprPtr UnsafeCastCall::emit(Context &context) {
 
     LLVMBuilder &builder =
             dynamic_cast<LLVMBuilder &>(context.builder);
-    BTypeDef *type = BTypeDefPtr::arcast(func->returnType);
+    BTypeDef *type = BTypeDef::get(func->returnType);
     builder.lastValue =
             builder.builder.CreateBitCast(builder.lastValue,
                                           type->rep
@@ -606,7 +608,7 @@ namespace {
         receiverResult = receiver->emit(context);
         LLVMBuilder &builder = dynamic_cast<LLVMBuilder &>(context.builder);
         receiverVal = builder.lastValue;
-        t = BTypeDefPtr::acast(type);
+        t = BTypeDef::get(type);
         return builder;
     }
 
@@ -737,7 +739,7 @@ ResultExprPtr PreIncrPtrOpCall::emit(Context &context) {
                                          receiverVal
                                          );
     receiverResult->handleTransient(context);
-    BTypeDef *intzType = BTypeDefPtr::arcast(context.construct->intzType);
+    BTypeDef *intzType = BTypeDef::get(context.construct->intzType);
     builder.lastValue = builder.builder.CreateGEP(builder.lastValue,
                                                   ConstantInt::get(intzType->rep, 1)
                                                   );
@@ -757,7 +759,7 @@ ResultExprPtr PreDecrPtrOpCall::emit(Context &context) {
                                          receiverVal
                                          );
     receiverResult->handleTransient(context);
-    BTypeDef *intzType = BTypeDefPtr::arcast(context.construct->intzType);
+    BTypeDef *intzType = BTypeDef::get(context.construct->intzType);
     builder.lastValue = builder.builder.CreateGEP(builder.lastValue,
                                                   ConstantInt::get(intzType->rep,
                                                                    -1
@@ -778,7 +780,7 @@ ResultExprPtr PostIncrPtrOpCall::emit(Context &context) {
                                          receiverResult,
                                          receiverVal
                                          );
-    BTypeDef *intzType = BTypeDefPtr::arcast(context.construct->intzType);
+    BTypeDef *intzType = BTypeDef::get(context.construct->intzType);
     Value *mutatedVal = builder.builder.CreateGEP(builder.lastValue,
                                                   ConstantInt::get(intzType->rep,
                                                                    1
@@ -804,7 +806,7 @@ ResultExprPtr PostDecrPtrOpCall::emit(Context &context) {
                                          receiverResult,
                                          receiverVal
                                          );
-    BTypeDef *intzType = BTypeDefPtr::arcast(context.construct->intzType);
+    BTypeDef *intzType = BTypeDef::get(context.construct->intzType);
     Value *mutatedVal = builder.builder.CreateGEP(builder.lastValue,
                                                   ConstantInt::get(intzType->rep,
                                                                    -1
@@ -926,7 +928,7 @@ ResultExprPtr AtomicLoadTruncOpCall::emit(Context &context) {
     loadInst->setAlignment(sizeof(void *));
     builder.lastValue = builder.builder.CreateTrunc(
         loadInst,
-        BTypeDefPtr::arcast(func->returnType)->rep
+        BTypeDef::get(func->returnType)->rep
     );
     return new BResultExpr(this, builder.lastValue);
 }
@@ -943,7 +945,7 @@ ResultExprPtr AtomicLoadZExtOpCall::emit(Context &context) {
     loadInst->setAlignment(sizeof(void *));
     builder.lastValue = builder.builder.CreateZExt(
         loadInst,
-        BTypeDefPtr::arcast(func->returnType)->rep
+        BTypeDef::get(func->returnType)->rep
     );
     return new BResultExpr(this, builder.lastValue);
 }

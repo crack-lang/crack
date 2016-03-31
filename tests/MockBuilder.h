@@ -55,8 +55,12 @@ class MockBuilder : public builder::Builder {
             void close() {}
         };
 
+        MockBuilder(builder::BuilderOptions *options) {
+            this->options = options;
+        }
+
         virtual builder::BuilderPtr createChildBuilder() {
-            return new MockBuilder();
+            return new MockBuilder(options.get());
         }
 
         virtual model::ResultExprPtr emitFuncCall(
@@ -397,6 +401,10 @@ class MockBuilder : public builder::Builder {
             result->returnType = spec.returnType;
             result->receiverType = spec.receiverType;
             result->vtableSlot = spec.vtableSlot;
+
+            // Totally bogus, but it works and is a lot easier than creating a
+            // function type and getting a specialization.
+            result->type = context.construct->classType;
             return result;
         }
 

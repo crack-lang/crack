@@ -151,6 +151,16 @@ class TypeDef : public VarDef, public Namespace {
         // if true, this is an abstract class (contains abstract methods)
         bool abstract;
         
+        // if true, this is a class derived from TypeDef that has an "impl".
+        // All types should have had builder data.  Preferably, their builder
+        // data should have been associated with VarDef::impl.  Then we
+        // wouldn't be subclassing TypeDef in LLVMBuilder and we could safely
+        // subclass it in model.
+        // At some point, we should change this to follow this model, but for
+        // now we'll live with this wacky mix of a bridge pattern and
+        // inheritence.
+        bool hasBuilderData;
+
         enum Flags {
             noFlags = 0,
             abstractClass = 1,
@@ -189,6 +199,7 @@ class TypeDef : public VarDef, public Namespace {
             forward(false),
             initializersEmitted(false),
             abstract(false),
+            hasBuilderData(false),
             gotExplicitOperNew(false),
             fieldCount(0) {
         }
@@ -405,6 +416,14 @@ class TypeDef : public VarDef, public Namespace {
          * Base class version does nothing, derived classes must implement.
          */
         virtual void getDependents(std::vector<TypeDefPtr> &deps);
+
+        /**
+         * Returns the type for all variable definitions for this type.  This
+         * is normally just the type itself, however it may be the only
+         * function type in the case of an overload and it may be null if the
+         * type is not appropriate for a variable.
+         */
+        virtual TypeDefPtr getVarType();
 
         /**
          * Serialize the type definition.
