@@ -31,16 +31,25 @@ Deref::Deref(Expr *receiver, VarDef *def) :
 ResultExprPtr Deref::emit(Context &context) {
     // This is being treated as a FieldRef.
 
-    // Make sure the def is not a method. (We may want to handle this case,
-    // eventually, either by returning a Python-style bound method or more
-    // likely by returning the function address, dereferencing virtual
-    // functions if necessary)
+    // Repeat the check below in convert().  There may be ways we could get
+    // to this point without going through that code..
     if (OverloadDefPtr::rcast(def))
         context.error("Bound methods can not be evaluated.");
 
     return context.builder.createFieldRef(receiver.get(),
                                           def.get()
                                           )->emit(context);
+}
+
+ExprPtr Deref::convert(Context &context, TypeDef *type) {
+    // Make sure the def is not a method. (We may want to handle this case,
+    // eventually, either by returning a Python-style bound method or more
+    // likely by returning the function address, dereferencing virtual
+    // functions if necessary)
+    if ( OverloadDefPtr::rcast(def))
+        context.error("Bound methods can not be evaluated.");
+    else
+        return Expr::convert(context, type);
 }
 
 void Deref::writeTo(ostream &out) const {
