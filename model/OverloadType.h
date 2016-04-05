@@ -31,13 +31,19 @@ class OverloadType : public TypeDef {
 
         TypeDefPtr builderType;
 
+    public:
         // The function types that this overload represents.
         typedef std::map<std::string, TypeDefPtr> TypeMap;
         TypeMap types;
 
-    public:
         OverloadType(TypeDef *metaType, TypeDef *templateType,
                      TypeDef *builderType);
+
+        /**
+         * Overrides VarDef to show only the first function type for overloads
+         * corresponding to a single function.
+         */
+        virtual std::string getDisplayName() const;
 
         TypeDefPtr getVarType();
 

@@ -6,5 +6,5 @@ void f(int i) {};
 void f(float f) {};
 function[void] g = f;
 %%EXPECT%%
-ParseError: %SCRIPTNAME%:3:20: Invalid type function[.builtin.void,.builtin.int] for initializer for variable g of type function[.builtin.void].
+ParseError: %SCRIPTNAME%:3:20: Invalid type Overload[.builtin.function[.builtin.void,.builtin.float], .builtin.function[.builtin.void,.builtin.int]] for initializer for variable g of type function[.builtin.void].
 %%STDIN%%

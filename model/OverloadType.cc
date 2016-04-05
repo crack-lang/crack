@@ -33,6 +33,13 @@ OverloadType::OverloadType(TypeDef *metaType, TypeDef *templateType,
         impl = builderType->impl;
 }
 
+string OverloadType::getDisplayName() const {
+    if (genericParms.size() > 1)
+        return VarDef::getDisplayName();
+    else
+        return genericParms[0]->getDisplayName();
+}
+
 TypeDefPtr OverloadType::getVarType() {
     if (genericParms.size() > 1)
         return 0;
@@ -88,7 +95,7 @@ OverloadTypePtr OverloadType::addType(TypeDef *funcType) {
     typeVec.reserve(types.size() + 1);
     SPUG_FOR(TypeMap, i, types) {
         // Insert the new type at the appropriate location.
-        if (name > i->first) {
+        if (funcType && name < i->first) {
             typeVec.push_back(funcType);
             funcType = 0;
         }
@@ -118,7 +125,7 @@ OverloadTypePtr OverloadType::addTypes(const list<FuncDefPtr> &funcs) {
     if (typeVec.empty())
         return this;
 
-    // Add all of the existing types and sort.
+    // Add all of the existing types.
     SPUG_FOR(TypeMap, i, types)
         typeVec.push_back(i->second);
 

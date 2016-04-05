@@ -70,9 +70,12 @@ OverloadTypePtr GenericOverloadType::getSpecialization(TypeVecObj *types) {
         result->defaultInitializer = new NullConst(result.get());
         (*generic)[TypeVecObjKey(types)] = result;
 
-        // Add "oper call" methods for all of the types.
-        SPUG_FOR(TypeDef::TypeVec, iter, *types)
+        // Add all of the types to the new types map and
+        // add "oper call" methods for all of the types.
+        SPUG_FOR(TypeDef::TypeVec, iter, *types) {
+            result->types[(*iter)->getFullName()] = *iter;
             result->addOperCall(iter->get());
+        }
     }
 
     return result;
