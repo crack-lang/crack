@@ -1801,20 +1801,21 @@ TypeDefPtr LLVMBuilder::createGenericClass(Context &context,
                                            ) {
     if (!BTypeDef::get(context.construct->classType)->impl)
         return 0;
-    BTypeDefPtr metaType = createMetaClass(context, name);
     BTypeDefPtr result = new BTypeDef(context.construct->classType.get(),
                                       name,
                                       /* rep */ 0,
                                       true
                                       );
-    result->type = metaType;
     {
         // createClassImpl() needs to be run in a class context, so we create
         // one.
         ContextPtr classCtx = context.createSubContext(Context::instance,
                                                        result.get()
                                                        );
+        BTypeDefPtr metaType = createMetaClass(*classCtx, name);
+        result->type = metaType;
         createClassImpl(*classCtx, result.get());
+        result->complete = true;
         result->fixIncompletes(*classCtx);
     }
     return result;
@@ -2461,15 +2462,18 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
     // create OverloadDef's type (this needs to be defined before we add any
     // functions).
     BTypeDefPtr overloadDef = new BTypeDef(context.construct->classType.get(),
-                                           "Overload",
+                                           ":OverloadImpl",
                                            Type::getVoidTy(lctx)
                                            );
     gd->overloadType = new GenericOverloadType(metaType.get(),
                                                overloadDef.get(),
                                                context
                                                );
+    overloadDef->complete = true;
+    deferMetaClass.push_back(overloadDef.get());
     deferMetaClass.push_back(gd->overloadType.get());
     context.addDef(gd->overloadType.get());
+    context.addDef(overloadDef.get());
 
     // create the raw function type
     // "oper call" methods are added as this type is specialized during parse

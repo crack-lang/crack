@@ -92,6 +92,10 @@ void LLVMLinkerBuilder::finishBuild(Context &context) {
 
     assert(!rootBuilder && "run must be called from root builder");
 
+    // Finish the ".root" module.  This is where OverloadType instances end up
+    // getting created.
+    engineFinishModule(context, moduleDef.get());
+
     // if optimizing, do module level unit at a time
     if (options->optimizeLevel) {
         for (ModuleListType::iterator i = moduleList->begin();
