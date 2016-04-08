@@ -52,6 +52,18 @@ ResultExprPtr VarRef::emit(Context &context) {
     return def->impl->emitRef(context, this);
 }
 
+ResultExprPtr VarRef::emit(Context &context, vector<ExprPtr> &args) {
+    if (OverloadDefPtr ovld = OverloadDefPtr::rcast(def)) {
+        // If this is an overload, we need to get the function matching our
+        // arg types.
+        return
+            ovld->getMatch(context, args, false)->impl
+                ->emitRef(context, this);
+    } else {
+        return emit(context);
+    }
+}
+
 ExprPtr VarRef::convert(Context &context, TypeDef *type) {
     if (OverloadDef *ovld = OverloadDefPtr::rcast(def)) {
         FuncDef *func = ovld->getMatch(type);
