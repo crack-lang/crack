@@ -345,14 +345,24 @@ void createClassImpl(Context &context, BTypeDef *type) {
                             canonicalName
                             );
 
-    // create the pointer to the class instance
+    // Get or create the pointer to the class instance.  We have to do the
+    // "get" first because, in the case of OverloadTypes (and possibly for
+    // other builtin generics), the type object can get created as an external
+    // (and merged into the merged module) before it is created during
+    // deserialization of meta-data.
     GlobalVariable *classInstPtr =
-        new GlobalVariable(*llvmBuilder.module, metaClassPtrType,
-                           true, // is constant
-                           GlobalVariable::ExternalLinkage,
-                           classInst,
-                           canonicalName
-                           );
+        llvmBuilder.module->getGlobalVariable(canonicalName);
+    if (!classInstPtr)
+        classInstPtr =
+            new GlobalVariable(*llvmBuilder.module, metaClassPtrType,
+                               true, // is constant
+                               GlobalVariable::ExternalLinkage,
+                               classInst,
+                               canonicalName
+                               );
+    else if (!classInstPtr->hasInitializer())
+        // If we already had it, set the initializer.
+        classInstPtr->setInitializer(classInst);
 
     // store the impl object in the class
     type->impl = new BGlobalVarDefImpl(classInstPtr,

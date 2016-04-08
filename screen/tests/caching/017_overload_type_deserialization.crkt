@@ -1,0 +1,10 @@
+%%TEST%%
+Overload Type Deserialization
+%%ARGS%%
+%%FILE%%
+void f() { puts('f()'); }
+void f(int i) { puts('f(int)'); }
+puts(typeof(f).name)
+%%EXPECT%%
+Overload[.builtin.function[.builtin.void,.builtin.int], .builtin.function[.builtin.void]]
+%%STDIN%%
