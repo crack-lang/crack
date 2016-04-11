@@ -94,7 +94,7 @@ void LLVMLinkerBuilder::finishBuild(Context &context) {
 
     // Finish the ".root" module.  This is where OverloadType instances end up
     // getting created.
-    engineFinishModule(context, moduleDef.get());
+    engineFinishModule(moduleDef.get());
 
     // if optimizing, do module level unit at a time
     if (options->optimizeLevel) {
@@ -287,9 +287,7 @@ void *LLVMLinkerBuilder::loadSharedLibrary(const string &name) {
     }
 }
 
-void LLVMLinkerBuilder::engineFinishModule(model::Context &context,
-                                           BModuleDef *moduleDef
-                                           ) {
+void LLVMLinkerBuilder::engineFinishModule(BModuleDef *moduleDef) {
     // only called from registerPrimFuncs in base LLVMBuilder
     addModule(moduleDef);
 }

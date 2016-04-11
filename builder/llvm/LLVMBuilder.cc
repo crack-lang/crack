@@ -3278,7 +3278,7 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
 
     // bind the module to the execution engine
     engineBindModule(builtinMod.get());
-    engineFinishModule(context, builtinMod.get());
+    engineFinishModule(builtinMod.get());
 
     if (options->statsMode) {
         context.construct->stats->setState(ConstructStats::start);
