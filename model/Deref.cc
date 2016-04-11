@@ -46,7 +46,7 @@ ExprPtr Deref::convert(Context &context, TypeDef *type) {
     // eventually, either by returning a Python-style bound method or more
     // likely by returning the function address, dereferencing virtual
     // functions if necessary)
-    if ( OverloadDefPtr::rcast(def))
+    if (OverloadDefPtr::rcast(def))
         context.error("Bound methods can not be evaluated.");
     else
         return Expr::convert(context, type);
