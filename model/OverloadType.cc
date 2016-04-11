@@ -54,8 +54,8 @@ void OverloadType::addOperCall(TypeDef *source) {
         ovld = new OverloadDef("oper call");
 
         // XXX this ends up being a recursive definition, we're going to need
-        // to deal with that.
-        ovld->type = 0;
+        // to deal with that.  By setting it to "this"?
+        ovld->type = this;
 
         // We don't have to collect ancestors, there are none.  Just add the
         // overload.
@@ -69,10 +69,10 @@ void OverloadType::addOperCall(TypeDef *source) {
         // for for classes.
         return;
 
-    for(OverloadDef::FuncList::iterator iter = operCall->beginTopFuncs();
-        iter != operCall->endTopFuncs();
-        ++iter
-        )
+    for (OverloadDef::FuncList::iterator iter = operCall->beginTopFuncs();
+         iter != operCall->endTopFuncs();
+         ++iter
+         )
         ovld->addFunc(iter->get());
 }
 
