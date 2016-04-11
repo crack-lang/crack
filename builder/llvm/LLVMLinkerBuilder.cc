@@ -283,9 +283,7 @@ void *LLVMLinkerBuilder::loadSharedLibrary(const string &name) {
     }
 }
 
-void LLVMLinkerBuilder::engineFinishModule(model::Context &context,
-                                           BModuleDef *moduleDef
-                                           ) {
+void LLVMLinkerBuilder::engineFinishModule(BModuleDef *moduleDef) {
     // only called from registerPrimFuncs in base LLVMBuilder
     addModule(moduleDef);
 }

@@ -106,8 +106,7 @@ void LLVMJitBuilder::fixupAfterMerge(ModuleDef *moduleDef, Module *merged) {
         needsCleanup.push_back(BModuleDefPtr::cast(moduleDef));
 }
 
-void LLVMJitBuilder::innerFinishModule(Context &context,
-                                       BModuleDef *moduleDef) {
+void LLVMJitBuilder::innerFinishModule(BModuleDef *moduleDef) {
    // note, this->module and moduleDef->rep should be ==
 
     // XXX right now, only checking for > 0, later perhaps we can
@@ -139,9 +138,8 @@ void LLVMJitBuilder::innerFinishModule(Context &context,
     moduleDef->rep->getOrInsertNamedMetadata("crack_finished");
 }
 
-void LLVMJitBuilder::engineFinishModule(Context &context,
-                                        BModuleDef *moduleDef) {
-    innerFinishModule(context, moduleDef);
+void LLVMJitBuilder::engineFinishModule(BModuleDef *moduleDef) {
+    innerFinishModule(moduleDef);
     mergeModule(moduleDef);
     moduleDef->clearRepFromConstants();
     delete module;
@@ -344,7 +342,7 @@ void LLVMJitBuilder::innerCloseModule(Context &context, ModuleDef *moduleDef) {
 
         // Do the common stuff (common with the .builtin module, which doesn't get
         // closed)
-        innerFinishModule(context, BModuleDefPtr::cast(moduleDef));
+        innerFinishModule(BModuleDefPtr::cast(moduleDef));
     }
 
     // store primitive functions from an extension
@@ -406,6 +404,10 @@ void LLVMJitBuilder::dump() {
     PassManager passMan;
     passMan.add(llvm::createPrintModulePass(&llvm::outs()));
     passMan.run(*module);
+}
+
+void LLVMJitBuilder::finishBuild(model::Context &context) {
+    SPUG_CHECK(!rootBuilder, "finishBuild() called on non-root builder.");
 }
 
 void LLVMJitBuilder::registerDef(Context &context, VarDef *varDef) {
