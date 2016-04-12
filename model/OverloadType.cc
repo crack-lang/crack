@@ -7,6 +7,7 @@
 
 #include "OverloadType.h"
 
+#include "spug/check.h"
 #include "spug/stlutil.h"
 
 #include "builder/Builder.h"
@@ -34,7 +35,7 @@ OverloadType::OverloadType(TypeDef *metaType, TypeDef *templateType,
 }
 
 string OverloadType::getDisplayName() const {
-    if (genericParms.size() > 1)
+    if (genericParms.size() != 1)
         return VarDef::getDisplayName();
     else
         return genericParms[0]->getDisplayName();
@@ -128,6 +129,9 @@ OverloadTypePtr OverloadType::addTypes(const list<FuncDefPtr> &funcs) {
     // Add all of the existing types.
     SPUG_FOR(TypeMap, i, types)
         typeVec.push_back(i->second);
+
+    // Sort them.
+    sort(typeVec.begin(), typeVec.end(), GenericOverloadType::nameLessThan);
 
     TypeVecObjPtr tvo = new TypeVecObj(typeVec);
     return GenericOverloadTypePtr::cast(templateType)->getSpecialization(

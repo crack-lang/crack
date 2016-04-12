@@ -88,12 +88,6 @@ OverloadTypePtr GenericOverloadType::getSpecialization(TypeVecObj *types) {
     return result;
 }
 
-namespace {
-    bool nameLessThan(const TypeDefPtr &a, const TypeDefPtr &b) {
-        return a->getFullName() < b->getFullName();
-    }
-}
-
 TypeDefPtr GenericOverloadType::getSpecialization(Context &context,
                                                   TypeVecObj *types,
                                                   bool checkCache
