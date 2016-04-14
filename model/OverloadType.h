@@ -60,10 +60,10 @@ class OverloadType : public TypeDef {
         OverloadTypePtr addType(TypeDef *funcType);
 
         /**
-         * Add all types in the list to the overload def type and returns a
+         * Add all types in the vector to the overload def type and returns a
          * new OverloadType for the resulting set of types.
          */
-        OverloadTypePtr addTypes(const std::list<FuncDefPtr> &funcs);
+        OverloadTypePtr addTypes(const TypeVec &newTypes);
 
         /**
          * Returns the builder type for the type.

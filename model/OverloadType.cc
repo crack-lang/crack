@@ -66,8 +66,10 @@ void OverloadType::addOperCall(TypeDef *source) {
     // Add the "oper call" methods from funcType.
     OverloadDefPtr operCall = source->lookUp("oper call");
     if (!operCall)
-        // XXX builtins_need_oper_call - somehow we're getting in this code
-        // for for classes.
+        // The code currently uses the return type as the function type for a
+        // lot of builtins, so as a result this function can get called with a
+        // class without an "oper call" which we should ignore.
+        // builtins_need_oper_call
         return;
 
     for (OverloadDef::FuncList::iterator iter = operCall->beginTopFuncs();
@@ -113,13 +115,13 @@ OverloadTypePtr OverloadType::addType(TypeDef *funcType) {
     );
 }
 
-OverloadTypePtr OverloadType::addTypes(const list<FuncDefPtr> &funcs) {
+OverloadTypePtr OverloadType::addTypes(const TypeDef::TypeVec &newTypes) {
 
     // Put all of the new types into an array.
     TypeVec typeVec;
-    SPUG_FOR(list<FuncDefPtr>, i, funcs) {
-        if ((*i)->type && !spug::contains(types, (*i)->type->getFullName()))
-            typeVec.push_back((*i)->type.get());
+    SPUG_FOR(TypeVec, i, newTypes) {
+        if (!spug::contains(types, (*i)->getFullName()))
+            typeVec.push_back((*i).get());
     }
 
     // Quit if we've got nothing to add.

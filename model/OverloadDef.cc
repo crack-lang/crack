@@ -252,7 +252,7 @@ void OverloadDef::addFunc(FuncDef *func) {
 void OverloadDef::addParent(OverloadDef *parent, bool before) {
 
     // Add all of the types from the parent.
-    type = OverloadTypePtr::rcast(type)->addTypes(parent->funcs);
+    type = OverloadTypePtr::rcast(type)->addTypes(parent->type->genericParms);
 
     // When inserting before, we don't check for intermediates.
     if (before) {
