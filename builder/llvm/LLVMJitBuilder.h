@@ -105,7 +105,6 @@ class LLVMJitBuilder : public LLVMBuilder {
         ~LLVMJitBuilder();
 
         virtual void *getFuncAddr(llvm::Function *func);
-        virtual void recordOrphanedDef(model::VarDef *def);
 
         virtual model::FuncDefPtr
             createExternFunc(model::Context &context,

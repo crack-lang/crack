@@ -285,10 +285,6 @@ void *LLVMJitBuilder::getFuncAddr(llvm::Function *func) {
     return addr;
 }
 
-void LLVMJitBuilder::recordOrphanedDef(VarDef *def) {
-    moduleDef->orphanedDefs.push_back(def);
-}
-
 void LLVMJitBuilder::run() {
     ExecutionEngine *execEng = getExecEng();
     Module *mainMod = getModuleMerger()->getTarget();
