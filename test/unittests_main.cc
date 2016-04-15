@@ -116,7 +116,8 @@ struct DataSet {
         dep1->addAlias(t0.get());
         OverloadDefPtr ovld = new OverloadDef("func");
         genericOvldType = new GenericOverloadType(
-            metaType.get(), new TypeDef(0, "BuilderType"), *context
+            metaType.get(),
+            new TypeDef(0, "BuilderType")
         );
         ovld->type = new OverloadType(metaType.get(),
                                       genericOvldType.get(),
@@ -128,13 +129,13 @@ struct DataSet {
         f->args[0] = new ArgDef(t1.get(), "a");
         f->returnType = voidType;
         f->type = new TypeDef(metaType.get(), "funcType");
-        ovld->addFunc(f.get());
+        ovld->addFunc(*context, f.get());
         f->setOwner(dep1.get());
         f = new MockFuncDef(FuncDef::noFlags, "func", 1);
         f->args[0] = new ArgDef(t0.get(), "x");
         f->returnType = t0;
         f->type = new TypeDef(metaType.get(), "funcType");
-        ovld->addFunc(f.get());
+        ovld->addFunc(*context, f.get());
         f->setOwner(dep1.get());
         dep1->addDef(ovld.get());
         dep1->finished = true;
@@ -248,7 +249,7 @@ bool reloadOfSelfReferrentTypes() {
     f->args[0] = new ArgDef(myType.get(), "a");
     f->returnType = ds.voidType;
     f->type = ds.metaType;
-    ovld->addFunc(f.get());
+    ovld->addFunc(*ds.context, f.get());
     f->setOwner(myType.get());
     myType->addDef(ovld.get());
 

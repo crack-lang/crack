@@ -50,20 +50,20 @@ class OverloadType : public TypeDef {
         /**
          * Aliases the "oper call" from 'source' into the type's namespace.
          */
-        void addOperCall(TypeDef *source);
+        void addOperCall(Context &context, TypeDef *source);
 
         /**
          * Add a new function type to the overload def type and returns a new
          * OverloadType containing the new type.  This gets called when a
          * function is added to the overload.
          */
-        OverloadTypePtr addType(TypeDef *funcType);
+        OverloadTypePtr addType(Context &context, TypeDef *funcType);
 
         /**
          * Add all types in the vector to the overload def type and returns a
          * new OverloadType for the resulting set of types.
          */
-        OverloadTypePtr addTypes(const TypeVec &newTypes);
+        OverloadTypePtr addTypes(Context &context, const TypeVec &newTypes);
 
         /**
          * Returns the builder type for the type.

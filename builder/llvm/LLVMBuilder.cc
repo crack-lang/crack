@@ -2466,8 +2466,7 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
                                            Type::getVoidTy(lctx)
                                            );
     gd->overloadType = new GenericOverloadType(metaType.get(),
-                                               overloadDef.get(),
-                                               context
+                                               overloadDef.get()
                                                );
     overloadDef->complete = true;
     deferMetaClass.push_back(overloadDef.get());

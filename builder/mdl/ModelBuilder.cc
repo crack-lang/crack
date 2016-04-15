@@ -504,8 +504,7 @@ ModuleDefPtr ModelBuilder::registerPrimFuncs(Context &context) {
 
     GenericOverloadTypePtr ovldType = new GenericOverloadType(
         classType,
-        typeBuilder.makeType("Overload").get(),
-        context
+        typeBuilder.makeType("Overload").get()
     );
     gd->overloadType = ovldType;
     context.addDef(ovldType.get(), classType);

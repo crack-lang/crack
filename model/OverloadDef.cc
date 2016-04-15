@@ -239,20 +239,24 @@ bool OverloadDef::hasExposedFuncs() const {
     return false;
 }
 
-void OverloadDef::addFunc(FuncDef *func) {
+void OverloadDef::addFunc(Context &context, FuncDef *func) {
     if (funcs.empty()) setImpl(func);
     funcs.push_back(func);
 
     // During primitive registration, we may not have a type.
     // XXX need to figure out a way to register these for later fixup.
     if (type)
-        type = OverloadTypePtr::rcast(type)->addType(func->type.get());
+        type = OverloadTypePtr::rcast(type)->addType(context, func->type.get());
 }
 
-void OverloadDef::addParent(OverloadDef *parent, bool before) {
+void OverloadDef::addParent(Context &context, OverloadDef *parent,
+                            bool before
+                            ) {
 
     // Add all of the types from the parent.
-    type = OverloadTypePtr::rcast(type)->addTypes(parent->type->genericParms);
+    type = OverloadTypePtr::rcast(type)->addTypes(context,
+                                                  parent->type->genericParms
+                                                  );
 
     // When inserting before, we don't check for intermediates.
     if (before) {
@@ -285,7 +289,7 @@ void OverloadDef::addParent(OverloadDef *parent, bool before) {
     parents.push_back(parent);
 }
 
-void OverloadDef::collectAncestors(Namespace *ns) {
+void OverloadDef::collectAncestors(Context &context, Namespace *ns) {
     bool classPrivate = name.substr(0, 2) == "__" && TypeDefPtr::cast(ns);
     NamespacePtr parent;
     for (unsigned i = 0; parent = ns->getParent(i++);) {
@@ -299,7 +303,7 @@ void OverloadDef::collectAncestors(Namespace *ns) {
         OverloadDefPtr parentOvld;
         if (!var) {
             // the parent does not have this overload.  Check the next level.
-            collectAncestors(parent.get());
+            collectAncestors(context, parent.get());
         } else {
             parentOvld = OverloadDefPtr::rcast(var);
             // if there is a variable of this name but it is not an overload, 
@@ -309,7 +313,7 @@ void OverloadDef::collectAncestors(Namespace *ns) {
             // but not something we want to deal with here.
 
             if (parentOvld)
-                addParent(parentOvld.get());
+                addParent(context, parentOvld.get());
         }
     }
 }
@@ -602,8 +606,10 @@ OverloadDefPtr OverloadDef::deserialize(Deserializer &deser,
     if (!(ovld = owner->lookUp(name, false))) {
         ovld = new OverloadDef(name);
         ovld->type =
-            deser.context->construct->overloadType->getSpecialization();
-        ovld->collectAncestors(owner);
+            deser.context->construct->overloadType->getSpecialization(
+                *deser.context
+            );
+        ovld->collectAncestors(*deser.context, owner);
     }
     int size = deser.readUInt("#overloads");
     for (int i = 0; i < size; ++i) {
@@ -614,7 +620,7 @@ OverloadDefPtr OverloadDef::deserialize(Deserializer &deser,
             func = FuncDef::deserialize(deser, name);
         if (!func->getOwner())
             func->setOwner(owner);
-        ovld->addFunc(func.get());
+        ovld->addFunc(*deser.context, func.get());
     }
 
     if (Serializer::trace)

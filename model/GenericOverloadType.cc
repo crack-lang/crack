@@ -21,11 +21,9 @@ using namespace model;
 using namespace std;
 
 GenericOverloadType::GenericOverloadType(TypeDef *metaType,
-                                         TypeDef *builderType,
-                                         Context &context
+                                         TypeDef *builderType
                                          ) :
     TypeDef(metaType, "Overload", false),
-    context(&context),
     builderType(builderType) {
 
     generic = new TypeDef::SpecializationCache();
@@ -33,7 +31,9 @@ GenericOverloadType::GenericOverloadType(TypeDef *metaType,
     impl = builderType->impl;
 }
 
-OverloadTypePtr GenericOverloadType::getSpecialization(TypeVecObj *types) {
+OverloadTypePtr GenericOverloadType::getSpecialization(Context &context,
+                                                       TypeVecObj *types
+                                                       ) {
     OverloadTypePtr result;
 
     // Null types means we want to get the empty Overload.
@@ -62,9 +62,9 @@ OverloadTypePtr GenericOverloadType::getSpecialization(TypeVecObj *types) {
         tmp << "]";
 
         result = new OverloadType(type.get(), this,
-                                  context->builder.createGenericClass(*context,
-                                                                      tmp.str()
-                                                                      ).get()
+                                  context.builder.createGenericClass(context,
+                                                                     tmp.str()
+                                                                     ).get()
                                   );
 
         // Fill in the remaining fields.
@@ -81,7 +81,7 @@ OverloadTypePtr GenericOverloadType::getSpecialization(TypeVecObj *types) {
         // add "oper call" methods for all of the types.
         SPUG_FOR(TypeDef::TypeVec, iter, *types) {
             result->types[(*iter)->getFullName()] = *iter;
-            result->addOperCall(iter->get());
+            result->addOperCall(context, iter->get());
         }
     }
 
@@ -93,5 +93,5 @@ TypeDefPtr GenericOverloadType::getSpecialization(Context &context,
                                                   bool checkCache
                                                   ) {
     sort(types->begin(), types->end(), nameLessThan);
-    return getSpecialization(types);
+    return getSpecialization(context, types);
 }

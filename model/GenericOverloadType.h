@@ -29,19 +29,18 @@ SPUG_RCPTR(GenericOverloadType);
 class GenericOverloadType : public TypeDef {
     private:
         TypeDefPtr builderType;
-        model::ContextPtr context;
         OverloadTypePtr emptyOverload;
 
     public:
-        GenericOverloadType(TypeDef *metaType, TypeDef *builderType,
-                            model::Context &context
-                            );
+        GenericOverloadType(TypeDef *metaType, TypeDef *builderType);
 
         /**
          * Gets an overload type specialization.  'types' must be ordered by
          * name.
          */
-        OverloadTypePtr getSpecialization(TypeVecObj *types = 0);
+        OverloadTypePtr getSpecialization(Context &context,
+                                          TypeVecObj *types = 0
+                                          );
 
         /**
          * This is provided just to be righteous, overloads will generally use

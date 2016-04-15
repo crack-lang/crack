@@ -48,7 +48,7 @@ TypeDefPtr OverloadType::getVarType() {
         return genericParms[0];
 }
 
-void OverloadType::addOperCall(TypeDef *source) {
+void OverloadType::addOperCall(Context &context, TypeDef *source) {
     OverloadDefPtr ovld = lookUp("oper call");
 
     if (!ovld) {
@@ -76,10 +76,10 @@ void OverloadType::addOperCall(TypeDef *source) {
          iter != operCall->endTopFuncs();
          ++iter
          )
-        ovld->addFunc(iter->get());
+        ovld->addFunc(context, iter->get());
 }
 
-OverloadTypePtr OverloadType::addType(TypeDef *funcType) {
+OverloadTypePtr OverloadType::addType(Context &context, TypeDef *funcType) {
 
     // Ignore operations.
     if (!funcType)
@@ -111,11 +111,14 @@ OverloadTypePtr OverloadType::addType(TypeDef *funcType) {
 
     TypeVecObjPtr tvo = new TypeVecObj(typeVec);
     return GenericOverloadTypePtr::cast(templateType)->getSpecialization(
+        context,
         tvo.get()
     );
 }
 
-OverloadTypePtr OverloadType::addTypes(const TypeDef::TypeVec &newTypes) {
+OverloadTypePtr OverloadType::addTypes(Context &context,
+                                       const TypeDef::TypeVec &newTypes
+                                       ) {
 
     // Put all of the new types into an array.
     TypeVec typeVec;
@@ -137,6 +140,7 @@ OverloadTypePtr OverloadType::addTypes(const TypeDef::TypeVec &newTypes) {
 
     TypeVecObjPtr tvo = new TypeVecObj(typeVec);
     return GenericOverloadTypePtr::cast(templateType)->getSpecialization(
+        context,
         tvo.get()
     );
 }

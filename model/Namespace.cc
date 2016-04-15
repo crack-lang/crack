@@ -349,9 +349,10 @@ OverloadDefPtr Namespace::replaceDef(Context &context, VarDef *def) {
                    " with a non function."
                    );
         ovld = new OverloadDef(def->name);
-        ovld->type = context.construct->overloadType->getSpecialization();
-        ovld->collectAncestors(this);
-        ovld->addFunc(func.get());
+        ovld->type =
+            context.construct->overloadType->getSpecialization(context);
+        ovld->collectAncestors(context, this);
+        ovld->addFunc(context, func.get());
         func->setOwner(this);
         def = ovld.get();
     }

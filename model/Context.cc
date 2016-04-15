@@ -114,10 +114,10 @@ OverloadDefPtr Context::replicateOverload(const std::string &varName,
                                           Namespace *srcNs
                                           ) {
     OverloadDefPtr overload = new OverloadDef(varName);
-    overload->type = construct->overloadType->getSpecialization();
+    overload->type = construct->overloadType->getSpecialization(*this);
     
     // merge in the overloads from the parents
-    overload->collectAncestors(srcNs);
+    overload->collectAncestors(*this, srcNs);
     srcNs->addDef(overload.get());
     return overload;
 }
@@ -1102,7 +1102,7 @@ VarDefPtr Context::addDef(VarDef *varDef, Namespace *srcNs) {
             OverloadDefPtr::rcast(lookUp(varDef->name, srcNs));
         if (!overload)
             overload = replicateOverload(varDef->name, srcNs);
-        overload->addFunc(funcDef);
+        overload->addFunc(*this, funcDef);
         funcDef->setOwner(srcNs);
         return overload;
     } else {
@@ -1134,7 +1134,7 @@ void Context::insureOverloadPath(Context *ancestor, OverloadDef *overload) {
             break;
     assert(parent && "insureOverloadPath(): parent is not a direct parent.");
     
-    localOverload->addParent(overload, /* before */ true);
+    localOverload->addParent(*this, overload, /* before */ true);
 }
 
 AnnotationPtr Context::lookUpAnnotation(const std::string &name) {

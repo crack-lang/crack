@@ -1,0 +1,18 @@
+%%TEST%%
+overload type generation
+%%ARGS%%
+%%FILE%%
+import test.ovldtyp.mod1 f;
+import test.ovldtyp.mod2 g = f;
+
+f(1, 'x', 1.0);
+g(1, 'x', 1.0);
+
+if (typeof(f) is typeof(g))
+    puts('ok');
+
+%%EXPECT%%
+mod1
+mod2
+ok
+%%STDIN%%

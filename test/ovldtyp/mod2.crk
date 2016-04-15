@@ -1,0 +1,4 @@
+
+void f(int i, byteptr j, float g) {
+    puts('mod2');
+}
