@@ -217,7 +217,7 @@ namespace {
         context.construct->registerDef(metaType.get());
         metaType->meta = type;
         BTypeDef *llvmType = BTypeDef::get(type);
-        createClassImpl(context, llvmType);
+        llvmType->createClassImpl(context);
         llvmType->createEmptyOffsetsInitializer(context);
     }
 
@@ -1814,7 +1814,7 @@ TypeDefPtr LLVMBuilder::createGenericClass(Context &context,
                                                        );
         BTypeDefPtr metaType = createMetaClass(*classCtx, name);
         result->type = metaType;
-        createClassImpl(*classCtx, result.get());
+        result->createClassImpl(*classCtx);
         result->complete = true;
         result->fixIncompletes(*classCtx);
     }
@@ -1866,7 +1866,7 @@ TypeDefPtr LLVMBuilder::emitBeginClass(Context &context,
     }
 
     // create the class implementation.
-    createClassImpl(context, type.get());
+    type->createClassImpl(context);
 
     // make the type the namespace of the context
     context.ns = type;
@@ -3216,7 +3216,7 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
     // implementation object for it.
     context.addDef(new IsOpDef(classType, boolType));
     finishClassType(context, classType);
-    createClassImpl(context, classType);
+    classType->createClassImpl(context);
 
     // back fill the meta-class for the types defined so far.  We create a
     // bogus context for them because functions called by fixMeta() expect to
@@ -3251,7 +3251,7 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
                      );
     vtableBaseType->hasVTable = true;
     vtableBaseType->defaultInitializer = new NullConst(vtableBaseType);
-    createClassImpl(context, vtableBaseType);
+    vtableBaseType->createClassImpl(context);
     metaType->meta = vtableBaseType;
     context.addDef(vtableBaseType);
     context.construct->registerDef(vtableBaseType);
