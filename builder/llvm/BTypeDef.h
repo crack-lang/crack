@@ -160,6 +160,11 @@ public:
      * times as it is inherited from.
      */
     int countAncestors() const;
+
+    /**
+     * Create the class implementation global variables.
+     */
+    void createClassImpl(model::Context &context);
 };
 
 } // end namespace builder::vmll

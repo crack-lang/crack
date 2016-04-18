@@ -220,7 +220,7 @@ namespace {
         type->type = metaType = createMetaClass(context, type->name);
         context.construct->registerDef(metaType.get());
         metaType->meta = type;
-        createClassImpl(context, BTypeDefPtr::acast(type));
+        type->createClassImpl(context);
         type->createEmptyOffsetsInitializer(context);
     }
 
@@ -1815,7 +1815,8 @@ TypeDefPtr LLVMBuilder::createGenericClass(Context &context,
         ContextPtr classCtx = context.createSubContext(Context::instance,
                                                        result.get()
                                                        );
-        createClassImpl(*classCtx, result.get());
+        result->createClassImpl(*classCtx);
+        result->complete = true;
         result->fixIncompletes(*classCtx);
     }
     return result;
@@ -1866,7 +1867,7 @@ TypeDefPtr LLVMBuilder::emitBeginClass(Context &context,
     }
 
     // create the class implementation.
-    createClassImpl(context, type.get());
+    type->createClassImpl(context);
 
     // make the type the namespace of the context
     context.ns = type;
@@ -3196,7 +3197,7 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
     // implementation object for it.
     context.addDef(new IsOpDef(classType, boolType));
     finishClassType(context, classType);
-    createClassImpl(context, classType);
+    classType->createClassImpl(context);
 
     // back fill the meta-class for the types defined so far.  We create a
     // bogus context for them because functions called by fixMeta() expect to
@@ -3214,7 +3215,7 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
     BTypeDefPtr overloadDef;
     gd->overloadType = overloadDef = new BTypeDef(metaType.get(), "Overload", 0);
     metaType->meta = overloadDef.get();
-    createClassImpl(context, overloadDef.get());
+    overloadDef->createClassImpl(context);
 
     // Give it a context and an "oper to .builtin.voidptr" method.
     context.addDef(
@@ -3246,7 +3247,7 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
                      );
     vtableBaseType->hasVTable = true;
     vtableBaseType->defaultInitializer = new NullConst(vtableBaseType);
-    createClassImpl(context, vtableBaseType);
+    vtableBaseType->createClassImpl(context);
     metaType->meta = vtableBaseType;
     context.addDef(vtableBaseType);
     context.construct->registerDef(vtableBaseType);
