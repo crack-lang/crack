@@ -894,6 +894,7 @@ ExprPtr Parser::parseDefine(const Token &ident) {
    // upon entry into the loop and the rvalue doesn't seem to get
    // re-evaluated.
    VarDefPtr var = context->emitVarDef(val->type.get(), ident, 0);
+   var->doc = consumeDocs();
    return createAssign(0, ident, var.get(), val.get());
 }
 
@@ -2316,7 +2317,8 @@ void Parser::parseConstDef() {
          
          // parse the initializer
          ExprPtr expr = parseInitializer(type.get(), varName.getData());
-         context->emitVarDef(type.get(), varName, expr.get(), true);
+         context->emitVarDef(type.get(), varName, expr.get(), true)->doc =
+            consumeDocs();
          
          // see if there are more constants in this definition.
          tok2 = getToken();
@@ -2352,7 +2354,8 @@ void Parser::parseConstDef() {
    // Make sure the value isn't an external override.
    checkForExternalOverload(expr.get());
    
-   context->emitVarDef(expr->type.get(), tok, expr.get(), true);
+   context->emitVarDef(expr->type.get(), tok, expr.get(), true)->doc =
+      consumeDocs();
 }
 
 ContextPtr Parser::parseIfClause() {
