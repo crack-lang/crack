@@ -1,0 +1,22 @@
+%%TEST%%
+%%ARGS%%
+%%FILE%%
+## Module docs.
+import test.testmod;
+class Foo {}
+%%EXPECT%%
+/**
+ Module docs.
+
+*/
+module
+class Foo : {
+.builtin.void oper del()
+.builtin.void oper init()
+@static .main._f5923f9bc1ed54264fda44faeffdce57_5f005_5fmodule_5fdocs_5fbefore_5fimports_2ecrk.Foo oper new()
+.builtin.voidptr oper to .builtin.voidptr()
+}
+.builtin.void __CrackBadCast(.builtin.Class curType, .builtin.Class newType, )
+.builtin.int __getArgc()
+.builtin.array[.builtin.byteptr] __getArgv()
+%%STDIN%%

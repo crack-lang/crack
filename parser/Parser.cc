@@ -3408,8 +3408,8 @@ Parser::Parser(Toker &toker, model::Context *context) :
 void Parser::parse() {
    state = st_base;
    
-   // Check for a "module;" statement, which consumes all doc-comments and 
-   // adds them to the module.
+   // Check for a "module;" statement, or the first import statement, either 
+   // of which consume all doc-comments and adds them to the module.
    Token tok = getToken();
    if (tok.isModule()) {
       tok = getToken();
@@ -3417,9 +3417,11 @@ void Parser::parse() {
          error(tok, "Semicolon expected after module token.");
       context->ns->getModule()->doc = consumeDocs();
    } else {
+      if (tok.isImport())
+         context->ns->getModule()->doc = consumeDocs();
       toker.putBack(tok);
    }
-   
+
    // parse an un-nested block
    parseBlock(false, noCallbacks);
 }
