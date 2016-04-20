@@ -1,0 +1,39 @@
+%%TEST%%
+%%ARGS%%
+%%FILE%%
+const int
+    ## A docs.
+    a = 100,
+    b = 200 ## B docs.
+    ;
+
+## C docs.
+const c := 'test';
+const d := 'other' ## D docs.
+
+%%EXPECT%%
+.builtin.void __CrackBadCast(.builtin.Class curType, .builtin.Class newType, )
+.builtin.int __getArgc()
+.builtin.array[.builtin.byteptr] __getArgv()
+/**
+ A docs.
+
+*/
+.builtin.int a
+/**
+ B docs.
+
+*/
+.builtin.int b
+/**
+ C docs.
+
+*/
+.builtin.byteptr c
+/**
+ D docs.
+
+*/
+.builtin.byteptr d
+
+%%STDIN%%
