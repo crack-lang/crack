@@ -75,6 +75,7 @@ TypeDefPtr FunctionTypeDef::getSpecialization(Context &context,
                          getSpecializedName(types, false),
                          llvmFunPtrType
                          );
+    tempSpec->weak = true;
     tempSpec->setOwner(this->owner);
     tempSpec->defaultInitializer = new NullConst(tempSpec.get());
 

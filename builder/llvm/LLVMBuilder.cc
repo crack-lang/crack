@@ -1357,7 +1357,7 @@ BasicBlock *LLVMBuilder::createLandingPad(
     // result in it.
     BMemVarDefImpl *exStructImpl =
         BMemVarDefImplPtr::rcast(exStructVar->impl);
-    b.CreateStore(exStruct, exStructImpl->getRep(*this));
+    b.CreateStore(exStruct, exStructImpl->getRep(context, *this));
 
     b.CreateBr(next);
 
@@ -1433,7 +1433,7 @@ ExprPtr LLVMBuilder::emitCatch(Context &context,
 
     // store the type and the catch block for later fixup
     BTypeDef *btype = BTypeDefPtr::cast(catchType);
-    fixClassInstRep(btype);
+    fixClassInstRep(context, btype);
     cdata->catches.push_back(
         BBuilderContextData::CatchBranch(btype, catchBlock)
     );
@@ -1484,7 +1484,7 @@ void LLVMBuilder::emitEndTry(model::Context &context,
         enclosingCData->nested.push_back(cdata);
 
     } else {
-        cdata->fixAllSelectors(moduleDef.get());
+        cdata->fixAllSelectors(context, moduleDef.get());
     }
 }
 
@@ -1800,7 +1800,8 @@ FuncDefPtr LLVMBuilder::createExternFuncCommon(Context &context,
 }
 
 TypeDefPtr LLVMBuilder::createGenericClass(Context &context,
-                                           const string &name
+                                           const string &name,
+                                           bool weak
                                            ) {
     BTypeDefPtr metaType = createMetaClass(context, name);
     BTypeDefPtr result = new BTypeDef(context.construct->classType.get(),
@@ -1809,13 +1810,24 @@ TypeDefPtr LLVMBuilder::createGenericClass(Context &context,
                                       true
                                       );
     result->type = metaType;
+
+    if (weak) {
+        result->setOwner(context.ns.get());
+        result->weak = true;
+    }
+
     {
         // createClassImpl() needs to be run in a class context, so we create
         // one.
         ContextPtr classCtx = context.createSubContext(Context::instance,
                                                        result.get()
                                                        );
-        result->createClassImpl(*classCtx);
+
+        // Create a class implementation unless this is a weak class - weak
+        // classes will have their instances generated when they are used.
+        if (!weak)
+            result->createClassImpl(*classCtx);
+
         result->complete = true;
         result->fixIncompletes(*classCtx);
     }

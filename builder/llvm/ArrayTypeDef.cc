@@ -50,6 +50,7 @@ TypeDefPtr ArrayTypeDef::getSpecialization(Context &context,
                                    ),
                          llvmType
                          );
+    tempSpec->weak = true;
     tempSpec->setOwner(this->owner);
     tempSpec->defaultInitializer = new NullConst(tempSpec.get());
 

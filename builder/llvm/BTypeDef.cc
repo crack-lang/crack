@@ -153,7 +153,9 @@ BTypeDef *BTypeDef::findFirstVTable(BTypeDef *vtableBaseType) {
     SPUG_CHECK(false, "Failed to find first vtable for " << getFullName());
 }
 
-GlobalVariable *BTypeDef::getClassInstRep(BModuleDef *module) {
+GlobalVariable *BTypeDef::getClassInstRep(Context &context,
+                                          BModuleDef *module
+                                          ) {
     if (classInstModuleId == module->repId) {
         return classInst;
     } else {
@@ -162,17 +164,23 @@ GlobalVariable *BTypeDef::getClassInstRep(BModuleDef *module) {
                 module->rep->getGlobalVariable(getFullName() + ":body")
             );
         if (!gvar) {
-            SPUG_CHECK(getModule() != module,
-                       "Module " << module->getFullName() <<
-                        " is missing the definiton for " << getFullName()
-                       );
-            gvar = new GlobalVariable(*module->rep,
-                                      classInstType,
-                                      true, // is constant
-                                      GlobalValue::ExternalLinkage,
-                                      0, // initializer: null for externs
-                                      getFullName() + ":body"
-                                      );
+            if (weak) {
+                gvar = createClassImpl(context);
+                createEmptyOffsetsInitializer(context);
+            } else {
+                // Make sure we aren't supposed to be the owner of this type.
+                SPUG_CHECK(getModule() != module,
+                           "Module " << module->getFullName() <<
+                            " is missing the definiton for " << getFullName()
+                           );
+                gvar = new GlobalVariable(*module->rep,
+                                          classInstType,
+                                          true, // is constant
+                                          GlobalValue::ExternalLinkage,
+                                          0, // initializer: null for externs
+                                          getFullName() + ":body"
+                                          );
+            }
         }
 
         classInst = gvar;
@@ -182,13 +190,14 @@ GlobalVariable *BTypeDef::getClassInstRep(BModuleDef *module) {
 }
 
 GlobalVariable *BTypeDef::createClassInst(BModuleDef *module,
-                               StructType *metaClassStructType,
-                               Constant *classObjVal,
-                               const string &canonicalName
-                               ) {
+                                          StructType *metaClassStructType,
+                                          Constant *classObjVal,
+                                          const string &canonicalName
+                                          ) {
     classInst = new GlobalVariable(*module->rep, metaClassStructType,
                                    true, // is constant
-                                   GlobalValue::ExternalLinkage,
+                                   weak ? GlobalValue::ExternalWeakLinkage :
+                                          GlobalValue::ExternalLinkage,
                                    classObjVal,
                                    canonicalName + ":body"
                                    );
@@ -353,10 +362,13 @@ namespace {
     }
 }
 
-void BTypeDef::createClassImpl(Context &context) {
+GlobalVariable *BTypeDef::createClassImpl(Context &context) {
 
     LLVMContext &lctx = getGlobalContext();
     LLVMBuilder &llvmBuilder = dynamic_cast<LLVMBuilder &>(context.builder);
+
+    GlobalValue::LinkageTypes linkage =
+        weak ? GlobalValue::ExternalWeakLinkage : GlobalValue::ExternalLinkage;
 
     // in situations where we haven't defined the class body yet, create a
     // fake class containing the parents so we can compute the base class
@@ -411,7 +423,7 @@ void BTypeDef::createClassImpl(Context &context) {
         new GlobalVariable(*llvmBuilder.module,
                            nameInit->getType(),
                            true, // is constant
-                           GlobalValue::ExternalLinkage,
+                           linkage,
                            nameInit,
                            canonicalName + ":name"
                            );
@@ -430,7 +442,7 @@ void BTypeDef::createClassImpl(Context &context) {
 
         // get the class body global variable
         Constant *baseClassPtr =
-            base->getClassInstRep(llvmBuilder.moduleDef.get());
+            base->getClassInstRep(context, llvmBuilder.moduleDef.get());
 
         // 1) if the base class is Class, just use the pointer
         // 2) if it's Class[BaseName], GEP our way into the base class
@@ -453,7 +465,7 @@ void BTypeDef::createClassImpl(Context &context) {
         new GlobalVariable(*llvmBuilder.module,
                            baseArrayType,
                            true, // is constant
-                           GlobalValue::ExternalLinkage,
+                           linkage,
                            baseArrayInit,
                            canonicalName +  ":bases"
                            );
@@ -472,7 +484,7 @@ void BTypeDef::createClassImpl(Context &context) {
             new GlobalVariable(*llvmBuilder.module,
                                ArrayType::get(intzType, parents.size()),
                                true, // is constant
-                               GlobalValue::ExternalLinkage,
+                               linkage,
                                NULL, // initializer, filled in later.
                                canonicalName +  ":offsets"
                                );
@@ -498,7 +510,7 @@ void BTypeDef::createClassImpl(Context &context) {
             new GlobalVariable(*llvmBuilder.module,
                                voidptrArrayType,
                                true, // is constant
-                               GlobalValue::ExternalLinkage,
+                               linkage,
                                NULL, // initializer, filled in later.
                                canonicalName + ":vtables"
                                );
@@ -559,7 +571,7 @@ void BTypeDef::createClassImpl(Context &context) {
         classInstPtr =
             new GlobalVariable(*llvmBuilder.module, metaClassPtrType,
                                true, // is constant
-                               GlobalVariable::ExternalLinkage,
+                               linkage,
                                classInst,
                                canonicalName
                                );
@@ -568,5 +580,12 @@ void BTypeDef::createClassImpl(Context &context) {
         classInstPtr->setInitializer(classInst);
 
     // store the impl object in the class
-    impl = new BGlobalVarDefImpl(classInstPtr, llvmBuilder.moduleDef->repId);
+    impl = weak ? new BWeakClassVarDefImpl(classInstPtr,
+                                           llvmBuilder.moduleDef->repId,
+                                           this
+                                           ) :
+                  new BGlobalVarDefImpl(classInstPtr,
+                                        llvmBuilder.moduleDef->repId
+                                        );
+    return classInstPtr;
 }

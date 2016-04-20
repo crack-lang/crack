@@ -223,7 +223,8 @@ class ModelBuilder : public builder::Builder {
         }
 
         virtual model::TypeDefPtr createGenericClass(model::Context &context,
-                                                     const std::string &name
+                                                     const std::string &name,
+                                                     bool weak
                                                      );
 
         virtual model::TypeDefPtr emitBeginClass(
