@@ -119,6 +119,7 @@ struct DataSet {
             metaType.get(),
             new TypeDef(0, "BuilderType")
         );
+        builtins->addDef(genericOvldType.get());
         ovld->type = new OverloadType(metaType.get(),
                                       genericOvldType.get(),
                                       builder->createGenericClass(*context,

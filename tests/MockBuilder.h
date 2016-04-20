@@ -228,7 +228,8 @@ class MockBuilder : public builder::Builder {
 
         virtual model::TypeDefPtr createGenericClass(
             model::Context &context,
-            const std::string &name
+            const std::string &name,
+            bool weak = false
         ) {
             return new model::TypeDef(context.construct->classType.get(),
                                       name,

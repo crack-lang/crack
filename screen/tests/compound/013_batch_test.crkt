@@ -456,6 +456,30 @@ test.run();
 test.rmCacheFiles('.main.*');
 test.run();
 
+# builtin generic linkage
+# This verifies that builtin generics have weak linkage - that they can be
+# used independently from multiple modules.
+test.mod('mod1', "
+    void f(int i, byteptr b, float h) {
+        puts('builtin generic linkage, mod1');
+        puts(typeof(f).name);
+        puts(array[float].name);
+    }
+    ");
+test.mod('mod2', "
+    void g(int i, byteptr b, float h) {
+        puts('builtin generic linkage, mod2');
+        puts(typeof(g).name);
+        puts(array[float].name);
+    }
+    ");
+test.main('import mod1 f; import mod2 g; f(1, "x", 1.0); g(1, "x", 1.0)');
+test.run();
+test.main('import mod1 f; f(1, "x", 1.0)');
+test.run();
+test.main('import mod2 g; g(1, "x", 1.0)');
+test.run();
+
 %%REXPECT%%
 out: alias
 terminated: success
@@ -580,5 +604,20 @@ terminated: success
 out: GenericClassImpl
 terminated: success
 out: GenericClassImpl
+terminated: success
+out: builtin generic linkage, mod1
+out: Overload\[.builtin.function\[.builtin.void,.builtin.int,.builtin.byteptr,.builtin.float\]\]
+out: array\[.builtin.float\]
+out: builtin generic linkage, mod2
+out: Overload\[.builtin.function\[.builtin.void,.builtin.int,.builtin.byteptr,.builtin.float\]\]
+out: array\[.builtin.float\]
+terminated: success
+out: builtin generic linkage, mod1
+out: Overload\[.builtin.function\[.builtin.void,.builtin.int,.builtin.byteptr,.builtin.float\]\]
+out: array\[.builtin.float\]
+terminated: success
+out: builtin generic linkage, mod2
+out: Overload\[.builtin.function\[.builtin.void,.builtin.int,.builtin.byteptr,.builtin.float\]\]
+out: array\[.builtin.float\]
 terminated: success
 %%STDIN%%

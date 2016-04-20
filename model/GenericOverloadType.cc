@@ -61,8 +61,12 @@ OverloadTypePtr GenericOverloadType::getSpecialization(Context &context,
         }
         tmp << "]";
 
+        // Create a module context wrapping the builtin module.
+        ContextPtr tempCtx = context.createSubContext(Context::module,
+                                                      getOwner()
+                                                      );
         result = new OverloadType(type.get(), this,
-                                  context.builder.createGenericClass(context,
+                                  context.builder.createGenericClass(*tempCtx,
                                                                      tmp.str()
                                                                      ).get()
                                   );
@@ -83,6 +87,8 @@ OverloadTypePtr GenericOverloadType::getSpecialization(Context &context,
             result->types[(*iter)->getFullName()] = *iter;
             result->addOperCall(context, iter->get());
         }
+
+        result->setOwner(getOwner());
     }
 
     return result;

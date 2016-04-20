@@ -294,7 +294,8 @@ FuncDefPtr ModelBuilder::emitBeginFunc(
 }
 
 TypeDefPtr ModelBuilder::createGenericClass(Context &context,
-                                            const string &name
+                                            const string &name,
+                                            bool weak
                                             ) {
     return createClass(context, name, false);
 }
@@ -425,6 +426,12 @@ namespace {
             if (def->doc.size())
                 cout << "/**\n" << def->doc << "\n*/" << endl;
             if (TypeDef *type = TypeDefPtr::cast(def)) {
+
+                // For some reason Overload type meta classes are showing up
+                // in the module namespaces.  Filter these out.
+                if (type->meta)
+                    return;
+
                 if (type->abstract)
                     cout << "@abstract ";
                 cout << "class " << type->name << " : ";

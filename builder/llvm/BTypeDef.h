@@ -52,6 +52,11 @@ public:
         IncompleteChildVec;
     IncompleteChildVec incompleteChildren;
 
+    // If true, the class implementation globals have weak linkage.  This is
+    // used by builtin generics, which may be generated in any module and
+    // therefore must be generated wherever they are used.
+    bool weak;
+
     // mapping from base types to their vtables.
     typedef std::map<BTypeDef *, llvm::Constant *> VTableMap;
     VTableMap vtables;
@@ -68,6 +73,7 @@ public:
         classInstModuleId(-1),
         rep(rep),
         nextVTableSlot(nextVTableSlot),
+        weak(false),
         firstVTableType(0) {
     }
 
@@ -104,7 +110,9 @@ public:
      * Get the global variable, creating an extern instance in the module if
      * it lives in another module.
      */
-    llvm::GlobalVariable *getClassInstRep(BModuleDef *module);
+    llvm::GlobalVariable *getClassInstRep(model::Context &context,
+                                          BModuleDef *module
+                                          );
 
     /**
      * Create the class instance global.  This should only be called for the
@@ -163,9 +171,10 @@ public:
     int countAncestors() const;
 
     /**
-     * Create the class implementation global variables.
+     * Create the class implementation global variables.  Returns the class
+     * implementation instance variable.
      */
-    void createClassImpl(model::Context &context);
+    llvm::GlobalVariable *createClassImpl(model::Context &context);
 
     static BTypeDef *maybeGet(model::TypeDef *type);
 
