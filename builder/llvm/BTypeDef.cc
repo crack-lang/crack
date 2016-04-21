@@ -199,7 +199,7 @@ GlobalVariable *BTypeDef::createClassInst(BModuleDef *module,
                                           ) {
     classInst = new GlobalVariable(*module->rep, metaClassStructType,
                                    true, // is constant
-                                   weak ? GlobalValue::ExternalWeakLinkage :
+                                   weak ? GlobalValue::WeakAnyLinkage :
                                           GlobalValue::ExternalLinkage,
                                    classObjVal,
                                    canonicalName + ":body"
@@ -373,7 +373,7 @@ GlobalVariable *BTypeDef::createClassImpl(Context &context) {
     LLVMBuilder &llvmBuilder = dynamic_cast<LLVMBuilder &>(context.builder);
 
     GlobalValue::LinkageTypes linkage =
-        weak ? GlobalValue::ExternalWeakLinkage : GlobalValue::ExternalLinkage;
+        weak ? GlobalValue::WeakAnyLinkage : GlobalValue::ExternalLinkage;
 
     // in situations where we haven't defined the class body yet, create a
     // fake class containing the parents so we can compute the base class
