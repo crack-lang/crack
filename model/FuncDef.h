@@ -171,6 +171,11 @@ class FuncDef : public VarDef {
          */
         ExprPtr foldConstants(const std::vector<ExprPtr> &args) const;
         
+        /**
+         * Get the type for the function, creating it if necessary.
+         */
+        TypeDefPtr getFuncType(Context &context);
+
         virtual
         void dump(std::ostream &out, const std::string &prefix = "") const;
         void display(std::ostream &out, const std::string &prefix = "") const;

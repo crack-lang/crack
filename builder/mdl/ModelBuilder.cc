@@ -189,20 +189,6 @@ namespace {
     };
 }
 
-model::TypeDefPtr ModelBuilder::getFuncType(
-    Context &context,
-    TypeDef *returnType,
-    const vector<ArgDefPtr> &args
-) {
-    TypeDef::TypeVecObjPtr paramTypes = new TypeDef::TypeVecObj();
-    paramTypes->push_back(returnType);
-    SPUG_FOR(vector<ArgDefPtr>, arg, args)
-        paramTypes->push_back((*arg)->type.get());
-    return context.construct->functionType->getSpecialization(context,
-                                                              paramTypes.get()
-                                                              );
-}
-
 TypeDefPtr ModelBuilder::createClassForward(Context &context,
                                             const string &name
                                             ) {
@@ -221,7 +207,7 @@ FuncDefPtr ModelBuilder::createFuncForward(Context &context,
     FuncDefPtr result = new ModelFuncDef(flags, name, args.size());
     result->returnType = returnType;
     result->args = args;
-    result->type = getFuncType(context, returnType, args);
+    result->getFuncType(context);
     if (!(flags & FuncDef::abstract))
         result->flags = flags | FuncDef::forward;
     result->ns = context.ns;
@@ -269,7 +255,7 @@ FuncDefPtr ModelBuilder::emitBeginFunc(
     model::FuncDefPtr func = new ModelFuncDef(flags, name, args.size());
     func->args = args;
     func->returnType = returnType;
-    func->type = getFuncType(context, returnType, args);
+    func->getFuncType(context);
 
     addImplToArgs(func->args);
 
