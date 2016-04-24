@@ -2,12 +2,10 @@
 file IO
 %%ARGS%%
 %%FILE%%
-import crack.io cerr, SeekableReader, SeekableWriter, SEEK_CUR, SEEK_SET,
-    SEEK_END;
+import crack.io cerr, SEEK_CUR, SEEK_SET, SEEK_END;
 import crack.fs makePath;
-import crack.lang Buffer, WriteBuffer;
 
-@import crack.ann assert, impl;
+@import crack.ann assert;
 
 path := makePath('/tmp/foo');
 out := path.writer();
@@ -25,30 +23,6 @@ dst := path.reader();
 out.write('ing');
 @assert(dst.seek(0, SEEK_SET) == 0);
 @assert(dst.read(7) == 'testing');
-
-
-# Just defining these to verify that we can implement SeekableReader and
-# SeekableWriter using @impl (they're unusual because of the dual-interface
-# inheritence)
-
-class MyReader @impl SeekableReader {
-    intz seek(intz pos, int whence) {
-        return 0;
-    }
-
-    uint read(WriteBuffer data) {
-        return 0;
-    }
-}
-
-class MyWriter @impl SeekableWriter {
-    intz seek(intz pos, int whence) {
-        return 0;
-    }
-
-    void write(Buffer data) {}
-}
-
 
 cerr `ok\n`;
 %%EXPECT%%
