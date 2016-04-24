@@ -242,7 +242,7 @@ bool OverloadDef::hasExposedFuncs() const {
 void OverloadDef::addFunc(FuncDef *func) {
     if (funcs.empty()) setImpl(func);
     funcs.push_back(func);
-    
+
     // During primitive registration, we may not have a type.
     // XXX need to figure out a way to register these for later fixup.
     if (type)
@@ -250,9 +250,9 @@ void OverloadDef::addFunc(FuncDef *func) {
 }
 
 void OverloadDef::addParent(OverloadDef *parent, bool before) {
-    
+
     // Add all of the types from the parent.
-    type = OverloadTypePtr::rcast(type)->addTypes(parent->funcs);
+    type = OverloadTypePtr::rcast(type)->addTypes(parent->type->genericParms);
 
     // When inserting before, we don't check for intermediates.
     if (before) {

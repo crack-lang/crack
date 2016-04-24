@@ -14,6 +14,7 @@
 #include "spug/Exception.h"
 
 #include "model/BaseMetaClass.h"
+#include "model/GenericOverloadType.h"
 #include "model/InstVarDef.h"
 #include "model/ops.h"
 #include "model/OverloadDef.h"
@@ -97,21 +98,24 @@ namespace {
 
     // Creates a class for a pointer type.  'context' is the context of the
     // new class.
-    TypeDefPtr createClass(Context &context, const string &name) {
+    TypeDefPtr createClass(Context &context, const string &name,
+                           bool addMethods = true) {
         TypeDefPtr metaClass = createMetaClass(context, name);
         TypeDefPtr type = new TypeDef(metaClass.get(), name, true);
         metaClass->meta = type.get();
 
-        FuncDefPtr unsafeCast =
-            newFuncDef(type.get(), FuncDef::noFlags, "unsafeCast", 1);
-        unsafeCast->args[0] = new ArgDef(context.construct->voidptrType.get(),
-                                         "val"
-                                         );
-        context.addDef(unsafeCast.get(), metaClass.get());
-        context.addDef(
-            newVoidPtrOpDef(context.construct->voidptrType.get()).get(),
-            type.get()
-        );
+        if (addMethods) {
+            FuncDefPtr unsafeCast =
+                newFuncDef(type.get(), FuncDef::builtin, "unsafeCast", 1);
+            unsafeCast->args[0] = new ArgDef(context.construct->voidptrType.get(),
+                                            "val"
+                                            );
+            context.addDef(unsafeCast.get(), metaClass.get());
+            context.addDef(
+                newVoidPtrOpDef(context.construct->voidptrType.get()).get(),
+                type.get()
+            );
+        }
         type->defaultInitializer = new NullConst(type.get());
         return type;
     }
@@ -292,7 +296,7 @@ FuncDefPtr ModelBuilder::emitBeginFunc(
 TypeDefPtr ModelBuilder::createGenericClass(Context &context,
                                             const string &name
                                             ) {
-    return createClass(context, name);
+    return createClass(context, name, false);
 }
 
 model::TypeDefPtr ModelBuilder::emitBeginClass(Context &context,
@@ -497,6 +501,14 @@ ModuleDefPtr ModelBuilder::registerPrimFuncs(Context &context) {
 
     // voidptr
     gd->voidptrType = type = typeBuilder.makeType("voidptr");
+
+    GenericOverloadTypePtr ovldType = new GenericOverloadType(
+        classType,
+        typeBuilder.makeType("Overload").get(),
+        context
+    );
+    gd->overloadType = ovldType;
+    context.addDef(ovldType.get(), classType);
 
     // now that we've got a voidptr type, give the class object a cast to it.
     context.addDef(newVoidPtrOpDef(type.get()).get(), classType);

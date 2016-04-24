@@ -35,14 +35,19 @@ GenericOverloadType::GenericOverloadType(TypeDef *metaType,
 
 OverloadTypePtr GenericOverloadType::getSpecialization(TypeVecObj *types) {
     OverloadTypePtr result;
-    if (types)
+
+    // Null types means we want to get the empty Overload.
+    if (types) {
         result = OverloadTypePtr::cast(findSpecialization(types));
+    } else {
+        if (emptyOverload)
+            return emptyOverload;
+
+        // Fall through and create the empty overload.
+        types = new TypeVecObj();
+    }
+
     if (!result) {
-
-        // Create an empty type vec if we didn't get one.
-        if (!types)
-            types = new TypeVecObj();
-
         // Construct the type name.
         ostringstream tmp;
         bool first = true;
@@ -69,19 +74,18 @@ OverloadTypePtr GenericOverloadType::getSpecialization(TypeVecObj *types) {
         result->templateType = this;
         result->defaultInitializer = new NullConst(result.get());
         (*generic)[TypeVecObjKey(types)] = result;
+        if (types->empty())
+            emptyOverload = result;
 
-        // Add "oper call" methods for all of the types.
-        SPUG_FOR(TypeDef::TypeVec, iter, *types)
+        // Add all of the types to the new types map and
+        // add "oper call" methods for all of the types.
+        SPUG_FOR(TypeDef::TypeVec, iter, *types) {
+            result->types[(*iter)->getFullName()] = *iter;
             result->addOperCall(iter->get());
+        }
     }
 
     return result;
-}
-
-namespace {
-    bool nameLessThan(const TypeDefPtr &a, const TypeDefPtr &b) {
-        return a->getFullName() < b->getFullName();
-    }
 }
 
 TypeDefPtr GenericOverloadType::getSpecialization(Context &context,

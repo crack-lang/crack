@@ -30,6 +30,7 @@ class GenericOverloadType : public TypeDef {
     private:
         TypeDefPtr builderType;
         model::ContextPtr context;
+        OverloadTypePtr emptyOverload;
 
     public:
         GenericOverloadType(TypeDef *metaType, TypeDef *builderType,

@@ -1,0 +1,19 @@
+%%TEST%%
+inherited overloads
+%%ARGS%%
+%%FILE%%
+# Verifies that overloads are correcly merged from ancestors
+class A {
+    @static void f() { puts('f() - first'); }
+    class B {
+        @static void f(int i) { puts('f(int) - first'); }
+        @static void g() {
+            puts(typeof(f).name);
+        }
+    }
+}
+
+A.B.g();
+%%EXPECT%%
+Overload[.builtin.function[.builtin.void,.builtin.int], .builtin.function[.builtin.void]]
+%%STDIN%%

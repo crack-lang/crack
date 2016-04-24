@@ -282,7 +282,7 @@ VarDefPtr TypeDef::emitVarDef(Context &container, const std::string &name,
                                    getDisplayName()
                                   )
                         );
-    return container.builder.emitVarDef(container, varType.get(), name, 
+    return container.builder.emitVarDef(container, varType.get(), name,
                                         initializer
                                         );
 }

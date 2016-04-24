@@ -390,7 +390,7 @@ ResultExprPtr FunctionPtrCall::emit(Context &context) {
     LLVMBuilder &builder =
             dynamic_cast<LLVMBuilder &>(context.builder);
 
-    receiver->emit(context)->handleTransient(context);
+    receiver->emit(context, args)->handleTransient(context);
     Value *fptr = builder.lastValue;
 
     // generate a function pointer call by passing on arguments

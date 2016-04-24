@@ -56,6 +56,17 @@ class Expr : public spug::RCBase {
         virtual ResultExprPtr emit(Context &context) = 0;
 
         /**
+         * Emit the expression which should be a function matching the
+         * specified arguments.
+         * This existe to allow emiting overloads correctly.  VarRef
+         * overrides it so that when dereferencing an overload from a pointer
+         * call ("f.oper call(...)") we select the correct function.
+         */
+        virtual ResultExprPtr emit(Context &context,
+                                   std::vector<ExprPtr> &args
+                                   );
+
+        /**
          * Emit the expression for use in a conditional context.
          * This defaults to calling Builder::emitTest().  Builder-derived 
          * classes should override in cases where there is a more appropriate 

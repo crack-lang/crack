@@ -24,6 +24,10 @@ string Expr::getTypeDisplayName() const {
     return type->getDisplayName();
 }
 
+ResultExprPtr Expr::emit(Context &context, vector<ExprPtr> &args) {
+    return emit(context);
+}
+
 void Expr::emitCond(Context &context) {
     context.builder.emitTest(context, this);
 }

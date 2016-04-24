@@ -7,6 +7,7 @@
 
 #include "OverloadType.h"
 
+#include "spug/check.h"
 #include "spug/stlutil.h"
 
 #include "builder/Builder.h"
@@ -33,6 +34,13 @@ OverloadType::OverloadType(TypeDef *metaType, TypeDef *templateType,
         impl = builderType->impl;
 }
 
+string OverloadType::getDisplayName() const {
+    if (genericParms.size() != 1)
+        return VarDef::getDisplayName();
+    else
+        return genericParms[0]->getDisplayName();
+}
+
 TypeDefPtr OverloadType::getVarType() {
     if (genericParms.size() > 1)
         return 0;
@@ -47,8 +55,8 @@ void OverloadType::addOperCall(TypeDef *source) {
         ovld = new OverloadDef("oper call");
 
         // XXX this ends up being a recursive definition, we're going to need
-        // to deal with that.
-        ovld->type = 0;
+        // to deal with that.  By setting it to "this"?
+        ovld->type = this;
 
         // We don't have to collect ancestors, there are none.  Just add the
         // overload.
@@ -58,14 +66,16 @@ void OverloadType::addOperCall(TypeDef *source) {
     // Add the "oper call" methods from funcType.
     OverloadDefPtr operCall = source->lookUp("oper call");
     if (!operCall)
-        // XXX builtins_need_oper_call - somehow we're getting in this code
-        // for for classes.
+        // The code currently uses the return type as the function type for a
+        // lot of builtins, so as a result this function can get called with a
+        // class without an "oper call" which we should ignore.
+        // builtins_need_oper_call
         return;
 
-    for(OverloadDef::FuncList::iterator iter = operCall->beginTopFuncs();
-        iter != operCall->endTopFuncs();
-        ++iter
-        )
+    for (OverloadDef::FuncList::iterator iter = operCall->beginTopFuncs();
+         iter != operCall->endTopFuncs();
+         ++iter
+         )
         ovld->addFunc(iter->get());
 }
 
@@ -88,7 +98,7 @@ OverloadTypePtr OverloadType::addType(TypeDef *funcType) {
     typeVec.reserve(types.size() + 1);
     SPUG_FOR(TypeMap, i, types) {
         // Insert the new type at the appropriate location.
-        if (name > i->first) {
+        if (funcType && name < i->first) {
             typeVec.push_back(funcType);
             funcType = 0;
         }
@@ -105,13 +115,13 @@ OverloadTypePtr OverloadType::addType(TypeDef *funcType) {
     );
 }
 
-OverloadTypePtr OverloadType::addTypes(const list<FuncDefPtr> &funcs) {
+OverloadTypePtr OverloadType::addTypes(const TypeDef::TypeVec &newTypes) {
 
     // Put all of the new types into an array.
     TypeVec typeVec;
-    SPUG_FOR(list<FuncDefPtr>, i, funcs) {
-        if ((*i)->type && !spug::contains(types, (*i)->type->getFullName()))
-            typeVec.push_back((*i)->type.get());
+    SPUG_FOR(TypeVec, i, newTypes) {
+        if (!spug::contains(types, (*i)->getFullName()))
+            typeVec.push_back((*i).get());
     }
 
     // Quit if we've got nothing to add.

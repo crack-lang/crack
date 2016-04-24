@@ -1,0 +1,32 @@
+%%TEST%%
+overload type order
+%%ARGS%%
+%%FILE%%
+Class ovldCls;
+if (1) {
+    void f() { puts('first f()'); }
+    if (1) {
+        void f(int i) { puts('first f(int)'); }
+        f();
+        f(100);
+        ovldCls = typeof(f);
+    }
+}
+
+if (1) {
+    void f(int i) { puts('second f(int)'); }
+    if (1) {
+        void f() { puts('second f()'); }
+        f();
+        f(100);
+        Class newType = typeof(f);
+        if (!(newType is ovldCls))
+            puts('FAILED: new type created for second overload!');
+    }
+}
+%%EXPECT%%
+first f()
+first f(int)
+second f()
+second f(int)
+%%STDIN%%

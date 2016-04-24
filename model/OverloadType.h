@@ -20,24 +20,30 @@ SPUG_RCPTR(OverloadType);
 
 /**
  * Overload types aggregate the types of all of the functions contained in an
- * overload.  They should be treated as immutable after construction (the
- * freeze() method enforces this).  When an overload adds a new function, it
- * creates a new type.  This preserves all of the normal expectations of types
- * (that they can be compared by identity).  That said, an OverloadType can
- * share the function types of the overloads that it is based on.
+ * overload.  They should be treated as immutable after construction.  When
+ * an overload adds a new function, it creates a new type.  This preserves
+ * all of the normal expectations of types (that they can be compared by
+ * identity).  That said, an OverloadType can share the function types of the
+ * overloads that it is based on.
  */
 class OverloadType : public TypeDef {
     private:
 
         TypeDefPtr builderType;
 
+    public:
         // The function types that this overload represents.
         typedef std::map<std::string, TypeDefPtr> TypeMap;
         TypeMap types;
 
-    public:
         OverloadType(TypeDef *metaType, TypeDef *templateType,
                      TypeDef *builderType);
+
+        /**
+         * Overrides VarDef to show only the first function type for overloads
+         * corresponding to a single function.
+         */
+        virtual std::string getDisplayName() const;
 
         TypeDefPtr getVarType();
 
@@ -54,10 +60,10 @@ class OverloadType : public TypeDef {
         OverloadTypePtr addType(TypeDef *funcType);
 
         /**
-         * Add all types in the list to the overload def type and returns a
+         * Add all types in the vector to the overload def type and returns a
          * new OverloadType for the resulting set of types.
          */
-        OverloadTypePtr addTypes(const std::list<FuncDefPtr> &funcs);
+        OverloadTypePtr addTypes(const TypeVec &newTypes);
 
         /**
          * Returns the builder type for the type.
