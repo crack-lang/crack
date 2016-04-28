@@ -75,7 +75,6 @@ TypeDefPtr FunctionTypeDef::getSpecialization(Context &context,
                          getSpecializedName(types, false),
                          llvmFunPtrType
                          );
-    tempSpec->weak = true;
     tempSpec->setOwner(this->owner);
     tempSpec->defaultInitializer = new NullConst(tempSpec.get());
 
@@ -91,7 +90,7 @@ TypeDefPtr FunctionTypeDef::getSpecialization(Context &context,
     // create the implementation (this can be called before the meta-class is
     // initialized, so check for it and defer if it is)
     if (context.construct->classType->complete) {
-        tempSpec->createClassImpl(context);
+        createClassImpl(context, tempSpec.get());
         tempSpec->createEmptyOffsetsInitializer(context);
     } else {
         b.deferMetaClass.push_back(tempSpec);

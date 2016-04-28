@@ -72,17 +72,14 @@ BasicBlock *BBuilderContextData::getUnwindBlock(Function *func) {
 }
 
 void BBuilderContextData::CatchData::populateClassImpls(
-    Context &context,
     vector<Value *> &values,
     BModuleDef *module
 ) {
     for (int i = 0; i < catches.size(); ++i)
-        values.push_back(catches[i].type->getClassInstRep(context, module));
+        values.push_back(catches[i].type->getClassInstRep(module));
 }
 
-void BBuilderContextData::CatchData::fixAllSelectors(Context &context,
-                                                     BModuleDef *module
-                                                     ) {
+void BBuilderContextData::CatchData::fixAllSelectors(BModuleDef *module) {
     // fix all of the incomplete selector functions now that we have all of
     // the catch clauses.
     for (vector<IncompleteCatchSelector *>::iterator iter = selectors.begin();
@@ -91,7 +88,7 @@ void BBuilderContextData::CatchData::fixAllSelectors(Context &context,
         ) {
         // get all of the class implementation objects into a Value vector
         vector<Value *> typeImpls;
-        populateClassImpls(context, typeImpls, module);
+        populateClassImpls(typeImpls, module);
 
         // fix the incomplete selector
         (*iter)->typeImpls = &typeImpls;
@@ -125,6 +122,6 @@ void BBuilderContextData::CatchData::fixAllSelectors(Context &context,
 
 
         // fix all of the selectors in the child
-        child.fixAllSelectors(context, module);
+        child.fixAllSelectors(module);
     }
 }

@@ -189,6 +189,20 @@ namespace {
     };
 }
 
+model::TypeDefPtr ModelBuilder::getFuncType(
+    Context &context,
+    TypeDef *returnType,
+    const vector<ArgDefPtr> &args
+) {
+    TypeDef::TypeVecObjPtr paramTypes = new TypeDef::TypeVecObj();
+    paramTypes->push_back(returnType);
+    SPUG_FOR(vector<ArgDefPtr>, arg, args)
+        paramTypes->push_back((*arg)->type.get());
+    return context.construct->functionType->getSpecialization(context,
+                                                              paramTypes.get()
+                                                              );
+}
+
 TypeDefPtr ModelBuilder::createClassForward(Context &context,
                                             const string &name
                                             ) {
@@ -207,7 +221,7 @@ FuncDefPtr ModelBuilder::createFuncForward(Context &context,
     FuncDefPtr result = new ModelFuncDef(flags, name, args.size());
     result->returnType = returnType;
     result->args = args;
-    result->getFuncType(context);
+    result->type = getFuncType(context, returnType, args);
     if (!(flags & FuncDef::abstract))
         result->flags = flags | FuncDef::forward;
     result->ns = context.ns;
@@ -255,7 +269,7 @@ FuncDefPtr ModelBuilder::emitBeginFunc(
     model::FuncDefPtr func = new ModelFuncDef(flags, name, args.size());
     func->args = args;
     func->returnType = returnType;
-    func->getFuncType(context);
+    func->type = getFuncType(context, returnType, args);
 
     addImplToArgs(func->args);
 
@@ -280,8 +294,7 @@ FuncDefPtr ModelBuilder::emitBeginFunc(
 }
 
 TypeDefPtr ModelBuilder::createGenericClass(Context &context,
-                                            const string &name,
-                                            bool weak
+                                            const string &name
                                             ) {
     return createClass(context, name, false);
 }
@@ -412,12 +425,6 @@ namespace {
             if (def->doc.size())
                 cout << "/**\n" << def->doc << "\n*/" << endl;
             if (TypeDef *type = TypeDefPtr::cast(def)) {
-
-                // For some reason Overload type meta classes are showing up
-                // in the module namespaces.  Filter these out.
-                if (type->meta)
-                    return;
-
                 if (type->abstract)
                     cout << "@abstract ";
                 cout << "class " << type->name << " : ";

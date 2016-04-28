@@ -245,7 +245,6 @@ void OverloadDef::addFunc(Context &context, FuncDef *func) {
 
     // During primitive registration, we may not have a type.
     // XXX need to figure out a way to register these for later fixup.
-    // builtins_need_oper_call
     if (type)
         type = OverloadTypePtr::rcast(type)->addType(context, func->type.get());
 }

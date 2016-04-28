@@ -894,7 +894,6 @@ ExprPtr Parser::parseDefine(const Token &ident) {
    // upon entry into the loop and the rvalue doesn't seem to get
    // re-evaluated.
    VarDefPtr var = context->emitVarDef(val->type.get(), ident, 0);
-   var->doc = consumeDocs();
    return createAssign(0, ident, var.get(), val.get());
 }
 
@@ -2317,8 +2316,7 @@ void Parser::parseConstDef() {
          
          // parse the initializer
          ExprPtr expr = parseInitializer(type.get(), varName.getData());
-         context->emitVarDef(type.get(), varName, expr.get(), true)->doc =
-            consumeDocs();
+         context->emitVarDef(type.get(), varName, expr.get(), true);
          
          // see if there are more constants in this definition.
          tok2 = getToken();
@@ -2354,8 +2352,7 @@ void Parser::parseConstDef() {
    // Make sure the value isn't an external override.
    checkForExternalOverload(expr.get());
    
-   context->emitVarDef(expr->type.get(), tok, expr.get(), true)->doc =
-      consumeDocs();
+   context->emitVarDef(expr->type.get(), tok, expr.get(), true);
 }
 
 ContextPtr Parser::parseIfClause() {
@@ -3408,8 +3405,8 @@ Parser::Parser(Toker &toker, model::Context *context) :
 void Parser::parse() {
    state = st_base;
    
-   // Check for a "module;" statement, or the first import statement, either 
-   // of which consume all doc-comments and adds them to the module.
+   // Check for a "module;" statement, which consumes all doc-comments and 
+   // adds them to the module.
    Token tok = getToken();
    if (tok.isModule()) {
       tok = getToken();
@@ -3417,11 +3414,9 @@ void Parser::parse() {
          error(tok, "Semicolon expected after module token.");
       context->ns->getModule()->doc = consumeDocs();
    } else {
-      if (tok.isImport())
-         context->ns->getModule()->doc = consumeDocs();
       toker.putBack(tok);
    }
-
+   
    // parse an un-nested block
    parseBlock(false, noCallbacks);
 }

@@ -40,7 +40,7 @@ class LLVMLinkerBuilder : public LLVMBuilder {
                                                       const std::string &name,
                                                       model::ModuleDef *owner
                                                       );
-        virtual void fixClassInstRep(model::Context &context, BTypeDef *type);
+        virtual void fixClassInstRep(BTypeDef *type);
 
     public:
         LLVMLinkerBuilder(LLVMBuilder *root = 0) :

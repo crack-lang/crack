@@ -119,7 +119,9 @@ void FuncBuilder::finish(bool storeDef) {
     }
 
     // get or create the type registered for the function
-    BTypeDefPtr crkFuncType = funcDef->getFuncType(context);
+    BTypeDefPtr crkFuncType = builder.getFuncType(context, funcDef.get(),
+                                                  llvmFuncType
+                                                  );
     funcDef->type = crkFuncType;
 
     if (storeDef)

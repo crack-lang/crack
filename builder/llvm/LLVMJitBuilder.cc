@@ -158,8 +158,8 @@ void LLVMJitBuilder::mergeModule(ModuleDef *moduleDef,
         fixupAfterMerge(BModuleDefPtr::rcast(*i), merger->getTarget());
 }
 
-void LLVMJitBuilder::fixClassInstRep(Context &context, BTypeDef *type) {
-    type->getClassInstRep(context, moduleDef.get());
+void LLVMJitBuilder::fixClassInstRep(BTypeDef *type) {
+    type->getClassInstRep(moduleDef.get());
 }
 
 BModuleDef *LLVMJitBuilder::instantiateModule(model::Context &context,
@@ -425,16 +425,10 @@ void LLVMJitBuilder::registerDef(Context &context, VarDef *varDef) {
     GlobalValue *rep;
     if (varDef->impl && (bgbl = BGlobalVarDefImplPtr::rcast(varDef->impl)))
         // global
-        GlobalValue *rep = dyn_cast<GlobalValue>(bgbl->getRep(context,
-                                                              builder
-                                                              )
-                                                 );
+        GlobalValue *rep = dyn_cast<GlobalValue>(bgbl->getRep(builder));
     else if (fd = BFuncDefPtr::cast(varDef))
         // funcdef
-        GlobalValue *rep = dyn_cast<GlobalValue>(bgbl->getRep(context,
-                                                              builder
-                                                              )
-                                                 );
+        GlobalValue *rep = dyn_cast<GlobalValue>(bgbl->getRep(builder));
     else
         //assert(0 && "registerDef: unknown varDef type");
         // this happens in a call from parser (not cacher) on e.g. classes,

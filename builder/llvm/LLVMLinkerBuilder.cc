@@ -292,9 +292,9 @@ void LLVMLinkerBuilder::engineFinishModule(BModuleDef *moduleDef) {
     addModule(moduleDef);
 }
 
-void LLVMLinkerBuilder::fixClassInstRep(Context &context, BTypeDef *type) {
+void LLVMLinkerBuilder::fixClassInstRep(BTypeDef *type) {
     // Not sure we ever need to do this since classInst is no longer public.
-    type->getClassInstRep(context, moduleDef.get());
+    type->getClassInstRep(moduleDef.get());
 }
 
 model::ModuleDefPtr LLVMLinkerBuilder::materializeModule(

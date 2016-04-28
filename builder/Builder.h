@@ -261,14 +261,9 @@ class Builder : public spug::RCBase {
 
         /**
          * Create a generic class.
-         * @param weak If true, the class should use a "weakly linked"
-         *             instance, which is created in every module in which it
-         *             is used as a weakly linked symbol.  This is appropriate
-         *             for types that are generated in the .builtin namespace.
          */
         virtual model::TypeDefPtr createGenericClass(model::Context &context,
-                                                     const std::string &name,
-                                                     bool weak = false
+                                                     const std::string &name
                                                      ) = 0;
 
         /**

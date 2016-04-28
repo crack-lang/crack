@@ -204,38 +204,7 @@ bool FuncDef::isAliasIn(const OverloadDef &overload) const {
 ExprPtr FuncDef::foldConstants(const vector<ExprPtr> &args) const {
     return 0;
 }
-
-TypeDefPtr FuncDef::getFuncType(Context &context) {
-    if (type)
-        return type;
-
-    // Get the function type, leave if it's null.
-    TypeDefPtr functionType = context.construct->functionType;
-    if (!functionType)
-        return 0;
     
-    // we have function, specialize based on return and argument types
-    TypeDef::TypeVecObjPtr types = new TypeDef::TypeVecObj();
-
-    // push return
-    types->push_back(returnType);
-
-    // if there is a receiver, push that
-    TypeDefPtr rcvrType = receiverType;
-    if (rcvrType)
-        types->push_back(rcvrType.get());
-
-    // now args
-    for (FuncDef::ArgVec::iterator arg = args.begin();
-         arg != args.end();
-         ++arg
-         ) {
-        types->push_back((*arg)->type.get());
-    }
-
-    type = functionType->getSpecialization(context, types.get());
-    return type;
-}
 
 void FuncDef::dump(ostream &out, const string &prefix) const {
     out << prefix << returnType->getFullName() << " " << getFullName() <<

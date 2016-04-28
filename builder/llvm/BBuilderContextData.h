@@ -71,8 +71,7 @@ public:
          * Populate the 'values' array with the implementations of the types
          * in 'types'.
          */
-        void populateClassImpls(model::Context &context,
-                                std::vector<llvm::Value *> &values,
+        void populateClassImpls(std::vector<llvm::Value *> &values,
                                 BModuleDef *module
                                 );
 
@@ -81,7 +80,7 @@ public:
          * implementation objects and calling Incomplete::fix() on them to
          * convert them to calls to llvm.eh.selector().
          */
-        void fixAllSelectors(model::Context &context, BModuleDef *module);
+        void fixAllSelectors(BModuleDef *module);
     };
 
     model::Context *context;

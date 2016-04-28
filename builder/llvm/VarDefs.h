@@ -69,9 +69,7 @@ public:
 
     virtual void emitAddr(model::Context &context, model::VarRef *var);
 
-    virtual llvm::Value *getRep(model::Context &context,
-                                LLVMBuilder &builder
-                                ) = 0;
+    virtual llvm::Value *getRep(LLVMBuilder &builder) = 0;
 
     virtual bool hasInstSlot() const;
     virtual int getInstSlot() const;
@@ -85,9 +83,7 @@ public:
 
     BHeapVarDefImpl(llvm::Value *rep) : rep(rep) {}
 
-    virtual llvm::Value *getRep(model::Context &context,
-                                LLVMBuilder &builder
-                                ) {
+    virtual llvm::Value *getRep(LLVMBuilder &builder) {
         return rep;
     }
 };
@@ -97,21 +93,16 @@ class BGlobalVarDefImpl : public BMemVarDefImpl {
 private:
     // global var rep's are module specific, this variable points to the
     // value for the module most recently evaluated by getRep().
+    llvm::GlobalVariable *rep;
     llvm::PointerType *llvmType;
     std::string name;
     bool constant;
-
-protected:
-    llvm::GlobalVariable *rep;
     int repModuleId;
-
 public:
 
     BGlobalVarDefImpl(llvm::GlobalVariable *rep, int repModuleId);
 
-    virtual llvm::Value *getRep(model::Context &context,
-                                LLVMBuilder &builder
-                                );
+    virtual llvm::Value *getRep(LLVMBuilder &builder);
 
     llvm::PointerType *getLLVMType() const {
         return llvmType;
@@ -126,22 +117,6 @@ public:
     }
 
     void fixModule(llvm::Module *oldMod, llvm::Module *newMod);
-};
-
-// Weak class implementation.  Weak classes are unusual in that their
-// instances are generated in any module that uses them, so they are defined
-// as weak external references.
-SPUG_RCPTR(BWeakClassVarDefImpl);
-class BWeakClassVarDefImpl : public BGlobalVarDefImpl {
-private:
-    // The class instance this is associated with.
-    BTypeDef *inst;
-
-public:
-    BWeakClassVarDefImpl(llvm::GlobalVariable *rep, int repModuleId,
-                         BTypeDef *inst
-                         );
-    virtual llvm::Value *getRep(model::Context &context, LLVMBuilder &builder);
 };
 
 // these are actually only used for function implementations.

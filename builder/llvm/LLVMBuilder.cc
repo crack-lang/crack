@@ -217,7 +217,7 @@ namespace {
         context.construct->registerDef(metaType.get());
         metaType->meta = type;
         BTypeDef *llvmType = BTypeDef::get(type);
-        llvmType->createClassImpl(context);
+        createClassImpl(context, llvmType);
         llvmType->createEmptyOffsetsInitializer(context);
     }
 
@@ -578,6 +578,59 @@ GlobalVariable *LLVMBuilder::getModVar(BGlobalVarDefImpl *varDefImpl) {
     }
 
     return global;
+}
+
+BTypeDefPtr LLVMBuilder::getFuncType(Context &context,
+                                     FuncDef *funcDef,
+                                     llvm::Type *llvmFuncType
+                                     ) {
+
+    // create a new type object and store it
+    TypeDefPtr function = context.construct->functionType.get();
+
+    if (!function) {
+        // there is no function in this context XXX this should create a
+        // deferred entry.
+        BTypeDefPtr crkFuncType = new BTypeDef(context.construct->classType.get(),
+                                               "",
+                                               llvmFuncType
+                                               );
+
+        // Give it an "oper to .builtin.voidptr" method.
+        context.addDef(
+                    new VoidPtrOpDef(context.construct->voidptrType.get()),
+                    crkFuncType.get()
+                    );
+
+        return crkFuncType.get();
+    }
+
+    // we have function, specialize based on return and argument types
+    TypeDef::TypeVecObjPtr args = new TypeDef::TypeVecObj();
+
+    // push return
+    args->push_back(funcDef->returnType);
+
+    // if there is a receiver, push that
+    TypeDefPtr rcvrType = funcDef->receiverType;
+    if (rcvrType)
+        args->push_back(rcvrType.get());
+
+    // now args
+    for (FuncDef::ArgVec::iterator arg = funcDef->args.begin();
+         arg != funcDef->args.end();
+         ++arg
+         ) {
+        args->push_back((*arg)->type.get());
+    }
+
+    BTypeDefPtr specFuncType =
+        BTypeDef::get(function->getSpecialization(context, args.get()));
+
+    specFuncType->defaultInitializer = new NullConst(specFuncType.get());
+
+    return specFuncType.get();
+
 }
 
 BHeapVarDefImplPtr LLVMBuilder::createLocalVar(BTypeDef *tp,
@@ -1301,7 +1354,7 @@ BasicBlock *LLVMBuilder::createLandingPad(
     // result in it.
     BMemVarDefImpl *exStructImpl =
         BMemVarDefImplPtr::rcast(exStructVar->impl);
-    b.CreateStore(exStruct, exStructImpl->getRep(context, *this));
+    b.CreateStore(exStruct, exStructImpl->getRep(*this));
 
     b.CreateBr(next);
 
@@ -1377,7 +1430,7 @@ ExprPtr LLVMBuilder::emitCatch(Context &context,
 
     // store the type and the catch block for later fixup
     BTypeDef *btype = BTypeDef::get(catchType);
-    fixClassInstRep(context, btype);
+    fixClassInstRep(btype);
     cdata->catches.push_back(
         BBuilderContextData::CatchBranch(btype, catchBlock)
     );
@@ -1428,7 +1481,7 @@ void LLVMBuilder::emitEndTry(model::Context &context,
         enclosingCData->nested.push_back(cdata);
 
     } else {
-        cdata->fixAllSelectors(context, moduleDef.get());
+        cdata->fixAllSelectors(moduleDef.get());
     }
 }
 
@@ -1744,8 +1797,7 @@ FuncDefPtr LLVMBuilder::createExternFuncCommon(Context &context,
 }
 
 TypeDefPtr LLVMBuilder::createGenericClass(Context &context,
-                                           const string &name,
-                                           bool weak
+                                           const string &name
                                            ) {
     if (!BTypeDef::get(context.construct->classType)->impl)
         return 0;
@@ -1754,12 +1806,6 @@ TypeDefPtr LLVMBuilder::createGenericClass(Context &context,
                                       /* rep */ 0,
                                       true
                                       );
-
-    if (weak) {
-        result->setOwner(context.ns.get());
-        result->weak = true;
-    }
-
     {
         // createClassImpl() needs to be run in a class context, so we create
         // one.
@@ -1768,12 +1814,7 @@ TypeDefPtr LLVMBuilder::createGenericClass(Context &context,
                                                        );
         BTypeDefPtr metaType = createMetaClass(*classCtx, name);
         result->type = metaType;
-
-        // Create a class implementation unless this is a weak class - weak
-        // classes will have their instances generated when they are used.
-        if (!weak)
-            result->createClassImpl(*classCtx);
-
+        createClassImpl(*classCtx, result.get());
         result->complete = true;
         result->fixIncompletes(*classCtx);
     }
@@ -1825,7 +1866,7 @@ TypeDefPtr LLVMBuilder::emitBeginClass(Context &context,
     }
 
     // create the class implementation.
-    type->createClassImpl(context);
+    createClassImpl(context, type.get());
 
     // make the type the namespace of the context
     context.ns = type;
@@ -2299,7 +2340,7 @@ FuncDefPtr LLVMBuilder::materializeFunc(Context &context, const string &name,
 
     // Set the type and impl, we have to do this after setting the rep because that's
     // where the LLVM type is assigned.
-    result->type = result->getFuncType(context);
+    result->type = getFuncType(context, result.get(), result->getLLVMFuncType());
     result->impl = new BConstDefImpl(result.get(), result->getFuncRep(*this));
     return result;
 }
@@ -3175,7 +3216,7 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
     // implementation object for it.
     context.addDef(new IsOpDef(classType, boolType));
     finishClassType(context, classType);
-    classType->createClassImpl(context);
+    createClassImpl(context, classType);
 
     // back fill the meta-class for the types defined so far.  We create a
     // bogus context for them because functions called by fixMeta() expect to
@@ -3210,7 +3251,7 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
                      );
     vtableBaseType->hasVTable = true;
     vtableBaseType->defaultInitializer = new NullConst(vtableBaseType);
-    vtableBaseType->createClassImpl(context);
+    createClassImpl(context, vtableBaseType);
     metaType->meta = vtableBaseType;
     context.addDef(vtableBaseType);
     context.construct->registerDef(vtableBaseType);

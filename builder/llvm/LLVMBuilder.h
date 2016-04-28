@@ -212,9 +212,7 @@ class LLVMBuilder : public Builder {
         /**
          * Insures that the class body global is present in the current module.
          */
-        virtual void fixClassInstRep(model::Context &context,
-                                     BTypeDef *type
-                                     ) = 0;
+        virtual void fixClassInstRep(BTypeDef *type) = 0;
 
         // The module id to use for the next module.  This is a monotonically
         // increasing value which is used to verify that the rep of a def is
@@ -276,6 +274,10 @@ class LLVMBuilder : public Builder {
 
         llvm::GlobalVariable *getModVar(BGlobalVarDefImpl *varDef);
 
+        BTypeDefPtr getFuncType(model::Context &context,
+                                model::FuncDef *funcDef,
+                                llvm::Type *llvmFuncType
+                                );
         BHeapVarDefImplPtr createLocalVar(BTypeDef *tp,
                                           llvm::Value *&var,
                                           const std::string &name,
@@ -473,8 +475,7 @@ class LLVMBuilder : public Builder {
                              );
 
         virtual model::TypeDefPtr createGenericClass(model::Context &context,
-                                                     const std::string &name,
-                                                     bool weak
+                                                     const std::string &name
                                                      );
 
         virtual model::TypeDefPtr

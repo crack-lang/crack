@@ -82,7 +82,7 @@ class LLVMJitBuilder : public LLVMBuilder {
                                                       const std::string &name,
                                                       model::ModuleDef *owner
                                                       );
-        virtual void fixClassInstRep(model::Context &context, BTypeDef *type);
+        virtual void fixClassInstRep(BTypeDef *type);
         virtual BModuleDef *instantiateModule(model::Context &context,
                                               const std::string &name,
                                               llvm::Module *owner
