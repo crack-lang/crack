@@ -8,8 +8,8 @@ class A {
         f(g);
     }
 }
-%%REXPECT%%
-ParseError: %SCRIPTNAME%:4:12: No method exists matching f\(function\[.builtin.void,.main..*.A\]\)
+%%EXPECT%%
+ParseError: %SCRIPTNAME%:4:12: No method exists matching f(Overload)
 Possible overloads for f:
   void A.f()
 

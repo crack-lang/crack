@@ -25,15 +25,15 @@ ResultExprPtr BFieldRef::emit(Context &context) {
     LLVMBuilder &bb = dynamic_cast<LLVMBuilder &>(context.builder);
 
     // narrow to the ancestor type where the variable is defined.
-    BTypeDef *owner = BTypeDef::get(def->getOwner());
-    bb.narrow(aggregate->type.get(), owner);
+    bb.narrow(aggregate->type.get(), BTypeDefPtr::acast(def->getOwner()));
 
     // cast the implementation and type to their local types.
     BFieldDefImplPtr impl = BFieldDefImplPtr::arcast(def->impl);
-    BTypeDef *typeDef = BTypeDef::get(def->type);
+    BTypeDef *typeDef = BTypeDefPtr::arcast(def->type);
 
     // if the variable is from a complete type, we can emit it.
     //  Otherwise, we need to store a placeholder.
+    BTypeDef *owner = BTypeDefPtr::acast(def->getOwner());
     if (owner->complete) {
         bb.lastValue = impl->emitFieldRef(bb.builder, typeDef->rep,
                                           bb.lastValue
@@ -65,15 +65,15 @@ Value *BFieldRef::emitAddr(Context &context) const {
     LLVMBuilder &bb = dynamic_cast<LLVMBuilder &>(context.builder);
 
     // narrow to the ancestor type where the variable is defined.
-    bb.narrow(aggregate->type.get(), BTypeDef::get(def->getOwner()));
+    bb.narrow(aggregate->type.get(), BTypeDefPtr::acast(def->getOwner()));
 
     // cast the implementation and type to their local types.
     BFieldDefImplPtr impl = BFieldDefImplPtr::arcast(def->impl);
-    BTypeDef *typeDef = BTypeDef::get(def->type);
+    BTypeDef *typeDef = BTypeDefPtr::arcast(def->type);
 
     // if the variable is from a complete type, we can emit it.
     //  Otherwise, we need to store a placeholder.
-    BTypeDef *owner = BTypeDef::get(def->getOwner());
+    BTypeDef *owner = BTypeDefPtr::acast(def->getOwner());
     Value *addr;
     if (owner->complete) {
         addr = impl->emitFieldAddr(bb.builder, typeDef->rep,

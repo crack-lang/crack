@@ -136,7 +136,7 @@ class OverloadDef : public VarDef {
          * inserted after all other overloads from the context but before 
          * overloads from the parent context.
          */
-        void addFunc(Context &context, FuncDef *func);
+        void addFunc(FuncDef *func);
         
         /**
          * Adds the parent overload.  Lookups will be delgated to parents in 
@@ -144,15 +144,13 @@ class OverloadDef : public VarDef {
          * @param before If true, insert before all other parents, otherwise
          *     insert after.
          */
-        void addParent(Context &context, OverloadDef *parent,
-                       bool before = false
-                       );
+        void addParent(OverloadDef *paren, bool before = false);
         
         /**
          * Go through the ancestors of 'ns', collect all other instances of 
          * the overload and use them to construct this overload's parent list.
          */
-        void collectAncestors(Context &context, Namespace *ns);
+        void collectAncestors(Namespace *ns);
         
         /** Returns true if 'parent' is a parent of the overload. */
         bool hasParent(OverloadDef *parent);

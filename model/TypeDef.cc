@@ -276,15 +276,7 @@ bool TypeDef::isDerivedFrom(const TypeDef *other) const {
 VarDefPtr TypeDef::emitVarDef(Context &container, const std::string &name,
                               Expr *initializer
                               ) {
-    TypeDefPtr varType = getVarType();
-    if (!varType)
-        container.error(SPUG_FSTR("Cannot create a variable of type " <<
-                                   getDisplayName()
-                                  )
-                        );
-    return container.builder.emitVarDef(container, varType.get(), name,
-                                        initializer
-                                        );
+    return container.builder.emitVarDef(container, this, name, initializer);
 }
 
 bool TypeDef::matches(const TypeDef &other) const {
@@ -1263,10 +1255,6 @@ bool TypeDef::isConstant() {
 }
 
 void TypeDef::getDependents(std::vector<TypeDefPtr> &deps) {}
-
-TypeDefPtr TypeDef::getVarType() {
-    return this;
-}
 
 void TypeDef::dump(ostream &out, const string &prefix) const {
     out << prefix << "class " << getFullName() << " {" << endl;

@@ -1,8 +1,0 @@
-%%TEST%%
-define on variable from multi-overload value
-%%ARGS%%
-%%FILE%%
-void f() {} void f(int val) {} g := f
-%%EXPECT%%
-ParseError: %SCRIPTNAME%:1:32: Cannot create a variable of type Overload[.builtin.function[.builtin.void,.builtin.int], .builtin.function[.builtin.void]]
-%%STDIN%%

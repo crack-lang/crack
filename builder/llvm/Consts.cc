@@ -26,11 +26,11 @@ BIntConst::BIntConst(BTypeDef *type, int64_t val) :
 }
 
 IntConstPtr BIntConst::create(int64_t val) {
-    return new BIntConst(BTypeDef::get(type), val);
+    return new BIntConst(BTypeDefPtr::arcast(type), val);
 }
 
 IntConstPtr BIntConst::create(uint64_t val) {
-    return new BIntConst(BTypeDef::get(type), val);
+    return new BIntConst(BTypeDefPtr::arcast(type), val);
 }
 
 BIntConst::BIntConst(BTypeDef *type, uint64_t val) :
@@ -44,5 +44,5 @@ BFloatConst::BFloatConst(BTypeDef *type, double val) :
 }
 
 FloatConstPtr BFloatConst::create(double val) const {
-    return new BFloatConst(BTypeDef::get(type), val);
+    return new BFloatConst(BTypeDefPtr::arcast(type), val);
 }

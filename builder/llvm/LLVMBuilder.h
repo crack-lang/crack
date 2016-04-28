@@ -130,8 +130,10 @@ class LLVMBuilder : public Builder {
          * Linked builder ignores this, as these are resolved during the link
          * instead. It is called from getModFunc and getModVar
          */
-        virtual void addGlobalFuncMapping(llvm::Function *, llvm::Function *) {}
-        virtual void addGlobalFuncMapping(llvm::Function *, void *) {}
+        virtual void addGlobalFuncMapping(llvm::Function*,
+                                          llvm::Function*) { }
+        virtual void addGlobalFuncMapping(llvm::Function*,
+                                          void*) { }
 
         /**
          * Lets the JIT builder keep track of shared library symbols.
@@ -142,13 +144,16 @@ class LLVMBuilder : public Builder {
          * possibly bind the module to an execution engine
          * called in base llvmbuilder only from registerPrimFuncs
          */
-        virtual void engineBindModule(BModuleDef *moduleDef) {}
+        virtual void engineBindModule(BModuleDef *moduleDef) { }
 
         /**
          * let the engine "finish" a module before running/linking/dumping
          * called in base llvmbuilder only from registerPrimFuncs
          */
-        virtual void engineFinishModule(BModuleDef *moduleDef) {}
+        virtual void engineFinishModule(model::Context &context,
+                                        BModuleDef *moduleDef
+                                        ) {
+        }
 
         /**
          * common module initialization that happens in all builders
@@ -250,7 +255,7 @@ class LLVMBuilder : public Builder {
 
         // the list of types that need to be fixed when the meta-class has
         // been defined.
-        std::vector<model::TypeDefPtr> deferMetaClass;
+        std::vector<BTypeDefPtr> deferMetaClass;
 
         /** Gets the _Unwind_Resume function. */
         llvm::Function *getUnwindResumeFunc();

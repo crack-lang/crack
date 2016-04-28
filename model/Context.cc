@@ -27,7 +27,6 @@
 #include "Deserializer.h"
 #include "DeserializationError.h"
 #include "FuncAnnotation.h"
-#include "GenericOverloadType.h"
 #include "StatState.h"
 #include "ArgDef.h"
 #include "Branchpoint.h"
@@ -38,7 +37,6 @@
 #include "ModuleDef.h"
 #include "NullConst.h"
 #include "OverloadDef.h"
-#include "OverloadType.h"
 #include "ResultExpr.h"
 #include "Serializer.h"
 #include "StrConst.h"
@@ -114,10 +112,10 @@ OverloadDefPtr Context::replicateOverload(const std::string &varName,
                                           Namespace *srcNs
                                           ) {
     OverloadDefPtr overload = new OverloadDef(varName);
-    overload->type = construct->overloadType->getSpecialization(*this);
+    overload->type = construct->overloadType;
     
     // merge in the overloads from the parents
-    overload->collectAncestors(*this, srcNs);
+    overload->collectAncestors(srcNs);
     srcNs->addDef(overload.get());
     return overload;
 }
@@ -1102,7 +1100,7 @@ VarDefPtr Context::addDef(VarDef *varDef, Namespace *srcNs) {
             OverloadDefPtr::rcast(lookUp(varDef->name, srcNs));
         if (!overload)
             overload = replicateOverload(varDef->name, srcNs);
-        overload->addFunc(*this, funcDef);
+        overload->addFunc(funcDef);
         funcDef->setOwner(srcNs);
         return overload;
     } else {
@@ -1134,7 +1132,7 @@ void Context::insureOverloadPath(Context *ancestor, OverloadDef *overload) {
             break;
     assert(parent && "insureOverloadPath(): parent is not a direct parent.");
     
-    localOverload->addParent(*this, overload, /* before */ true);
+    localOverload->addParent(overload, /* before */ true);
 }
 
 AnnotationPtr Context::lookUpAnnotation(const std::string &name) {

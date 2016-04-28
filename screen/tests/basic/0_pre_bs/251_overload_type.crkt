@@ -5,5 +5,5 @@ overloads have types
 void f() {}
 void g() { f.a(); }
 %%EXPECT%%
-ParseError: %SCRIPTNAME%:2:14: Instance of function[.builtin.void] has no member a
+ParseError: %SCRIPTNAME%:2:14: Instance of Overload has no member a
 %%STDIN%%

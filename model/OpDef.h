@@ -26,9 +26,7 @@ class OpDef : public FuncDef {
               ) :
             FuncDef(flags, name, argCount) {
 
-            // XXX we don't have a function type for these, when this gets
-            // fixed search for builtins_need_oper_call and change the
-            // relevant code.
+            // XXX we don't have a function type for these
             returnType = resultType;
         }
 

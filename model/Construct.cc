@@ -26,7 +26,6 @@
 #include "Context.h"
 #include "DummyModuleDef.h"
 #include "GenericModuleInfo.h"
-#include "GenericOverloadType.h"
 #include "GlobalNamespace.h"
 #include "ModuleDef.h"
 #include "StatState.h"

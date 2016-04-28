@@ -166,24 +166,21 @@ void createClassImpl(Context &context, BTypeDef *type) {
         vector<Type *> fields(type->parents.size());
         for (int i = 0; i < type->parents.size(); ++i) {
             PointerType *basePtrType =
-                cast<PointerType>(
-                    BTypeDef::get(type->parents[i])->rep
-                );
+                cast<PointerType>(BTypeDefPtr::rcast(type->parents[i])->rep);
             fields[i] = basePtrType->getElementType();
         }
         instType->setBody(fields);
         pointerType = instType->getPointerTo();
     }
 
-    Type *intzType =
-        BTypeDef::get(context.construct->intzType)->rep,
+    Type *intzType = BTypeDefPtr::rcast(context.construct->intzType)->rep,
 
          // GEP offsets have to be int32.  int64 offsets are considered to be
          // "invalid indeces" by validIndex().
          *int32Type = Type::getInt32Ty(lctx);
 
     // get the LLVM class structure type from out of the meta class rep.
-    BTypeDef *classType = BTypeDef::get(context.construct->classType);
+    BTypeDef *classType = BTypeDefPtr::arcast(context.construct->classType);
     PointerType *classPtrType = cast<PointerType>(classType->rep);
     StructType *classStructType =
         cast<StructType>(classPtrType->getElementType());
@@ -217,14 +214,14 @@ void createClassImpl(Context &context, BTypeDef *type) {
             ConstantExpr::getGetElementPtr(nameGVar, index00, 2);
 
     // numBases
-    Type *uintType = BTypeDef::get(context.construct->uintType)->rep;
+    Type *uintType = BTypeDefPtr::arcast(context.construct->uintType)->rep;
     classStructVals[1] = ConstantInt::get(uintType, type->parents.size());
 
     // bases
     vector<Constant *> basesVal(type->parents.size());
     for (int i = 0; i < type->parents.size(); ++i) {
         // get the pointer to the inner "Class" object of "Class[BaseName]"
-        BTypeDefPtr base = BTypeDef::get(type->parents[i]);
+        BTypeDefPtr base = BTypeDefPtr::arcast(type->parents[i]);
 
         // get the class body global variable
         Constant *baseClassPtr =
@@ -313,7 +310,7 @@ void createClassImpl(Context &context, BTypeDef *type) {
 
     // extract the meta class structure types from our meta-class
     PointerType *metaClassPtrType =
-        cast<PointerType>(BTypeDef::get(type->type)->rep);
+        cast<PointerType>(BTypeDefPtr::arcast(type->type)->rep);
     StructType *metaClassStructType =
         cast<StructType>(metaClassPtrType->getElementType());
 
@@ -345,24 +342,14 @@ void createClassImpl(Context &context, BTypeDef *type) {
                             canonicalName
                             );
 
-    // Get or create the pointer to the class instance.  We have to do the
-    // "get" first because, in the case of OverloadTypes (and possibly for
-    // other builtin generics), the type object can get created as an external
-    // (and merged into the merged module) before it is created during
-    // deserialization of meta-data.
+    // create the pointer to the class instance
     GlobalVariable *classInstPtr =
-        llvmBuilder.module->getGlobalVariable(canonicalName);
-    if (!classInstPtr)
-        classInstPtr =
-            new GlobalVariable(*llvmBuilder.module, metaClassPtrType,
-                               true, // is constant
-                               GlobalVariable::ExternalLinkage,
-                               classInst,
-                               canonicalName
-                               );
-    else if (!classInstPtr->hasInitializer())
-        // If we already had it, set the initializer.
-        classInstPtr->setInitializer(classInst);
+        new GlobalVariable(*llvmBuilder.module, metaClassPtrType,
+                           true, // is constant
+                           GlobalVariable::ExternalLinkage,
+                           classInst,
+                           canonicalName
+                           );
 
     // store the impl object in the class
     type->impl = new BGlobalVarDefImpl(classInstPtr,
@@ -392,7 +379,7 @@ BTypeDefPtr createMetaClass(Context &context, const string &name,
                      true,
                      0
                      );
-    BTypeDef *classType = BTypeDef::get(context.construct->classType);
+    BTypeDef *classType = BTypeDefPtr::arcast(context.construct->classType);
     metaType->addBaseClass(classType);
     PointerType *classPtrType = cast<PointerType>(classType->rep);
     StructType *classStructType =

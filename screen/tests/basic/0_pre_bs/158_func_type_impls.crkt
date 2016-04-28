@@ -5,6 +5,6 @@ function types have implementations
 %%FILE%%
 void f() {} puts(typeof(f).name)
 %%EXPECT%%
-Overload[.builtin.function[.builtin.void]]
+function[.builtin.void]
 %%STDIN%%
 

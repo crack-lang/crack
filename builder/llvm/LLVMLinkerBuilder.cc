@@ -92,10 +92,6 @@ void LLVMLinkerBuilder::finishBuild(Context &context) {
 
     assert(!rootBuilder && "run must be called from root builder");
 
-    // Finish the ".root" module.  This is where OverloadType instances end up
-    // getting created.
-    engineFinishModule(moduleDef.get());
-
     // if optimizing, do module level unit at a time
     if (options->optimizeLevel) {
         for (ModuleListType::iterator i = moduleList->begin();
@@ -141,7 +137,7 @@ void LLVMLinkerBuilder::finishBuild(Context &context) {
     // final IR generation: cleanup and main
     emitAggregateCleanup(finalir);
     BTypeDef *vtableType =
-        BTypeDef::get(context.construct->vtableBaseType);
+        BTypeDefPtr::rcast(context.construct->vtableBaseType);
     Value *vtableTypeBody =
         finalir->getGlobalVariable(vtableType->getFullName() + ":body");
     createMain(finalir, options.get(), vtableTypeBody, mainModuleName);
@@ -287,7 +283,9 @@ void *LLVMLinkerBuilder::loadSharedLibrary(const string &name) {
     }
 }
 
-void LLVMLinkerBuilder::engineFinishModule(BModuleDef *moduleDef) {
+void LLVMLinkerBuilder::engineFinishModule(model::Context &context,
+                                           BModuleDef *moduleDef
+                                           ) {
     // only called from registerPrimFuncs in base LLVMBuilder
     addModule(moduleDef);
 }

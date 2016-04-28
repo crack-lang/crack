@@ -254,7 +254,6 @@ noinst_HEADERS = \
     model/FuncCall.h \
     model/FuncDef.h \
     model/Generic.h \
-    model/GenericOverloadType.h \
     model/GenericParm.h \
     model/GetRegisterExpr.h \
     model/GlobalNamespace.h \
@@ -277,7 +276,6 @@ noinst_HEADERS = \
     model/Options.h \
     model/OverloadAliasTreeNode.h \
     model/OverloadDef.h \
-    model/OverloadType.h \
     model/PrimFuncAnnotation.h \
     model/ProtoBuf.h \
     model/ResultExpr.h \

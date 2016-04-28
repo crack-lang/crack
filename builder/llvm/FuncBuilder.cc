@@ -55,7 +55,7 @@ void FuncBuilder::finish(bool storeDef) {
          iter != funcDef->args.end();
          ++iter, ++i
          )
-        llvmArgs[i] = BTypeDef::get((*iter)->type)->rep;
+        llvmArgs[i] = BTypeDefPtr::rcast((*iter)->type)->rep;
 
     // register the function with LLVM
     Type *rawRetType = returnType->rep ? returnType->rep :

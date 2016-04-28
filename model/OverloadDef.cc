@@ -16,9 +16,7 @@
 #include "Deserializer.h"
 #include "Expr.h"
 #include "FuncCall.h"  // just so we can "out << args"
-#include "GenericOverloadType.h"
 #include "OverloadAliasTreeNode.h"
-#include "OverloadType.h"
 #include "Serializer.h"
 #include "TypeDef.h"
 #include "VarDefImpl.h"
@@ -27,6 +25,7 @@ using namespace std;
 using namespace model;
 
 void OverloadDef::setImpl(FuncDef *func) {
+    type = func->type;
     impl = func->impl;
 }
 
@@ -239,25 +238,12 @@ bool OverloadDef::hasExposedFuncs() const {
     return false;
 }
 
-void OverloadDef::addFunc(Context &context, FuncDef *func) {
+void OverloadDef::addFunc(FuncDef *func) {
     if (funcs.empty()) setImpl(func);
     funcs.push_back(func);
-
-    // During primitive registration, we may not have a type.
-    // XXX need to figure out a way to register these for later fixup.
-    if (type)
-        type = OverloadTypePtr::rcast(type)->addType(context, func->type.get());
 }
 
-void OverloadDef::addParent(Context &context, OverloadDef *parent,
-                            bool before
-                            ) {
-
-    // Add all of the types from the parent.
-    type = OverloadTypePtr::rcast(type)->addTypes(context,
-                                                  parent->type->genericParms
-                                                  );
-
+void OverloadDef::addParent(OverloadDef *parent, bool before) {
     // When inserting before, we don't check for intermediates.
     if (before) {
         vector<OverloadDefPtr> newParents;
@@ -289,7 +275,7 @@ void OverloadDef::addParent(Context &context, OverloadDef *parent,
     parents.push_back(parent);
 }
 
-void OverloadDef::collectAncestors(Context &context, Namespace *ns) {
+void OverloadDef::collectAncestors(Namespace *ns) {
     bool classPrivate = name.substr(0, 2) == "__" && TypeDefPtr::cast(ns);
     NamespacePtr parent;
     for (unsigned i = 0; parent = ns->getParent(i++);) {
@@ -303,7 +289,7 @@ void OverloadDef::collectAncestors(Context &context, Namespace *ns) {
         OverloadDefPtr parentOvld;
         if (!var) {
             // the parent does not have this overload.  Check the next level.
-            collectAncestors(context, parent.get());
+            collectAncestors(parent.get());
         } else {
             parentOvld = OverloadDefPtr::rcast(var);
             // if there is a variable of this name but it is not an overload, 
@@ -313,7 +299,7 @@ void OverloadDef::collectAncestors(Context &context, Namespace *ns) {
             // but not something we want to deal with here.
 
             if (parentOvld)
-                addParent(context, parentOvld.get());
+                addParent(parentOvld.get());
         }
     }
 }
@@ -605,11 +591,8 @@ OverloadDefPtr OverloadDef::deserialize(Deserializer &deser,
     // existing one.
     if (!(ovld = owner->lookUp(name, false))) {
         ovld = new OverloadDef(name);
-        ovld->type =
-            deser.context->construct->overloadType->getSpecialization(
-                *deser.context
-            );
-        ovld->collectAncestors(*deser.context, owner);
+        ovld->type = deser.context->construct->overloadType;
+        ovld->collectAncestors(owner);
     }
     int size = deser.readUInt("#overloads");
     for (int i = 0; i < size; ++i) {
@@ -620,7 +603,7 @@ OverloadDefPtr OverloadDef::deserialize(Deserializer &deser,
             func = FuncDef::deserialize(deser, name);
         if (!func->getOwner())
             func->setOwner(owner);
-        ovld->addFunc(*deser.context, func.get());
+        ovld->addFunc(func.get());
     }
 
     if (Serializer::trace)

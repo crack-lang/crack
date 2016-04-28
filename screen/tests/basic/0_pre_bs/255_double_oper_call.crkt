@@ -1,9 +1,0 @@
-%%TEST%%
-double oper call
-%%ARGS%%
-%%FILE%%
-void f() {}
-f.oper call.oper call();
-%%EXPECT%%
-ParseError: %SCRIPTNAME%:2:24: Bound methods can not be evaluated.
-%%STDIN%%

@@ -26,10 +26,7 @@ class VarRef : public Expr {
         virtual TypeDefPtr getType(Context &context) const;
         
         virtual ResultExprPtr emit(Context &context);
-        virtual ResultExprPtr emit(Context &context,
-                                   std::vector<ExprPtr> &args
-                                   );
-
+        
         // Overriden so we can introduce special behavior for references to 
         // OverloadDef.
         virtual ExprPtr convert(Context &context, TypeDef *type);

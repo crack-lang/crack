@@ -73,7 +73,7 @@ int VTableBuilder::fillVTablesVar(vector<Constant *> &vtablesArrayInit,
     vector<Constant *> baseOffsets(type->parents.size());
 
     for (int i = start; i < type->parents.size(); ++i, ++outputStart) {
-        BTypeDef *base = BTypeDef::get(type->parents[i]);
+        BTypeDef *base = BTypeDefPtr::arcast(type->parents[i]);
         if (base == vtableBaseType) {
             // If the class is directly derived from VTableBase, VTableBase
             // must be the first parent and we want to use the vtable defined
@@ -118,7 +118,7 @@ int VTableBuilder::fillVTablesVar(vector<Constant *> &vtablesArrayInit,
 
     // Fill the rest of the array with the vtable pointers of the parents.
     for (int i = start; i < type->parents.size(); ++i) {
-        BTypeDef *base = BTypeDef::get(type->parents[i]);
+        BTypeDef *base = BTypeDefPtr::arcast(type->parents[i]);
         if (base != vtableBaseType)
             outputStart = fillVTablesVar(vtablesArrayInit,
                                          outputStart,
