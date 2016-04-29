@@ -583,59 +583,6 @@ GlobalVariable *LLVMBuilder::getModVar(BGlobalVarDefImpl *varDefImpl) {
     return global;
 }
 
-BTypeDefPtr LLVMBuilder::getFuncType(Context &context,
-                                     FuncDef *funcDef,
-                                     llvm::Type *llvmFuncType
-                                     ) {
-
-    // create a new type object and store it
-    TypeDefPtr function = context.construct->functionType.get();
-
-    if (!function) {
-        // there is no function in this context XXX this should create a
-        // deferred entry.
-        BTypeDefPtr crkFuncType = new BTypeDef(context.construct->classType.get(),
-                                               "",
-                                               llvmFuncType
-                                               );
-
-        // Give it an "oper to .builtin.voidptr" method.
-        context.addDef(
-                    new VoidPtrOpDef(context.construct->voidptrType.get()),
-                    crkFuncType.get()
-                    );
-
-        return crkFuncType.get();
-    }
-
-    // we have function, specialize based on return and argument types
-    TypeDef::TypeVecObjPtr args = new TypeDef::TypeVecObj();
-
-    // push return
-    args->push_back(funcDef->returnType);
-
-    // if there is a receiver, push that
-    TypeDefPtr rcvrType = funcDef->receiverType;
-    if (rcvrType)
-        args->push_back(rcvrType.get());
-
-    // now args
-    for (FuncDef::ArgVec::iterator arg = funcDef->args.begin();
-         arg != funcDef->args.end();
-         ++arg
-         ) {
-        args->push_back((*arg)->type.get());
-    }
-
-    BTypeDefPtr specFuncType =
-        BTypeDefPtr::arcast(function->getSpecialization(context, args.get()));
-
-    specFuncType->defaultInitializer = new NullConst(specFuncType.get());
-
-    return specFuncType.get();
-
-}
-
 BHeapVarDefImplPtr LLVMBuilder::createLocalVar(BTypeDef *tp,
                                                Value *&var,
                                                const string &name,
@@ -2349,7 +2296,7 @@ FuncDefPtr LLVMBuilder::materializeFunc(Context &context, const string &name,
 
     // Set the type and impl, we have to do this after setting the rep because that's
     // where the LLVM type is assigned.
-    result->type = getFuncType(context, result.get(), result->getLLVMFuncType());
+    result->type = result->getFuncType(context);
     result->impl = new BConstDefImpl(result.get(), result->getFuncRep(*this));
     return result;
 }

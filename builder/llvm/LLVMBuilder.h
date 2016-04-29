@@ -276,10 +276,6 @@ class LLVMBuilder : public Builder {
 
         llvm::GlobalVariable *getModVar(BGlobalVarDefImpl *varDef);
 
-        BTypeDefPtr getFuncType(model::Context &context,
-                                model::FuncDef *funcDef,
-                                llvm::Type *llvmFuncType
-                                );
         BHeapVarDefImplPtr createLocalVar(BTypeDef *tp,
                                           llvm::Value *&var,
                                           const std::string &name,
