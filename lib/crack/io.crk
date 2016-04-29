@@ -57,7 +57,11 @@ class FileHandle : Object {
     }
 }
 
-@abstract class SeekableWriter : Writer, Seekable {}
+@abstract class SeekableWriter : Writer, Seekable {
+    @abstract Object oper from SeekableWriter();
+    Object oper from Writer() { return this.oper from SeekableWriter(); }
+    Object oper from Seekable() { return this.oper from SeekableWriter(); }
+}
 
 ## Writer for a file descriptor.
 ## Unless you are managing the file descriptor elsewhere, you probably want
@@ -79,8 +83,7 @@ class FDWriter : FileHandle, SeekableWriter {
         return lseek(fd, offset, whence);
     }
 
-    Object oper from Writer() { return this; }
-    Object oper from Seekable() { return this; }
+    Object oper from SeekableWriter() { return this; }
 };
 
 ## Writer for a file descriptor that closes the file descriptor upon
@@ -121,7 +124,11 @@ class OwningFDWriter : FDWriter {
     }
 };
 
-@abstract class SeekableReader : Reader, Seekable {}
+@abstract class SeekableReader : Reader, Seekable {
+    @abstract Object oper from SeekableReader();
+    Object oper from Reader() { return this.oper from SeekableReader() }
+    Object oper from Seekable() { return this.oper from SeekableReader() }
+}
 
 ## Reader to read from a file descriptor.
 ## Unless you are managing the file descriptor elsewhere, you probably want to
@@ -148,8 +155,7 @@ class FDReader : FileHandle, SeekableReader {
         return lseek(fd, offset, whence);
     }
 
-    Object oper from Reader() { return this; }
-    Object oper from Seekable() { return this; }
+    Object oper from SeekableReader() { return this; }
 };
 
 ## Reader for a file descriptor that closes the file descriptor upon
