@@ -138,6 +138,8 @@ class Array[Elem] {
     int cmp(Object other) {
         if (this is other)
             return 0;
+        else if (other is null)
+            return 1;
         else if (!other.isa(Array))
             return Object.cmp(other);
 
