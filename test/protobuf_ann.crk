@@ -57,7 +57,7 @@ if (true) {
     @assert(bar1 != bar2);
     @assert(bar1.makeHashVal() != bar2.makeHashVal());
 
-    bar2.name.append('first');
+    bar2.name_append('first');
     @assert(bar1 == bar2);
     @assert(bar1.makeHashVal() == bar2.makeHashVal());
 
