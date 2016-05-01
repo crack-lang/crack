@@ -199,6 +199,10 @@ class Message : Type {
         # Emit a default constructor.
         out `oper init() {}\n`;
 
+        # Emit accessor methods.
+        for (field :in ordered)
+            field.emitAccessors(out);
+
         # Emit serialization methods.
         out `void serialize(ProtoWriter dst) {\n\t`;
         for (field :in ordered) {
@@ -273,10 +277,6 @@ class Message : Type {
         out     `field.readMessage(inst);\n`;
         out     `return inst;\b\n`;
         out `}\n`;
-
-        # Emit accessor methods.
-        for (field :in ordered)
-            field.emitAccessors(out);
 
         out `\b\n}\n`;
     }
