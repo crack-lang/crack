@@ -1,0 +1,8 @@
+%%TEST%%
+void arguments
+%%ARGS%%
+%%FILE%%
+void f(void g) {}
+%%EXPECT%%
+ParseError: %SCRIPTNAME%:1:8: Can not create a parameter of type 'void'.
+%%STDIN%%

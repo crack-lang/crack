@@ -1577,6 +1577,8 @@ void Parser::parseArgDefs(vector<ArgDefPtr> &args, bool isMethod) {
       // parse the next argument type
       toker.putBack(tok);
       TypeDefPtr argType = parseTypeSpec();
+      if (argType == context->construct->voidType)
+         error(tok, "Can not create a parameter of type 'void'.");
       
       tok = getToken();
       if (!tok.isIdent())
