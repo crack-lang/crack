@@ -2,6 +2,8 @@
    base64.cpp and base64.h
 
    Copyright (C) 2004-2008 René Nyffenegger
+   Copyright 2012 Conrad D. Steenberg <conrad.steenberg@gmail.com>
+   Copyright 2016 Google Inc.
 
    This source code is provided 'as-is', without any express or implied
    warranty. In no event will the author be held liable for any damages
@@ -25,12 +27,9 @@
 
 */
 
-// Crack version
-// Copyright 2012 Conrad D. Steenberg <conrad.steenberg@gmail.com>
-// 12/26/2012
-
 import crack.cont.array Array;
-import crack.lang Buffer, ManagedBuffer, AppendBuffer;
+import crack.lang Buffer, InvalidArgumentError, ManagedBuffer, AppendBuffer;
+import crack.io FStr;
 
 base64 := "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
           "abcdefghijklmnopqrstuvwxyz"
@@ -192,4 +191,104 @@ Buffer decode(Buffer inbuf) {
     }
 
     return ret;
+}
+
+## Encodes 'data' in an encoding similar to base 64 except that:
+##
+##   1) '+' is replaced with '.', '/' is replaced with '_'.
+##   2) No newlines or whitespace are ever added.
+##   3) The results are not padded with '='.
+##
+## This encoding has been implemented because, unlike true base64, it's
+## representation is suitable for use as a posix filename and also in URLs.
+String altEncode(Buffer data) {
+    class Result : AppendBuffer {
+        oper init(uint size) : AppendBuffer(size) {}
+        @final void encode(uint32 val) {
+            b := byte(val);
+            if (b < 26)
+                append(b'A' + b);
+            else if (b < 52)
+                append(b'a' + (b - 26));
+            else if (b < 62)
+                append(b'0' + (b - 52));
+            else
+                append((b & 1) ? b'_' : b'.');
+        }
+    }
+    Result result = {data.size * 4 / 3};
+
+    int i = 0;
+    while (i < data.size) {
+
+        # Accumulator: stores up to three bytes of data as a word to be
+        # written as 4 base64 characters.
+        uint32 accum;
+
+        # Number of characters necessary to represent the bytes in the current
+        # word.
+        int numChars = 2;
+        accum = uint32(data[i++]) << 16;
+
+        if (i < data.size) {
+            accum |= uint32(data[i++]) << 8;
+            numChars++;
+        }
+        if (i < data.size) {
+            accum |= data[i++];
+            numChars++;
+        }
+
+        # Write the word, 6 bits at a time.
+        result.encode(accum >> 18);
+        result.encode((accum >> 12) & 0x3f);
+        if (numChars >= 3)
+            result.encode(accum >> 6 & 0x3F);
+        if (numChars == 4)
+            result.encode(accum & 0x3f);
+    }
+
+    return String(result);
+}
+
+String altDecode(Buffer encoded) {
+    AppendBuffer result = {encoded.size * 3 / 4};
+    uint32 accum;
+    int i;
+    for (i = 0; i < encoded.size; ++i) {
+        b := encoded[i];
+        if (b >= b'0' && b <= b'9')
+            b = b - b'0' + 52;
+        else if (b >= b'a' && b <= b'z')
+            b = b - b'a' + 26;
+        else if (b >= b'A' && b <= b'Z')
+            b = b - b'A';
+        else if (b == b'.')
+            b = 62;
+        else if (b == b'_')
+            b = 63;
+        else
+            throw InvalidArgumentError(
+                FStr() I`$b at index $i is not a legal base64 alt character.`
+            );
+
+        accum = accum << 6 | b;
+
+        # Write every 4th byte.
+        if ((i + 1) % 4 == 0) {
+            result.append(byte(accum >> 16));
+            result.append(byte(accum >> 8));
+            result.append(byte(accum));
+            accum = 0;
+        }
+    }
+
+    if (i % 4 == 2) {
+        result.append(byte(accum >> 4));
+    } else if (i % 4 == 3) {
+        result.append(byte(accum >> 10));
+        result.append(byte(accum >> 2));
+    }
+
+    return String(result);
 }
