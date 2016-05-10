@@ -827,7 +827,7 @@ extern "C" void crack_runtime_cinit(Module *mod) {
     f->addArg(intType, "fd");
     f->addArg(intzType, "offset");
     f->addArg(intType, "whence");
-    
+
     mod->addConstant(intType, "SEEK_SET", SEEK_SET);
     mod->addConstant(intType, "SEEK_CUR", SEEK_CUR);
     mod->addConstant(intType, "SEEK_END", SEEK_END);
@@ -840,6 +840,9 @@ extern "C" void crack_runtime_cinit(Module *mod) {
 
     f = mod->addFunc(voidType, "exit", (void *)exit, "exit");
     f->addArg(intType, "status");
+
+    f = mod->addFunc(intType, "isatty", (void *)isatty, "isatty");
+    f->addArg(intType, "fd");
 
     f = mod->addFunc(intType, "setNonBlocking",
                      (void *)crack::runtime::setNonBlocking);
