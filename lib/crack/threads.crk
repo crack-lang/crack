@@ -28,6 +28,10 @@ class Thread : Object, pthread_t {
     void run() {}
 
     @final void start() {
+
+        # Increment the reference count of the thread object to ensure that it
+        # remains in existence throughout the life of the thread.
+        this.oper bind();
         if (rc := pthread_create(this, null, _thread_main, this))
             throw SystemError('Error starting thread', rc);
     }
@@ -40,11 +44,17 @@ class Thread : Object, pthread_t {
 
 void _thread_main(voidptr thread) {
     obj := Thread.unsafeCast(thread);
+
+    # Now that we're bound to a variable, release the extra reference we added
+    # in Thread.start().
+    obj.oper release();
+
     try {
         obj.run();
     } catch (Exception ex) {
         ex.writeTo(cerr);
     }
+
 }
 
 ## A mutual-exclusion lock.  This is the most basic concurrency primitive.
