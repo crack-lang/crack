@@ -714,6 +714,7 @@ ExprPtr Parser::parseIString(Expr *expr) {
    // for reuse.
    GetRegisterExprPtr reg = new GetRegisterExpr(expr->type.get());
    ExprPtr formatter = new SetRegisterExpr(reg.get(), expr);
+   ExprPtr delegateFormatter;
    
    // create an expression sequence for the formatter
    MultiExprPtr seq = new MultiExpr();
@@ -726,7 +727,15 @@ ExprPtr Parser::parseIString(Expr *expr) {
       BSTATS_END
       if (func->flags & FuncDef::method)
          funcCall->receiver = reg;
-      seq->add(funcCall.get());
+
+      // If enter() returns a non-void, use that as the formatter instead of
+      // the original object.
+      if (func->returnType != context->construct->voidType) {
+         reg = new GetRegisterExpr(func->returnType.get());
+         seq->add(new SetRegisterExpr(reg.get(), funcCall.get()));
+      } else {
+         seq->add(funcCall.get());
+      }
    }
 
    // parse all of the subtokens
@@ -756,7 +765,7 @@ ExprPtr Parser::parseIString(Expr *expr) {
       // look up a format method for the argument
       FuncCall::ExprVec args(1);
       args[0] = arg;
-      func = context->lookUp("format", args, expr->type.get());
+      func = context->lookUp("format", args, reg->type.get());
       if (!func)
          error(tok, 
                SPUG_FSTR("No format method exists for objects of type " <<
@@ -773,7 +782,7 @@ ExprPtr Parser::parseIString(Expr *expr) {
       seq->add(funcCall.get());
    }
 
-   func = context->lookUpNoArgs("leave", true, expr->type.get());
+   func = context->lookUpNoArgs("leave", true, reg->type.get());
    if (func) {
       BSTATS_GO(s1)
       FuncCallPtr funcCall = context->builder.createFuncCall(func.get());
