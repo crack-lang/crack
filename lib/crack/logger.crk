@@ -10,7 +10,7 @@
 import crack.ascii escape, strip, wsplit;
 import crack.cont.array Array;
 import crack.cont.hashmap HashMap;
-import crack.exp.file File;
+import crack.fs makePath, Path;
 import crack.functor Functor2;
 import crack.io cout, cerr, StandardFormatter, StringFormatter;
 import crack.lang Formatter, Writer;
@@ -241,15 +241,15 @@ class Logger @impl Functor2[void, uint, String] {
     }
 
     void setFile(String fname) {
-        options.fmt = StandardFormatter(File(fname, "w"));
+        options.fmt = StandardFormatter(makePath(fname).writer());
     }
 
     void setWriter(Writer w) {
         options.fmt = StandardFormatter(w);
     }
 
-    void setFile(File file) {
-        options.fmt = StandardFormatter(file);
+    void setPath(Path path) {
+        options.fmt = StandardFormatter(path.writer());
     }
 
 }
@@ -277,7 +277,7 @@ class LogFormatter {
 
     oper init(String fname, uint level, String fieldSpec) :
         _level = level,
-        _logger = Logger(StandardFormatter(File(fname, "w")), level,
+        _logger = Logger(StandardFormatter(makePath(fname).writer()), level,
                          fieldSpec
                          ) {
     }
@@ -289,7 +289,7 @@ class LogFormatter {
 
     oper init(String fname, uint level) :
         _level = level,
-        _logger = Logger(StandardFormatter(File(fname, "w")), level) {
+        _logger = Logger(StandardFormatter(makePath(fname).writer()), level) {
     }
 
     oper init(Writer w, uint level) :
@@ -333,8 +333,8 @@ class LogFormatter {
         _logger.setFile(fname);
     }
 
-    void setFile(File file) {
-        _logger.setFile(file);;
+    void setPath(Path path) {
+        _logger.setPath(path);;
     }
 
     void setWriter(Writer w) {
@@ -356,8 +356,8 @@ void setLogFile(String fname) {
     cerrLogger.setFile(fname);
 }
 
-void setLogFile(File file) {
-    cerrLogger.setFile(file)
+void setLogPath(Path path) {
+    cerrLogger.setPath(path)
 }
 
 void setLogWriter(Writer w) {
