@@ -12,7 +12,7 @@ import crack.cont.array Array;
 import crack.cont.hashmap HashMap;
 import crack.exp.file File;
 import crack.functor Functor2;
-import crack.io cout, cerr, StandardFormatter, StringWriter;
+import crack.io cout, cerr, StandardFormatter, StringFormatter;
 import crack.lang Formatter, Writer;
 import crack.runtime usecs;
 import crack.strutil StringArray;
@@ -254,58 +254,55 @@ class Logger @impl Functor2[void, uint, String] {
 
 }
 
-class LogFormatter : StandardFormatter {
-    StringWriter _writer = {};
+class _EntryFormatter : StringFormatter {
+
+    Logger __logger;
+    uint __level;
+
+    oper init(Logger logger, uint level) : __logger = logger, __level = level {}
+
+    @final void leave() {
+        __logger.log(__level, string());
+    }
+}
+
+class LogFormatter {
     Logger _logger;
     uint _level;
 
     oper init(Logger logger, uint level) :
-            StandardFormatter(null), _logger = logger, _level = level
-    {
-        rep = _writer;
+        _logger = logger,
+        _level = level {
     }
 
     oper init(String fname, uint level, String fieldSpec) :
-            StandardFormatter(null),  _level = level,
-            _logger = Logger(StandardFormatter(File(fname, "w")), level, fieldSpec)
-    {
-        rep = _writer;
+        _level = level,
+        _logger = Logger(StandardFormatter(File(fname, "w")), level,
+                         fieldSpec
+                         ) {
     }
 
     oper init(Writer w, uint level, String fieldSpec) :
-            StandardFormatter(null),  _level = level,
-            _logger = Logger(StandardFormatter(w), level, fieldSpec)
-    {
-        rep = _writer;
+        _level = level,
+        _logger = Logger(StandardFormatter(w), level, fieldSpec) {
     }
 
     oper init(String fname, uint level) :
-            StandardFormatter(null),  _level = level,
-            _logger = Logger(StandardFormatter(File(fname, "w")), level)
-    {
-        rep = _writer;
+        _level = level,
+        _logger = Logger(StandardFormatter(File(fname, "w")), level) {
     }
 
     oper init(Writer w, uint level) :
-            StandardFormatter(null),  _level = level,
-            _logger = Logger(StandardFormatter(w), level)
-    {
-        rep = _writer;
+        _level = level,
+        _logger = Logger(StandardFormatter(w), level) {
     }
 
     Logger logger() {
       return _logger;
     }
 
-    void enter() {
-        if (!_writer)
-            rep = _writer = StringWriter();
-    }
-
-    void leave() {
-        _logger.log(_level, _writer.string());
-        _writer = null;
-        rep = null;
+    _EntryFormatter enter() {
+        return _EntryFormatter(_logger, _level);
     }
 
     void setNamedFields(Array[String] fieldNames) {
