@@ -43,7 +43,8 @@ typedef enum {
     modelBuilder,
     doubleBuilder = 1001,
     dumpFuncTable = 1002,
-    dumpMeta = 1003
+    dumpMeta = 1003,
+    allowSourceless = 1004,
 } builderType;
 
 struct option longopts[] = {
@@ -57,6 +58,7 @@ struct option longopts[] = {
     {"verbosity", false, 0, 'v'},
     {"quiet", false, 0, 'q'},
     {"no-cache", false, 0, 'K'},
+    {"allow-sourceless", false, 0, allowSourceless},
     {"no-bootstrap", false, 0, 'n'},
     {"no-default-paths", false, 0, 'G'},
     {"migration-warnings", false, 0, 'm'},
@@ -94,6 +96,8 @@ void usage(int retval) {
     cout << "    default, this just overrrides the CRACK_CACHING" << endl;
     cout << "    environment variable if it's set to false." << endl;
     cout << " -K\n    Disable module caching." << endl;
+    cout << " --allow-sourceless\n    Allow loading modules from the" << endl;
+    cout << "    cache, even if the source file can not be found." << endl;
 
     cout << " -g --debug\n    Generate DWARF debug information" << endl;
     cout << " -O <N> --optimize\n    Use optimization level N (default 2)" <<
@@ -239,6 +243,9 @@ int main(int argc, char **argv) {
                 break;
             case 'K':
                 crack.cacheMode = false;
+                break;
+            case allowSourceless:
+                crack.allowSourceless = true;
                 break;
             case 'h':
                 usage(0);

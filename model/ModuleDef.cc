@@ -11,6 +11,7 @@
 #include <sstream>
 #include "spug/check.h"
 #include "spug/stlutil.h"
+#include "spug/StringFmt.h"
 #include "builder/Builder.h"
 #include "util/SourceDigest.h"
 #include "NamespaceAliasTreeNode.h"
@@ -452,6 +453,13 @@ ModuleDefPtr ModuleDef::deserialize(Deserializer &deser,
                     canonicalName << endl;
             mustRebuild = true;
         }
+    } else if (!deser.context->construct->allowSourceless) {
+        deser.context->error(SPUG_FSTR("No source file found for cached "
+                                        "module " << canonicalName << ".  Use "
+                                        "--allow-sourceless to allow loading "
+                                        "from the cache."
+                                       )
+                             );
     }
 
     // See if the builder can open its file.

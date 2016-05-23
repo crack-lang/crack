@@ -1,11 +1,11 @@
 // Copyright 2003 Michael A. Muller <mmuller@enduden.com>
 // Copyright 2010,2012 Google Inc.
 // Copyright 2012 Shannon Weyrick <weyrick@mozek.us>
-// 
+//
 //   This Source Code Form is subject to the terms of the Mozilla Public
 //   License, v. 2.0. If a copy of the MPL was not distributed with this
 //   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-// 
+//
 
 #ifndef LOCATION_H
 #define LOCATION_H
@@ -110,28 +110,31 @@ class Location : public LocationImplPtr {
        * existence for as long as the instance is
        */
       const char *getName() const {
-         return get()->getName();
+         return *this ? get()->getName() : "";
       }
 
       /** returns the source line number */
       int getLineNumber() const {
-         return get()->getLineNumber();
+         return *this ? get()->getLineNumber() : 0;
       }
 
       /** returns the source columns */
       int getColNumber() const {
-         return get()->getColNumber();
+         return *this ? get()->getColNumber() : 0;
       }
       int getStartCol() const {
-         return get()->getStartCol();
+         return *this ? get()->getStartCol() : 0;
       }
       int getEndCol() const {
-         return get()->getEndCol();
+         return *this ? get()->getEndCol() : 0;
       }
 
       friend std::ostream &
       operator <<(std::ostream &out, const Location &loc) {
-         return out << *loc;
+         if (loc)
+            return out << *loc;
+         else
+            return out << "<no-location>";
       }
 };
 
