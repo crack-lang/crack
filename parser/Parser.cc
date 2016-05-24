@@ -1543,7 +1543,7 @@ VarDefPtr Parser::parseAnyDef() {
 TypeDefPtr Parser::parseTypeSpec(const char *errorMsg) {
 
    VarDefPtr varDef = parseAnyDef();
-   TypeDefPtr typeDef = varDef;
+   TypeDefPtr typeDef = TypeDefPtr::rcast(varDef);
    if (!typeDef)
       context->error(SPUG_FSTR(varDef->getDisplayName() << " is not a type."));
 
