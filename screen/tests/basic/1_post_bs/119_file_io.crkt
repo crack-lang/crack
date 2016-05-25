@@ -32,9 +32,8 @@ out.write('ing');
 # inheritence)
 
 class MyReader @impl SeekableReader {
-    intz seek(intz pos, int whence) {
-        return 0;
-    }
+    int64 seek(int64 pos, int whence) { return 0 }
+    int64 tell() { return 0 }
 
     uint read(WriteBuffer data) {
         return 0;
@@ -42,9 +41,8 @@ class MyReader @impl SeekableReader {
 }
 
 class MyWriter @impl SeekableWriter {
-    intz seek(intz pos, int whence) {
-        return 0;
-    }
+    int64 seek(int64 pos, int whence) { return 0 }
+    int64 tell() { return 0 }
 
     void write(Buffer data) {}
 }

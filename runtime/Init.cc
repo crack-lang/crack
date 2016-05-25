@@ -823,9 +823,9 @@ extern "C" void crack_runtime_cinit(Module *mod) {
     f->addArg(byteptrType, "buf");
     f->addArg(uintType, "count");
 
-    f = mod->addFunc(intType, "lseek", (void *)lseek, "lseek");
+    f = mod->addFunc(int64Type, "lseek", (void *)lseek, "lseek");
     f->addArg(intType, "fd");
-    f->addArg(intzType, "offset");
+    f->addArg(int64Type, "offset");
     f->addArg(intType, "whence");
 
     mod->addConstant(intType, "SEEK_SET", SEEK_SET);
