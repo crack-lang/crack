@@ -203,7 +203,7 @@ Buffer decode(Buffer inbuf) {
 ## representation is suitable for use as a posix filename and also in URLs.
 String altEncode(Buffer data) {
     class Result : AppendBuffer {
-        oper init(uint size) : AppendBuffer(size) {}
+        oper init(uintz size) : AppendBuffer(size) {}
         @final void encode(uint32 val) {
             b := byte(val);
             if (b < 26)

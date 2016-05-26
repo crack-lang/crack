@@ -224,7 +224,7 @@ CString _makeCString(Buffer val);
 class Buffer : Object {
 
     // buffer and size.
-    uint size;
+    uintz size;
     byteptr buffer;
 
     oper init(byteptr buffer, uint size) : buffer = buffer, size = size {}
@@ -450,13 +450,13 @@ void _formatObject(Formatter f, Object o) {
 class WriteBuffer : Buffer {
 
     ## buffer capacity
-    uint cap;
+    uintz cap;
 
-    oper init(byteptr buffer, uint size) : Buffer(buffer, size), cap = size {}
+    oper init(byteptr buffer, uintz size) : Buffer(buffer, size), cap = size {}
 
     ## Construct a new buffer from a buffer pointer, an initial size and 
     ## capacity.
-    oper init(byteptr buffer, uint size, uint cap) : 
+    oper init(byteptr buffer, uintz size, uintz cap) :
         Buffer(buffer, size), 
         cap = cap {
     }
@@ -464,17 +464,17 @@ class WriteBuffer : Buffer {
     ## Move data from an arbitrary byteptr into the buffer.  The end of the 
     ## new data must not exceed buffer capacity, if it exceeds the current 
     ## size the size will be adjusted to fit it.
-    @final void move(uint start, byteptr ptr, uint count) {
+    @final void move(uintz start, byteptr ptr, uintz count) {
         if (start + count > cap)
             _throwIndexError('Move target out of bounds');
-        memmove(buffer + start, ptr, count);
+        memmove(buffer + uint(start), ptr, uint(count));
         if (start + count > size)
             size = start + count;
     }
 
     ## move data from one place in the buffer to another place in the buffer.  
-    ## Rules concerning size and capacity in move(uint, byteptr, int) apply.
-    @final void move(uint newStart, uint oldStart, uint count) {
+    ## Rules concerning size and capacity in move(uintz, byteptr, int) apply.
+    @final void move(uintz newStart, uintz oldStart, uintz count) {
         if (oldStart + count > size)
             _throwIndexError('Move source out of bounds');
         move(newStart, buffer + oldStart, count);
@@ -483,8 +483,8 @@ class WriteBuffer : Buffer {
     }
 
     ## move a buffer to a place in this buffer.
-    ## Rules concerning size and capacity in move(uint, byteptr, int) apply.
-    @final void move(uint newStart, Buffer buf) {
+    ## Rules concerning size and capacity in move(uintz, byteptr, int) apply.
+    @final void move(uintz newStart, Buffer buf) {
         if (newStart + buf.size > cap)
             _throwIndexError('Move target out of bounds');
         move(newStart, buf.buffer, buf.size);
@@ -508,7 +508,7 @@ class WriteBuffer : Buffer {
 ## scope.
 class ManagedBuffer : WriteBuffer {
 
-    oper init(uint cap) : WriteBuffer(malloc(cap), 0, cap) {}
+    oper init(uintz cap) : WriteBuffer(malloc(cap), 0, cap) {}
     
     ## Orphan's the byte buffer, returning it for use by the caller.  The
     ## caller is responsible for freeing it.
@@ -547,7 +547,7 @@ class ManagedBuffer : WriteBuffer {
 ## AppendBuffer lets you add stuff onto the end of it.
 class AppendBuffer : ManagedBuffer {
 
-    oper init(uint cap) : ManagedBuffer(cap) {}
+    oper init(uintz cap) : ManagedBuffer(cap) {}
 
     ## Append a single byte to the buffer, growing if necessary.
     @final void append(byte c) {
@@ -559,7 +559,7 @@ class AppendBuffer : ManagedBuffer {
     ## Extend the buffer from the pointer and size.  That is, concatenate the 
     ## buffer defined by buf, bufSize onto the end of the current buffer.
     #unsafe
-    @final void extend(byteptr buf, uint bufSize) {
+    @final void extend(byteptr buf, uintz bufSize) {
         uint newSize = size + bufSize;
         if (newSize > cap)
             # grow to the larger of newSize and cap * 2
@@ -577,7 +577,7 @@ class AppendBuffer : ManagedBuffer {
     }
 
     ## Extend the buffer with a portion of the other buffer.
-    @final void extend(Buffer other, uint len) {
+    @final void extend(Buffer other, uintz len) {
         if (len > other.size)
             _throwIndexError('Extend length out of bounds');
         extend(other.buffer, len);
@@ -589,16 +589,16 @@ class AppendBuffer : ManagedBuffer {
 # these efficiently
 
 class SubString;
-SubString _substr(SubString target, uint pos, uint len);
-SubString substr(SubString target, int pos, uint len);
-SubString substr(SubString target, int pos);
-SubString slice(SubString target, int start, int end);
-SubString slice(SubString target, int start);
-SubString _substr(String target, uint pos, uint len);
-SubString substr(String target, int pos, uint len);
-SubString substr(String target, int pos);
-SubString slice(String target, int start, int end);
-SubString slice(String target, int start);
+SubString _substr(SubString target, uintz pos, uintz len);
+SubString substr(SubString target, intz pos, uintz len);
+SubString substr(SubString target, intz pos);
+SubString slice(SubString target, intz start, intz end);
+SubString slice(SubString target, intz start);
+SubString _substr(String target, uintz pos, uintz len);
+SubString substr(String target, intz pos, uintz len);
+SubString substr(String target, intz pos);
+SubString slice(String target, intz start, intz end);
+SubString slice(String target, intz start);
 String rtrim(String target);
 
 @define substr2 1 {
@@ -664,7 +664,7 @@ class String : Buffer {
     }
 
     ## Initialize with a given length and byte
-    oper init(uint size, byte c) : Buffer(malloc(size), size) {
+    oper init(uintz size, byte c) : Buffer(malloc(size), size) {
         memset(buffer, c, size);
     }
 
@@ -684,7 +684,7 @@ class String : Buffer {
 
     ## Initialize from a portion of a WriteBuffer and optionally take ownership
     ## of the buffer.
-    oper init(ManagedBuffer buf, uint len, bool takeOwnership) :
+    oper init(ManagedBuffer buf, uintz len, bool takeOwnership) :
         Buffer(null, 0) {
 
         if (takeOwnership) {
@@ -700,14 +700,14 @@ class String : Buffer {
 
     ## Initialize from a substring of buffer.  This copies the buffer from
     ## index pos to pos + len.  It does not assume ownership.
-    oper init(Buffer buf, uint pos, uint len) : Buffer(malloc(len), len) {
+    oper init(Buffer buf, uintz pos, uintz len) : Buffer(malloc(len), len) {
         if (pos + len > buf.size)
             _throwIndexError('out of bounds copy');
         memcpy(buffer, buf.buffer + pos, len);
     }
 
     ## Initialize from byte pointer and size and optionally take ownership.
-    oper init(byteptr buf, uint size, bool takeOwnership) :
+    oper init(byteptr buf, uintz size, bool takeOwnership) :
         Buffer(takeOwnership ? buf : memcpy(malloc(size), buf, size),
                size
                ) {
@@ -732,7 +732,7 @@ class String : Buffer {
 
     ## Concatenation
     @final String oper +(String rhs) {
-        uint newBufferSize = this.size + rhs.size;
+        uintz newBufferSize = this.size + rhs.size;
         byteptr newRawBuffer = malloc(newBufferSize);
         memcpy(newRawBuffer, this.buffer, this.size);
         memcpy(newRawBuffer+this.size, rhs.buffer, rhs.size);
@@ -740,7 +740,7 @@ class String : Buffer {
     }
 
     @final String oper +(byte chr) {
-        uint newBufferSize = this.size + 1;
+        uintz newBufferSize = this.size + 1;
         byteptr newRawBuffer = malloc(newBufferSize);
         memcpy(newRawBuffer, this.buffer, this.size);
         newRawBuffer[this.size] = chr;
@@ -750,8 +750,8 @@ class String : Buffer {
     ## Returns a new string that is the concatenation of the receiver and the 
     ## null-terminated 'rhs'.
     @final String oper +(byteptr rhs) {
-        uint rhs_size = strlen(rhs);
-        uint newBufferSize = size + rhs_size;
+        uintz rhs_size = strlen(rhs);
+        uintz newBufferSize = size + rhs_size;
         byteptr newRawBuffer = malloc(newBufferSize);
         memcpy(newRawBuffer, buffer, size);
         memcpy(newRawBuffer + size, rhs, rhs_size);
@@ -781,7 +781,7 @@ class String : Buffer {
     ## receiver is already a SubString, in which case it will translate to
     ## the underlying String to avoid creating a stack of SubStrings.
     ## If 'pos' is negative, it is an offset from the end of the string.
-    SubString substr(int pos, uint len) @substr2 this
+    SubString substr(int pos, uintz len) @substr2 this
 
     ## Create a substring from 'pos' to the end of the string.
     SubString substr(int pos) @substr1 this
@@ -818,7 +818,7 @@ String _getRepr(Buffer buffer) {
     AppendBuffer buf = {buffer.size + 2};
 
     buf.append(b"'");
-    for (uint i = 0; i < buffer.size; ++i) {
+    for (uintz i = 0; i < buffer.size; ++i) {
         ch := buffer.buffer[i];
         if (ch < 32 || ch > 127 || ch == 39 || ch == 92) {
             buf.append(b'\\'); # '\'
@@ -841,20 +841,20 @@ class SubString : String {
     String _rep = null;
 
     ## Create a stubstring 'target' starting from 'pos' and of length 'len'.
-    oper init(String target, uint pos, uint len) :
+    oper init(String target, uintz pos, uintz len) :
         String(target.buffer + pos, len, true),
         _rep = target {
     }
 
     ## Create a substring from 'pos' to the end of the string.
-    oper init(String target, uint pos) :
+    oper init(String target, uintz pos) :
         String(target.buffer + pos, target.size - pos, true),
         _rep = target {
     }
 
     ## Create a substring from a target string given a start 'buf' and length.
     ## 'buf' must point to within 'target'.
-    oper init(String target, byteptr buf, uint len) :
+    oper init(String target, byteptr buf, uintz len) :
         String(buf, len, true),
         _rep = target {
     }
@@ -862,7 +862,7 @@ class SubString : String {
     # duplicate the substring/slice interface since we can do them more
     # efficiently here
 
-    SubString substr(int pos, uint len) @substr2 this
+    SubString substr(int pos, uintz len) @substr2 this
     SubString substr(int pos) @substr1 this
     SubString slice(int start, int end) @slice2 this
     SubString slice(int start) @slice1 this
@@ -870,21 +870,21 @@ class SubString : String {
     void _freeBuffer() {}
 }
 
-SubString _substr(SubString target, uint pos, uint len) {
+SubString _substr(SubString target, uintz pos, uintz len) {
     # do bounds checking
     if (pos > target.size || pos + len > target.size)
         _throwIndexError('Substring out of bounds');
 
-    byteptr buf = target.buffer + uint(pos);
+    byteptr buf = target.buffer + pos;
     return SubString(target._rep, buf, len);
 }
 
-SubString substr(SubString target, int pos, uint len) @substr2 target
-SubString substr(SubString target, int pos) @substr1 target
-SubString slice(SubString target, int start, int end) @slice2 target
-SubString slice(SubString target, int start) @slice1 target
+SubString substr(SubString target, intz pos, uintz len) @substr2 target
+SubString substr(SubString target, intz pos) @substr1 target
+SubString slice(SubString target, intz start, intz end) @slice2 target
+SubString slice(SubString target, intz start) @slice1 target
 
-SubString _substr(String target, uint pos, uint len) {
+SubString _substr(String target, uintz pos, uintz len) {
     # do bounds checking
     if (pos > target.size || pos + len > target.size)
         _throwIndexError('Substring out of bounds');
@@ -896,23 +896,23 @@ SubString _substr(String target, uint pos, uint len) {
         return SubString(target, buf, len);
 }
 
-SubString substr(String target, int pos, uint len) {
+SubString substr(String target, intz pos, uintz len) {
     # adjust a negative position
     if (pos < 0)
         pos = int(target.size) - pos;
 
-    return _substr(target, uint(pos), len);
+    return _substr(target, uintz(pos), len);
 }
 
-SubString substr(String target, int pos) {
+SubString substr(String target, intz pos) {
     # adjust a negative position
     if (pos < 0)
         pos = int(target.size) - pos;
 
-    return _substr(target, uint(pos), target.size - uint(pos));
+    return _substr(target, uintz(pos), target.size - uintz(pos));
 }
 
-SubString slice(String target, int start, int end) {
+SubString slice(String target, intz start, intz end) {
 
     # adjust negative offsets
     if (start < 0)
@@ -924,20 +924,20 @@ SubString slice(String target, int start, int end) {
     if (end < start)
         _throwIndexError('Start of slice is after end.');
 
-    return _substr(target, uint(start), uint(end - start));
+    return _substr(target, uintz(start), uintz(end - start));
 }
 
-SubString slice(String target, int start) {
+SubString slice(String target, intz start) {
 
     # adjust negative offsets
     if (start < 0)
         start = int(target.size) + start;
 
     # bounds checking
-    if (uint(start) > target.size)
+    if (uintz(start) > target.size)
         _throwIndexError('Start of slice is after end.');
 
-    return _substr(target, uint(start), target.size - uint(start));
+    return _substr(target, uintz(start), target.size - uintz(start));
 }
 
 String rtrim(String target) {
@@ -958,7 +958,7 @@ String rtrim(String target) {
 ## not included in the size of the string.
 class CString : String {
 
-    @final void __copy(byteptr buf, uint newSize) {
+    @final void __copy(byteptr buf, uintz newSize) {
         size = newSize;
         buffer = malloc(size + 1);
         memcpy(buffer, buf, size);
@@ -973,7 +973,7 @@ class CString : String {
     ## memory if requested.
     ## If takeOwnership is true, buf[size] must be null.  This constructor
     ## will not verify that this is the case.
-    oper init(byteptr buf, uint size, bool takeOwnership) :
+    oper init(byteptr buf, uintz size, bool takeOwnership) :
         String(buf, size, true) {
         if (!takeOwnership)
             __copy(buf, size);
@@ -1012,7 +1012,7 @@ CString _makeCString(Buffer val) {
 ##    life of the StaticString object.
 class StaticString : CString {
 
-    oper init(byteptr data, uint size) : CString(data, size, true) {}
+    oper init(byteptr data, uintz size) : CString(data, size, true) {}
 
     ## Initialize from a null terminated string.
     oper init(byteptr data) : CString(data, strlen(data), true) {}

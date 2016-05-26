@@ -6035,6 +6035,8 @@ From 0.11 to 1.0
 -   In \X(The Formatter Protocol), The return value of the #enter()# method
     was previously ignored, but is now used as the formatter object for
     format() methods and leave().
+-   Buffer size is now defined as uintz.  All other indexes and sizes to
+    strings and buffers are uintz or intz.
 
 From 0.10 to 0.11
 -----------------

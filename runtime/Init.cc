@@ -778,27 +778,27 @@ extern "C" void crack_runtime_cinit(Module *mod) {
     f->addArg(byteptrType, "str");
 
     f = mod->addFunc(byteptrType, "malloc", (void *)malloc, "malloc");
-    f->addArg(uintType, "size");
+    f->addArg(uintzType, "size");
     
     f = mod->addFunc(byteptrType, "memcpy", (void *)memcpy, "memcpy");
     f->addArg(byteptrType, "dst");
     f->addArg(byteptrType, "src");
-    f->addArg(uintType, "size");
+    f->addArg(uintzType, "size");
 
     f = mod->addFunc(byteptrType, "memset", (void *)memset, "memset");
     f->addArg(byteptrType, "dst");
     f->addArg(byteType, "c");
-    f->addArg(uintType, "size");
+    f->addArg(uintzType, "size");
 
     f = mod->addFunc(intType, "memcmp", (void *)memcmp, "memcmp");
     f->addArg(byteptrType, "a");
     f->addArg(byteptrType, "b");
-    f->addArg(uintType, "size");
+    f->addArg(uintzType, "size");
     
     f = mod->addFunc(byteptrType, "memmove", (void *)memmove, "memmove");
     f->addArg(byteptrType, "dst");
     f->addArg(byteptrType, "src");
-    f->addArg(uintType, "size");
+    f->addArg(uintzType, "size");
     
     Type *cFileType = mod->addType("CFile", 0);
     cFileType->finish();
