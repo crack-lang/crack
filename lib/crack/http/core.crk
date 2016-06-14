@@ -1,0 +1,265 @@
+## Core classes for the HTTP subsystem.
+## This is the basic functionality needed to implement a server.  Higher level
+## functionality can be found in crack.http.util.
+
+import crack.ascii lstrip;
+import crack.cont.array Array;
+import crack.cont.hashmap HashMap;
+import crack.functor Function1, Functor1, Functor2;
+import crack.fieldset HashMapFieldSet;
+import crack.io FStr, StandardFormatter, Writer;
+import crack.lang AppendBuffer, Buffer, Exception;
+import crack.logger debug, info, warn;
+import crack.net InetAddress;
+import crack.regex Regex;
+import crack.strutil split, StringArray;
+import crack.time Date;
+
+@export_symbols HandlerArray, HandlerFunc, RequestHandler, PostDataHandler;
+
+class NotImplementedError : Exception {}
+
+## Class for an HTTP Cookie.
+class Cookie {
+    String name;
+    String value;
+
+    oper init(String name, String value) :
+        name = name,
+        value = value {
+    }
+
+    ## Return the expiration time of the cookie.
+    ## NOT IMPLEMENTED, reserved for future use.
+    @final Date getExpirationTime() {
+        throw NotImplementedError();
+    }
+
+    ## Returns the domain name.
+    ## NOT IMPLEMENTED, reserved for future use.
+    @final String getDomain() {
+        throw NotImplementedError();
+    }
+
+    ## Returns true if the cookie should only be sent over TLS.
+    ## NOT IMPLEMENTED, reserved for future use.
+    bool getSecure() {
+        throw NotImplementedError();
+    }
+
+    ## Returns true if the cookie is not available to javascript.
+    ## NOT IMPLEMENTED, reserved for future use.
+    bool getHTTPOnly() {
+        throw NotImplementedError();
+    }
+}
+
+const Regex _COOKIE_RX = {r'\s*([^\s\(\)<>@,;:\\"/\[\]\?=\{\}\000-\037]+)='
+                          r'("[\x21\x23-\x2b\x2d-\x3a\x3c-\x5b\x5d-\x7e]*"|'
+                          r'[\x21\x23-\x2b\x2d-\x3a\x3c-\x5b\x5d-\x7e]*)'
+                          r'(; .*)?'
+                          };
+
+class Request;
+
+# Post data handlers are used to allow request handlers to defer reading of
+# contents from a PUT/POST request.  The request handler must set this in the
+# Request object otherwise this data will be discarded.
+alias PostDataHandler = Functor2[void, Request, Buffer];
+
+# The primary request handler should attach a ResponseHandler to the request
+# if it either needs to block or is returning something to large to
+# comfortably fit into memory.  The response handler should return true when
+# it is done sending data back to the client.
+alias RequestHandler = Functor1[bool, Request];
+
+# Alias to allow converting a raw function handler to a Functor.
+alias HandlerFunc = Function1[bool, Request];
+
+alias HandlerArray = Array[RequestHandler];
+
+## You can throw this from anywhere in any of the HTTP handling functions and
+## cause the request to cleanly terminate at the top-level handler and send
+## the code and body text to the client.
+class Abort : Exception {
+    int code;
+    oper init(int code, String body) : Exception(body), code = code {}
+}
+
+uintz normalizeIndex(intz index, uintz size) {
+    if (index < 0)
+        index = size + index;
+
+    # if it's still zero, trim to zero
+    if (index < 0)
+        index = 0;
+
+    # if greater than the limit, trim to the limit.
+    else if (index > size)
+        index = size;
+
+    return index;
+}
+
+## Joins an array of path components into a path.
+String joinPath(StringArray path, int start, int end) {
+    size := path.count();
+    s := normalizeIndex(start, size);
+    e := normalizeIndex(end, size);
+
+    # figure out how much space we need for all strings separated by slashes.
+    uintz bufSize;
+    for (elem :in path)
+        bufSize += elem.size;
+    bufSize += size - 1;
+
+    AppendBuffer buf = {bufSize};
+    for (int i = start; i < end; ++i) {
+        if (i == start)
+            buf.append(b'/');
+        buf.extend(path[i]);
+    }
+
+    return String(buf, true);
+}
+
+## Contains the full contents of an HTTP request and provides the means for
+## communicating back to the client.
+## Note that this is a FieldSet, arbitrary user data can be attached to it.
+class Request : HashMapFieldSet {
+    String method, path, version;
+
+    ## Headers received from the client.  These are all normalized to
+    ## lower-case.
+    HashMap[String, Array[String]] headers = {};
+
+    ## Headers to be sent back to the client.  These should be fully formatted
+    ## and with no trailing newline.  For best results, just use addHeader().
+    StringArray responseHeaders;
+
+    InetAddress clientAddr;
+    StandardFormatter __clt;
+
+    ## If present, this is the path parsed into components, e.g.
+    ## with a path of "/foo/bar/baz" this would normally contain ["foo",
+    ## "bar", "baz"].  Use getParsedPath() if you want to create it from
+    ## 'path' when it's null.  Handlers may mutate this field for other
+    ## handlers on the path.  For example, Dispatchers typically remove the
+    ## first element (which they have already matched).
+    StringArray parsedPath;
+
+    ## If non-null, this is the contents of the request sent with a POST/PUT
+    ## request.  It is the responsibility of the handler to populate this.
+    Buffer contents;
+
+    HashMap[String, Cookie] __parsedCookies;
+
+    Functor2[void, Request, Buffer] postDataHandler;
+    Functor1[bool, Request] responseHandler;
+
+    ## The number of bytes of POST/PUT data that hasn't been processed yet.
+    ## This is updated after postDataHandler is called, so it includes the
+    ## data in the buffer passed to postDataHandler.
+    uint remainingPostData;
+
+    oper init(Writer client, ## the channel to write back to the client.
+              InetAddress clientAddr ## the client address.
+              ) :
+        method = method,
+        path = path,
+        version = version,
+        clientAddr = clientAddr,
+        __clt(client) {
+    }
+
+    ## Returns the parsed path (see 'parsedPath' above), creating it from
+    ## 'path' if the field is currently null.
+    @final StringArray getParsedPath() {
+        if (parsedPath is null) {
+            temp := (p := path.lfind('?')) == -1 ? path : path.slice(0, p);
+            parsedPath = split(temp.substr(1), '/');
+        }
+        return parsedPath;
+    }
+
+    ## Returns the requested cookie or null if it does not exist.
+    @final Cookie getCookie(String cookieName) {
+        if (__parsedCookies is null) {
+            __parsedCookies = HashMap[String, Cookie]();
+            cookies := headers.get('cookie');
+            if (!cookies)
+                return null;
+
+            for (cookieLine :in cookies) {
+                while (cookieLine) {
+                    if (m := _COOKIE_RX.match(cookieLine)) {
+                        name := m.group(1);
+                        val := m.group(2);
+                        if (val[0] == b'"')
+                            val = val.slice(1, -1);
+                        __parsedCookies[name] = Cookie(name, val);
+                        debug `cookie: $name = $(val.getRepr())`;
+
+                        # See if there's more.
+                        if (m.group(3))
+                            cookieLine = lstrip(m.group(3).substr(1));
+                        else
+                            cookieLine = null;
+                    } else {
+                        warn `Malformed cookie: $cookieLine`;
+                        cookieLine = null;
+                    }
+                }
+            }
+        }
+
+        return __parsedCookies.get(cookieName);
+    }
+
+    ## Adds a header to the list to be sent to the client.
+    @final void addHeader(String header, String value) {
+        if (responseHeaders is null)
+            responseHeaders = StringArray();
+        responseHeaders.append(FStr() `$header: $value`);
+    }
+
+    ## Writes the response status and some of the headers.  It is the
+    ## responsibility of the caller to write the "content-length" header and a
+    ## blank line prior to writing the message contents.
+    @final void writePartialHeaders(int code, String contentType) {
+        info `$clientAddr $method $path $code`;
+        __clt I`HTTP/1.1 $code Stat
+               Content-type: $contentType
+               `;
+
+        if (responseHeaders) {
+            for (header :in responseHeaders)
+                __clt `$header\n`;
+        }
+    }
+
+    ## Write all headers.  Caller is responsible for writing contents.
+    @final void writeHeaders(int code, String contentType, int contentLength) {
+        writePartialHeaders(code, contentType);
+        __clt `Content-length: $contentLength\n\n`;
+    }
+
+    ## Sends a reply to the client with the specified code, content type and
+    ## contents.
+    void sendReply(int code, String contentType, Buffer contents) {
+        writeHeaders(code, contentType, contents.size);
+        __clt.write(contents);
+    }
+
+    void sendRedirect(int code, String location) {
+        info `$clientAddr $method $path $code`;
+        __clt `HTTP/1.1 $code Stat
+Location: $location
+
+`;
+    }
+
+    @final void write(Buffer data) {
+        __clt.write(data);
+    }
+}

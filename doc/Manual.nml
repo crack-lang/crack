@@ -4886,7 +4886,7 @@ server, allowing frameworks to customize their request objects, but that in
 turn makes it difficult to combine elements of different frameworks.
 
 Field sets provide an elegant solution to this problem.
-#crack.net.httpsrv.HTTPRequest# implements the #FieldSet# interface, allowing
+#crack.http.HTTPRequest# implements the #FieldSet# interface, allowing
 arbitrary objects to be attached to it.  So for example, for our
 authentication data we could define an #AuthData# class and use it as follows:
 
@@ -4904,7 +4904,7 @@ authentication data we could define an #AuthData# class and use it as follows:
         @fieldset_accessors(AuthData);
     }
 
-    void authHandler(HTTPRequest req) {
+    void authHandler(Request req) {
         ... do authentication ...
 
         # Store the auth data.
@@ -4915,7 +4915,7 @@ authentication data we could define an #AuthData# class and use it as follows:
 Our application handler could then access it using the #get()# method:
 
 {{
-    void appHandler(HTTPRequest req) {
+    void appHandler(Request req) {
         auth := AuthData.get(req);
 
         if (!auth) {
@@ -6037,6 +6037,8 @@ From 0.11 to 1.0
     format() methods and leave().
 -   Buffer size is now defined as uintz.  All other indexes and sizes to
     strings and buffers are uintz or intz.
+-   #crack.net.httpsrv# has been broken out into a set of modules under
+    #crack.http#.
 
 From 0.10 to 0.11
 -----------------
