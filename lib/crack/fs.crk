@@ -10,8 +10,8 @@
 import crack.runtime basename, chdir, chmod, closedir, dirname, errno,
     fileExists, free, fileRemove, getcwd, getDirEntry, malloc, mkdir, open,
     opendir, readdir, rename, stat, strcpy, strlen, truncate, Dir, DirEntry,
-    Stat, EEXIST, O_CREAT, O_TRUNC, O_RDONLY, O_WRONLY, O_APPEND, PATH_MAX, S_IFDIR,
-    S_IFLNK;
+    Stat, EEXIST, ENOENT, O_CREAT, O_TRUNC, O_RDONLY, O_WRONLY, O_APPEND,
+    PATH_MAX, S_IFDIR, S_IFLNK;
 import crack.sys strerror;
 import crack.io cout, FStr, OwningFDReader, OwningFDWriter, Reader,
     SeekableReader, SeekableWriter, Writer;
@@ -97,7 +97,8 @@ class Path;
     @abstract bool exists();
 
     ## Returns true if the path is a directory (that is, if "children()" can
-    ## be used for iteration)
+    ## be used for iteration).  Returns false (does not throw an exception) if
+    ## the file or a parent does not exist.
     @abstract bool isDir();
 
     ## Returns true if the path is a symlink.
@@ -302,7 +303,13 @@ class RealPath : Path {
 
     @define __stater(funcName, constName) {
         bool funcName() {
-            PathStat st = getStat();
+            PathStat st = {};
+            rc := stat(__path.buffer, st);
+            if (rc) {
+                if (errno() == ENOENT)
+                    return false;
+                throw SystemError('Stating ' + __path);
+            }
             result := st.st_mode & constName;
             return result;
         }
