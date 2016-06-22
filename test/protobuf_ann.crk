@@ -29,6 +29,10 @@ import crack.strutil StringArray;
     message Foo {
         optional Bar bar = 1;
         required int32 field = 100;
+
+        optional uint32 uint32Field = 2;
+        optional uint64 uint64Field = 3;
+        optional int64 int64Field = 4;
     }
 }
 
@@ -89,6 +93,18 @@ if (true) {
 
     fooTest = RoundTripTest[Foo]();
     fooTest.old.field = 456;
+    fooTest.test();
+}
+
+# other int type tests.
+if (true) {
+    fooTest := RoundTripTest[Foo]();
+
+    # We intentionally don't test large values because they don't work at this
+    # time.
+    fooTest.old.uint32Field = 100;
+    fooTest.old.uint64Field = 200;
+    fooTest.old.int64Field = 300;
     fooTest.test();
 }
 

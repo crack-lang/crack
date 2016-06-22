@@ -56,6 +56,9 @@ if (!tempDir.exists())
 if (!tempDir.isDir())
     cout `FAILED isDir() check on directory\n`;
 
+if (RealPath('fakeDir').isDir())
+    cout `FAILED isDir() check on non-existent directory\n`;
+
 # Make sure 'errorOnExists' flag works.
 tempDir.makeDir(false);
 
