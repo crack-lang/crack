@@ -203,7 +203,6 @@ FuncDefPtr ModelBuilder::createFuncForward(Context &context,
     FuncDefPtr result = new ModelFuncDef(flags, name, args.size());
     result->returnType = returnType;
     result->args = args;
-    result->getFuncType(context);
     if (!(flags & FuncDef::abstract))
         result->flags = flags | FuncDef::forward;
     result->ns = context.ns;
@@ -212,6 +211,9 @@ FuncDefPtr ModelBuilder::createFuncForward(Context &context,
     else if (flags & FuncDef::method)
         result->receiverType =
             TypeDefPtr::arcast(context.getClassContext()->ns);
+
+    result->getFuncType(context);
+
     return result;
 }
 
@@ -251,7 +253,6 @@ FuncDefPtr ModelBuilder::emitBeginFunc(
     model::FuncDefPtr func = new ModelFuncDef(flags, name, args.size());
     func->args = args;
     func->returnType = returnType;
-    func->getFuncType(context);
 
     addImplToArgs(func->args);
 
@@ -264,6 +265,8 @@ FuncDefPtr ModelBuilder::emitBeginFunc(
             // TODO: move nextVTableSlot into TypeDef.
             func->vtableSlot = 0; // func->receiverType->nextVTableSlot++;
     }
+
+    func->getFuncType(context);
 
     // Set the receiver's impl if we've got one.
     if (func->receiverType) {
@@ -985,6 +988,7 @@ ModuleDefPtr ModelBuilder::registerPrimFuncs(Context &context) {
     // Create OverloadDef.
     TypeDefPtr metaType = createMetaClass(context, "Overload");
     TypeDefPtr overloadDef = new TypeDef(metaType.get(), "Overload", false);
+    gd->overloadType = overloadDef;
     metaType->meta = overloadDef.get();
 
     context.addDef(
