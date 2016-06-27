@@ -78,7 +78,8 @@ class Object : VTableBase {
     }
 
     @final bool oper <(Object other) {
-        return this is null ? !(other is null) : (other is null ? false : cmp(other) < 0);
+        return this is null ? !(other is null) :
+                              (other is null ? false : cmp(other) < 0);
     }
 
     @final bool oper <=(Object other) {
@@ -86,15 +87,18 @@ class Object : VTableBase {
     }
 
     @final bool oper ==(Object other) {
-        return this is null ? other is null : (other is null ? false :cmp(other) == 0);
+        return this is null ? other is null :
+                              (other is null ? false :cmp(other) == 0);
     }
 
     @final bool oper !=(Object other) {
-        return this is null ? !(other is null) : (other is null ? false : cmp(other) != 0);
+        return this is null ? !(other is null) :
+                              (other is null ? true : cmp(other) != 0);
     }
 
     @final bool oper >=(Object other) {
-        return this is null ? other is null : ( other is null ? false : cmp(other) >= 0);
+        return this is null ? other is null :
+                              (other is null ? true : cmp(other) >= 0);
     }
 
     @final bool oper >(Object other) {
@@ -1378,3 +1382,4 @@ $$
 
 uint makeHashVal(uint64 val) { return uint(val >> 32 ^ val); }
 uint makeHashVal(int64 val) { return uint(val >> 32 ^ val); }
+uint makeHashVal(bool val) { return val ? 1 : 0; }
