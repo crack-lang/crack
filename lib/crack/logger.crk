@@ -10,9 +10,9 @@
 import crack.ascii escape, strip, wsplit;
 import crack.cont.array Array;
 import crack.cont.hashmap HashMap;
-import crack.exp.file File;
+import crack.fs makePath, Path;
 import crack.functor Functor2;
-import crack.io cout, cerr, StandardFormatter, StringWriter;
+import crack.io cout, cerr, StandardFormatter, StringFormatter;
 import crack.lang Formatter, Writer;
 import crack.runtime usecs;
 import crack.strutil StringArray;
@@ -241,71 +241,68 @@ class Logger @impl Functor2[void, uint, String] {
     }
 
     void setFile(String fname) {
-        options.fmt = StandardFormatter(File(fname, "w"));
+        options.fmt = StandardFormatter(makePath(fname).writer());
     }
 
     void setWriter(Writer w) {
         options.fmt = StandardFormatter(w);
     }
 
-    void setFile(File file) {
-        options.fmt = StandardFormatter(file);
+    void setPath(Path path) {
+        options.fmt = StandardFormatter(path.writer());
     }
 
 }
 
-class LogFormatter : StandardFormatter {
-    StringWriter _writer = {};
+class _EntryFormatter : StringFormatter {
+
+    Logger __logger;
+    uint __level;
+
+    oper init(Logger logger, uint level) : __logger = logger, __level = level {}
+
+    @final void leave() {
+        __logger.log(__level, string());
+    }
+}
+
+class LogFormatter {
     Logger _logger;
     uint _level;
 
     oper init(Logger logger, uint level) :
-            StandardFormatter(null), _logger = logger, _level = level
-    {
-        rep = _writer;
+        _logger = logger,
+        _level = level {
     }
 
     oper init(String fname, uint level, String fieldSpec) :
-            StandardFormatter(null),  _level = level,
-            _logger = Logger(StandardFormatter(File(fname, "w")), level, fieldSpec)
-    {
-        rep = _writer;
+        _level = level,
+        _logger = Logger(StandardFormatter(makePath(fname).writer()), level,
+                         fieldSpec
+                         ) {
     }
 
     oper init(Writer w, uint level, String fieldSpec) :
-            StandardFormatter(null),  _level = level,
-            _logger = Logger(StandardFormatter(w), level, fieldSpec)
-    {
-        rep = _writer;
+        _level = level,
+        _logger = Logger(StandardFormatter(w), level, fieldSpec) {
     }
 
     oper init(String fname, uint level) :
-            StandardFormatter(null),  _level = level,
-            _logger = Logger(StandardFormatter(File(fname, "w")), level)
-    {
-        rep = _writer;
+        _level = level,
+        _logger = Logger(StandardFormatter(makePath(fname).writer()), level) {
     }
 
     oper init(Writer w, uint level) :
-            StandardFormatter(null),  _level = level,
-            _logger = Logger(StandardFormatter(w), level)
-    {
-        rep = _writer;
+        _level = level,
+        _logger = Logger(StandardFormatter(w), level) {
     }
 
     Logger logger() {
       return _logger;
     }
 
-    void enter() {
-        if (!_writer)
-            rep = _writer = StringWriter();
-    }
-
-    void leave() {
-        _logger.log(_level, _writer.string());
-        _writer = null;
-        rep = null;
+    _EntryFormatter enter() {
+        return _EntryFormatter(_logger, _level);
     }
 
     void setNamedFields(Array[String] fieldNames) {
@@ -336,8 +333,8 @@ class LogFormatter : StandardFormatter {
         _logger.setFile(fname);
     }
 
-    void setFile(File file) {
-        _logger.setFile(file);;
+    void setPath(Path path) {
+        _logger.setPath(path);;
     }
 
     void setWriter(Writer w) {
@@ -359,8 +356,8 @@ void setLogFile(String fname) {
     cerrLogger.setFile(fname);
 }
 
-void setLogFile(File file) {
-    cerrLogger.setFile(file)
+void setLogPath(Path path) {
+    cerrLogger.setPath(path)
 }
 
 void setLogWriter(Writer w) {

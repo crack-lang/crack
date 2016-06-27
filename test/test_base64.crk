@@ -1,16 +1,17 @@
 // Test base64 encoding/decoding
 // Copyright 2012 Conrad Steenberg <conrad.steenberg@gmail.com>
-// 
+//
 //   This Source Code Form is subject to the terms of the Mozilla Public
 //   License, v. 2.0. If a copy of the MPL was not distributed with this
 //   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-// 
+//
 // 12/26/2012
 
-import crack.ascii hex, bin;
+import crack.ascii bin, hex;
+import crack.enc.base64 altDecode, altEncode, decode, encode;
 import crack.io cout, FStr;
 import crack.runtime exit;
-import crack.enc.base64 encode, decode;
+import crack.strutil StringArray;
 
 lipsum := "Lorem ipsum dolor sit amet, consetetur sadipscing elitr, sed diam "
           "nonumyeirmod tempor invidunt ut labore et dolore magna aliquyam "
@@ -56,6 +57,24 @@ if (b != "hello") {
   exit(1);
 }
 
+# Test altEncode/Decode with strings of variaous lengths.
+for (val :in StringArray!['1', '12', '123', '1234', '12345',
+                          'this is a longer test of encoding.']) {
+    if (altDecode(altEncode(val)) != val)
+        cout `FAILED encode/decode of $val`;
+}
+
+# Test against all different byte values.
+for (int i = 0; i < 256; ++i) {
+    b := byte(i);
+    val := String(1, b);
+    if (altDecode(altEncode(val)) != val)
+        cout `FAILED encode/decode of byte $b\n`;
+}
+
+# Just verify that we're actually encoding.
+if (altEncode('hello world') != 'aGVsbG8gd29ybGQ')
+    cout `FAILED hello world.\n`;
 
 cout.write("ok\n");
 

@@ -72,7 +72,7 @@ bool BArgVarDefImpl::isInstVar() const { return false; }
 ResultExprPtr BMemVarDefImpl::emitRef(Context &context, VarRef *var) {
     LLVMBuilder &b =
             dynamic_cast<LLVMBuilder &>(context.builder);
-    b.emitMemVarRef(context, getRep(b));
+    b.emitMemVarRef(context, getRep(context, b));
     return new BResultExpr((Expr*)var, b.lastValue);
 }
 
@@ -82,7 +82,7 @@ ResultExprPtr BMemVarDefImpl::emitAssignment(Context &context, AssignExpr *assig
     ResultExprPtr result = assign->value->emit(context);
     Value *exprVal = b.lastValue;
     b.narrow(assign->value->type.get(), assign->var->type.get());
-    b.builder.CreateStore(b.lastValue, getRep(b));
+    b.builder.CreateStore(b.lastValue, getRep(context, b));
     result->handleAssignment(context);
     b.lastValue = exprVal;
 
@@ -92,7 +92,7 @@ ResultExprPtr BMemVarDefImpl::emitAssignment(Context &context, AssignExpr *assig
 void BMemVarDefImpl::emitAddr(Context &context, VarRef *var) {
     LLVMBuilder &b =
             dynamic_cast<LLVMBuilder &>(context.builder);
-    b.lastValue = getRep(b);
+    b.lastValue = getRep(context, b);
 }
 
 bool BMemVarDefImpl::hasInstSlot() const { return false; }
@@ -110,7 +110,7 @@ BGlobalVarDefImpl::BGlobalVarDefImpl(llvm::GlobalVariable *rep,
     repModuleId(repModuleId) {
 }
 
-Value *BGlobalVarDefImpl::getRep(LLVMBuilder &builder) {
+Value *BGlobalVarDefImpl::getRep(Context &context, LLVMBuilder &builder) {
     if (repModuleId != builder.moduleDef->repId) {
         repModuleId = builder.moduleDef->repId;
         rep = builder.getModVar(this);
@@ -121,6 +121,30 @@ Value *BGlobalVarDefImpl::getRep(LLVMBuilder &builder) {
 void BGlobalVarDefImpl::fixModule(Module *oldMod, Module *newMod) {
     if (rep->getParent() == oldMod)
         rep = newMod->getGlobalVariable(rep->getName());
+}
+
+BWeakClassVarDefImpl::BWeakClassVarDefImpl(llvm::GlobalVariable *rep,
+                                           int repModuleId,
+                                           BTypeDef *inst
+                                           ) :
+    BGlobalVarDefImpl(rep, repModuleId),
+    inst(inst) {
+}
+
+Value *BWeakClassVarDefImpl::getRep(Context &context, LLVMBuilder &builder) {
+    if (repModuleId != builder.moduleDef->repId) {
+        GlobalVariable *gvar =
+            builder.module->getGlobalVariable(inst->getFullName());
+
+        // If undefined, create a whole new instance.
+        if (!gvar) {
+            gvar = inst->getClassInstRep(context, builder.moduleDef.get());
+        }
+
+        repModuleId = builder.moduleDef->repId;
+        rep = gvar;
+    }
+    return rep;
 }
 
 // BConstDefImpl

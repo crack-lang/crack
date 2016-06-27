@@ -1,0 +1,524 @@
+## Utility classes to help out with Server-side HTTP functionality.
+
+import crack.ascii parseInt;
+import crack.cont.array Array;
+import crack.cont.hashmap HashMap;
+import crack.enc.base64 altEncode;
+import crack.fieldset FieldSet, HashMapFieldSet;
+import crack.functor Functor0, Functor1, Function1;
+import crack.hash.sha256 SHA256;
+import crack.io FStr, StringWriter;
+import crack.lang AppendBuffer, Buffer, InvalidArgumentError;
+import crack.logger debug, error, setLogLevel, DEBUG;
+import crack.http.core Abort, HandlerFunc, PostDataHandler, Request,
+    RequestHandler;
+import crack.random MersenneTwister;
+import crack.regex Regex;
+import crack.strutil StringArray;
+import crack.sys argv;
+import crack.time Time;
+
+@import crack.ann interface, impl, implements, SCOPE_NAME;
+@import crack.fieldset_ann fieldset_accessors;
+
+## A Chain is a sequence of handlers. It replicates the logic of the
+## HTTPServer itself, calling all of its handlers until one of them returns
+## 'true' at which point it returns true, also.  If no handler returns true,
+## this functor returns false.
+class Chain : Array[RequestHandler] @implements Functor1[bool, Request] {
+    bool oper call(Request req) {
+        for (handler :in this) {
+            if (handler(req))
+                return true;
+        }
+        return false;
+    }
+}
+
+## A PathDispatcher is a map of handlers that calls and returns the return
+## value of the handler mapped to the first segment of the URL path, if there
+## is one.  Returns 'false' if there is no match.
+class PathDispatcher : HashMap[String, RequestHandler]
+                       @implements Functor1[bool, Request] {
+    bool oper call(Request req) {
+        handler := get(req.getParsedPath()[0], null);
+        if (!(handler is null)) {
+            req.parsedPath.delete(0);
+            return handler(req);
+        } else {
+            return false;
+        }
+    }
+}
+
+## The most common type of POST/PUT data handler.  This just collects the
+## request contents and stores it in the 'contents' buffer in the request
+## object and then calls another request handler.
+class PostDataCollector @impl PostDataHandler {
+    StringWriter __writer = {};
+    Functor1[bool, Request] __handler;
+
+    oper init(function[bool, Request] handler) :
+        __handler = HandlerFunc(handler) {
+    }
+
+    oper init(Functor1[bool, Request] handler) :
+        __handler = handler {
+    }
+
+    void oper call(Request req, Buffer buf) {
+        __writer.write(buf);
+        if (buf.size == req.remainingPostData) {
+            req.contents = __writer.string();
+            debug `calling handler with contents: $(req.contents)`;
+            __handler(req);
+        } else if (buf.size > req.remainingPostData) {
+            error I`PostDataCollector received buffer [$buf] which is \
+                    greater than remaining post data \
+                    ($(req.remainingPostData))`;
+        }
+    }
+}
+
+## Handler that uses PostDataCollector to collect the contents of a post/put
+## request prior to storing all of the data in the "contents" attribute and
+## calling the user's handler.
+class PostRequestHandler @impl Functor1[bool, Request] {
+
+    Functor1[bool, Request] handler;
+
+    oper init(Functor1[bool, Request] handler) : handler = handler {}
+
+    oper init(function[bool, Request] handler) :
+        handler = Function1[bool, Request](handler) {
+    }
+
+    bool oper call(Request req) {
+        if (req.method == 'POST' || req.method == 'PUT') {
+            debug `starting collector`;
+            req.postDataHandler = PostDataCollector(handler);
+            return true;
+        } else {
+            # Tell them they need to do a POST.
+            req.addHeader('Allow', 'POST');
+            req.sendReply(405, 'text/plain',
+                          FStr() I`Invalid method type $(req.method) for \
+                                   handler requiring POST or PUT.`
+                          );
+            return true;
+        }
+    }
+}
+
+bool __notFound(Request req) {
+    req.sendReply(
+        404,
+        'text/html',
+        I'<http>
+            <head>
+              <title>404 - Page not found</title>
+            </head>
+            <body>
+              <h1>404 - Page not found</h1>
+            </body>
+          </http>'
+    );
+    return true;
+}
+
+## The NOT_FOUND handler can be appended to the end of a chain (including the
+## HTTPServer itself, of course) to handle all requests that are not resolved
+## by any of the other handlers by returning a 404 response to the client.
+const NOT_FOUND := HandlerFunc(__notFound);
+
+@export_symbols HandlerFunc, RequestHandler;
+
+class QueryParmMap;
+QueryParmMap parseQuery(Buffer contents);
+
+## A map of query parameters to the list of their values.
+class QueryParmMap : HashMap[String, Array[String]] {
+    oper init() {}
+
+    void add(String key, String val) {
+        vals := this.get(key);
+        if (!vals)
+            this[key] = vals = Array[String]();
+        vals.append(val);
+    }
+
+    ## Gets the first value of 'parm' from the query map, sends an error back
+    ## on req and returns null if it's undefined.
+    ## If errorOnMultiple is true, also sends back an error if the parameters
+    ## is defined multiple times.
+    String getSingle(Request req, String parm, bool errorOnMultiple) {
+        vals := get(parm);
+        if (!vals) {
+            req.sendReply(422, 'text/plain',
+                          FStr() `Missing query parameter: $parm`
+                          );
+            return null;
+        } else if (errorOnMultiple && vals.count() != 1) {
+            req.sendReply(422, 'text/plain',
+                          FStr() `Query parm "$parm" defined multiple times`
+                          );
+            return null;
+        } else {
+            return vals[0];
+        }
+    }
+
+    ## Gets the first value of 'parm' from the query map, returns null (but
+    ## does not send back an error) if it's not defined or if it's defined
+    ## multiple times.
+    String getSingle(String parm) {
+        vals := get(parm);
+        return vals ? vals[0] : null;
+    }
+
+    @fieldset_accessors(QueryParmMap);
+
+    ## Parse the query out of the query parms.
+    @static QueryParmMap getOrMake(Request req) {
+        inst := get(req);
+        if (inst is null) {
+
+            queryStart := req.path.lfind('?');
+            String queryString;
+            if (queryStart != -1)
+                queryString = req.path.substr(queryStart + 1);
+
+            if (queryString) {
+                try {
+                    inst = parseQuery(queryString);
+                } catch (InvalidArgumentError ex) {
+                    throw Abort(422, 'Invalid query string.');
+                }
+            } else {
+                # Create an empty one.
+                inst = QueryParmMap();
+            }
+
+            inst.putIn(req);
+        }
+
+        return inst;
+    }
+}
+
+## Decode a portion of a URI, converting % HEX HEX escape sequences to bytes.
+String decode(Buffer data, bool permissive) {
+    byte escape;
+    # Initialize to 10% larger than the original buffer (there's no theory or
+    # empirical data behind this metric, it just seemed like a good idea at
+    # the time).
+    AppendBuffer result = {data.size + data.size / 10};
+
+    # 0 - Unesacped
+    # 1, 2 - first and second character of escape sequence.
+    int state;
+    for (int i = 0; i < data.size; ++i) {
+        ch := data[i];
+        if (state == 0) {
+            if (ch == b'%') {
+                escape = 0;
+                state = 1;
+            } else {
+                result.append(ch);
+            }
+        } else if (state >= 1) {
+            if (ch >= b'0' && ch <= b'9') {
+                escape = (escape << 4) | (ch - b'0');
+            } else if (ch >= b'a' && ch <= b'f') {
+                escape = (escape << 4) | (ch - b'a' + 10);
+            } else if (ch >= b'A' && ch <= b'F') {
+                escape = (escape << 4) | (ch - b'A' + 10);
+            } else {
+                if (permissive) {
+                    result.append(escape);
+                    --i;
+                    state = 0;
+                } else {
+                    throw InvalidArgumentError(
+                        FStr() `Invalid escape sequence at $(i - state)`
+                    );
+                }
+            }
+
+            if (state == 2) {
+                # Return to unescaped state.
+                result.append(escape);
+                state = 0;
+            } else if (state == 1) {
+                # Advance to the second character.
+                ++state;
+            }
+        }
+    }
+
+    if (state != 0) {
+        if (permissive)
+            result.append(escape);
+        else
+            throw InvalidArgumentError(
+                FStr() `Invalid escape sequence at $(data.size - state)`
+            );
+    }
+
+    return String(result, true);
+}
+
+## Parse query parameters out of a string with no escape sequences.
+QueryParmMap parseUnescapedQuery(Buffer contents, bool permissive) {
+
+    # States:
+    # 0 - before '=' (variable name)
+    # 1 - after '=' (value)
+    int state;
+
+    int varStart, varEnd;
+    AppendBuffer var = {32};
+    AppendBuffer value = {32};
+
+    QueryParmMap result = {};
+
+    for (int i = 0; i < contents.size; ++i) {
+        ch := contents[i];
+        if (state == 0) {
+            if (ch == b'=') {
+                varEnd = i;
+                state = 1;
+            } else {
+                var.append(ch);
+            }
+        } else if (state == 1) {
+            if (ch == b'&') {
+                result.add(String(var, false), String(value, false));
+
+                # Reset var and value.
+                var.size = 0;
+                value.size = 0;
+                state = 0;
+            } else {
+                value.append(ch);
+            }
+        }
+    }
+
+    if (state == 1)
+        result.add(String(var, false), String(value, false));
+    else if (var && !permissive)
+        throw InvalidArgumentError(
+            'Trailing name at the end of a query string.'
+        );
+
+    return result;
+}
+
+## Parse an HTTP Query out of the (possibly escaped) query string.
+##
+## If 'permissive' is true, tries to accomodate illegal escape sequences
+## (e.g "%xy") otherwise throws an exception.  In these cases, uses the
+## longest legal substring, so "%xy" would map to "%", "%1x" and would map to
+## 1.
+QueryParmMap parseQuery(Buffer contents, bool permissive) {
+    return parseUnescapedQuery(decode(contents, permissive), permissive);
+}
+
+## Parse an HTTP Query out of the (possibly escaped) query string.
+##
+## This is inherently not permissive.
+QueryParmMap parseQuery(Buffer contents) {
+    return parseUnescapedQuery(decode(contents, false), false);
+}
+
+## Base class for wrappers of handlers that require a specific method type.
+## When used as a handler, this replies with a 405 "Invalid Method" if the
+## method doesn't match that defined for the handler.
+class MethodHandler @impl RequestHandler {
+
+    ## The method name (e.g. "GET", "POST" ...)
+    String method;
+
+    ## The request handler.
+    RequestHandler handler;
+
+    oper init(String method, RequestHandler handler) :
+        method = method,
+        handler = handler {
+    }
+
+    oper init(String method, function[bool, Request] func) :
+        method = method,
+        handler = Function1[bool, Request](func) {
+    }
+
+    bool oper call(Request req) {
+        if (req.method != method) {
+            req.addHeader('Allow', method);
+            req.sendReply(405, 'text/plain', 'Invalid Method');
+            return true;
+        }
+
+        return handler(req);
+    }
+}
+
+## A MethodHandler for POST methods that also handles POST data collection.
+class PostHandler : MethodHandler {
+    oper init(RequestHandler handler) :
+        MethodHandler("POST", PostRequestHandler(handler)) {
+    }
+
+    oper init(function[bool, Request] handler) :
+        MethodHandler("POST", PostRequestHandler(HandlerFunc(handler))) {
+    }
+}
+
+## Utility handler for endpoints that allow multiple method types.  You can
+## use this with the method specific handlers (e.g. GetHandler,
+## PostHandler...) to dispatch to specific method types as follows:
+##
+##      multi := MultiMethod![
+##          MethodHandler("GET", handleGet),
+##          PostHandler("POST", handlePost)
+##      ];
+##
+## Note that you can also include handlers that are not derived from
+## MethodHandler and they will be chained before the request is dispatched
+## before the method.  However, they must be listed before the method specific
+## handlers.  If they are not, InvalidArgumentError will be raised.
+class MultiMethod @impl RequestHandler {
+    Array[RequestHandler] __chained = {};
+    HashMap[String, MethodHandler] __methods = {};
+
+    void append(MethodHandler handler) {
+        __methods[handler.method] = handler;
+    }
+
+    void append(RequestHandler handler) {
+        if (__methods)
+            throw InvalidArgumentError(
+                'Ordinary handlers must be added before all method handlers'
+            );
+        __chained.append(handler);
+    }
+
+    bool oper call(Request req) {
+
+        # Give it to the chained handlers first.
+        for (handler :in __chained) {
+            if (handler(req))
+                return true;
+        }
+
+        # Look up the method handler for the method.
+        handler := __methods.get(req.method);
+        if (!handler) {
+            StringArray methods = {__methods.count()};
+            for (method :in __methods)
+                methods.append(method.val.method);
+            req.addHeader('Allow', methods.join(', '));
+            req.sendReply(405, 'text/plain', 'Invalid Method');
+            return true;
+        }
+
+        # Dispatch the handler directly - we don't need the check for the
+        # method type in 'oper call'.
+        return handler.handler(req);
+    }
+}
+
+## MethodDispatcher calls its "on<method>" method for a request.  It's
+## easier to work with than MultiMethod for request handler combinations that
+## share state.
+##
+## Subclass it and implement "onGet", "onPut" or whichever of the standard
+## HTTP methods you want to handle.  The onPut/onPost handlers will be called
+## after the request contents is fully processed.
+##
+## This handler always terminates the chain.
+class MethodDispatcher @impl RequestHandler {
+    alias __Method = function[void, MethodDispatcher, Request];
+    class __Adapter @impl RequestHandler {
+        MethodDispatcher inst;
+        __Method method;
+
+        oper init(MethodDispatcher inst,
+                  __Method method
+                  ) :
+            inst = inst,
+            method = method {
+        }
+
+        bool oper call(Request req) {
+            method(inst, req);
+
+            # This return code is ignored.
+            return true;
+        }
+    }
+
+    void onPost(Request req) {
+        req.sendReply(405, 'text/plain',
+                      FStr() `POST Method not allowed for $(req.path)`
+                      );
+    }
+
+    void __onPost(Request req) {
+        onPost(req);
+    }
+
+    void onPut(Request req) {
+        req.sendReply(405, 'text/plain',
+                      FStr() `PUT Method not allowed for $(req.path)`
+                      );
+    }
+
+    void __onPut(Request req) {
+        onPut(req);
+    }
+
+    bool onGet(Request req) {
+        req.sendReply(405, 'text/plain',
+                      FStr() `GET Method not allowed for $(req.path)`
+                      );
+        return true;
+    }
+
+    bool onDelete(Request req) {
+        req.sendReply(405, 'text/plain',
+                      FStr() `DELETE Method not allowed for $(req.path)`
+                      );
+        return true;
+    }
+
+    bool onHead(Request req) {
+        req.sendReply(405, 'text/plain',
+                      FStr() `HEAD Method not allowed for $(req.path)`
+                      );
+        return true;
+    }
+
+    bool oper call(Request req) {
+        # Intercept PUT and POST to do the right thing.
+        if (req.method == 'POST') {
+            req.postDataHandler = PostDataCollector(__Adapter(this, __onPost));
+            return true;
+        } else if (req.method == 'PUT') {
+            req.postDataHandler = PostDataCollector(__Adapter(this, __onPut));
+            return true;
+        } else if (req.method == 'GET') {
+            return onGet(req);
+        } else if (req.method == 'DELETE') {
+            return onDelete(req);
+        } else if (req.method == 'HEAD') {
+            return onHead(req);
+        } else {
+            req.sendReply(405, 'text/plain',
+                          FStr() `$(req.method) not supported for $(req.path)`
+                          );
+            return true;
+        }
+    }
+}

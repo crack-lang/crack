@@ -12,7 +12,7 @@ import crack.io cout, cerr, FDReader, Reader;
 import crack.cont.hashmap HashMap;
 import crack.math min;
 
-@import crack.ann implements;
+@import crack.ann impl;
 
 NEWLINE := '\n'[0];
 
@@ -21,7 +21,7 @@ class LineReader;
 LineIter _createLineIter(LineReader reader);
 
 ## Allows you to read one line at a time.
-class LineReader {
+class LineReader @impl Reader {
     Reader r;
     ManagedBuffer buffer = {1024};
     uint start;
@@ -58,7 +58,7 @@ class LineReader {
 
             # if we are at the end of the file, either return the remaining
             # chunk or a null pointer if there is no remaining chunk
-            if (!amtRead)
+            if (!amtRead) {
                 if (start == buffer.size) {
                     return null;
                 } else {
@@ -69,6 +69,7 @@ class LineReader {
                     start = buffer.size;
                     return result;
                 }
+            }
         }
 
         // should never get here
@@ -76,6 +77,21 @@ class LineReader {
     }
 
     LineIter iter() { return _createLineIter(this); }
+
+    uint read(WriteBuffer buffer) {
+        if (start < this.buffer.size) {
+            size := this.buffer.size - start;
+            if (buffer.cap <= size)
+                size = buffer.cap;
+            buffer.move(0, this.buffer.buffer + start, size);
+            start += size;
+            buffer.size = size;
+            return size;
+        }
+
+        # Otherwise fall through to the reader.
+        return r.read(buffer);
+    }
 }
 
 class LineIter {
@@ -94,7 +110,7 @@ LineIter _createLineIter(LineReader reader) {
 
 ## A FullReader is a Reader that supports line reads, and complete reads of
 ## its underlying reader.
-class FullReader : LineReader @implements Reader {
+class FullReader : LineReader  {
 
     oper init(Reader reader) : LineReader(reader) {}
 
@@ -120,10 +136,6 @@ class FullReader : LineReader @implements Reader {
         }
 
         return String(result, true);
-    }
-
-    uint read(WriteBuffer buf) {
-        return r.read(buf);
     }
 }
 

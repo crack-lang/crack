@@ -778,27 +778,27 @@ extern "C" void crack_runtime_cinit(Module *mod) {
     f->addArg(byteptrType, "str");
 
     f = mod->addFunc(byteptrType, "malloc", (void *)malloc, "malloc");
-    f->addArg(uintType, "size");
+    f->addArg(uintzType, "size");
     
     f = mod->addFunc(byteptrType, "memcpy", (void *)memcpy, "memcpy");
     f->addArg(byteptrType, "dst");
     f->addArg(byteptrType, "src");
-    f->addArg(uintType, "size");
+    f->addArg(uintzType, "size");
 
     f = mod->addFunc(byteptrType, "memset", (void *)memset, "memset");
     f->addArg(byteptrType, "dst");
     f->addArg(byteType, "c");
-    f->addArg(uintType, "size");
+    f->addArg(uintzType, "size");
 
     f = mod->addFunc(intType, "memcmp", (void *)memcmp, "memcmp");
     f->addArg(byteptrType, "a");
     f->addArg(byteptrType, "b");
-    f->addArg(uintType, "size");
+    f->addArg(uintzType, "size");
     
     f = mod->addFunc(byteptrType, "memmove", (void *)memmove, "memmove");
     f->addArg(byteptrType, "dst");
     f->addArg(byteptrType, "src");
-    f->addArg(uintType, "size");
+    f->addArg(uintzType, "size");
     
     Type *cFileType = mod->addType("CFile", 0);
     cFileType->finish();
@@ -823,11 +823,11 @@ extern "C" void crack_runtime_cinit(Module *mod) {
     f->addArg(byteptrType, "buf");
     f->addArg(uintType, "count");
 
-    f = mod->addFunc(intType, "lseek", (void *)lseek, "lseek");
+    f = mod->addFunc(int64Type, "lseek", (void *)lseek, "lseek");
     f->addArg(intType, "fd");
-    f->addArg(intzType, "offset");
+    f->addArg(int64Type, "offset");
     f->addArg(intType, "whence");
-    
+
     mod->addConstant(intType, "SEEK_SET", SEEK_SET);
     mod->addConstant(intType, "SEEK_CUR", SEEK_CUR);
     mod->addConstant(intType, "SEEK_END", SEEK_END);
@@ -840,6 +840,9 @@ extern "C" void crack_runtime_cinit(Module *mod) {
 
     f = mod->addFunc(voidType, "exit", (void *)exit, "exit");
     f->addArg(intType, "status");
+
+    f = mod->addFunc(intType, "isatty", (void *)isatty, "isatty");
+    f->addArg(intType, "fd");
 
     f = mod->addFunc(intType, "setNonBlocking",
                      (void *)crack::runtime::setNonBlocking);

@@ -20,7 +20,14 @@ struct Options {
     // date.
     bool cacheMode;
 
-    Options() : migrationWarnings(false), cacheMode(true) {}
+    // If true, allow loading a module from the cache even if the source
+    // module can not be found on the path.
+    bool allowSourceless;
+
+    Options() : migrationWarnings(false),
+                cacheMode(true),
+                allowSourceless(false) {
+    }
 
     // copy the options from another Options object.  This is useful because
     // we typically inherit this struct.

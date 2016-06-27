@@ -35,14 +35,12 @@ class LLVMLinkerBuilder : public LLVMBuilder {
         llvm::Function *emitAggregateCleanup(llvm::Module *module);
 
     protected:
-        virtual void engineFinishModule(model::Context &context,
-                                        BModuleDef *moduleDef
-                                        );
+        virtual void engineFinishModule(BModuleDef *moduleDef);
         virtual model::ModuleDefPtr innerCreateModule(model::Context &context,
                                                       const std::string &name,
                                                       model::ModuleDef *owner
                                                       );
-        virtual void fixClassInstRep(BTypeDef *type);
+        virtual void fixClassInstRep(model::Context &context, BTypeDef *type);
 
     public:
         LLVMLinkerBuilder(LLVMBuilder *root = 0) :

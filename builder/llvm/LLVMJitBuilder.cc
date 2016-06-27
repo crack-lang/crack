@@ -106,8 +106,7 @@ void LLVMJitBuilder::fixupAfterMerge(ModuleDef *moduleDef, Module *merged) {
         needsCleanup.push_back(BModuleDefPtr::cast(moduleDef));
 }
 
-void LLVMJitBuilder::innerFinishModule(Context &context,
-                                       BModuleDef *moduleDef) {
+void LLVMJitBuilder::innerFinishModule(BModuleDef *moduleDef) {
    // note, this->module and moduleDef->rep should be ==
 
     // XXX right now, only checking for > 0, later perhaps we can
@@ -139,9 +138,8 @@ void LLVMJitBuilder::innerFinishModule(Context &context,
     moduleDef->rep->getOrInsertNamedMetadata("crack_finished");
 }
 
-void LLVMJitBuilder::engineFinishModule(Context &context,
-                                        BModuleDef *moduleDef) {
-    innerFinishModule(context, moduleDef);
+void LLVMJitBuilder::engineFinishModule(BModuleDef *moduleDef) {
+    innerFinishModule(moduleDef);
     mergeModule(moduleDef);
     moduleDef->clearRepFromConstants();
     delete module;
@@ -160,8 +158,8 @@ void LLVMJitBuilder::mergeModule(ModuleDef *moduleDef,
         fixupAfterMerge(BModuleDefPtr::rcast(*i), merger->getTarget());
 }
 
-void LLVMJitBuilder::fixClassInstRep(BTypeDef *type) {
-    type->getClassInstRep(moduleDef.get());
+void LLVMJitBuilder::fixClassInstRep(Context &context, BTypeDef *type) {
+    type->getClassInstRep(context, moduleDef.get());
 }
 
 BModuleDef *LLVMJitBuilder::instantiateModule(model::Context &context,
@@ -340,7 +338,7 @@ void LLVMJitBuilder::innerCloseModule(Context &context, ModuleDef *moduleDef) {
 
         // Do the common stuff (common with the .builtin module, which doesn't get
         // closed)
-        innerFinishModule(context, BModuleDefPtr::cast(moduleDef));
+        innerFinishModule(BModuleDefPtr::cast(moduleDef));
     }
 
     // store primitive functions from an extension
@@ -404,6 +402,10 @@ void LLVMJitBuilder::dump() {
     passMan.run(*module);
 }
 
+void LLVMJitBuilder::finishBuild(model::Context &context) {
+    SPUG_CHECK(!rootBuilder, "finishBuild() called on non-root builder.");
+}
+
 void LLVMJitBuilder::registerDef(Context &context, VarDef *varDef) {
 
     // here we keep track of which external functions and globals came from
@@ -419,10 +421,16 @@ void LLVMJitBuilder::registerDef(Context &context, VarDef *varDef) {
     GlobalValue *rep;
     if (varDef->impl && (bgbl = BGlobalVarDefImplPtr::rcast(varDef->impl)))
         // global
-        GlobalValue *rep = dyn_cast<GlobalValue>(bgbl->getRep(builder));
+        GlobalValue *rep = dyn_cast<GlobalValue>(bgbl->getRep(context,
+                                                              builder
+                                                              )
+                                                 );
     else if (fd = BFuncDefPtr::cast(varDef))
         // funcdef
-        GlobalValue *rep = dyn_cast<GlobalValue>(bgbl->getRep(builder));
+        GlobalValue *rep = dyn_cast<GlobalValue>(bgbl->getRep(context,
+                                                              builder
+                                                              )
+                                                 );
     else
         //assert(0 && "registerDef: unknown varDef type");
         // this happens in a call from parser (not cacher) on e.g. classes,

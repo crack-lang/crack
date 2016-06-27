@@ -102,6 +102,8 @@ void Toker::fixIndentation(string &val) {
     int indent;
     for (int i = 0; i < val.size(); ++i) {
         if (val[i] == '\n') {
+            if (inPrefix)
+                result.push_back('\n');
             inPrefix = true;
             indent = 0;
         } else if (inPrefix) {

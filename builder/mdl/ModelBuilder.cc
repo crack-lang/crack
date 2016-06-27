@@ -185,20 +185,6 @@ namespace {
     };
 }
 
-model::TypeDefPtr ModelBuilder::getFuncType(
-    Context &context,
-    TypeDef *returnType,
-    const vector<ArgDefPtr> &args
-) {
-    TypeDef::TypeVecObjPtr paramTypes = new TypeDef::TypeVecObj();
-    paramTypes->push_back(returnType);
-    SPUG_FOR(vector<ArgDefPtr>, arg, args)
-        paramTypes->push_back((*arg)->type.get());
-    return context.construct->functionType->getSpecialization(context,
-                                                              paramTypes.get()
-                                                              );
-}
-
 TypeDefPtr ModelBuilder::createClassForward(Context &context,
                                             const string &name
                                             ) {
@@ -217,7 +203,6 @@ FuncDefPtr ModelBuilder::createFuncForward(Context &context,
     FuncDefPtr result = new ModelFuncDef(flags, name, args.size());
     result->returnType = returnType;
     result->args = args;
-    result->type = getFuncType(context, returnType, args);
     if (!(flags & FuncDef::abstract))
         result->flags = flags | FuncDef::forward;
     result->ns = context.ns;
@@ -226,6 +211,9 @@ FuncDefPtr ModelBuilder::createFuncForward(Context &context,
     else if (flags & FuncDef::method)
         result->receiverType =
             TypeDefPtr::arcast(context.getClassContext()->ns);
+
+    result->getFuncType(context);
+
     return result;
 }
 
@@ -265,7 +253,6 @@ FuncDefPtr ModelBuilder::emitBeginFunc(
     model::FuncDefPtr func = new ModelFuncDef(flags, name, args.size());
     func->args = args;
     func->returnType = returnType;
-    func->type = getFuncType(context, returnType, args);
 
     addImplToArgs(func->args);
 
@@ -279,6 +266,8 @@ FuncDefPtr ModelBuilder::emitBeginFunc(
             func->vtableSlot = 0; // func->receiverType->nextVTableSlot++;
     }
 
+    func->getFuncType(context);
+
     // Set the receiver's impl if we've got one.
     if (func->receiverType) {
         VarDefPtr receiver = context.ns->lookUp("this");
@@ -290,7 +279,8 @@ FuncDefPtr ModelBuilder::emitBeginFunc(
 }
 
 TypeDefPtr ModelBuilder::createGenericClass(Context &context,
-                                            const string &name
+                                            const string &name,
+                                            bool weak
                                             ) {
     return createClass(context, name);
 }
@@ -421,6 +411,12 @@ namespace {
             if (def->doc.size())
                 cout << "/**\n" << def->doc << "\n*/" << endl;
             if (TypeDef *type = TypeDefPtr::cast(def)) {
+
+                // For some reason Overload type meta classes are showing up
+                // in the module namespaces.  Filter these out.
+                if (type->meta)
+                    return;
+
                 if (type->abstract)
                     cout << "@abstract ";
                 cout << "class " << type->name << " : ";
@@ -992,6 +988,7 @@ ModuleDefPtr ModelBuilder::registerPrimFuncs(Context &context) {
     // Create OverloadDef.
     TypeDefPtr metaType = createMetaClass(context, "Overload");
     TypeDefPtr overloadDef = new TypeDef(metaType.get(), "Overload", false);
+    gd->overloadType = overloadDef;
     metaType->meta = overloadDef.get();
 
     context.addDef(

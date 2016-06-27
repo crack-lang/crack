@@ -59,11 +59,25 @@ extern "C" _Unwind_Reason_Code __CrackExceptionPersonality(
         " exception class: " << exceptionClass << endl;
 #endif
 
-    exceptionObject->last_ip = 
-        reinterpret_cast<void *>(_Unwind_GetIP(context));
+    void *last_ip = reinterpret_cast<void *>(_Unwind_GetIP(context));
+    void *user_data = 0;
+
+    // The exception personality function can be called for non-crack
+    // exceptions, in which case _Unwind_Action will not be Crack's
+    // extended _Unwind_Exception structure.
+    // If this is a Crack exception, we want to set the last_ip field and get
+    // the user data.
+    _Unwind_Exception *crackException =
+        reinterpret_cast<_Unwind_Exception *>(
+            pthread_getspecific(crack::runtime::exceptionObjectKey)
+        );
+    if (crackException) {
+        user_data = crackException->user_data;
+        crackException->last_ip = last_ip;
+    }
+
     if (runtimeHooks.exceptionPersonalityFunc)
-        runtimeHooks.exceptionPersonalityFunc(exceptionObject->user_data,
-                                              exceptionObject->last_ip,
+        runtimeHooks.exceptionPersonalityFunc(user_data, last_ip,
                                               exceptionClass,
                                               actions
                                               );

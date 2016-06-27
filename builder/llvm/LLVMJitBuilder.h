@@ -68,9 +68,7 @@ class LLVMJitBuilder : public LLVMBuilder {
         virtual void engineBindModule(BModuleDef *moduleDef);
 
         // Contains most of the meat of engineFinishModule.
-        void innerFinishModule(model::Context &context,
-                               BModuleDef *moduleDef
-                               );
+        void innerFinishModule(BModuleDef *moduleDef);
 
         // Merge the module into the global main module, replace all of the
         // old pointers into the original module (including the builder's) and
@@ -79,14 +77,12 @@ class LLVMJitBuilder : public LLVMBuilder {
                          StructResolver *resolver = 0
                          );
 
-        virtual void engineFinishModule(model::Context &context,
-                                        BModuleDef *moduleDef
-                                        );
+        virtual void engineFinishModule(BModuleDef *moduleDef);
         virtual model::ModuleDefPtr innerCreateModule(model::Context &context,
                                                       const std::string &name,
                                                       model::ModuleDef *owner
                                                       );
-        virtual void fixClassInstRep(BTypeDef *type);
+        virtual void fixClassInstRep(model::Context &context, BTypeDef *type);
         virtual BModuleDef *instantiateModule(model::Context &context,
                                               const std::string &name,
                                               llvm::Module *owner
@@ -129,7 +125,7 @@ class LLVMJitBuilder : public LLVMBuilder {
 
         virtual bool isExec() { return true; }
 
-        virtual void finishBuild(model::Context &context) {}
+        virtual void finishBuild(model::Context &context);
 
         virtual void registerDef(model::Context &context,
                                  model::VarDef *varDef

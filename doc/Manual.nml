@@ -3027,11 +3027,30 @@ present.  If the #leave()# method exists, its return value is the result
 value of the interpolation expression.  If not, the original target (cout, in
 this case) is the result.
 
-The #cout# variable is defined in #crack.io# as an instance of #Formatter#.
-Interpolation expressions are not limited to use with #Formatter#, they can
-be used on any object that supports conversion to boolean and #format()#
-methods for all of the values in the expression.  For example, we could
-create our own formatter that could be used in the expression above:
+The #enter()# method is typically defined with a return type of #void#.  If
+the return type is not void, the return type is used as the formatter for the
+remainder of the interpolation expression: #format()# and #leave()# methods
+are called on this value instead of the original expression (although the
+original expression is still used to determine whether the interpolation
+sequence is invoked at all).  If #out# is an object whose #enter()# method
+returns a non-void value, then #out \`this is $x\`# would be equivalent to the
+following code:
+
+{{
+    if (out) {
+        temp := out.enter();
+        temp.format('this is ');
+        temp.format(x);
+        temp.leave();
+    }
+}}
+
+The #cout# variable used above is defined in #crack.io# as an instance of
+#Formatter#. Interpolation expressions are not limited to use with
+#Formatter#, they can be used on any object that supports conversion to
+boolean and #format()# methods for all of the values in the expression.  For
+example, we could create our own formatter that could be used in the
+expression above:
 
 {{
     class SumOfInts {
@@ -4867,7 +4886,7 @@ server, allowing frameworks to customize their request objects, but that in
 turn makes it difficult to combine elements of different frameworks.
 
 Field sets provide an elegant solution to this problem.
-#crack.net.httpsrv.HTTPRequest# implements the #FieldSet# interface, allowing
+#crack.http.HTTPRequest# implements the #FieldSet# interface, allowing
 arbitrary objects to be attached to it.  So for example, for our
 authentication data we could define an #AuthData# class and use it as follows:
 
@@ -4885,7 +4904,7 @@ authentication data we could define an #AuthData# class and use it as follows:
         @fieldset_accessors(AuthData);
     }
 
-    void authHandler(HTTPRequest req) {
+    void authHandler(Request req) {
         ... do authentication ...
 
         # Store the auth data.
@@ -4896,7 +4915,7 @@ authentication data we could define an #AuthData# class and use it as follows:
 Our application handler could then access it using the #get()# method:
 
 {{
-    void appHandler(HTTPRequest req) {
+    void appHandler(Request req) {
         auth := AuthData.get(req);
 
         if (!auth) {
@@ -6013,6 +6032,13 @@ From 0.11 to 1.0
     as independent separators (e.g. "split('foo..bar', b'.') -> ['foo', '',
     'bar']" instead of ['foo', 'bar']).  The #tsplit()# functions preserve the
     original behavior.
+-   In \X(The Formatter Protocol), The return value of the #enter()# method
+    was previously ignored, but is now used as the formatter object for
+    format() methods and leave().
+-   Buffer size is now defined as uintz.  All other indexes and sizes to
+    strings and buffers are uintz or intz.
+-   #crack.net.httpsrv# has been broken out into a set of modules under
+    #crack.http#.
 
 From 0.10 to 0.11
 -----------------

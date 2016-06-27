@@ -17,9 +17,9 @@ void substr() {}
 .builtin.array[.builtin.byteptr] __getArgv()
 alias aImportVar = test.testmod.aImportVar
 .builtin.int i
-alias crack.lang.SubString substr(crack.lang.SubString target, .builtin.int pos, .builtin.uint len, )
-alias crack.lang.SubString substr(crack.lang.SubString target, .builtin.int pos, )
-alias crack.lang.SubString substr(crack.lang.String target, .builtin.int pos, .builtin.uint len, )
-alias crack.lang.SubString substr(crack.lang.String target, .builtin.int pos, )
+alias crack.lang.SubString substr(crack.lang.SubString target, .builtin.intz pos, .builtin.uintz len, )
+alias crack.lang.SubString substr(crack.lang.SubString target, .builtin.intz pos, )
+alias crack.lang.SubString substr(crack.lang.String target, .builtin.intz pos, .builtin.uintz len, )
+alias crack.lang.SubString substr(crack.lang.String target, .builtin.intz pos, )
 .builtin.void substr()
 %%STDIN%%

@@ -27,11 +27,6 @@ void addArrayMethods(model::Context &context,
 void closeAllCleanupsStatic(model::Context &context);
 
 /**
- * Create the implementation object for a class.
- */
-void createClassImpl(model::Context &context, BTypeDef *type);
-
-/**
  * Creates a new meta-class and registers it with its owner.  If no owner is
  * specified, the owner is the first definition context of the /parent/ of
  * 'context' (i.e. 'context' is assumed to be a class context).

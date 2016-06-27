@@ -1,0 +1,27 @@
+%%TEST%%
+loading sourceless modules from the cache
+%%ARGS%%
+%%FILE%%
+import systest test;
+
+test.preBootstrap = true;
+test.mod('mod', 'puts("in mod")');
+test.main('import mod; puts("in main")');
+test.run();
+
+(test.testtmp/'mod.crk').delete();
+test.run();
+test.runFlags.append('--allow-sourceless');
+test.run();
+
+%%REXPECT%%
+out: in mod
+out: in main
+terminated: success
+err: ParseError: <no-location>: No source file found for cached module mod.  Use --allow-sourceless to allow loading from the cache.
+err:\s*
+terminated, rc = 2049
+out: in mod
+out: in main
+terminated: success
+%%STDIN%%

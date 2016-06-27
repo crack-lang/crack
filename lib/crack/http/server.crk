@@ -1,0 +1,398 @@
+## The HTTP Server implementation.
+
+import crack.ascii parseInt, strip, toLower;
+import crack.cont.array Array;
+import crack.cont.hashmap HashMap;
+import crack.http.core Abort, HandlerArray, Request, RequestHandler;
+import crack.io FileHandle, Formatter, Writer;
+import crack.lang Buffer, Exception, ManagedBuffer, SystemError, WriteBuffer;
+import crack.logger debug, error, warn;
+import crack.net InetAddress, Poller, Socket, AF_INET, SOCK_STREAM, POLLIN,
+    POLLERR, POLLOUT ;
+import crack.runtime errno;
+import crack.strutil StringArray;
+import crack.sys strerror;
+import crack.time TimeDelta;
+
+@import crack.ann implements;
+
+## Output queue to convert a sequence of written buffers to a string array.
+class OutQueue : Array[String] @implements Writer {
+    void write(Buffer data) {
+        if (data.isa(String))
+            append(String.cast(data));
+        else
+            append(String(data));
+    }
+    void write(byteptr data) {
+        append(String(data));
+    }
+}
+
+const int _ST_REQUEST = 0;
+const int _ST_HEADERS= 1;
+const int _ST_BODY = 2;
+
+## An HTTP Server.
+##
+## TODO: make this class proactor based.
+class Server {
+
+    class Client {
+        ManagedBuffer inbuf = {1024};
+        Server server;
+        Request request;
+        HandlerArray handlers;
+        Socket sock;
+        InetAddress addr;
+        int state;
+
+        OutQueue outQueue = {};
+
+        ## the index of the first byte in the buffer that has been read but
+        ## not processed.
+        uint pos;
+
+        oper init(Socket sock, InetAddress addr, HandlerArray handlers) :
+            sock = sock,
+            addr = addr,
+            handlers = handlers {
+        }
+
+        void formatTo(Formatter fmt) {
+            fmt `Client: $sock, $addr `;
+        }
+
+        ## Returns a byteptr to the current input buffer read position.
+        @final byteptr getInputBuf() {
+            if (inbuf.cap - inbuf.size < 1024)
+                # since the start size is 1024, we can assume that we will
+                # grow to accomodate a 1024 byte buffer.
+                inbuf.grow(inbuf.cap * 2);
+            return inbuf.buffer + pos;
+        }
+
+        @final void compressBuffer(uintz start) {
+            inbuf.compact(start);
+            pos = 0;
+        }
+
+        @final void __badRequest() {
+            warn `Invalid request from $(this)\n`;
+        }
+
+        @final void processRequestLine(uintz start, uintz end) {
+            request = Request(outQueue, addr);
+
+            # find the first space
+            methodEnd := inbuf.lfind(b' ', start);
+            if (methodEnd == -1 || methodEnd >= end) {
+                __badRequest();
+                return;
+            }
+            request.method = String(inbuf.buffer + start, methodEnd, false);
+
+            # find the next non-space
+            pathStart := methodEnd;
+            while (inbuf.buffer[pathStart] == b' ' && pathStart < end)
+                ++pathStart;
+            if (pathStart == end) {
+                __badRequest();
+                return;
+            }
+
+            # find the path end
+            pathEnd := inbuf.lfind(b' ', pathStart);
+            if (pathEnd == -1 || pathEnd > end) {
+                __badRequest();
+                return
+            }
+
+            # find the protocol version
+            request.path = String(inbuf.buffer + pathStart,
+                                  pathEnd - pathStart,
+                                  false
+                                  );
+
+            # deal with HTTP 1.0
+            if (pathEnd == end) {
+                state = _ST_REQUEST;
+                return;
+            }
+
+            # find the next non-space
+            verStart := pathEnd;
+            while ((c := inbuf.buffer[verStart]) == b' ' && verStart < end)
+                ++verStart;
+            if (verStart == end) {
+                __badRequest();
+                return;
+            }
+            request.version = String(inbuf.buffer + verStart,
+                                     end - verStart,
+                                     false
+                                     );
+            debug `got header $(request.version)`;
+            state = _ST_HEADERS;
+        }
+
+        @final void processRequest() {
+            try {
+                for (handler :in handlers) {
+                    if (handler(request))
+                        break;
+                }
+            } catch (Abort ex) {
+                warn `request terminated with abort: $(ex.code) $(ex.text)`;
+                request.sendReply(ex.code, 'text/plain', ex.text);
+            } catch (Exception ex) {
+                error `Exception caught in handler: $ex`;
+            }
+
+            if (request.method != 'POST' && request.method != 'PUT') {
+                state = _ST_REQUEST;
+                request = Request(outQueue, addr);
+            }
+        }
+
+        @final void processHeaderLine(uintz start, uintz end) {
+            line := String(inbuf.buffer + start, end - start, false);
+            debug `processing header line: $(line.getRepr())`;
+            if (!line) {
+                state = _ST_BODY;
+                if (request.method == 'POST' || request.method == 'PUT') {
+                    # For requests with a body, get the content-length.
+                    contentLength := request.headers.get('content-length',
+                                                         null
+                                                         );
+                    if (contentLength)
+                        request.remainingPostData = parseInt(contentLength[-1]);
+                    else
+                        request.remainingPostData = 0xFFFFFFFF;
+
+                    # Discard the request line and headers.  'inbuf' now
+                    # contains only the body.
+                    compressBuffer(end + (inbuf.buffer[end] == b'\r' ? 2 : 1));
+                }
+                processRequest();
+                return;
+            }
+            # find the first colon
+            sep := line.lfind(b':');
+            debug `adding $(line.slice(0, sep)) $(line.slice(sep + 1))`;
+            request.headers[toLower(line.slice(0, sep))] =
+                StringArray![strip(line.slice(sep + 1))];
+        }
+
+        @final void parseNext(uint amtRead) {
+            end := inbuf.size + amtRead;
+            inbuf.size += amtRead;
+            while (true) {
+                if (state == _ST_REQUEST || state == _ST_HEADERS) {
+
+                    # find the first newline
+                    int p;
+                    for (p = pos; inbuf.buffer[p] != b'\n' && p < end; ++p);
+
+                    # if we got one, process the request line
+                    if (p < end) {
+
+                        start := pos;
+                        pos = p + 1;
+
+                        # ignore a carrriage-return
+                        if (p > 1 && inbuf.buffer[p - 1] == b'\r')
+                            --p;
+
+                        if (state == _ST_REQUEST)
+                            processRequestLine(start, p);
+                        else
+                            processHeaderLine(start, p);
+
+                    } else {
+                        # XXX verify that we haven't yet exceeded the maximum
+                        # request line length
+                        # no complete line yet
+                        break;
+                    }
+                } else {
+                    void callPostData(Request request, Buffer buf) {
+                        try {
+                            request.postDataHandler(request, buf);
+                        } catch (Abort ex) {
+                            warn I`request terminated with abort: $(ex.code) \
+                                   $(ex.text)`;
+                        } catch (Exception ex) {
+                            error `Exception caught in post handler: $ex`;
+                        }
+                    }
+
+                    # State is _ST_BODY.  Deal with the "end of parcel"
+                    # condition correctly and if the handler has defined a post
+                    # data handler, call it.
+                    if (request.remainingPostData >= inbuf.size) {
+                        if (request.postDataHandler) {
+                            debug I`calling post data handler with inbuf \
+                                    [$inbuf]`;
+                            callPostData(request, inbuf);
+                            request.postDataHandler(request, inbuf);
+                        }
+                        request.remainingPostData -= inbuf.size;
+                        compressBuffer(inbuf.size);
+                    } else {
+                        # The inbuf contains more than the contents (it
+                        # overlaps the beginning of the next request)
+                        if (request.postDataHandler)
+                            callPostData(
+                                request,
+                                Buffer(inbuf.buffer, request.remainingPostData)
+                            );
+                        compressBuffer(request.remainingPostData);
+                        request.remainingPostData = 0;
+                    }
+
+                    # Begin the new request if we're done with post data.
+                    if (!request.remainingPostData) {
+                        state = _ST_REQUEST;
+                        request = Request(outQueue, addr);
+                    }
+                    return;
+                }
+            }
+
+            compressBuffer(pos);
+        }
+
+        @final bool readChunk() {
+            uint amtRead;
+            try {
+                amtRead = sock.read(WriteBuffer(getInputBuf(), 0, 1024));
+            } catch (Exception ex) {
+                warn `failed to read from socket: $ex`;
+                return false;
+            }
+            if (!amtRead) {
+                return false;
+            } else {
+                parseNext(amtRead);
+                return true;
+            }
+        }
+    } // end of Client
+
+    int __port;
+    Socket __sock = {AF_INET, SOCK_STREAM, 0};
+    HashMap[FileHandle, Client] __clients = {};
+    Poller __poller = {};
+    Array[FileHandle] __toRemove = {};
+    HandlerArray __handlers = {};
+
+    oper init(int port) {
+        if (!__sock.bind(InetAddress(0, port)))
+            throw SystemError('bind failed', errno());
+        if (!__sock.listen(5))
+            throw SystemError('listen failed', errno());
+        if (!__sock.setReuseAddr(true))
+            warn `reuseaddr failed: $(strerror())`;
+        __poller.add(__sock, POLLIN);
+    }
+
+    void __accept() {
+        clientAccepted := __sock.accept();
+        debug `  got connection from $(clientAccepted.addr) with ref count \
+$(clientAccepted.sock.refCount) on $(clientAccepted.sock.fd)`;
+        __poller.add(clientAccepted.sock, POLLIN);
+        __clients[clientAccepted.sock] =
+            Client(clientAccepted.sock,
+                   InetAddress.cast(clientAccepted.addr),
+                   __handlers);
+    }
+
+    void __processClientRead(FileHandle p) {
+        client := __clients[p];
+        if (!client.readChunk()) {
+            debug `deleting client $p)`;
+            __clients.delete(p);
+            # XXX should do a deferred close here
+            client.sock.close();
+            __toRemove.append(p);
+        }
+    }
+
+    void __processClientWrite(FileHandle p) {
+        # find the client
+        client := __clients[p];
+
+        # XXX this is rubbish.  Fix it
+        while (client.outQueue) {
+            debug `writing $(client.outQueue[0].getRepr())`;
+            client.sock.send(client.outQueue[0], 0);
+            client.outQueue.delete(0);
+        }
+    }
+
+    ## Adds the given handler to the chain.  Handlers are called in the order
+    ## in which they were added until one of them returns true.
+    void addHandler(RequestHandler handler) {
+        __handlers.append(handler);
+    }
+
+    ## Process a single event.
+    ## If 'timeout' is not null, it is the timeout to wait for the next event.
+    void processOnce(TimeDelta timeout) {
+
+        # go through the clients, change their events
+        for (clientItem :in __clients)
+            if (clientItem.val.outQueue)
+                __poller.setEvents(clientItem.val.sock, POLLIN | POLLOUT);
+            else
+                __poller.setEvents(clientItem.val.sock, POLLIN);
+
+        debug `waiting for an event`;
+        result := __poller.wait(timeout);
+        debug `got events: $result`;
+        while (evt := __poller.nx()) {
+            debug `  event is on $(evt.pollable)`;
+            # if it's the server socket, do an accept
+            if (evt.pollable is __sock) {
+                debug `  got new connection`;
+                __accept();
+            # client events
+            } else {
+                if (POLLIN & evt.revents) {
+                    debug `  got client read`;
+                    __processClientRead(evt.pollable);
+                } else if (POLLOUT & evt.revents) {
+                    debug `  got client writable`;
+                    __processClientWrite(evt.pollable);
+                } else if (POLLERR & evt.revents) {
+                    debug `  error on socket $(evt.pollable)`;
+                } else {
+                    debug `  wtf???  pollable = $(evt.pollable), events = \
+$(evt.events), revents = $(evt.revents)`;
+                }
+            }
+        }
+
+        # remove pollables that we're done with.
+        if (__toRemove) {
+            for (p :in __toRemove) {
+                debug `removing $p`;
+                __poller.remove(p);
+            }
+            while (__toRemove)
+                __toRemove.delete(0);
+            debug `removals finished`;
+        }
+
+    }
+
+    void run() {
+        while (true) {
+            processOnce(null);
+        }
+    }
+
+    int getPort() { return __port; }
+}
+

@@ -10,7 +10,10 @@
 import crack.runtime random;
 import crack.lang AppendBuffer, Buffer;
 import crack.io cout, StringReader, StringWriter;
-import crack.io.readers FullReader, PageBufferReader, PageBufferString;
+import crack.io.readers FullReader, LineReader, PageBufferReader, 
+    PageBufferString;
+
+@import crack.ann assert;
 
 # Construct a string writer full of random data
 arr := array[int32](10000);
@@ -92,4 +95,30 @@ if (1) {
         cout `PageBufferString returned invalid result\n`;
 
 }
+
+if (true) {
+    # Construct some long lines that won't fall on buffer boundaries.  We 
+    # choose data such that a single line read will result in two buffer 
+    # fetches and the remaining normal reads will include at least one partial 
+    # fetch from LineReader's internal buffer and also a couple of pass 
+    # through reads.
+    longLine := String(1574, b'x') + '\n';
+    data := StringReader(longLine * 3);
+    
+    src := LineReader(data);
+    
+    # This test assumes a buffer capacity of 1024.
+    @assert(src.buffer.cap == 1024);
+    
+    # Read the first line.
+    @assert(src.readLine() == longLine);
+    
+    # Make sure that a normal read of the remaining contents yields what we 
+    # expect.
+    result := AppendBuffer(1575 * 2);
+    while (buf := src.read(1575))
+        result.extend(buf);
+    @assert(result == longLine * 2);
+}
+
 cout `ok\n`;

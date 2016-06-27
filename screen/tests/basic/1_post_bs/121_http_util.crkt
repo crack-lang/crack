@@ -1,0 +1,254 @@
+%%TEST%%
+http.util module
+%%ARGS%%
+%%FILE%%
+# Note: much of the http.util module is being tested in 95_httpsrv
+
+import crack.io cout, FStr, StringWriter;
+import crack.strutil StringArray;
+import crack.http.core HandlerFunc, Request;
+import crack.http.util decode, parseQuery, parseUnescapedQuery,
+    MethodDispatcher, MethodHandler, MultiMethod, PostHandler,
+    PostRequestHandler, QueryParmMap;
+import crack.lang InvalidArgumentError;
+import crack.net InetAddress;
+
+@import crack.ann assert;
+
+# TODO: move this into an http.test module.
+class RequestTest {
+    StringWriter response = {};
+    Request req;
+
+    oper init() : req(response, InetAddress(1, 2, 3, 4, 100)) {}
+
+    ## Returns the full response text.
+    String getResponse() {
+        return response.string();
+    }
+}
+
+# QueryParmMap
+if (true) {
+    QueryParmMap map = {};
+    map.add('foo', '1');
+    map.add('foo', '2');
+    @assert(map.get('foo') == StringArray!['1', '2']);
+
+    RequestTest test = {};
+
+    @assert(map.getSingle(test.req, 'foo', false) == '1');
+    @assert(map.getSingle(test.req, 'foo', true) is null);
+    @assert(test.getResponse().lfind('"foo" defined multiple times') != -1);
+
+    test = RequestTest();
+    @assert(map.getSingle(test.req, 'undefined', true) is null);
+    @assert(test.getResponse().lfind('Missing query parameter: undefined'));
+
+    @assert(map.getSingle('foo') == '1');
+    @assert(map.getSingle('undefined') == null);
+
+    test.req.path = '/foo?bar=1&baz=2';
+    map = QueryParmMap.getOrMake(test.req);
+    @assert(map.getSingle('bar') == '1');
+    @assert(map.getSingle('baz') == '2');
+}
+
+# decode()
+if (true) {
+    @assert(decode('%1a%A1%9f%F9', false) == '\x1a\xa1\x9f\xf9');
+    @assert(decode('%1g', true) == '\x01g');
+    @assert(decode('%f', true) == '\x0f');
+    try {
+        decode('%f', false);
+        cout `FAILED no exception decoding malformed string\n`;
+    } catch (InvalidArgumentError ex) {
+    }
+}
+
+# parseUnescapedQuery()
+if (true) {
+    map := parseUnescapedQuery('foo=1&bar=test', true);
+    @assert(map.getSingle('foo') == '1');
+    @assert(map.getSingle('bar') == 'test');
+    @assert(parseUnescapedQuery('foo=', false).getSingle('foo') == '');
+    try {
+        @assert(parseUnescapedQuery('foo', false));
+        cout `FAILED no exception parsing malformed query string`;
+    } catch (InvalidArgumentError ex) {
+    }
+    @assert(parseQuery('foo=100&bar', true).getSingle('foo') == '100');
+}
+
+# parseQuery()
+if (true) {
+    @assert(parseQuery('foo=1', true).getSingle('foo') == '1');
+}
+
+# MethodHandler
+if (true) {
+    bool f(Request req) {
+        req.sendReply(200, 'text/plain', 'got some response');
+        return true;
+    }
+    MethodHandler handler = {'GET', f};
+    RequestTest test = {};
+    test.req.method = 'POST';
+    handler(test.req);
+    response := test.getResponse();
+    @assert(response.lfind('Invalid Method') != -1);
+    @assert(response.startsWith('HTTP/1.1 405'));
+
+    test = RequestTest();
+    test.req.method = 'GET';
+    @assert(handler(test.req));
+    @assert(test.getResponse().lfind('got some response') != -1);
+
+    # Just verify that the other constructor sets all the right things.
+    HandlerFunc func = {f};
+    @assert(HandlerFunc.cast(MethodHandler('FOO', func).handler) is func);
+    @assert(MethodHandler('FOO', func).method == 'FOO');
+}
+
+# PostHandler
+if (true) {
+    bool f(Request req) {
+        req.sendReply(200, 'text/plain', 'more data');
+        return true;
+    }
+    PostHandler ph = {f};
+    RequestTest test = {};
+    test.req.method = 'POST';
+    @assert(ph(test.req));
+    @assert(test.req.postDataHandler);
+    postData := 'test post data';
+    test.req.remainingPostData = postData.size;
+    test.req.postDataHandler(test.req, postData);
+    @assert(test.getResponse().lfind('more data') != -1);
+
+    HandlerFunc func = {f};
+    @assert(
+        HandlerFunc.cast(
+            PostRequestHandler.cast(PostHandler(func).handler).handler
+        ) is func
+    );
+    @assert(PostHandler(func).method == 'POST');
+}
+
+# MultiMethod
+if (true) {
+
+    # Test chain handler.
+    bool doCh;
+    bool ch(Request req) {
+        if (doCh) {
+            req.sendReply(200, 'text/plain', 'chain handler');
+            return true;
+        } else {
+            return false;
+        }
+    }
+
+    bool frc;
+    bool f(Request req) {
+        req.sendReply(200, 'text/plain', 'method handler');
+        return frc;
+    }
+
+    # Chain handlers are invoked first.
+    mm := MultiMethod![
+        HandlerFunc(ch),
+        MethodHandler('GET', f)
+    ];
+    RequestTest test = {};
+    doCh = true;
+    @assert(mm(test.req));
+    @assert(test.getResponse().lfind('chain handler') != -1);
+
+    # Dispatch to the correct method handler.
+    doCh = false;
+    frc = true;
+    test = RequestTest();
+    test.req.method = 'GET';
+    @assert(mm(test.req));
+    @assert(test.getResponse().lfind('chain handler') == -1);
+    @assert(test.getResponse().lfind('method handler') != -1);
+
+    # False return code propagated from method handlers.
+    test = RequestTest();
+    frc = false;
+    test.req.method = 'GET';
+    @assert(!mm(test.req));
+
+    # Error if we don't handle the method.
+    test = RequestTest();
+    test.req.method = 'POST';
+    @assert(mm(test.req));
+    @assert(test.getResponse().lfind('Invalid Method') != -1);
+}
+
+# MethodDispatcher
+if (true) {
+    class TestDisp : MethodDispatcher {
+        void onPost(Request req) {
+            req.sendReply(200, 'text/plain',
+                          FStr() `post called: $(req.contents))`
+                          );
+        }
+
+        void onPut(Request req) {
+            req.sendReply(200, 'text/plain',
+                          FStr() `put called: $(req.contents))`
+                          );
+        }
+
+        bool onGet(Request req) {
+            req.sendReply(200, 'text/plain', 'get called');
+            return true;
+        }
+
+        bool onDelete(Request req) {
+            req.sendReply(200, 'text/plain', 'delete called');
+            return true;
+        }
+
+        bool onHead(Request req) {
+            req.sendReply(200, 'text/plain', 'head called');
+            return true;
+        }
+    }
+
+    test := RequestTest();
+    TestDisp disp = {};
+    test.req.method = 'GET';
+    @assert(disp(test.req));
+    @assert(test.getResponse().lfind('get called') != -1);
+
+    test = RequestTest();
+    test.req.method = 'DELETE';
+    @assert(disp(test.req));
+    @assert(test.getResponse().lfind('delete called') != -1);
+
+    test = RequestTest();
+    test.req.method = 'POST';
+    postData := 'post data';
+    test.req.remainingPostData = postData.size;
+    @assert(disp(test.req));
+    @assert(test.req.postDataHandler);
+    test.req.postDataHandler(test.req, postData);
+    @assert(test.getResponse().lfind('post called: post data') != -1);
+
+    test = RequestTest();
+    test.req.method = 'PUT';
+    postData = 'put data';
+    test.req.remainingPostData = postData.size;
+    @assert(disp(test.req));
+    @assert(test.req.postDataHandler);
+    test.req.postDataHandler(test.req, postData);
+    @assert(test.getResponse().lfind('put called: put data') != -1);
+}
+
+cout `ok`;
+%%EXPECT%%
+ok
+%%STDIN%%

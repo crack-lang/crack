@@ -283,16 +283,14 @@ void *LLVMLinkerBuilder::loadSharedLibrary(const string &name) {
     }
 }
 
-void LLVMLinkerBuilder::engineFinishModule(model::Context &context,
-                                           BModuleDef *moduleDef
-                                           ) {
+void LLVMLinkerBuilder::engineFinishModule(BModuleDef *moduleDef) {
     // only called from registerPrimFuncs in base LLVMBuilder
     addModule(moduleDef);
 }
 
-void LLVMLinkerBuilder::fixClassInstRep(BTypeDef *type) {
+void LLVMLinkerBuilder::fixClassInstRep(Context &context, BTypeDef *type) {
     // Not sure we ever need to do this since classInst is no longer public.
-    type->getClassInstRep(moduleDef.get());
+    type->getClassInstRep(context, moduleDef.get());
 }
 
 model::ModuleDefPtr LLVMLinkerBuilder::materializeModule(

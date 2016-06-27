@@ -1,0 +1,49 @@
+%%TEST%%
+formatter enter() returns value
+%%ARGS%%
+%%FILE%%
+class Tester {
+    class Marker {
+        oper bind() {
+            puts('binding Marker');
+        }
+
+        oper release() {
+            puts('releasing Marker');
+        }
+
+        void format(byteptr data) {
+            puts(data);
+        }
+
+        void leave() {
+            puts('leaving marker context');
+        }
+    }
+
+    Marker enter() {
+        puts('doing enter');
+        return null;
+    }
+
+    void format(byteptr data) {
+        puts('in Tester.format!');
+    }
+
+    void leave() {
+        puts('in Tester.leave!');
+    }
+
+    oper to bool() { return 1 }
+    oper release() { puts('releasing Tester') }
+}
+
+Tester() `here is some data`;
+%%EXPECT%%
+doing enter
+binding Marker
+here is some data
+leaving marker context
+releasing Marker
+releasing Tester
+%%STDIN%%

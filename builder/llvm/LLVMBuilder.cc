@@ -220,7 +220,7 @@ namespace {
         type->type = metaType = createMetaClass(context, type->name);
         context.construct->registerDef(metaType.get());
         metaType->meta = type;
-        createClassImpl(context, BTypeDefPtr::acast(type));
+        type->createClassImpl(context);
         type->createEmptyOffsetsInitializer(context);
     }
 
@@ -581,59 +581,6 @@ GlobalVariable *LLVMBuilder::getModVar(BGlobalVarDefImpl *varDefImpl) {
     }
 
     return global;
-}
-
-BTypeDefPtr LLVMBuilder::getFuncType(Context &context,
-                                     FuncDef *funcDef,
-                                     llvm::Type *llvmFuncType
-                                     ) {
-
-    // create a new type object and store it
-    TypeDefPtr function = context.construct->functionType.get();
-
-    if (!function) {
-        // there is no function in this context XXX this should create a
-        // deferred entry.
-        BTypeDefPtr crkFuncType = new BTypeDef(context.construct->classType.get(),
-                                               "",
-                                               llvmFuncType
-                                               );
-
-        // Give it an "oper to .builtin.voidptr" method.
-        context.addDef(
-                    new VoidPtrOpDef(context.construct->voidptrType.get()),
-                    crkFuncType.get()
-                    );
-
-        return crkFuncType.get();
-    }
-
-    // we have function, specialize based on return and argument types
-    TypeDef::TypeVecObjPtr args = new TypeDef::TypeVecObj();
-
-    // push return
-    args->push_back(funcDef->returnType);
-
-    // if there is a receiver, push that
-    TypeDefPtr rcvrType = funcDef->receiverType;
-    if (rcvrType)
-        args->push_back(rcvrType.get());
-
-    // now args
-    for (FuncDef::ArgVec::iterator arg = funcDef->args.begin();
-         arg != funcDef->args.end();
-         ++arg
-         ) {
-        args->push_back((*arg)->type.get());
-    }
-
-    BTypeDefPtr specFuncType =
-        BTypeDefPtr::arcast(function->getSpecialization(context, args.get()));
-
-    specFuncType->defaultInitializer = new NullConst(specFuncType.get());
-
-    return specFuncType.get();
-
 }
 
 BHeapVarDefImplPtr LLVMBuilder::createLocalVar(BTypeDef *tp,
@@ -1357,7 +1304,7 @@ BasicBlock *LLVMBuilder::createLandingPad(
     // result in it.
     BMemVarDefImpl *exStructImpl =
         BMemVarDefImplPtr::rcast(exStructVar->impl);
-    b.CreateStore(exStruct, exStructImpl->getRep(*this));
+    b.CreateStore(exStruct, exStructImpl->getRep(context, *this));
 
     b.CreateBr(next);
 
@@ -1433,7 +1380,7 @@ ExprPtr LLVMBuilder::emitCatch(Context &context,
 
     // store the type and the catch block for later fixup
     BTypeDef *btype = BTypeDefPtr::cast(catchType);
-    fixClassInstRep(btype);
+    fixClassInstRep(context, btype);
     cdata->catches.push_back(
         BBuilderContextData::CatchBranch(btype, catchBlock)
     );
@@ -1484,7 +1431,7 @@ void LLVMBuilder::emitEndTry(model::Context &context,
         enclosingCData->nested.push_back(cdata);
 
     } else {
-        cdata->fixAllSelectors(moduleDef.get());
+        cdata->fixAllSelectors(context, moduleDef.get());
     }
 }
 
@@ -1800,7 +1747,8 @@ FuncDefPtr LLVMBuilder::createExternFuncCommon(Context &context,
 }
 
 TypeDefPtr LLVMBuilder::createGenericClass(Context &context,
-                                           const string &name
+                                           const string &name,
+                                           bool weak
                                            ) {
     BTypeDefPtr metaType = createMetaClass(context, name);
     BTypeDefPtr result = new BTypeDef(context.construct->classType.get(),
@@ -1809,13 +1757,25 @@ TypeDefPtr LLVMBuilder::createGenericClass(Context &context,
                                       true
                                       );
     result->type = metaType;
+
+    if (weak) {
+        result->setOwner(context.ns.get());
+        result->weak = true;
+    }
+
     {
         // createClassImpl() needs to be run in a class context, so we create
         // one.
         ContextPtr classCtx = context.createSubContext(Context::instance,
                                                        result.get()
                                                        );
-        createClassImpl(*classCtx, result.get());
+
+        // Create a class implementation unless this is a weak class - weak
+        // classes will have their instances generated when they are used.
+        if (!weak)
+            result->createClassImpl(*classCtx);
+
+        result->complete = true;
         result->fixIncompletes(*classCtx);
     }
     return result;
@@ -1866,7 +1826,7 @@ TypeDefPtr LLVMBuilder::emitBeginClass(Context &context,
     }
 
     // create the class implementation.
-    createClassImpl(context, type.get());
+    type->createClassImpl(context);
 
     // make the type the namespace of the context
     context.ns = type;
@@ -2336,7 +2296,7 @@ FuncDefPtr LLVMBuilder::materializeFunc(Context &context, const string &name,
 
     // Set the type and impl, we have to do this after setting the rep because that's
     // where the LLVM type is assigned.
-    result->type = getFuncType(context, result.get(), result->getLLVMFuncType());
+    result->type = result->getFuncType(context);
     result->impl = new BConstDefImpl(result.get(), result->getFuncRep(*this));
     return result;
 }
@@ -3196,7 +3156,7 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
     // implementation object for it.
     context.addDef(new IsOpDef(classType, boolType));
     finishClassType(context, classType);
-    createClassImpl(context, classType);
+    classType->createClassImpl(context);
 
     // back fill the meta-class for the types defined so far.  We create a
     // bogus context for them because functions called by fixMeta() expect to
@@ -3214,7 +3174,7 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
     BTypeDefPtr overloadDef;
     gd->overloadType = overloadDef = new BTypeDef(metaType.get(), "Overload", 0);
     metaType->meta = overloadDef.get();
-    createClassImpl(context, overloadDef.get());
+    overloadDef->createClassImpl(context);
 
     // Give it a context and an "oper to .builtin.voidptr" method.
     context.addDef(
@@ -3246,7 +3206,7 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
                      );
     vtableBaseType->hasVTable = true;
     vtableBaseType->defaultInitializer = new NullConst(vtableBaseType);
-    createClassImpl(context, vtableBaseType);
+    vtableBaseType->createClassImpl(context);
     metaType->meta = vtableBaseType;
     context.addDef(vtableBaseType);
     context.construct->registerDef(vtableBaseType);
@@ -3272,7 +3232,7 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
 
     // bind the module to the execution engine
     engineBindModule(builtinMod.get());
-    engineFinishModule(context, builtinMod.get());
+    engineFinishModule(builtinMod.get());
 
     if (options->statsMode) {
         context.construct->stats->setState(ConstructStats::start);

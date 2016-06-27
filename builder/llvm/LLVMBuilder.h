@@ -130,10 +130,8 @@ class LLVMBuilder : public Builder {
          * Linked builder ignores this, as these are resolved during the link
          * instead. It is called from getModFunc and getModVar
          */
-        virtual void addGlobalFuncMapping(llvm::Function*,
-                                          llvm::Function*) { }
-        virtual void addGlobalFuncMapping(llvm::Function*,
-                                          void*) { }
+        virtual void addGlobalFuncMapping(llvm::Function *, llvm::Function *) {}
+        virtual void addGlobalFuncMapping(llvm::Function *, void *) {}
 
         /**
          * Lets the JIT builder keep track of shared library symbols.
@@ -144,16 +142,13 @@ class LLVMBuilder : public Builder {
          * possibly bind the module to an execution engine
          * called in base llvmbuilder only from registerPrimFuncs
          */
-        virtual void engineBindModule(BModuleDef *moduleDef) { }
+        virtual void engineBindModule(BModuleDef *moduleDef) {}
 
         /**
          * let the engine "finish" a module before running/linking/dumping
          * called in base llvmbuilder only from registerPrimFuncs
          */
-        virtual void engineFinishModule(model::Context &context,
-                                        BModuleDef *moduleDef
-                                        ) {
-        }
+        virtual void engineFinishModule(BModuleDef *moduleDef) {}
 
         /**
          * common module initialization that happens in all builders
@@ -217,7 +212,9 @@ class LLVMBuilder : public Builder {
         /**
          * Insures that the class body global is present in the current module.
          */
-        virtual void fixClassInstRep(BTypeDef *type) = 0;
+        virtual void fixClassInstRep(model::Context &context,
+                                     BTypeDef *type
+                                     ) = 0;
 
         // The module id to use for the next module.  This is a monotonically
         // increasing value which is used to verify that the rep of a def is
@@ -279,10 +276,6 @@ class LLVMBuilder : public Builder {
 
         llvm::GlobalVariable *getModVar(BGlobalVarDefImpl *varDef);
 
-        BTypeDefPtr getFuncType(model::Context &context,
-                                model::FuncDef *funcDef,
-                                llvm::Type *llvmFuncType
-                                );
         BHeapVarDefImplPtr createLocalVar(BTypeDef *tp,
                                           llvm::Value *&var,
                                           const std::string &name,
@@ -474,7 +467,8 @@ class LLVMBuilder : public Builder {
                              );
 
         virtual model::TypeDefPtr createGenericClass(model::Context &context,
-                                                     const std::string &name
+                                                     const std::string &name,
+                                                     bool weak
                                                      );
 
         virtual model::TypeDefPtr

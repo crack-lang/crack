@@ -714,6 +714,7 @@ ExprPtr Parser::parseIString(Expr *expr) {
    // for reuse.
    GetRegisterExprPtr reg = new GetRegisterExpr(expr->type.get());
    ExprPtr formatter = new SetRegisterExpr(reg.get(), expr);
+   ExprPtr delegateFormatter;
    
    // create an expression sequence for the formatter
    MultiExprPtr seq = new MultiExpr();
@@ -726,7 +727,15 @@ ExprPtr Parser::parseIString(Expr *expr) {
       BSTATS_END
       if (func->flags & FuncDef::method)
          funcCall->receiver = reg;
-      seq->add(funcCall.get());
+
+      // If enter() returns a non-void, use that as the formatter instead of
+      // the original object.
+      if (func->returnType != context->construct->voidType) {
+         reg = new GetRegisterExpr(func->returnType.get());
+         seq->add(new SetRegisterExpr(reg.get(), funcCall.get()));
+      } else {
+         seq->add(funcCall.get());
+      }
    }
 
    // parse all of the subtokens
@@ -756,7 +765,7 @@ ExprPtr Parser::parseIString(Expr *expr) {
       // look up a format method for the argument
       FuncCall::ExprVec args(1);
       args[0] = arg;
-      func = context->lookUp("format", args, expr->type.get());
+      func = context->lookUp("format", args, reg->type.get());
       if (!func)
          error(tok, 
                SPUG_FSTR("No format method exists for objects of type " <<
@@ -773,7 +782,7 @@ ExprPtr Parser::parseIString(Expr *expr) {
       seq->add(funcCall.get());
    }
 
-   func = context->lookUpNoArgs("leave", true, expr->type.get());
+   func = context->lookUpNoArgs("leave", true, reg->type.get());
    if (func) {
       BSTATS_GO(s1)
       FuncCallPtr funcCall = context->builder.createFuncCall(func.get());
@@ -894,6 +903,7 @@ ExprPtr Parser::parseDefine(const Token &ident) {
    // upon entry into the loop and the rvalue doesn't seem to get
    // re-evaluated.
    VarDefPtr var = context->emitVarDef(val->type.get(), ident, 0);
+   var->doc = consumeDocs();
    return createAssign(0, ident, var.get(), val.get());
 }
 
@@ -1533,7 +1543,7 @@ VarDefPtr Parser::parseAnyDef() {
 TypeDefPtr Parser::parseTypeSpec(const char *errorMsg) {
 
    VarDefPtr varDef = parseAnyDef();
-   TypeDefPtr typeDef = varDef;
+   TypeDefPtr typeDef = TypeDefPtr::rcast(varDef);
    if (!typeDef)
       context->error(SPUG_FSTR(varDef->getDisplayName() << " is not a type."));
 
@@ -1576,6 +1586,8 @@ void Parser::parseArgDefs(vector<ArgDefPtr> &args, bool isMethod) {
       // parse the next argument type
       toker.putBack(tok);
       TypeDefPtr argType = parseTypeSpec();
+      if (argType == context->construct->voidType)
+         error(tok, "Can not create a parameter of type 'void'.");
       
       tok = getToken();
       if (!tok.isIdent())
@@ -2316,7 +2328,8 @@ void Parser::parseConstDef() {
          
          // parse the initializer
          ExprPtr expr = parseInitializer(type.get(), varName.getData());
-         context->emitVarDef(type.get(), varName, expr.get(), true);
+         context->emitVarDef(type.get(), varName, expr.get(), true)->doc =
+            consumeDocs();
          
          // see if there are more constants in this definition.
          tok2 = getToken();
@@ -2352,7 +2365,8 @@ void Parser::parseConstDef() {
    // Make sure the value isn't an external override.
    checkForExternalOverload(expr.get());
    
-   context->emitVarDef(expr->type.get(), tok, expr.get(), true);
+   context->emitVarDef(expr->type.get(), tok, expr.get(), true)->doc =
+      consumeDocs();
 }
 
 ContextPtr Parser::parseIfClause() {
@@ -3405,8 +3419,8 @@ Parser::Parser(Toker &toker, model::Context *context) :
 void Parser::parse() {
    state = st_base;
    
-   // Check for a "module;" statement, which consumes all doc-comments and 
-   // adds them to the module.
+   // Check for a "module;" statement, or the first import statement, either 
+   // of which consume all doc-comments and adds them to the module.
    Token tok = getToken();
    if (tok.isModule()) {
       tok = getToken();
@@ -3414,9 +3428,11 @@ void Parser::parse() {
          error(tok, "Semicolon expected after module token.");
       context->ns->getModule()->doc = consumeDocs();
    } else {
+      if (tok.isImport())
+         context->ns->getModule()->doc = consumeDocs();
       toker.putBack(tok);
    }
-   
+
    // parse an un-nested block
    parseBlock(false, noCallbacks);
 }

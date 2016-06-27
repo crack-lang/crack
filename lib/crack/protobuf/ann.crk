@@ -10,9 +10,9 @@
 ##   @import crack.ann impl;
 ##
 ##   @protobuf {
-##       # This line enables debugging.  Specifically, it dumps the generated code
-##       # with line numbers to standard error, which is essential for identifying
-##       # errors in the generated code.
+##       # This line enables debugging.  Specifically, it dumps the generated
+##       # code with line numbers to standard error, which is essential for
+##       # identifying errors in the generated code.
 ##       debug
 ##
 ##       message Bar {
@@ -29,9 +29,9 @@
 ## serialization, deserialization and comparison.
 ##
 ## This doesn't support the full set of protouf syntax.  It only includes
-## support for the int32, int64, string and bytes types, and doesn't support
-## options, extensions, packages or anything beyond the minimal level of usable
-## functionality.
+## support for the int32, uint32, int64, uint64, string and bytes types, and
+## doesn't support options, extensions, packages or anything beyond the
+## minimal level of usable functionality.
 
 import crack.ascii parseInt, radix;
 import crack.compiler CrackContext, Token;
@@ -146,16 +146,28 @@ class Field {
 
     void emitDef(Formatter out) {
         if (cardinality == REPEATED)
-            out `Array[$(type.getGenName())] $name = {};\n`;
+            out `Array[$(type.getGenName())] $name;\n`;
         else
             out `$(type.getGenName()) $name;\n`;
     }
 
     void emitFieldAdder(Formatter out) {
-        if (cardinality == REPEATED)
-            out I`this.$name.append($(type.getReader()));\n`;
-        else
+        if (cardinality == REPEATED) {
+            out I`this.$(name)_append($(type.getReader()));\n`;
+        } else {
             out `this.$name = $(type.getReader());\n`;
+        }
+    }
+
+    void emitAccessors(Formatter out) {
+        if (cardinality == REPEATED) {
+            out I`void $(this.name)_append($(type.getGenName()) elem) {
+                      if (this.$(this.name) is null)
+                          this.$(this.name) = Array[$(type.getGenName())]();
+                      this.$(this.name).append(elem);
+                  }
+                  `;
+        }
     }
 }
 
@@ -187,6 +199,10 @@ class Message : Type {
         # Emit a default constructor.
         out `oper init() {}\n`;
 
+        # Emit accessor methods.
+        for (field :in ordered)
+            field.emitAccessors(out);
+
         # Emit serialization methods.
         out `void serialize(ProtoWriter dst) {\n\t`;
         for (field :in ordered) {
@@ -194,8 +210,13 @@ class Message : Type {
                 out `if (this.$(field.name))\n\t`;
                 out `dst.write($(field.tag), this.$(field.name));\b\n`;
             } else if (field.cardinality == REPEATED) {
-                out `for (item :in this.$(field.name))\n\t`;
-                out `dst.write($(field.tag), item);\b\n`;
+                # XXX need a test for this case.
+                out I`\
+                    if (!(this.$(field.name) is null)) {
+                        for (item :in this.$(field.name))
+                            dst.write($(field.tag), item);
+                    }
+                    `;
             } else {
                 out `dst.write($(field.tag), this.$(field.name));\n`;
             }
@@ -272,7 +293,9 @@ class Schema {
 
     oper init() {
         types['int32'] = BuiltinType('int32', null, 'int32(field.getUInt())');
+        types['uint32'] = BuiltinType('uint32', null, 'uint32(field.getUInt())');
         types['int64'] = BuiltinType('int64', null, 'int64(field.getUInt())');
+        types['uint64'] = BuiltinType('uint64', null, 'uint64(field.getUInt())');
         types['string'] = BuiltinType('string', 'String', 'field.getString()');
         types['bytes'] = BuiltinType('bytes', 'String', 'field.getString()');
     }
@@ -359,6 +382,23 @@ class Schema {
         return msg;
     }
 
+    void parseMessageDecl(CrackContext ctx) {
+        tok := getToken(ctx);
+        if (!tok.isIdent())
+            ctx.error(tok, 'Message name expected.'.buffer);
+        Message msg = {String(tok.getText())};
+
+        # Adding this to the types map lets us look this up, but without
+        # adding it to the message list it shouldn't get generated.
+        types[msg.name] = msg;
+
+        tok = getToken(ctx);
+        if (!tok.isSemi())
+            ctx.error(tok,
+                      'Semicolon expected after message declaration.'.buffer
+                      );
+    }
+
     void parse(CrackContext ctx) {
 
         # Parse the opening curly brace.
@@ -370,6 +410,8 @@ class Schema {
             tok = getToken(ctx);
             if (tok.isIdent() && tok.getText() == 'message') {
                 messages.append(parseMessage(ctx));
+            } else if (tok.isIdent() && tok.getText() == 'declare') {
+                parseMessageDecl(ctx);
             } else if (tok.isRCurly()) {
                 break;
             } else if (tok.isIdent() && tok.getText() == 'debug') {

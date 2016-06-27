@@ -38,6 +38,12 @@ if (I"Test of a quoted string:
     )
     cerr `FAILED indented double-quoted string\n`;
 
+if (I"String with blank lines:
+
+      got that?
+      " != "String with blank lines:\n\ngot that?\n")
+    cerr `FAILED indented string with blank lines.\n`;
+
 cerr `ok\n`;
 %%EXPECT%%
 ok

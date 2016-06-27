@@ -2,9 +2,36 @@
 String IO
 %%ARGS%%
 %%FILE%%
-import crack.io cout, BufferReader, StringReader;
+import crack.io cout, BufferReader, StringReader, StringWriter, SEEK_CUR,
+    SEEK_END, SEEK_SET;
 import crack.lang Buffer, ManagedBuffer;
-@import crack.ann assert;
+@import crack.ann assert, define;
+
+# This should end up at position 5.
+@define seekTests(var) {
+    # verify seek()
+    @assert(var.seek(10, SEEK_SET) == 10);
+    @assert(var.seek(20, SEEK_SET) == 10);
+    @assert(var.tell() == 10);
+    @assert(var.seek(5, SEEK_SET) == 5);
+    @assert(var.seek(-5, SEEK_SET) == 0);
+    @assert(var.tell() == 0);
+
+    @assert(var.seek(-5, SEEK_END) == 5);
+    @assert(var.tell() == 5);
+    @assert(var.seek(5, SEEK_END) == 10);
+    @assert(var.seek(0, SEEK_END) == 10);
+    @assert(var.tell() == 10);
+
+    @assert(var.seek(0, SEEK_SET) == 0);
+    @assert(var.seek(20, SEEK_CUR) == 10);
+    @assert(var.tell() == 10);
+    @assert(var.seek(-20, SEEK_CUR) == 0);
+    @assert(var.tell() == 0);
+    @assert(var.seek(20, SEEK_CUR) == 10);
+    @assert(var.seek(-5, SEEK_CUR) == 5);
+    @assert(var.tell() == 5);
+}
 
 if (1) {
     StringReader src = {'first test'};
@@ -15,6 +42,23 @@ if (1) {
     @assert(buf == 'test');
     src.read(buf);
     @assert(buf == '');
+    @seekTests(src);
+    @assert(src.read(5) == ' test');
+}
+
+# Test StringWriter seek.
+if (1) {
+    StringWriter dst = {};
+    dst.write('first test');
+    @seekTests(dst);
+    dst.write('verylong');
+    @assert(dst.string() == 'firstverylong');
+
+    dst = StringWriter();
+    dst.write('first test');
+    dst.seek(5, SEEK_SET);
+    dst.write('nb');
+    @assert(dst.string() == 'firstnbest');
 }
 
 # Just verify that this works with an arbitrary buffer (StringReader is just
