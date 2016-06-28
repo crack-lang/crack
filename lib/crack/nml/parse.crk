@@ -5,10 +5,11 @@
 #   file, You can obtain one at http://mozilla.org/MPL/2.0/.
 # 
 
+import crack.functor Functor4, Function4;
 import crack.lang AssertionError, Exception, CString; # XXX remove CStrign
 import crack.io cout, FStr, StringFormatter, StringReader, Writer;
 import crack.io.readers LineReader;
-import crack.nml.block AnyBlockType, TextBlock, BlockType, 
+import crack.nml.block makeBlock, AnyBlockType, TextBlock, BlockType,
     ANY_BLOCK_TEMPLATE;
 import crack.regex escape, Match, Regex;
 import crack.process Process;
@@ -128,11 +129,25 @@ class DocParser {
     int lineNum = 1;
     String debugOut = '';
     HashMap[String, Regex] terminatorRxSet = {};
+    Functor4[TextBlock, String, int, String, bool] __makeBlock;
     
 
     ## Constructs a DocParser from the given source stream.
-    oper init(LineReader src, String srcName) : src = src, srcName = srcName {}
+    oper init(LineReader src, String srcName) :
+        src = src,
+        srcName = srcName,
+        __makeBlock =
+            Function4[TextBlock, String, int, String, bool](makeBlock) {
+    }
 
+    ## Constructs a DocParser from the given source stream and a block factory.
+    oper init(LineReader src, String srcName,
+              Functor4[TextBlock, String, int, String, bool] makeBlock
+              ) :
+        src = src,
+        srcName = srcName,
+        __makeBlock = makeBlock {
+    }
     ## If in debug mode, prints a loc followed by blk.debug() (blk is expected
     ## to be a text block).
     void _debug(String context, TextBlock blk) {
@@ -417,7 +432,7 @@ line $lineNum: $msg\n`;
     ## Parses and executes an "exec" block, reading the output of
     ## the executed command and then parsing it as an NML document.
     TextBlock _parseExec(TextBlock txt, Regex term) {
-        tmp := TextBlock(srcName, lineNum, 'literal', false);
+        tmp := __makeBlock(srcName, lineNum, 'literal', false);
         startLineNum := lineNum;
         _parseLiteral(tmp, term);
         newSrc := Process(tmp.makeString()).getStdOut();
@@ -459,7 +474,7 @@ line $lineNum: $msg\n`;
     ##     is below that level of indentation, block processing is terminated.
     TextBlock _parseText(String type, Regex term, bool tightLeft, int indent) {
 
-        txt := TextBlock(srcName, lineNum, type, tightLeft);
+        txt := __makeBlock(srcName, lineNum, type, tightLeft);
   
         if (txt.preformatted && txt.literal)
            return _parsePreformattedLiteral(txt, null, term);
@@ -607,7 +622,7 @@ line $lineNum: $msg\n`;
     TextBlock _parseDefinitionList(int indent) {
 
         # create a new definition list
-        dl := TextBlock(srcName, lineNum, 'definitionList', false);
+        dl := __makeBlock(srcName, lineNum, 'definitionList', false);
   
         # trick to get the string that the line actually terminates with
         line := _getNextFullLine();
@@ -632,13 +647,13 @@ line $lineNum: $msg\n`;
                                     item
                                     );
             
-            definition := TextBlock(srcName, lineNum, 'doc', false);
+            definition := __makeBlock(srcName, lineNum, 'doc', false);
             parseAnything(definition, lineIndent);
             _debug("Definition: ", definition);
             
             # create a new definition item block containing the item and its
             # definition
-            block := TextBlock(srcName, lineNum, 'definitionItem', false);
+            block := __makeBlock(srcName, lineNum, 'definitionItem', false);
             block.addChild(item);
             block.addChild(definition);
             
@@ -678,7 +693,7 @@ line $lineNum: $msg\n`;
             return line;
         }
      
-        ol := TextBlock(srcName, lineNum, 'unorderedList', false);
+        ol := __makeBlock(srcName, lineNum, 'unorderedList', false);
      
         # replace the leading hyphen in the current line with a space
         line = _getCurLine();
@@ -689,7 +704,7 @@ line $lineNum: $msg\n`;
         
         while (true) {
             # create a new doc block for the item
-            item := TextBlock(srcName, lineNum, 'doc', false);
+            item := __makeBlock(srcName, lineNum, 'doc', false);
             parseAnything(item, lineIndent);
             
             # add the new item to the list
@@ -767,7 +782,7 @@ line $lineNum: $msg\n`;
             } else if (_prelitStartrx.match(line)) {
                 #cout `prelit\n`;
                 _harvestBuffer();
-                tmp := TextBlock(srcName, lineNum, 'prelit', false);
+                tmp := __makeBlock(srcName, lineNum, 'prelit', false);
                 _parsePreformattedLiteral(tmp, _prelitEndrx, null);
                 _debug('Preformatted literal: ', tmp);
                 block.addChild(tmp);
@@ -816,7 +831,7 @@ line $lineNum: $msg\n`;
 
     ## Parse (and return) the entire document from the stream.
     TextBlock parseDoc() {
-        doc := TextBlock(srcName, lineNum, 'doc', false);
+        doc := __makeBlock(srcName, lineNum, 'doc', false);
         parseAnything(doc, 0);
         return doc;
     }
