@@ -318,6 +318,14 @@ class TextBlock {
     }
 }
 
+## Factory function for creating a TextBlock.  See TextBlock constructor for
+## args.
+TextBlock makeBlock(String sourceName, int lineNumber, String typeName,
+                    bool tightLeft
+                    ) {
+    return TextBlock(sourceName, lineNumber, typeName, tightLeft);
+}
+
 ## A utility function which finds the first header in the text and returns
 ## it as a string.  This is useful for extracting the title from a
 ## document.
