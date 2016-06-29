@@ -17,7 +17,7 @@ AC_DEFUN([AM_PATH_JACK], [dnl
         
         int main(int argc, const char **argv) {
             int result;
-            jack_get_time();
+            jack_client_name_size();
             return 0;
         }
     ], [
