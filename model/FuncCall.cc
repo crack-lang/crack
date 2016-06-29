@@ -49,7 +49,10 @@ std::ostream &model::operator <<(std::ostream &out,
                                  ) {
     for (int i = 0; i < args.size(); i++) {
         if (i > 0) out << ", ";
-        out << args[i]->getTypeDisplayName();
+        if (!args[i]->type)
+            out << "NULL-TYPE(" << *args[i] << ")" << std::endl;
+        else
+            out << args[i]->getTypeDisplayName();
     }
 
     return out;
