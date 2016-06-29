@@ -88,7 +88,7 @@ FuncDef *OverloadDef::getMatch(Context &context, vector<ExprPtr> &args,
 FuncDef *OverloadDef::getMatch(Context &context, std::vector<ExprPtr> &args,
                                bool allowOverrides
                                ) const {
-    
+
     // see if we have any adaptive arguments and if all of them are adaptive.
     bool someAdaptive = false, allAdaptive = true;
     for (vector<ExprPtr>::iterator iter = args.begin();
@@ -100,7 +100,7 @@ FuncDef *OverloadDef::getMatch(Context &context, std::vector<ExprPtr> &args,
         else
             allAdaptive = false;
     
-    // if any of the arguments are adpative, convert the adaptive arguments.
+    // if any of the arguments are adaptive, convert the adaptive arguments.
     FuncDef::Convert convertFlag = FuncDef::noConvert;
     if (someAdaptive)
         convertFlag = FuncDef::adapt;
