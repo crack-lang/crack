@@ -16,6 +16,7 @@
 #==============================================================================
 
 import crack.ascii wsplit;
+import crack.cont.hashmap HashMap;
 import crack.lang AppendBuffer, InvalidArgumentError;
 import crack.io cout, Formatter, FStr, Writer, StringFormatter, StringWriter;
 import crack.cont.array Array;
@@ -46,14 +47,10 @@ class BlockType {
     }
 }
 
-ANY_BLOCK_TEMPLATE := r'\\([\w\.]+)([\[\{\(<"\'])';
+ANY_BLOCK_TEMPLATE := r'\\([\w\.]+)(\[+|\{+|\(+|<+|"+|\'+)'; #'
 
-BRACKRX := Regex(r'\]');
-CBRACKRX := Regex(r'\}');
-RPARENRX := Regex(r'\)');
-GTRX := Regex(r'>');
-SQRX := Regex(r"'");
-DQRX := Regex(r'"');
+# Terminator cache.  Terminators are constructed on first use.
+HashMap[String, Regex] __terminators = {};
 
 ## Contains information about the generalized block format: \\name( ... )
 ## Generalized blocks can use parens, square, curly, or angle brackets
@@ -70,14 +67,23 @@ class AnyBlockType : BlockType {
    
     Regex getTerminator(String pattern) {
         initiator := templateRx.match(pattern).group(2);
+        if (t := __terminators.get(initiator))
+            return t;
+
+        # Doesn't already exist, construct it.
         i := initiator[0];
-        if (i == b'[') return BRACKRX;
-        else if (i == b'{') return CBRACKRX;
-        else if (i == b'(') return RPARENRX;
-        else if (i == b'<') return GTRX;
-        else if (i == b'"') return DQRX;
-        else if (i == b"'") return SQRX;
+        String termStr;
+        if (i == b'[') termStr = ']';
+        else if (i == b'{') termStr = r'\}';
+        else if (i == b'(') termStr = r'\)';
+        else if (i == b'<') termStr = '>';
+        else if (i == b'"') termStr = '"';
+        else if (i == b"'") termStr = "'";
         else throw InvalidArgumentError("Invalid pattern");
+
+        __terminators[initiator] = result :=
+            Regex(FStr() `$termStr{$(initiator.count())}`);
+        return result;
     }
 }
 
