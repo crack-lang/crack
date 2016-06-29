@@ -12,7 +12,7 @@ import crack.io cerr, FStr, Writer, Reader;
 import crack.ext._ssl SSL_library_init, BIO, SSL, SSL_CTX, SSLv23_method,
     SSL_FILETYPE_PEM, SSL_CTX_new, BIO_new, BIO_s_mem, SSL_new,
     SSL_ERROR_WANT_READ;
-@import crack.ann assert, implements;
+@import crack.ann assert, impl, implements;
 
 class SSLStuff @impl Reader, Writer {
     String name;
