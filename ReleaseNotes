@@ -1,3 +1,16 @@
+0.12
+    -   Added full support for special documentation comments, created the
+        model builder which knows how to extract them and created the
+        "crackdoc" documentation tool.
+    -   Greatly improved http server support, moved it to crack.http
+    -   NML extensibility enhancements.
+    -   Convert buffer size from uint to uintz
+    -   Change alias serialization to deal with ordering issues in nested
+        aliases.
+    -   SHA256 hashing
+    -   Added POSIX signal handling, display stack traces for fatal signals.
+    -   Many small enhancements and bug fixes.
+
 0.11
     -   Allow importing crack.compiler outside of an annotation.
     -   Fixed casting so we can now correctly cast from secondary bases and
