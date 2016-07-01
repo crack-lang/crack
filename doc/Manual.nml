@@ -12,7 +12,7 @@
 The Crack Programming Language Guide
 ====================================
 
-This is the Manual for version 0.11 of the Crack Programming Language.  We
+This is the Manual for version 0.12 of the Crack Programming Language.  We
 regard this version largely as an alpha 1.0 release - compatibility breakage
 between this and 1.0 should be very limited.  There are still some usability
 gaps in the system, mostly with respect to debugging and caching.  And as of
@@ -27,7 +27,7 @@ So without further caveats - let's do some Crack!
 Important Note on Caching
 -------------------------
 
-Crack 0.11 enables module caching by default.  When a Crack module is
+Crack 0.12 enables module caching by default.  When a Crack module is
 compiled, the compiler stores the modules metadata and LLVM bitcode in your
 `$HOME/.crack/cache` directory and reuses this information if it exists and is
 up to date with respect to the source file and all dependencies.
@@ -705,7 +705,7 @@ You'll generally want to use the memory-managed #Array# collection instead
 Control Structures
 ------------------
 
-Crack 0.11 supports four control structures: the "if\/else" statement,
+Crack 0.12 supports four control structures: the "if\/else" statement,
 the "while" statement, the "for" statement and the "try\/catch" statement.
 "if" runs code blocks depending on whether a condition is true or false:
 
@@ -3303,7 +3303,7 @@ variable is actually defined.
 When a sequence constant is defined, the compiler does the following:
 
 -   Searches for a constructor for the type that can accept an unsigned
-    integer value (as of 0.11 - we will eventually be switching to an integer
+    integer value (as of 0.12 - we will eventually be switching to an integer
     type large enough to accommodate a memory size).  This #uint# value is
     assumed to be the number of elements in the sequence.
 -   That failing, it searches for a default constructor for the type.
@@ -3993,7 +3993,7 @@ member variables.  For example:
     Coord c = {10, 20};
 }}
 
-Structs are very limited as of Crack 0.11.  In particular:
+Structs are very limited as of Crack 0.12.  In particular:
 
 -   They don't support inheritence.
 -   You can't add any other methods.
@@ -4109,7 +4109,7 @@ extension, you'll want to:
 -   build it into a shared library, linked with whatever support code it needs
     (usually the code it's wrapping)
 -   Add the include directory for crack headers to the include path (usually
-    something like #`/usr/local/include/crack-0.11`#)
+    something like #`/usr/local/include/crack-0.12`#)
 
 The Extension Generator
 '''''''''''''''''''''''
@@ -4263,7 +4263,7 @@ threading.
 Debugging
 ---------
 
-Crack has only minimal support for debugging in 0.11.  If your program
+Crack has only minimal support for debugging in 0.12.  If your program
 seg-faults or aborts, you can at least get a sparse stack-trace by running it
 in JIT mode under a fairly recent version of GDB (7.0 or later).
 
@@ -6020,8 +6020,8 @@ you want to avoid code breakage when upgrading, we recommend two strategies:
 The remainder of this appendix describes the things you need to know when
 upgrading between versions.
 
-From 0.11 to 1.0
-----------------
+From 0.11 to 0.12
+-----------------
 
 -   Many methods that were unnecssarily virtual are now @final.
 -   The deprecated "createString()" and "createCString()" methods in
