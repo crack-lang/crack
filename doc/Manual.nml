@@ -12,7 +12,7 @@
 The Crack Programming Language Guide
 ====================================
 
-This is the Manual for version 0.11 of the Crack Programming Language.  We
+This is the Manual for version 0.12 of the Crack Programming Language.  We
 regard this version largely as an alpha 1.0 release - compatibility breakage
 between this and 1.0 should be very limited.  There are still some usability
 gaps in the system, mostly with respect to debugging and caching.  And as of
@@ -27,7 +27,7 @@ So without further caveats - let's do some Crack!
 Important Note on Caching
 -------------------------
 
-Crack 0.11 enables module caching by default.  When a Crack module is
+Crack 0.12 enables module caching by default.  When a Crack module is
 compiled, the compiler stores the modules metadata and LLVM bitcode in your
 `$HOME/.crack/cache` directory and reuses this information if it exists and is
 up to date with respect to the source file and all dependencies.
@@ -705,7 +705,7 @@ You'll generally want to use the memory-managed #Array# collection instead
 Control Structures
 ------------------
 
-Crack 0.11 supports four control structures: the "if\/else" statement,
+Crack 0.12 supports four control structures: the "if\/else" statement,
 the "while" statement, the "for" statement and the "try\/catch" statement.
 "if" runs code blocks depending on whether a condition is true or false:
 
@@ -3303,7 +3303,7 @@ variable is actually defined.
 When a sequence constant is defined, the compiler does the following:
 
 -   Searches for a constructor for the type that can accept an unsigned
-    integer value (as of 0.11 - we will eventually be switching to an integer
+    integer value (as of 0.12 - we will eventually be switching to an integer
     type large enough to accommodate a memory size).  This #uint# value is
     assumed to be the number of elements in the sequence.
 -   That failing, it searches for a default constructor for the type.
@@ -3993,7 +3993,7 @@ member variables.  For example:
     Coord c = {10, 20};
 }}
 
-Structs are very limited as of Crack 0.11.  In particular:
+Structs are very limited as of Crack 0.12.  In particular:
 
 -   They don't support inheritence.
 -   You can't add any other methods.
@@ -4109,7 +4109,7 @@ extension, you'll want to:
 -   build it into a shared library, linked with whatever support code it needs
     (usually the code it's wrapping)
 -   Add the include directory for crack headers to the include path (usually
-    something like #`/usr/local/include/crack-0.11`#)
+    something like #`/usr/local/include/crack-0.12`#)
 
 The Extension Generator
 '''''''''''''''''''''''
@@ -4263,7 +4263,7 @@ threading.
 Debugging
 ---------
 
-Crack has only minimal support for debugging in 0.11.  If your program
+Crack has only minimal support for debugging in 0.12.  If your program
 seg-faults or aborts, you can at least get a sparse stack-trace by running it
 in JIT mode under a fairly recent version of GDB (7.0 or later).
 
@@ -5583,8 +5583,10 @@ With a little more code, we can create a very basic server program:
     srv.setReuseAddr(true);
 
     # bind to port 1900 on all interfaces
-    if (!srv.bind(InetAddress(INADDR_ANY, 1900)))
-        err.do() `error binding socket`;
+    if (!srv.bind(InetAddress(INADDR_ANY, 1900))) {
+        cerr `error binding socket`;
+        exit(1);
+    }
 
     # queue up to 5 connections
     srv.listen(5);
@@ -5594,8 +5596,10 @@ With a little more code, we can create a very basic server program:
 
         # accept a new client connnection
         accepted := srv.accept();
-        if (!accepted)
-            err.do() `error accepting new connection`;
+        if (!accepted) {
+            cerr `Error accepting socket.\n`;
+            continue;
+        }
 
         # read up to 1K from the new connection
         data := accepted.sock.read(1024);
@@ -5649,81 +5653,78 @@ about on them.  You can then wait for an event (or a timeout) using the
 back whatever it reads from a client) written using #Poller#:
 
 {{
-    import crack.net sockconsts, Poller, PollEvent, Socket, SockAddrIn;
-    import crack.cont.list DList;
-    import crack.exp.error err, strerror;
+    import crack.net InetAddress, Poller, PollEvent, PollEventCallback,
+        Socket, AF_INET, INADDR_ANY, POLLIN, POLLOUT, POLLERR, SOCK_STREAM;
+    import crack.logger error;
+    import crack.sys exit;
 
-    Socket srv = {sockconsts.AF_INET, sockconsts.SOCK_STREAM, 0};
+    @import crack.ann impl;
+
+    class ClientHandler @impl PollEventCallback {
+        Socket sock;
+
+        oper init(Socket sock) : sock = sock {}
+
+        int oper call(Poller poller, PollEvent event) {
+            if (event.revents & POLLIN) {
+                data := sock.read(1024);
+                if (!data) {
+                    poller.remove(sock);
+                    return 0;
+                }
+
+                # This won't make for a very robust server.  Sockets should
+                # really be non-blocking and should keep a buffer and send as
+                # much data as they can when ready to write (when the POLLOUT
+                # flag is set).  But it's good enough for an example.
+                sock.write(data);
+            } else if (event.revents & POLLHUP) {
+                poller.remove(sock);
+            }
+
+            return POLLIN | POLLERR;
+        }
+
+        oper del() {
+            error `socket destroyed`;
+        }
+    }
+
+    class ServerHandler @impl PollEventCallback {
+        Socket sock;
+        oper init(Socket sock) : sock = sock {}
+        int oper call(Poller poller, PollEvent event) {
+            if (event.revents & POLLIN) {
+                accepted := sock.accept();
+                poller.add(accepted.sock, ClientHandler(accepted.sock));
+            }
+            if (event.revents & POLLERR)
+                error `Error on server socket.`;
+            return POLLIN | POLLOUT
+        }
+    }
+
+    Socket srv = {AF_INET, SOCK_STREAM, 0};
 
     # allow the socket's port to be immediately reused after the program
     # terminates (useful for debugging and server restarts)
     srv.setReuseAddr(true);
 
     # bind to port 1900 on all interfaces
-    if (!srv.bind(SockAddrIn(sockconsts.INADDR_ANY, 1900)))
-        err.do() `error binding socket`;
+    if (!srv.bind(InetAddress(INADDR_ANY, 1900))) {
+        error `Error binding socket `;
+        exit(1);
+    }
 
     # queue up to 5 connections
     srv.listen(5);
 
-    # our list of clients
-    DList[Socket] clients;
-
-    # remove a client from the list
-    void removeClient(Socket client) {
-        i := clients.iter();
-        while (!(client is i.elem()))
-            i.next();
-
-        if (!i)
-            err.do() `unable to remove client: $(client.fd)\n`;
-
-        clients.delete(i);
-    }
+    Poller p = {};
+    p.add(srv, ServerHandler(srv));
 
     # accept loop
-    while (true) {
-        Poller p;
-
-        # add the server socket and all of the client sockets
-        events := sockconsts.POLLIN | sockconsts.POLLERR;
-        p.add(srv, events);
-        i := clients.iter();
-        while (i.nx())
-            p.add(Socket.cast(i.elem()), events);
-
-        # wait indefinitely for the next event
-        rc := p.wait(null);
-        if (rc < 0)
-            err.do() `error during poll: $(strerror())`;
-
-        PollEvent evt = null;
-        while (evt = p.nx()) {
-            cout `got event\n`;
-            # if this is the server, do an accept.  Otherwise do a read.
-            if (evt.pollable is srv) {
-                accepted := srv.accept();
-                if (!accepted)
-                    err.do() `error accepting new connection`;
-
-                clients.append(accepted.sock);
-            } else {
-                # read some data, write it back (what we should really do is
-                # add sockconsts.POLLOUT to the events that this client is
-                # listening for, and then write when the socket becomes ready
-                # to write, but in the interests of simplifying the example
-                # we'll just write back to it)
-                client := Socket.cast(evt.pollable);
-                data := client.read(1024);
-                if (!data) {
-                    cout `removing client $(client.fd)\n`;
-                    removeClient(client);
-                } else {
-                    client.write(data);
-                }
-            }
-        }
-    }
+    while (p)
+        p.waitAndProcess(null);
 }}
 
 Logging
@@ -5731,7 +5732,8 @@ Logging
 The #crack.logger# module provides classes for logging messages with configurable
 formatting, severity level and output destination.
 
-*Core functionality*
+Core functionality
+''''''''''''''''''
 
 The core of the module is the #Logger# class which implements 5 logging severity
 levels: #FATAL#, #ERROR#, #WARN#, #INFO#, #DEBUG#. Only messages with a severity
@@ -5771,7 +5773,8 @@ The #Logger# class defines convenience methods #fatal#, #error#, #warn#, #info#,
     logger.error("This will be logged");
 }}
 
-*Formatter protocol*
+Formatter protocol
+''''''''''''''''''
 
 The #logger# module also provides a #LogFormatter# class that implements the #Formatter#
 protocol. Extending the example above to use a #LogFormatter# instead, we get:
@@ -5799,7 +5802,8 @@ undelying #Logger# instance, the method #setLoggerLevel(uint level)# can be used
 The severity level of a #LogFormatter# instance can be changed using the
 #setLevel(uint level)# method.
 
-*Message formatting*
+Message formatting
+''''''''''''''''''
 
 The #Logger# class implements log message fields, named #msg#, #datetime#,
 #progname#, #escapemsg#, and #severity#. The default fields used are
@@ -5823,7 +5827,8 @@ format, with the default being #"%Y-%m-%dT%H:%M:%S"#, as defined by
 ISO-8601. This format is only able to produce timestamps with second
 accuracy, as it relies on the #crack.time.Date# class.
 
-*Message fields*
+Message fields
+''''''''''''''
 
 Field representations are constructed by #MessageField# instances. To add a new
 type of message field, define a class as follows:
@@ -5848,7 +5853,8 @@ The field can be registered with the #Logger#, and the fields specified with:
     logger.setNamedFields("datetime msecs severity progname escapemsg");
 }}
 
-*Logger options*
+Logger options
+''''''''''''''
 
 The #Logger# class contains an #options# member of type #LoggerOptions#,
 with members, defined as:
@@ -6020,8 +6026,8 @@ you want to avoid code breakage when upgrading, we recommend two strategies:
 The remainder of this appendix describes the things you need to know when
 upgrading between versions.
 
-From 0.11 to 1.0
-----------------
+From 0.11 to 0.12
+-----------------
 
 -   Many methods that were unnecssarily virtual are now @final.
 -   The deprecated "createString()" and "createCString()" methods in

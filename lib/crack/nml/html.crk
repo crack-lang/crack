@@ -7,6 +7,8 @@
 
 import crack.ascii isDigit, parseInt, strip, toLower;
 import crack.cont.array Array;
+import crack.cont.hashmap HashMap;
+import crack.functor Functor2;
 import crack.io cout, Formatter, FStr, StringFormatter, StringWriter, Writer;
 import crack.io.readers FullReader;
 import crack.lang AssertionError;
@@ -64,6 +66,15 @@ const int _NEWLINE = 0,
 const Regex _PUNCT_RX = Regex(r'.*[^\w\.]$'),
             _WORD_RX = Regex(r'\w+'),
             _PERIOD_RX = Regex(r'.*\.');
+
+const int
+    ## Flag for HTMLFormatter.write().
+    ## Escape all special HTML characters.
+    HTML_ESCAPE = 1,
+
+    ## Flag for HTMLFormatter.write().
+    ## Reflow all output to fit in 80 character lines.
+    HTML_REFLOW = 2;
    
 # used to define the maximum line width for the output.
 const int _MAX_LINE_WIDTH = 79;
@@ -73,7 +84,19 @@ class HTMLFormatter : StdFormatter {
     Writer __out;
     int __last;
     
+    alias CustomFormatter = Functor2[void, HTMLFormatter, TextBlock];
+
+    # Special formatters for custom block types.
+    HashMap[String, CustomFormatter] __formatters;
+
     oper init(Writer out) : __out = out, __last = _NEWLINE {}
+
+    ## Register a custom formatter for the block type.
+    void addFormatter(String tag, CustomFormatter formatter) {
+        if (__formatters is null)
+            __formatters = HashMap[String, CustomFormatter]();
+        __formatters[tag] = formatter;
+    }
 
     class TagPair {
         String start, end;
@@ -175,7 +198,10 @@ class HTMLFormatter : StdFormatter {
         if (!block.tightLeft)
             _writeSpace();
 
-        if (block.type == 'definitionItem') {
+        # Let the custom formatters deal with it first.
+        if (__formatters && fmt := __formatters.get(block.type)) {
+            fmt(this, block);
+        } else if (block.type == 'definitionItem') {
             if (block.words.count() != 2)
                 throw AssertionError(FStr() `Definition item does not have \
 two words: $(block)\n`);
@@ -342,6 +368,23 @@ two words: $(block)\n`);
             } else {
                 __out.write(line);
             }
+        }
+    }
+
+    ## Writes the given text to the output document.
+    ## The values for 'flags' are:
+    ##   HTML_ESCAPE - escape all special HTML characters.
+    ##   HTML_REFLOW - reflow all output to fit in 80 character lines.
+    @final void write(String text, int flags) {
+        txt := (flags & HTML_ESCAPE) ? _fix(text) : text;
+        if (flags & HTML_REFLOW) {
+            _write(txt);
+        } else {
+            if (buf.size) {
+                _commit(buf);
+                buf.size = 0;
+            }
+            __out.write(txt);
         }
     }
 }

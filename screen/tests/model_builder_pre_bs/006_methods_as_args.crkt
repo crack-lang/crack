@@ -1,0 +1,24 @@
+%%TEST%%
+methods as arguments
+%%ARGS%%
+%%FILE%%
+class A {
+    void f() {}
+    void g(function[void, A] method) {}
+    void h() { g(f) }
+}
+
+%%REXPECT%%
+class A : {
+.builtin.void f\(\)
+.builtin.void g\(.builtin.function\[.builtin.void,.main..*.A\] method, \)
+.builtin.void h\(\)
+.builtin.void oper del\(\)
+.builtin.void oper init\(\)
+@static .main..*.A oper new\(\)
+.builtin.voidptr oper to .builtin.voidptr\(\)
+}
+.builtin.void __CrackBadCast\(.builtin.Class curType, .builtin.Class newType, \)
+.builtin.int __getArgc\(\)
+.builtin.array\[.builtin.byteptr\] __getArgv\(\)
+%%STDIN%%

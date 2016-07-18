@@ -54,18 +54,14 @@ TypeDefPtr ArrayTypeDef::getSpecialization(Context &context,
     tempSpec->setOwner(this->owner);
     tempSpec->defaultInitializer = new NullConst(tempSpec.get());
 
-    // This class won't be in the module's namespace, we need to record the
-    // its existence so we can fix it later.
-    LLVMBuilder &b = dynamic_cast<LLVMBuilder &>(context.builder);
-    b.recordOrphanedDef(tempSpec.get());
-
     // create the implementation (this can be called before the meta-class is
     // initialized, so check for it and defer if it is)
     if (context.construct->classType->complete) {
         tempSpec->createClassImpl(context);
         tempSpec->createEmptyOffsetsInitializer(context);
     } else {
-        b.deferMetaClass.push_back(tempSpec);
+        dynamic_cast<LLVMBuilder &>(context.builder).deferMetaClass
+            .push_back(tempSpec);
     }
 
     tempSpec->genericParms = *types;

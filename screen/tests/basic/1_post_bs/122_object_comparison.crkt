@@ -1,0 +1,21 @@
+%%TEST%%
+object comparison operators
+%%ARGS%%
+%%FILE%%
+import crack.io cout;
+
+# Test comparison against null.
+@import crack.ann assert;
+@assert('test' != null);
+@assert('test' > null);
+@assert('test' >= null);
+String nullString;
+@assert(nullString < 'test');
+@assert(nullString <= 'test');
+@assert(nullString >= null);
+@assert(nullString <= null);
+
+cout `ok`;
+%%EXPECT%%
+ok
+%%STDIN%%

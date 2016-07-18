@@ -61,6 +61,10 @@ FDWriter _makeWriter(Process proc, int fd);
 ## Implements ProcessHandler and provides the translation from the data 
 ## handlers to the line handlers, making it easy to implement any combination 
 ## of line reader and data reader for a process.
+##
+## If a handler implements both line handlers and onTerminate(), it should 
+## call ProcessHandlerImpl.onTerminate() to ensure that any final output 
+## without a newline is flushed through to the on*Line() handlers.
 class ProcessHandlerImpl @impl ProcessHandler {
     AppendBuffer outBuf = {1024}, errBuf = {1024};
     bool outDone, errDone;
@@ -84,7 +88,13 @@ class ProcessHandlerImpl @impl ProcessHandler {
     @output_handlers(out, Out);
     @output_handlers(err, Err);
     
-    void onTerminate(int resultCode) {}
+    void onTerminate(int resultCode) {
+        # If there's unconsumed output, flush through to the line handlers.
+        if (outBuf)
+            onOutLine(outBuf);
+        if (errBuf)
+            onErrLine(errBuf);
+    }
 }
 
 class Process {
