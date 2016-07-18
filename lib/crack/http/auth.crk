@@ -1,0 +1,267 @@
+## HTTP Authentication subsystem.
+##
+## This is an extensible framework that provides basic user management and
+## login functionality.
+##
+## To use it, you'll need to define a global AuthInfo implementation
+## (AuthInfoImpl will work for simple cases) to manage users and session
+## cookies.  Then chain AuthHandler before all of your request handlers that
+## require user authentication.
+
+import crack.cont.array Array;
+import crack.cont.hashmap HashMap;
+import crack.enc.base64 altEncode;
+import crack.fieldset FieldSet, HashMapFieldSet;
+import crack.functor Functor0, Functor1;
+import crack.hash.sha256 SHA256;
+import crack.http.core Request, RequestHandler;
+import crack.http.util parseQuery, MethodDispatcher, QueryParmMap;
+import crack.io FStr;
+import crack.lang Buffer, InvalidArgumentError;
+import crack.logger debug;
+import crack.random MersenneTwister;
+import crack.time Time;
+
+@import crack.ann impl, interface;
+@import crack.fieldset_ann fieldset_accessors;
+
+## A user record.
+class User : HashMapFieldSet {
+    ## User id.
+    String id;
+
+    ## SHA256 hash of id + password + salt.
+    String passwordHash;
+
+    ## Password salt.
+    String salt;
+
+    @static String __hash(String password, String salt) {
+        hasher := SHA256();
+        hasher.update(password);
+        hasher.update(salt);
+        return hasher.digest();
+    }
+
+    ## Returns true if the user's unencrypted password matches 'password'.
+    bool hasPassword(String password) {
+        return passwordHash == __hash(password, salt);
+    }
+
+    ## Sets the unencrypted password and a random salt string.  Only the
+    ## password hash will be stored in this record, the unencrypted password
+    ## will be unavailable.
+    void setPassword(String password, String salt) {
+        this.passwordHash = __hash(password, salt);
+        this.salt = salt;
+    }
+
+    @fieldset_accessors(User);
+}
+
+## An auth URL is a functor that returns the login URL when called.  The
+## parameter should be a string identifying the location to redirect to upon
+## successsful login.
+alias LoginURL = Functor1[String, String];
+
+## Creates a new URL by simply concatenating the string it was constructed
+## with with the argument.
+class Concatter @impl Functor1[String, String] {
+
+    String __template;
+
+    oper init(String template) : __template = template {}
+
+    String oper call(String param) {
+        # XXX need to encode the parameter and update the class doc.
+        return __template + param;
+    }
+}
+
+## A request's auth info.  You can use this interface to customize the
+## authentication system, or use AuthInfoImpl for a reasonable default
+## implementation.
+@interface AuthInfo {
+
+    ## Returns the URL to redirect users to for login.
+    @abstract LoginURL getLoginURL();
+
+    ## Returns the user with the given name, null if there is no such user.
+    @abstract User getUser(String user);
+
+    ## Return the user object given an auth cookie.
+    @abstract User lookUp(String cookie);
+
+    ## Make a new cookie and associate it with the user.
+    @abstract String makeCookie(User user);
+
+    @fieldset_accessors(AuthInfo);
+}
+
+## Authenticates the user and if successful stores a User object in the
+## request.  If not, redirects to the login page.  To use a different
+## implementation of AuthInfo, add a handler that seeds the AuthInfo before
+## this handler in the chain.
+class AuthHandler @impl RequestHandler {
+
+    ## The authentication system for the handler.
+    AuthInfo authInfo;
+
+    oper init(AuthInfo authInfo) : authInfo = authInfo {}
+
+    bool oper call(Request req) {
+
+        User user;
+        if (cookie := req.getCookie('SpugAuth')) {
+            # We've got an auth cookie.  Try to get the user.
+            user = authInfo.lookUp(cookie.value);
+        }
+
+        if (!user) {
+            req.sendRedirect(303, authInfo.getLoginURL()(req.path));
+            return true;
+        }
+
+        user.putIn(req);
+        return false;
+    }
+}
+
+## Interface for a random number generator that returns a random byte string
+## every time it is called.
+alias RandomNumberGenerator = Functor0[String];
+
+## This is a PRNG that produces random strings from a hash of the output of
+## the random() function, the current clock time and a 64 bit salt value.
+class StupidRNG @impl RandomNumberGenerator {
+
+    uint64 salt;
+    MersenneTwister random;
+
+    ## 'salt' is a value that is mixed into all of the random numbers that are
+    ## generated.
+    ## 'seed' is the seed for the Mersenne twister.
+    oper init (uint64 salt, uint seed) : salt = salt, random(seed) {}
+
+    String oper call() {
+        Array[uint32] vals = {8};
+
+        # Get 16 bytes of random data.
+        for (int i = 0; i < 0; ++i)
+            vals.append(uint32(random.get()));
+
+        # Mix in the time.
+        t := Time.now();
+        vals.append(uint32(t.secs));
+        vals.append(uint32(t.nsecs));
+
+        # Add salt.
+        vals.append(uint32(salt >> 32));
+        vals.append(uint32(salt & 0xffffffff));
+
+        # SHA256 hash the result.
+        hasher := SHA256();
+        hasher.update(Buffer(byteptr(vals.data()), 32));
+
+        return hasher.digest();
+    }
+}
+
+## Default auth info implementation.  Stores the user and cookie database in
+## memory. The default login path is /login.
+class AuthInfoImpl @impl AuthInfo {
+    HashMap[String, User] __users = {};
+    HashMap[String, User] __cookieMap = {};
+    RandomNumberGenerator __rand;
+
+    oper init(RandomNumberGenerator rand) :
+        __rand = rand {
+    }
+
+    LoginURL getLoginURL() {
+        return Concatter("/login?url=");
+    }
+
+    User getUser(String name) { return __users.get(name) }
+
+    User lookUp(String cookie) {
+        return __cookieMap.get(cookie);
+    }
+
+    String makeCookie(User user) {
+        cookie := altEncode(__rand());
+        __cookieMap[cookie] = user;
+        return cookie;
+    }
+
+    User addUser(String name, String password, String salt) {
+        __users[name] = user := User();
+        user.id = name;
+        user.setPassword(password, salt);
+        return user;
+    }
+}
+
+## Dual-mode GET/POST handler for the login form.
+class LoginHandler : MethodDispatcher {
+
+    ## The authentication system for the handler.
+    AuthInfo authInfo;
+
+    oper init(AuthInfo authInfo) : authInfo = authInfo {}
+
+    bool onGet(Request req) {
+        url := QueryParmMap.getOrMake(req).getSingle('url');
+        if (!url)
+            url = '';
+        loginURL := authInfo.getLoginURL()(url);
+        req.sendReply(
+            200, 'text/html',
+            FStr() I`<html>
+                <body>
+                <form method="POST" action="$loginURL">
+                    User: <input type="entry" name="user">
+                    <input type="password" name="password">
+                    <input type="submit" value="Login">
+                    <input type="hidden" name="url" value="$url">
+                </form>
+                </body>
+            </html>
+            `
+        );
+        return true;
+    }
+
+    void onPost(Request req) {
+        QueryParmMap parms;
+        try {
+            parms = parseQuery(req.contents);
+        } catch (InvalidArgumentError ex) {
+            req.sendReply(400, 'text/plain', 'Malformed query contents');
+        }
+        String userId, passwd;
+        if (!(userId = parms.getSingle(req, 'user', true)) ||
+            !(passwd = parms.getSingle(req, 'password', true))
+            )
+            return;
+
+        # Verify the user id and password.
+        user := authInfo.getUser(userId);
+        if (!user || !user.hasPassword(passwd)) {
+            onGet(req);
+            return;
+        }
+
+        # Create a cookie, store it in the request.
+        cookie := authInfo.makeCookie(user);
+        req.addHeader('Set-Cookie', 'SpugAuth=' + cookie);
+
+        # Send a redirect to the target page.
+        if (url := parms.getSingle('url'))
+            req.addHeader('Location', url);
+        else
+            req.addHeader('Location', '/');
+        req.sendReply(303, 'text/plain', req.contents);
+        return;
+    }
+}

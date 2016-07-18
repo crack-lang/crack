@@ -1,0 +1,82 @@
+%%TEST%%
+http auth
+%%ARGS%%
+%%FILE%%
+import crack.http.auth AuthHandler, AuthInfoImpl, LoginHandler, StupidRNG, User;
+import crack.http.test TestRequest;
+import crack.io cout;
+import crack.logger setLogLevel, DEBUG;
+import crack.strutil StringArray;
+
+@import crack.ann assert;
+
+const PASSWORD := 'b4ds3cr3t';
+
+setLogLevel(DEBUG);
+
+AuthInfoImpl makeAuthInfo() {
+    return AuthInfoImpl(StupidRNG(i'salty123', 12345678));
+}
+
+# Password hashing.
+if (true) {
+    user := User();
+    user.id = 'foo';
+    user.setPassword(PASSWORD, 'salty');
+
+    @assert(user.hasPassword(PASSWORD));
+    @assert(!user.hasPassword('wrong-password'));
+}
+
+# AuthInfoImpl
+if (true) {
+    ah := makeAuthInfo();
+    user := ah.addUser('foo', PASSWORD, 'salty');
+    @assert(ah.getUser('foo') is user);
+    @assert(ah.getUser('notreal') is null);
+    cookie := ah.makeCookie(user);
+    @assert(ah.lookUp(cookie) is user);
+    @assert(ah.lookUp(cookie + 'x') is null);
+}
+
+# AuthHandler
+if (true) {
+    ai := makeAuthInfo();
+    handler := AuthHandler(ai);
+    test := TestRequest();
+    test.req.path = '/test';
+    @assert(handler(test.req));
+    @assert(test.getResponse().startsWith('HTTP/1.1 303'));
+    @assert(test.getResponse().lfind('Location: /login?url=/test') != -1);
+
+    test = TestRequest();
+    user := ai.addUser('foo', PASSWORD, 'salty');
+    cookie := ai.makeCookie(user);
+    test.req.headers['cookie'] = StringArray!['SpugAuth=' + cookie];
+    test.req.path = '/test';
+    @assert(!handler(test.req));
+}
+
+# LoginHandler
+if (true) {
+    ai := makeAuthInfo();
+    ai.addUser('foo', PASSWORD, 'salty');
+    handler := LoginHandler(ai);
+    test := TestRequest();
+    test.req.method = 'GET';
+    test.req.path = '/login?url=/test';
+    @assert(handler(test.req));
+    response := test.getResponse();
+    @assert(response.lfind('name="url" value="/test"') != -1);
+
+    test = TestRequest();
+    test.req.method = 'POST';
+    test.req.path = '/login';
+    @assert(handler(test.req));
+    # xxx finish
+}
+
+cout `ok\n`;
+%%EXPECT%%
+ok
+%%STDIN%%
