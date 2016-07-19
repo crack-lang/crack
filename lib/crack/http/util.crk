@@ -207,7 +207,10 @@ class QueryParmMap : HashMap[String, Array[String]] {
 }
 
 ## Decode a portion of a URI, converting % HEX HEX escape sequences to bytes.
-String decode(Buffer data, bool permissive) {
+##
+## If 'convertPlus' is true, converts all plus signs to spaces (use this for
+## decoding a query string).
+String decode(Buffer data, bool permissive, bool convertPlus) {
     byte escape;
     # Initialize to 10% larger than the original buffer (there's no theory or
     # empirical data behind this metric, it just seemed like a good idea at
@@ -223,6 +226,8 @@ String decode(Buffer data, bool permissive) {
             if (ch == b'%') {
                 escape = 0;
                 state = 1;
+            } else if (convertPlus && ch == b'+') {
+                result.append(b' ');
             } else {
                 result.append(ch);
             }
@@ -322,14 +327,14 @@ QueryParmMap parseUnescapedQuery(Buffer contents, bool permissive) {
 ## longest legal substring, so "%xy" would map to "%", "%1x" and would map to
 ## 1.
 QueryParmMap parseQuery(Buffer contents, bool permissive) {
-    return parseUnescapedQuery(decode(contents, permissive), permissive);
+    return parseUnescapedQuery(decode(contents, permissive, true), permissive);
 }
 
 ## Parse an HTTP Query out of the (possibly escaped) query string.
 ##
 ## This is inherently not permissive.
 QueryParmMap parseQuery(Buffer contents) {
-    return parseUnescapedQuery(decode(contents, false), false);
+    return parseUnescapedQuery(decode(contents, false, true), false);
 }
 
 ## Base class for wrappers of handlers that require a specific method type.

@@ -56,14 +56,16 @@ if (true) {
 
 # decode()
 if (true) {
-    @assert(decode('%1a%A1%9f%F9', false) == '\x1a\xa1\x9f\xf9');
-    @assert(decode('%1g', true) == '\x01g');
-    @assert(decode('%f', true) == '\x0f');
+    @assert(decode('%1a%A1%9f%F9', false, false) == '\x1a\xa1\x9f\xf9');
+    @assert(decode('%1g', true, false) == '\x01g');
+    @assert(decode('%f', true, false) == '\x0f');
     try {
-        decode('%f', false);
+        decode('%f', false, false);
         cout `FAILED no exception decoding malformed string\n`;
     } catch (InvalidArgumentError ex) {
     }
+    @assert(decode('a+b', false, true) == 'a b');
+    @assert(decode('a+b', false, false) == 'a+b');
 }
 
 # parseUnescapedQuery()
@@ -83,6 +85,11 @@ if (true) {
 # parseQuery()
 if (true) {
     @assert(parseQuery('foo=1', true).getSingle('foo') == '1');
+}
+
+# parseQuery(), verify that '+' is converted to space.
+if (true) {
+    @assert(parseQuery('foo=a+b').getSingle('foo') == 'a b');
 }
 
 # MethodHandler
