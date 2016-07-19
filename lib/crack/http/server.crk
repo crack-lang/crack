@@ -235,7 +235,6 @@ class Server {
                             debug I`calling post data handler with inbuf \
                                     [$inbuf]`;
                             callPostData(request, inbuf);
-                            request.postDataHandler(request, inbuf);
                         }
                         request.remainingPostData -= inbuf.size;
                         compressBuffer(inbuf.size);

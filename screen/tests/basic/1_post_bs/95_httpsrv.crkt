@@ -10,6 +10,7 @@ import crack.http.util Chain, PathDispatcher, PostRequestHandler,
     RequestHandler, NOT_FOUND;
 import crack.strutil StringArray;
 import crack.io cout, FStr, StringWriter;
+import crack.lang AppendBuffer;
 @import crack.ann assert;
 @import crack.fieldset_ann fieldset_accessors;
 
@@ -156,6 +157,30 @@ if (true) {
     @assert(req.getCookie('foo').value == 'testvalue');
     @assert(req.getCookie('bar').value == 'othervalue');
     @assert(req.getCookie('cookie').value == 'value');
+}
+
+if (true) {
+    AppendBuffer contents = {1024};
+    bool handler(Request req) {
+        contents.extend(req.contents);
+        return true;
+    }
+
+    # Force the post data handler to be called with partial data.
+    postHandler := PostRequestHandler(handler);
+    client := Server.Client(null, null, Chain![postHandler]);
+    client.inbuf = inbuf := AppendBuffer(1024);
+    inbuf.extend(I'\
+        POST / HTTP/1.1
+        Content-length: 23
+
+        here is some data'
+    );
+
+    client.parseNext(0);
+    inbuf.extend(', dude');
+    client.parseNext(0);
+    @assert(contents == 'here is some data, dude');
 }
 
 cout `ok`;
