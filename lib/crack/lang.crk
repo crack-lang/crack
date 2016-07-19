@@ -520,6 +520,7 @@ class ManagedBuffer : WriteBuffer {
         temp := buffer;
         buffer = null;
         size = 0;
+        cap = 0;
         return temp;
     }
 
