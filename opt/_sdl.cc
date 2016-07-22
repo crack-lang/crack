@@ -119,16 +119,16 @@ void crack_ext__sdl_cinit(crack::ext::Module *mod) {
         f = type_SDL_Rect->addConstructor("oper init",
                             (void *)crk_SDL_Rect_init
                         );
-    f->addArg(type_int16, 
+    f->addArg(type_int16,
               "x"
               );
-    f->addArg(type_int16, 
+    f->addArg(type_int16,
               "y"
               );
-    f->addArg(type_uint16, 
+    f->addArg(type_uint16,
               "w"
               );
-    f->addArg(type_uint16, 
+    f->addArg(type_uint16,
               "h"
               );
 

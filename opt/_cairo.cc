@@ -168,7 +168,12 @@ void crack_ext__cairo_cinit(crack::ext::Module *mod) {
                                 CRACK_OFFSET(cairo_rectangle_list_t, rectangles));
         type_cairo_rectangle_list_t->addInstVar(type_int, "num_rectangles",
                                 CRACK_OFFSET(cairo_rectangle_list_t, num_rectangles));
-    f->addArg(type_cairo_rectangle_list_t, 
+f = type_cairo_rectangle_list_t->addMethod(
+    type_cairo_rectangle_list_t,
+    "oper del",
+    (void *)cairo_rectangle_list_destroy
+);
+    f->addArg(type_cairo_rectangle_list_t,
               "rectangle_list"
               );
 

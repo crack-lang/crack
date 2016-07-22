@@ -4,6 +4,7 @@ struct _jack_client { int x; };
 const char *Jack_getDefaultAudioType() {
     return JACK_DEFAULT_AUDIO_TYPE;
 }
+
 typedef jack_port_t JackPort;
 struct _jack_port { int x; };
 
@@ -52,17 +53,17 @@ void crack_ext__jack_cinit(crack::ext::Module *mod) {
     crack::ext::Type *type_JackPort = mod->addType("JackPort", sizeof(JackPort));
 
     f = type_JackPort->addMethod(
-        array_pfloat_q, 
+        array_pfloat_q,
         "getBuffer",
         (void *)jack_port_get_buffer
     );
-    f->addArg(type_uint32, 
+    f->addArg(type_uint32,
               "frames"
               );
 
 
     f = type_JackPort->addMethod(
-        type_byteptr, 
+        type_byteptr,
         "getName",
         (void *)jack_port_name
     );
@@ -91,93 +92,93 @@ void crack_ext__jack_cinit(crack::ext::Module *mod) {
     crack::ext::Type *type_JackClient = mod->addType("JackClient", sizeof(JackClient));
 
     f = type_JackClient->addMethod(
-        type_int, 
+        type_int,
         "setProcessCallback",
         (void *)jack_set_process_callback
     );
-    f->addArg(function_pint_c_suint32_c_svoidptr_q, 
+    f->addArg(function_pint_c_suint32_c_svoidptr_q,
               "callback"
               );
-    f->addArg(type_voidptr, 
+    f->addArg(type_voidptr,
               "arg"
               );
 
 
     f = type_JackClient->addMethod(
-        type_JackPort, 
+        type_JackPort,
         "portRegister",
         (void *)jack_port_register
     );
-    f->addArg(type_byteptr, 
+    f->addArg(type_byteptr,
               "port_name"
               );
-    f->addArg(type_byteptr, 
+    f->addArg(type_byteptr,
               "port_type"
               );
-    f->addArg(type_uint, 
+    f->addArg(type_uint,
               "flags"
               );
-    f->addArg(type_uint, 
+    f->addArg(type_uint,
               "buffer_size"
               );
 
 
     f = type_JackClient->addMethod(
-        type_JackPort, 
+        type_JackPort,
         "portByName",
         (void *)jack_port_by_name
     );
-    f->addArg(type_byteptr, 
+    f->addArg(type_byteptr,
               "name"
               );
 
 
     f = type_JackClient->addMethod(
-        type_uint32, 
+        type_uint32,
         "getSampleRate",
         (void *)jack_get_sample_rate
     );
 
 
     f = type_JackClient->addMethod(
-        type_int, 
+        type_int,
         "connect",
         (void *)jack_connect
     );
-    f->addArg(type_byteptr, 
+    f->addArg(type_byteptr,
               "port1"
               );
-    f->addArg(type_byteptr, 
+    f->addArg(type_byteptr,
               "port2"
               );
 
 
     f = type_JackClient->addMethod(
-        type_int, 
+        type_int,
         "activate",
         (void *)jack_activate
     );
 
 
     f = type_JackClient->addMethod(
-        type_int, 
+        type_int,
         "deactivate",
         (void *)jack_deactivate
     );
 
 
     f = type_JackClient->addMethod(
-        array_pbyteptr_q, 
+        array_pbyteptr_q,
         "getPorts",
         (void *)jack_get_ports
     );
-    f->addArg(type_byteptr, 
+    f->addArg(type_byteptr,
               "port_name_pattern"
               );
-    f->addArg(type_byteptr, 
+    f->addArg(type_byteptr,
               "type_name_pattern"
               );
-    f->addArg(type_uint64, 
+    f->addArg(type_uint64,
               "flags"
               );
 

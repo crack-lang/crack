@@ -36,19 +36,23 @@ int nc_def_dim_crk(int ncid, byteptr name, uint64_t len) {
         else return -1;
     }
 int nc_def_var_crk(int ncid, byteptr name, int xtype,
-                     int ndims, int *dimidsp) {
+                                int ndims, int *dimidsp) {
         int varidp = 0;
         crk_ncstatus = nc_def_var(ncid, name, xtype, ndims, dimidsp, &varidp);
-        if (!crk_ncstatus) return varidp;
-        else return -1;
+        if (!crk_ncstatus)
+            return varidp;
+        else
+            return -1;
     }
 int nc_get_status() {
         return crk_ncstatus;
     }int nc_inq_ndims_crk(int ncid) {
         int ndims;
         crk_ncstatus = nc_inq_ndims(ncid, &ndims);
-        if (!crk_ncstatus) return ndims;
-        else return -1;
+        if (!crk_ncstatus)
+            return ndims;
+        else
+            return -1;
     }
 int *nc_inq_dimids_crk(int ncid, int ndims) {
         int nndims;
@@ -57,8 +61,9 @@ int *nc_inq_dimids_crk(int ncid, int ndims) {
         if (crk_ncstatus != 0) {
             free(dimids);
             return NULL;
+        } else {
+            return dimids;
         }
-        else return dimids;
     }
 byteptr nc_inq_dimname_crk(int ncid, int dimid) {
         byteptr name = (byteptr)malloc(NC_MAX_NAME);
@@ -76,15 +81,19 @@ uint64_t nc_inq_dimlen_crk(int ncid, int dimid) {
 int nc_inq_nvars_crk(int ncid) {
         int nvars;
         crk_ncstatus = nc_inq_nvars(ncid, &nvars);
-        if (!crk_ncstatus) return nvars;
-        else return -1;
+        if (!crk_ncstatus)
+            return nvars;
+        else
+            return -1;
     }
 int *nc_inq_varids_crk(int ncid, int nvars) {
         int nnvars;
         int *varids = (int *)malloc(nvars * sizeof(int));
         crk_ncstatus = nc_inq_varids(ncid, &nnvars, varids);
-        if (!crk_ncstatus) return varids;
-        else return varids;
+        if (!crk_ncstatus)
+            return varids;
+        else
+            return varids;
     }
 int nc_inq_varid_crk(int ncid, byteptr name) {
         int varid;
@@ -109,10 +118,12 @@ int *nc_inq_vardimid_crk(int ncid, int varid) {
         int ndims;
         int *dimids;
         crk_ncstatus = nc_inq_varndims(ncid, varid, &ndims);
-        if (crk_ncstatus !=0) return NULL;
+        if (crk_ncstatus != 0)
+            return NULL;
         dimids = (int *)malloc(ndims * sizeof(int));
         crk_ncstatus = nc_inq_vardimid(ncid, varid, dimids);
-        if (crk_ncstatus !=0) return NULL;
+        if (crk_ncstatus != 0)
+            return NULL;
         return dimids;
     }
 int nc_inq_vartype_crk(int ncid, int varid) {

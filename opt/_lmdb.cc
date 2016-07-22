@@ -29,6 +29,7 @@ MDB_txn *mdb_txn_begin_crk(MDB_env *env, MDB_txn *parent,
 {
     MDB_txn *txn;
     errno = mdb_txn_begin(env, parent, flags, &txn);
+
     if (errno) return NULL;
     return txn;
 }

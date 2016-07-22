@@ -173,6 +173,14 @@ class Func {
             out `       f->addArg($(arg.type.emit()), "$(arg.name)");\n`;
         out `\n`;
     }
+
+    ## Returns the normalized name (adds "oper" for operators).
+    String getNormalName() {
+        if (isOper)
+            return 'oper ' + name;
+        else
+            return name;
+    }
 }
 
 class IfdefFunc: Func{
@@ -270,8 +278,10 @@ class TypeImpl : Type {
 
    // class methods, emit not implemented
     void addMethod(Func method) {
-        if ((m := __names.get(method.name)) && !m.isa(Func))
+        normalName := method.getNormalName();
+        if ((m := __names.get(normalName)) && !m.isa(Func))
             throw AlreadyExists(FStr() `Name $(method.name) redefined`);
+        __names[normalName] = method;
         methods.append(method);
     }
 
@@ -318,6 +328,14 @@ class TypeImpl : Type {
                         out `        f = $typeVar->addConstructor("oper init",
                             (void *)$(method.cname)
                         );\n`;
+                    else
+                        out I`\
+                            f = $typeVar->addMethod(
+                                $(method.retType.emit()),
+                                "oper $(method.name)",
+                                (void *)$(method.cname)
+                            );
+                            `;
                 } else {
                     out I`
                         f = $typeVar->addMethod(
@@ -630,8 +648,15 @@ class ExtensionData {
     Errors error(CrackContext ctx, Token tok) { return Errors(ctx, tok); }
     Errors error(CrackContext ctx) { return Errors(ctx); }
 
-    Type _parseType(CrackContext ctx) {
+    Token __getToken(CrackContext ctx) {
         tok := ctx.getToken();
+        while (tok.isDoc())
+            tok = ctx.getToken();
+        return tok;
+    }
+
+    Type _parseType(CrackContext ctx) {
+        tok := __getToken(ctx);
 
         if (!tok.isIdent())
             error(ctx, tok) `Type specifier expected`;
@@ -640,12 +665,12 @@ class ExtensionData {
             error(ctx, tok) `Unknown type $(tok.getText())`;
 
         # check for a specializer type
-        tok = ctx.getToken();
+        tok = __getToken(ctx);
         if (tok.isLBracket()) {
             Array[Type] specializers = {};
             while (true) {
                 specializers.append(_parseType(ctx));
-                tok = ctx.getToken();
+                tok = __getToken(ctx);
                 if (tok.isRBracket())
                     break;
                 else if (!tok.isComma())
@@ -675,7 +700,7 @@ $(generic.getParamCount()) parameters.`;
     }
 
     String _parseString(CrackContext ctx) {
-        tok := ctx.getToken();
+        tok := __getToken(ctx);
         if (!tok.isString())
             error(ctx, tok) `Expected string`;
         return String(tok.getText());
@@ -690,12 +715,12 @@ $(generic.getParamCount()) parameters.`;
     }
 
     void _parseIfdef(String ifdefTest, CrackContext ctx){
-        tok := ctx.getToken();
+        tok := __getToken(ctx);
         if (!tok.isIdent())
           error(ctx, tok) `Identifier expected`;
 
         ifdefCond := String(tok.getText());
-        tok = ctx.getToken();
+        tok = __getToken(ctx);
         if (!tok.isLCurly())
              error(ctx, tok) `Opening curly bracket expected`;
 
@@ -706,7 +731,7 @@ $(generic.getParamCount()) parameters.`;
     }
 
     void _parseLParen(CrackContext ctx) {
-        tok := ctx.getToken();
+        tok := __getToken(ctx);
         if (!tok.isLParen())
             error(ctx, tok) `Left paren expected, got $tok.`;
     }
@@ -714,24 +739,24 @@ $(generic.getParamCount()) parameters.`;
     StringArray _parseArgList(CrackContext ctx){
         StringArray args = {};
         _parseLParen(ctx);
-        tok := ctx.getToken();
+        tok := __getToken(ctx);
         for (uint i = 0; !tok.isRParen(); i++) {
             if (i>0) {
                 if (!tok.isComma())
                     error(ctx, tok) `Expected a comma in argument list`;
-                tok = ctx.getToken();
+                tok = __getToken(ctx);
             }
 
             if (!tok.isIdent())
                     error(ctx, tok) `Expected identifier in argument list`;
             args.append(String(tok.getText()));
-            tok = ctx.getToken();
+            tok = __getToken(ctx);
         }
         return args;
     }
 
     void _parseAnnotation(CrackContext ctx) {
-        tok := ctx.getToken();
+        tok := __getToken(ctx);
         if (tok.isIdent()) {
             String ann = {tok.getText()};
             if (ann == 'filename') {
@@ -789,12 +814,12 @@ $(generic.getParamCount()) parameters.`;
             else if (ann == 'cname') {
             /// Specifies the C name of a function if different from the
             /// Crack name
-                tok = ctx.getToken();
+                tok = __getToken(ctx);
                 if (!tok.isIdent())
                     error(ctx, tok) `Expected identifier in cname annotation`;
                 lastCName = String(tok.getText());
             } else if (ann == 'extern') {
-                tok = ctx.getToken();
+                tok = __getToken(ctx);
                 if (!tok.isIdent())
                     error(ctx, tok) `Expected identifier in extern annotation`;
 
@@ -820,22 +845,22 @@ $(generic.getParamCount()) parameters.`;
         f := Func(retType, name, lastCName ? lastCName : name, isOper);
         lastCName = null;
 
-        tok := ctx.getToken();
+        tok := __getToken(ctx);
         while (!tok.isRParen()) {
             # parse the argument type
             ctx.putBack(tok);
             argType := _parseType(ctx);
 
             # get the arg variable
-            tok = ctx.getToken();
+            tok = __getToken(ctx);
             if (!tok.isIdent())
                 error(ctx, tok) `argument name expected`;
 
             f.addArg(Arg(argType, String(tok.getText())));
 
-            tok = ctx.getToken();
+            tok = __getToken(ctx);
             if (tok.isComma())
-                tok = ctx.getToken();
+                tok = __getToken(ctx);
             else if (!tok.isRParen())
                 error(ctx, tok) `Comma or right paren expected`;
         }
@@ -848,10 +873,10 @@ $(generic.getParamCount()) parameters.`;
     void _parseDef(CrackContext ctx, TypeImpl type) {
 
         # Check for an "oper" def, which may not be preceeded by a return type.
-        tok := ctx.getToken();
+        tok := __getToken(ctx);
         if (tok.isOper()) {
             # TODO: Fix this very incomplete implementation of 'oper' parsing.
-            ident := ctx.getToken();
+            ident := __getToken(ctx);
             if (!ident.isIdent())
                 error(ctx, ident) `Identifier expected after oper, got $ident`;
             _parseLParen(ctx);
@@ -868,11 +893,11 @@ $(generic.getParamCount()) parameters.`;
         # return or object type.
         retType := _parseType(ctx);
 
-        ident := ctx.getToken();
+        ident := __getToken(ctx);
         if (!ident.isIdent())
             error(ctx, ident) `Identifier expected in definition, got $ident`;
 
-        tok = ctx.getToken();
+        tok = __getToken(ctx);
         if (tok.isLParen()) {
             # it's a function.  parse the rest of it
             try {
@@ -885,15 +910,15 @@ $(generic.getParamCount()) parameters.`;
             try {
                 ctx.putBack(tok);
                 type.addMember(Arg(retType, String(ident.getText())));
-                tok = ctx.getToken();
+                tok = __getToken(ctx);
 
                 while (tok.isComma()){
-                    tok = ctx.getToken();
+                    tok = __getToken(ctx);
                     if (!tok.isIdent())
                         error(ctx, tok) `argument name expected`;
 
                     type.addMember(Arg(retType, String(tok.getText())));
-                    tok = ctx.getToken();
+                    tok = __getToken(ctx);
                     if (!tok.isSemi() && !tok.isComma())
                         error(ctx, tok) `Semicolon or comma expected`;
                 }
@@ -908,7 +933,7 @@ $(generic.getParamCount()) parameters.`;
 
     void _parseClassDef(CrackContext ctx) {
         # get the type name.
-        tok := ctx.getToken();
+        tok := __getToken(ctx);
         TypeImpl classType;
 
         if (!tok.isIdent())
@@ -917,7 +942,7 @@ $(generic.getParamCount()) parameters.`;
         String className = {tok.getText()};
 
         # get a semicolon or left curly
-        tok = ctx.getToken();
+        tok = __getToken(ctx);
         if (tok.isSemi() || tok.isLCurly()){
             uint numDecl = 1;
             if (types.get(className))
@@ -935,23 +960,23 @@ class declaration`;
         }
 
         if (tok.isLCurly()){
-            tok = ctx.getToken();
+            tok = __getToken(ctx);
             Type type;
             while (!tok.isRCurly()) {
 
                 // check for an annotation
                 if (tok.isAnn()) {
                     _parseAnnotation(ctx);
-                    tok = ctx.getToken();
+                    tok = __getToken(ctx);
                     continue;
                 } else {
                     ctx.putBack(tok);
                     _parseDef(ctx, classType);
-                    tok = ctx.getToken();
+                    tok = __getToken(ctx);
                 }
 
                if (tok.isSemi())
-                    tok = ctx.getToken();
+                    tok = __getToken(ctx);
                else if (!tok.isRCurly())
                    error(ctx, tok) `Semicolon or right curly brace expected, got $(tok.getText())`;
             }
@@ -975,12 +1000,12 @@ class declaration`;
     StringArray _parseExtensionName(CrackContext ctx) {
         StringArray result = {};
         while (true) {
-            tok := ctx.getToken();
+            tok := __getToken(ctx);
             if (!tok.isIdent())
                 error(ctx, tok) `Expected extension name.`;
 
             result.append(String(tok.getText()));
-            tok = ctx.getToken();
+            tok = __getToken(ctx);
 
             if (!tok.isDot()) {
                 ctx.putBack(tok);
@@ -998,13 +1023,13 @@ class declaration`;
             error(ctx) `$(type.name) is not a valid constant type.`;
 
         while (true) {
-            tok := ctx.getToken();
+            tok := __getToken(ctx);
             if (!tok.isIdent())
                 error(ctx, tok) `Identifier expected in constant definition`;
 
             ident := String(tok.getText());
 
-            tok = ctx.getToken();
+            tok = __getToken(ctx);
             if (tok.isSemi()) {
                 consts.append(Const(type, ident));
                 break;
@@ -1018,7 +1043,7 @@ class declaration`;
                 error(ctx, tok) `Assignment operator, comma or semicolon \
 expected after constant name.`;
 
-            tok = ctx.getToken();
+            tok = __getToken(ctx);
             if (!(tok.isIdent() || tok.isString() || tok.isInteger() ||
                   tok.isFloat()
                   )
@@ -1028,7 +1053,7 @@ or string.`;
 
             consts.append(Const(type, ident, String(tok.getText())));
 
-            tok = ctx.getToken();
+            tok = __getToken(ctx);
             if (tok.isSemi())
                 break;
             else if (!tok.isComma())
@@ -1043,13 +1068,13 @@ definition.`;
         moduleName = _parseExtensionName(ctx);
 
         # expecting a '{'
-        tok := ctx.getToken();
+        tok := __getToken(ctx);
         if (!tok.isLCurly())
             error(ctx, tok) `Opening curly bracket expected`;
 
         # parse all definitions
         while (true) {
-            tok = ctx.getToken();
+            tok = __getToken(ctx);
 
             # check for a class definition
             if (tok.isClass())
@@ -1060,7 +1085,7 @@ definition.`;
                 # Looks like a function defintion.
                 ctx.putBack(tok);
                 retType := _parseType(ctx);
-                ident := ctx.getToken();
+                ident := __getToken(ctx);
                 _parseLParen(ctx);
                 funcs.append(_parseFuncTail(ctx, retType, ident, false));
             } else if (tok.isRCurly()){

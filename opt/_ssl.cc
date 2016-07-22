@@ -86,54 +86,54 @@ void crack_ext__ssl_cinit(crack::ext::Module *mod) {
     crack::ext::Type *type_BIO = mod->addType("BIO", sizeof(BIO));
 
     f = type_BIO->addMethod(
-        type_int, 
+        type_int,
         "read",
         (void *)BIO_read
     );
-    f->addArg(type_byteptr, 
+    f->addArg(type_byteptr,
               "buffer"
               );
-    f->addArg(type_int, 
+    f->addArg(type_int,
               "len"
               );
 
 
     f = type_BIO->addMethod(
-        type_int, 
+        type_int,
         "write",
         (void *)BIO_write
     );
-    f->addArg(type_byteptr, 
+    f->addArg(type_byteptr,
               "buffer"
               );
-    f->addArg(type_int, 
+    f->addArg(type_int,
               "len"
               );
 
 
     f = type_BIO->addMethod(
-        type_void, 
+        type_void,
         "free",
         (void *)BIO_free
     );
-    f->addArg(type_BIO, 
+    f->addArg(type_BIO,
               "bio"
               );
 
 
     f = type_BIO->addMethod(
-        type_int, 
+        type_int,
         "ctrlPending",
         (void *)BIO_ctrl_pending
     );
 
 
     f = type_BIO->addMethod(
-        type_void, 
+        type_void,
         "setBlocking",
         (void *)my_BIO_set_blocking
     );
-    f->addArg(type_bool, 
+    f->addArg(type_bool,
               "blocking"
               );
 
@@ -147,34 +147,34 @@ void crack_ext__ssl_cinit(crack::ext::Module *mod) {
     crack::ext::Type *type_SSL_CTX = mod->addType("SSL_CTX", sizeof(SSL_CTX));
 
     f = type_SSL_CTX->addMethod(
-        type_void, 
+        type_void,
         "free",
         (void *)SSL_CTX_free
     );
 
 
     f = type_SSL_CTX->addMethod(
-        type_int, 
+        type_int,
         "useCertificateFile",
         (void *)SSL_CTX_use_certificate_file
     );
-    f->addArg(type_byteptr, 
+    f->addArg(type_byteptr,
               "filename"
               );
-    f->addArg(type_int, 
+    f->addArg(type_int,
               "type"
               );
 
 
     f = type_SSL_CTX->addMethod(
-        type_int, 
+        type_int,
         "usePrivateKeyFile",
         (void *)SSL_CTX_use_PrivateKey_file
     );
-    f->addArg(type_byteptr, 
+    f->addArg(type_byteptr,
               "file"
               );
-    f->addArg(type_int, 
+    f->addArg(type_int,
               "type"
               );
 
@@ -184,92 +184,92 @@ void crack_ext__ssl_cinit(crack::ext::Module *mod) {
     crack::ext::Type *type_SSL = mod->addType("SSL", sizeof(SSL));
 
     f = type_SSL->addMethod(
-        type_void, 
+        type_void,
         "free",
         (void *)SSL_free
     );
 
 
     f = type_SSL->addMethod(
-        type_void, 
+        type_void,
         "setBIO",
         (void *)SSL_set_bio
     );
-    f->addArg(type_BIO, 
+    f->addArg(type_BIO,
               "rbio"
               );
-    f->addArg(type_BIO, 
+    f->addArg(type_BIO,
               "wbio"
               );
 
 
     f = type_SSL->addMethod(
-        type_void, 
+        type_void,
         "setAcceptState",
         (void *)SSL_set_accept_state
     );
 
 
     f = type_SSL->addMethod(
-        type_void, 
+        type_void,
         "setConnectState",
         (void *)SSL_set_connect_state
     );
 
 
     f = type_SSL->addMethod(
-        type_int, 
+        type_int,
         "accept",
         (void *)SSL_accept
     );
 
 
     f = type_SSL->addMethod(
-        type_int, 
+        type_int,
         "connect",
         (void *)SSL_connect
     );
 
 
     f = type_SSL->addMethod(
-        type_int, 
+        type_int,
         "shutdown",
         (void *)SSL_shutdown
     );
 
 
     f = type_SSL->addMethod(
-        type_int, 
+        type_int,
         "write",
         (void *)SSL_write
     );
-    f->addArg(type_byteptr, 
+    f->addArg(type_byteptr,
               "buf"
               );
-    f->addArg(type_int, 
+    f->addArg(type_int,
               "size"
               );
 
 
     f = type_SSL->addMethod(
-        type_int, 
+        type_int,
         "read",
         (void *)SSL_read
     );
-    f->addArg(type_byteptr, 
+    f->addArg(type_byteptr,
               "buf"
               );
-    f->addArg(type_int, 
+    f->addArg(type_int,
               "cap"
               );
 
 
     f = type_SSL->addMethod(
-        type_int, 
+        type_int,
         "getError",
         (void *)SSL_get_error
     );
-    f->addArg(type_int, 
+    f->addArg(type_int,
               "ret"
               );
 
@@ -279,35 +279,35 @@ void crack_ext__ssl_cinit(crack::ext::Module *mod) {
     crack::ext::Type *type_EVPCipher = mod->addType("EVPCipher", sizeof(EVP_CIPHER));
 
     f = type_EVPCipher->addMethod(
-        type_int, 
+        type_int,
         "getIVLength",
         (void *)my_EVP_CIPHER_iv_length
     );
 
 
     f = type_EVPCipher->addMethod(
-        type_int, 
+        type_int,
         "getKeyLength",
         (void *)my_EVP_CIPHER_key_length
     );
 
 
     f = type_EVPCipher->addMethod(
-        type_int, 
+        type_int,
         "getBlockSize",
         (void *)my_EVP_CIPHER_block_size
     );
 
 
     f = type_EVPCipher->addMethod(
-        type_int, 
+        type_int,
         "getMode",
         (void *)my_EVP_CIPHER_mode
     );
 
 
     f = type_EVPCipher->addMethod(
-        type_int, 
+        type_int,
         "getFlags",
         (void *)my_EVP_CIPHER_flags
     );
@@ -335,110 +335,110 @@ void crack_ext__ssl_cinit(crack::ext::Module *mod) {
 
 
     f = type_EVPCipherContext->addMethod(
-        type_void, 
+        type_void,
         "cleanup",
         (void *)EVP_CIPHER_CTX_cleanup
     );
 
 
     f = type_EVPCipherContext->addMethod(
-        type_int, 
+        type_int,
         "encryptInit",
         (void *)EVP_EncryptInit_ex
     );
-    f->addArg(type_EVPCipher, 
+    f->addArg(type_EVPCipher,
               "type"
               );
-    f->addArg(type_Engine, 
+    f->addArg(type_Engine,
               "impl"
               );
-    f->addArg(type_byteptr, 
+    f->addArg(type_byteptr,
               "key"
               );
-    f->addArg(type_byteptr, 
+    f->addArg(type_byteptr,
               "iv"
               );
 
 
     f = type_EVPCipherContext->addMethod(
-        type_int, 
+        type_int,
         "encryptUpdate",
         (void *)EVP_EncryptUpdate
     );
-    f->addArg(type_byteptr, 
+    f->addArg(type_byteptr,
               "out"
               );
-    f->addArg(array_pint_q, 
+    f->addArg(array_pint_q,
               "out1"
               );
-    f->addArg(type_byteptr, 
+    f->addArg(type_byteptr,
               "inp"
               );
-    f->addArg(type_int, 
+    f->addArg(type_int,
               "inp1"
               );
 
 
     f = type_EVPCipherContext->addMethod(
-        type_int, 
+        type_int,
         "encryptFinal",
         (void *)EVP_EncryptFinal
     );
-    f->addArg(type_byteptr, 
+    f->addArg(type_byteptr,
               "out"
               );
-    f->addArg(array_pint_q, 
+    f->addArg(array_pint_q,
               "out1"
               );
 
 
     f = type_EVPCipherContext->addMethod(
-        type_int, 
+        type_int,
         "decryptInit",
         (void *)EVP_DecryptInit_ex
     );
-    f->addArg(type_EVPCipher, 
+    f->addArg(type_EVPCipher,
               "type"
               );
-    f->addArg(type_Engine, 
+    f->addArg(type_Engine,
               "impl"
               );
-    f->addArg(type_byteptr, 
+    f->addArg(type_byteptr,
               "key"
               );
-    f->addArg(type_byteptr, 
+    f->addArg(type_byteptr,
               "iv"
               );
 
 
     f = type_EVPCipherContext->addMethod(
-        type_int, 
+        type_int,
         "decryptUpdate",
         (void *)EVP_DecryptUpdate
     );
-    f->addArg(type_byteptr, 
+    f->addArg(type_byteptr,
               "out"
               );
-    f->addArg(array_pint_q, 
+    f->addArg(array_pint_q,
               "out1"
               );
-    f->addArg(type_byteptr, 
+    f->addArg(type_byteptr,
               "inp"
               );
-    f->addArg(type_int, 
+    f->addArg(type_int,
               "inp1"
               );
 
 
     f = type_EVPCipherContext->addMethod(
-        type_int, 
+        type_int,
         "decryptFinal",
         (void *)EVP_DecryptFinal
     );
-    f->addArg(type_byteptr, 
+    f->addArg(type_byteptr,
               "out"
               );
-    f->addArg(array_pint_q, 
+    f->addArg(array_pint_q,
               "out1"
               );
 

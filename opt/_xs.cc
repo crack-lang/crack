@@ -142,62 +142,62 @@ void crack_ext__xs_cinit(crack::ext::Module *mod) {
 
 
     f = type_xs_msg_t->addMethod(
-        type_int, 
+        type_int,
         "initEmpty",
         (void *)xs_msg_init
     );
 
 
     f = type_xs_msg_t->addMethod(
-        type_int, 
+        type_int,
         "initSize",
         (void *)xs_msg_init_size
     );
-    f->addArg(type_uint, 
+    f->addArg(type_uint,
               "size"
               );
 
 
     f = type_xs_msg_t->addMethod(
-        type_int, 
+        type_int,
         "initData",
         (void *)crk_xs_msg_init_data
     );
-    f->addArg(type_byteptr, 
+    f->addArg(type_byteptr,
               "data"
               );
-    f->addArg(type_uint, 
+    f->addArg(type_uint,
               "size"
               );
 
 
     f = type_xs_msg_t->addMethod(
-        type_int, 
+        type_int,
         "close",
         (void *)xs_msg_close
     );
 
 
     f = type_xs_msg_t->addMethod(
-        type_byteptr, 
+        type_byteptr,
         "data",
         (void *)xs_msg_data
     );
 
 
     f = type_xs_msg_t->addMethod(
-        type_uint, 
+        type_uint,
         "size",
         (void *)xs_msg_size
     );
 
 
     f = type_xs_msg_t->addMethod(
-        type_int, 
+        type_int,
         "getOptInt",
         (void *)crk_xs_getmsgopt_int
     );
-    f->addArg(type_int, 
+    f->addArg(type_int,
               "option"
               );
 

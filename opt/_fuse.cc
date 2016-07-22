@@ -1,12 +1,17 @@
 #define FUSE_USE_VERSION 26
 #include <fuse.h>
+
 struct DoubleTimeSpec {
     timespec first, second;
 };
+
 typedef struct statvfs StatVFS;
+
 struct Undef {};
+
 void crk_fuse_operations_init(struct fuse_operations *ops) {
 }
+
 int crk_fuse_main(int argc, char *argv[],
                   const struct fuse_operations *op,
                   void *user_data
