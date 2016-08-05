@@ -437,32 +437,6 @@ void TypeDef::createDefaultDestructor(Context &classContext) {
     classContext.addDef(delFunc.get());
 }
 
-namespace {
-    // Store the current no{Bind,Release}Inferred variables of a type.  We
-    // may make use of code that calls bind and release when generating the
-    // oper new and cast functions, even before bind and release are defined,
-    // but it doesn't matter because we're just passing the value of the
-    // argument through.  We certainly don't want to generate an error on
-    // declaration of bind/release as a result of this usage.
-    class IgnoreBindRelease {
-        private:
-            TypeDef *type;
-            Location tempNoBindInferred, tempNoReleaseInferred;
-
-        public:
-            IgnoreBindRelease(TypeDef *type) :
-                type(type),
-                tempNoBindInferred(type->noBindInferred),
-                tempNoReleaseInferred(type->noReleaseInferred) {
-            }
-
-            ~IgnoreBindRelease() {
-                type->noBindInferred = tempNoBindInferred;
-                type->noReleaseInferred = tempNoReleaseInferred;
-            }
-    };
-}
-
 void TypeDef::createNewFunc(Context &classContext, FuncDef *initFunc) {
     ContextPtr funcContext = classContext.createSubContext(Context::local);
     funcContext->toplevel = true;
@@ -604,7 +578,6 @@ void TypeDef::createCast(Context &outer, bool throws, FuncDef *forward) {
     funcCtx->returnType = this;
 
     ArgVec &args = forward->args;
-    IgnoreBindRelease ibr(this);
 
     FuncDefPtr castFunc = outer.builder.emitBeginFunc(*funcCtx,
                                                       FuncDef::noFlags,
