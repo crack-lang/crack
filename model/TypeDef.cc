@@ -573,12 +573,7 @@ namespace {
     }
 }
 
-void TypeDef::createCast(Context &outer, bool throws) {
-    assert(hasVTable && "Attempt to createCast() on a non-virtual class");
-    ContextPtr funcCtx = outer.createSubContext(Context::local);
-    funcCtx->toplevel = true;
-    funcCtx->returnType = this;
-    
+FuncDefPtr TypeDef::createCastForward(Context &outer, bool throws) {
     ArgVec args;
     args.reserve(2);
     args.push_back(
@@ -593,6 +588,22 @@ void TypeDef::createCast(Context &outer, bool throws) {
             outer.builder.createArgDef(this, "defaultValue")
         );
 
+    FuncDefPtr castFunc = outer.builder.createFuncForward(
+        outer, FuncDef::forward, "cast", this, args, 0
+    );
+
+    // add the cast function to the meta-class
+    outer.addDef(castFunc.get(), type.get());
+    return castFunc;
+}
+
+void TypeDef::createCast(Context &outer, bool throws, FuncDef *forward) {
+    assert(hasVTable && "Attempt to createCast() on a non-virtual class");
+    ContextPtr funcCtx = outer.createSubContext(Context::local);
+    funcCtx->toplevel = true;
+    funcCtx->returnType = this;
+
+    ArgVec &args = forward->args;
     IgnoreBindRelease ibr(this);
 
     FuncDefPtr castFunc = outer.builder.emitBeginFunc(*funcCtx,
@@ -600,7 +611,7 @@ void TypeDef::createCast(Context &outer, bool throws) {
                                                       "cast",
                                                       this,
                                                       args,
-                                                      0
+                                                      forward
                                                       );
 
     // function body is:
@@ -716,9 +727,6 @@ void TypeDef::createCast(Context &outer, bool throws) {
 
     funcCtx->closeCleanupFrame();
     funcCtx->builder.emitEndFunc(*funcCtx, castFunc.get());
-
-    // add the cast function to the meta-class
-    outer.addDef(castFunc.get(), type.get());
 }
 
 bool TypeDef::gotAbstractFuncs(vector<FuncDefPtr> *abstractFuncs,

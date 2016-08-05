@@ -1,0 +1,38 @@
+%%TEST%%
+bind in cast
+%%ARGS%%
+%%FILE%%
+# Regression test for a bug where the cast methods are generated before the
+# bind operator is defined.  Since cast() is productive, the result gets
+# released and therefore must be bound in the return statement.
+
+bool deleted;
+
+class Object : VTableBase {
+    atomic_int refCount;
+    @final oper to bool() { return !(this is null) }
+    @final void oper bind() {
+        if (this) refCount += 1;
+    }
+    @final void oper release() {
+        if (this && !(refCount -= 1)) deleted = 1;
+    }
+    @final void f() {
+        # Verify cast() is declared in the class context.
+        Object.cast(this);
+    }
+}
+
+if (1) {
+    o := Object.cast(Object());
+    if (deleted)
+        puts('FAILED: Object was deleted during cast');
+}
+
+if (!deleted)
+    puts('FAILED: Object was not deleted when it went out of scope');
+else
+    puts('ok');
+%%EXPECT%%
+ok
+%%STDIN%%

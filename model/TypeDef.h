@@ -312,8 +312,16 @@ class TypeDef : public VarDef, public Namespace {
          *        function which throws an exception.  Otherwise emit the two 
          *        argument version which returns a default value provided by 
          *        the caller.
+         * @param forward The forward declaration of the function, created
+         *        with createCastForward().
          */
-        void createCast(Context &outerContext, bool throws);
+        void createCast(Context &outerContext, bool throws, FuncDef *forward);
+
+        /**
+         * Create a forward declaration for a function to cast to the type.
+         * See createCast for arguments.
+         */
+        FuncDefPtr createCastForward(Context &outerContext, bool throws);
 
         /**
          * Returns true if the class has any abstract functions.

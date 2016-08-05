@@ -3333,11 +3333,12 @@ TypeDefPtr Parser::parseClassDef() {
       type->abstract = true;
    
    // add the "oper class" and "cast" methods
+   FuncDefPtr throwingCast, defaultingCast;
    if (type->hasVTable) {
       // "oper class" _must_ come first!
       type->createOperClass(*classContext);
-      type->createCast(*classContext, true);
-      type->createCast(*classContext, false);
+      throwingCast = type->createCastForward(*classContext, true);
+      defaultingCast = type->createCastForward(*classContext, false);
    }
    
    if (type->abstract && !type->hasVTable)
@@ -3359,6 +3360,12 @@ TypeDefPtr Parser::parseClassDef() {
 
    // parse the body
    parseClassBody();
+
+   // Generate the cast functions.
+   if (type->hasVTable) {
+      type->createCast(*classContext, true, throwingCast.get());
+      type->createCast(*classContext, false, defaultingCast.get());
+   }
 
    type->rectify(*classContext);
    BSTATS_GO(s2)
