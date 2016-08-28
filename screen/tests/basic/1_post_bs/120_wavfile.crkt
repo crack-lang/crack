@@ -4,12 +4,12 @@ wavfile
 %%FILE%%
 import crack.fs makePath;
 import crack.io cout;
-import crack.audio.wavfile readWave, WaveBuffer, WaveDef;
+import crack.audio.wavfile readWave, ManagedWaveBuffer, WaveDef;
 
 @import crack.ann assert;
 
 def := WaveDef(2, 44100, 16);
-WaveBuffer buf = {10};
+ManagedWaveBuffer buf = {10};
 wavefile := makePath('/tmp/test.wav');
 out := wavefile.writer();
 def.writeHeader(out);
@@ -23,7 +23,7 @@ def = readWave(src);
 @assert(def.channels == 2);
 @assert(def.rate == 44100);
 @assert(def.bitsPerSample == 16);
-buf = WaveBuffer(10);
+buf = ManagedWaveBuffer(10);
 def.read(src, buf);
 @assert(buf.size == 10);
 for (int i = 0; i < 10; ++i)

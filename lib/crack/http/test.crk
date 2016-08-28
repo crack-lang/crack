@@ -1,0 +1,48 @@
+## Test utilities for HTTP.
+
+import crack.http.core Request;
+import crack.io FStr, StringReader, StringWriter;
+import crack.io.readers FullReader;
+import crack.lang AssertionError;
+import crack.net InetAddress;
+import crack.ascii strip;
+
+## A utility for testing request handlers.
+class TestRequest {
+    StringWriter response = {};
+    Request req;
+    String __body;
+
+    oper init() : req(response, InetAddress(1, 2, 3, 4, 100)) {}
+
+    ## Returns the full response text.
+    String getResponse() {
+        return response.string();
+    }
+
+    ## Returns the content body of the response.
+    String getBody() {
+        if (__body is null) {
+            reader := FullReader(StringReader(getResponse()));
+            for (line :in reader) {
+                # When we get to the first line
+                if (!strip(line))
+                    __body = String(reader.readAll());
+            }
+        }
+        return __body;
+    }
+
+    void assertResponse(int code, String contents) {
+        response := getResponse();
+        if (!response.startsWith(FStr() `HTTP/1.1 $code`) ||
+             getBody() != contents
+            )
+            throw AssertionError(FStr() I`Expected $code $contents, got:
+                                          $(getBody())`
+                                 );
+    }
+}
+
+
+

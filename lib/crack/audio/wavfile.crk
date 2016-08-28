@@ -9,14 +9,29 @@ import crack.runtime free, malloc;
 
 ## Like a standard Buffer, but holds 16 bit samples instead of bytes.
 ## Likewise, 'size' and 'cap' are in terms of samples.
+##
+## WaveBuffer doesn't own it's buffer, use ManagedWaveBuffer to create the
+## backing buffer, use WaveBuffer to reference a slice of an existing buffer.
 class WaveBuffer {
     uintz size, cap;
     array[int16] buffer;
 
+    oper init(uintz cap, array[int16] buffer) : cap = cap, buffer = buffer {}
+
+    @final int16 oper [](uint index) { return buffer[index] }
+    @final int16 oper []=(uint index, int16 val) {
+        return buffer[index] = val;
+    }
+}
+
+class ManagedWaveBuffer : WaveBuffer {
+
     ## Creates a new wave buffer large enough to hold 'cap' samples.  If you
     ## have n channels, you'll need to specify n * number_of_samples to hold
     ## them.
-    oper init(uintz cap) : cap = cap, buffer = array[int16](malloc(cap * 2)) {}
+    oper init(uintz cap) :
+        WaveBuffer(cap, array[int16](malloc(cap * 2))) {
+    }
 
     void append(int16 sample) {
         @assert(size < cap);
