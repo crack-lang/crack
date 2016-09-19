@@ -80,6 +80,9 @@ class Test {
     ## If true, run the script in pre-bootstrap (-n) mode.
     bool preBootstrap;
 
+    ## If true, add the default library path.
+    bool addDefaultLibs = true;
+
     # Fully qualified extra library path.
     String __libPath;
 
@@ -130,9 +133,14 @@ class Test {
 
     StringArray __makeCmd(String script) {
         StringArray cmd = [
-            crackBin.getFullName(), '-l', (root/'lib').getFullName(),
+            crackBin.getFullName(),
             '-b', 'cachePath=' + cacheDir.getFullName(), '-q'
         ];
+
+        if (addDefaultLibs) {
+            cmd.append('-l');
+            cmd.append((root/'lib').getFullName());
+        }
 
         # Add the appropriate flags.
         if (preBootstrap)
