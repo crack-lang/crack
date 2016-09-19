@@ -3294,7 +3294,17 @@ TypeDefPtr Parser::parseClassDef() {
             unexpected(tok, "expected comma or opening brace");
       }
    } else if (tok.isSemi()) {
-      // forward declaration
+      // forward declaration.
+
+      // Check for an existing forward declaration.  We don't have to check 
+      // for existing class definitions, the createForwardClass() code appears 
+      // takes care of that.
+      if (existing && existing->forward)
+         error(tok, SPUG_FSTR("Duplicate forward declaration of class " << 
+                               className
+                              )
+               );
+      
       TypeDefPtr result =
          context->getDefContext()->createForwardClass(className);
       result->doc = consumeDocs();
