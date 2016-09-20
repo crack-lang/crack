@@ -1,0 +1,45 @@
+%%TEST%%
+crack.lang dependencies
+%%ARGS%%
+%%FILE%%
+import crack.io cerr, FStr;
+import systest test;
+
+(test.testtmp/'crack').makeDir();
+test.mod('crack/lang', I"
+    class Object {}
+    class String {}
+    class StaticString {
+        byteptr buf;
+        oper init(byteptr buf, uintz size) : buf = buf {}
+    }
+    ");
+
+test.main(I"
+    puts('ok'.buf);
+    ");
+
+test.addDefaultLibs = false;
+test.runFlags.append('-l');
+test.runFlags.append(test.testtmp.getFullName());
+test.runFlags.append('-l');
+test.runFlags.append((test.root/'lib').getFullName());
+test.run();
+
+# Change the signature of the StaticString constructor.
+test.mod('crack/lang', I"
+    class Object {}
+    class String {}
+    class StaticString {
+        byteptr buf;
+        oper init(byteptr buf, uint32 size) : buf = buf {}
+    }
+    ");
+test.run();
+
+%%EXPECT%%
+out: ok
+terminated: success
+out: ok
+terminated: success
+%%STDIN%%
