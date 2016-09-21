@@ -5727,6 +5727,113 @@ back whatever it reads from a client) written using #Poller#:
         p.waitAndProcess(null);
 }}
 
+Serving HTTP
+------------
+
+As of 0.13, Crack includes the #crack.http# modules containing functionality
+commonly used in an HTTP server.  Functionality is broken out as follows:
+
+#crack.http.core#::
+    Core functionality, mainly the #Request# class.
+#crack.http.server#::
+    Contains the #Server# class, which implements an HTTP server.
+#crack.http.util#::
+    Utilities.  Includes different kinds of request dispatchers, tools for
+    parsing URLs and for dealing with query parameters,
+
+The HTTP serving system is designed around handler chains.  A handler chain is
+a sequence of handlers of type #Functor1[bool, Request]# that are
+called in sequence, and provided with the current #Request# object, until one
+of them returns true (or until the end of the chain).  This approach is
+useful for defining default behavior and composing functionality.  #Request#
+is a #FieldSet#, allowing handlers to attach arbitrary data to it.  These
+concepts can be used to build sites and web applications out of
+loosely-coupled subsystems.
+
+#http.auth# is one such system.  It defines a handler (#AuthHandler#) to be
+chained in front of other handlers that require authentication.  When invoked
+in the context of an HTTP request that includes a valid session cookie, it
+injects a #User# object into the #Request# instance.  In the absence of a
+valid session cookie, it redirects the client to a login page which should be
+served by #LoginHandler#.
+
+As a complete example, let's consider a simple web server with user
+authentication. (Note that this code can be found in the source tree as
+"#`example/httpsrv.crk`#".)
+
+
+{{
+    import crack.http.auth AuthHandler, AuthInfoImpl, LoginHandler, StupidRNG, User;
+    import crack.http.core HandlerFunc, Request;
+    import crack.http.server Server;
+    import crack.http.util Chain, MethodHandler, PathDispatcher, NOT_FOUND;
+    import crack.io FStr;
+
+    server := Server(8080);
+
+    # Create a random number generator that the authInfo object will use for
+    # generating session cookies.  We need to give it a 64 bit salt value and an
+    # unsigned integer seed value.  You should use a better (more random) salt
+    # value and a different seed value.
+    rng := StupidRNG(uint64(i'123abczx') << 16 | i'y475oKjW', 123763);
+
+    # Create our authentication database and give it a user.  (The password isn't
+    # stored in plain text.  Instead we follow the standard practice of storing
+    # the hash of the password and salt.)
+    authInfo := AuthInfoImpl(rng);
+    authInfo.addUser('user', 'password', 'salt');
+
+    # Our "hello user!" request handler.
+    bool hello(Request req) {
+
+        # Get the User record for the request.  This gets stored by the AuthHandler.
+        user := User.get(req);
+
+        req.sendReply(200, 'text/plain', FStr() `Hello $(user.id)!`);
+        return true;
+    }
+
+    # Our root page handler.  Let's just have it redirect to the "/hello"
+    # entrypoint.
+    bool root(Request req) {
+        req.sendRedirect(303, '/hello');
+        return true;
+    }
+
+    # Create a path dispatcher to route requests to the correct entrypoints.
+    disp := PathDispatcher();
+
+    # Create a "/hello" entrypoint, stick an AuthHandler in front of it.
+    disp['hello'] = Chain![AuthHandler(authInfo), MethodHandler('GET', hello)];
+
+    # Add the login handler.  The name "login" is special because "/login?url=" is
+    # wired into AuthInfoImpl.  To change this entrypoint, you must change it
+    # here where it is registered and you must also override getLoginURL() in
+    # AuthInfoImpl.
+    disp['login'] = LoginHandler(authInfo);
+
+    # Add a handler for the root page.
+    disp[''] = HandlerFunc(root);
+
+    # Add the path dispatcher and the NOT_FOUND handler, which serves a 404 if
+    # nothing before it terminates the request processing.
+    server.addHandler(disp);
+    server.addHandler(NOT_FOUND);
+
+    # Run the server.
+    server.run();
+}}
+
+This illustrates a simple HTTP server with basic authentication and provides a
+rough layout as to how the library is distributed across the #core#, #server#,
+#util# and #auth# modules.  There's a xx
+
+Please note that that HTTP interfaces in Crack are very immature.  While the
+memory management features in Crack's lower level code ensure some degree of
+safety, we can make no claim as to the security of these systems.  Use them
+at your discretion, and if you choose to use them in a public-facing service,
+be sure to put them behind some form of trustworthy reverse proxy.
+
 Logging
 -------
 The #crack.logger# module provides classes for logging messages with configurable

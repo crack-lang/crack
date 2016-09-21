@@ -1,0 +1,75 @@
+# Copyright 2016 Google Inc.
+#
+#   This Source Code Form is subject to the terms of the Mozilla Public
+#   License, v. 2.0. If a copy of the MPL was not distributed with this
+#   file, You can obtain one at http://mozilla.org/MPL/2.0/.
+#
+
+# NOTE: Changes to this code should be propagated to doc/Manual.nml.  Also,
+# crackdoc should let us simply include it :-)
+
+## This is a sample webserver with authentication.  Run it, then point your
+## browser at http://localhost:8080/hello.  User id is "user", password is
+## "password".
+
+import crack.http.auth AuthHandler, AuthInfoImpl, LoginHandler, StupidRNG, User;
+import crack.http.core HandlerFunc, Request;
+import crack.http.server Server;
+import crack.http.util Chain, MethodHandler, PathDispatcher, NOT_FOUND;
+import crack.io FStr;
+
+server := Server(8080);
+
+# Create a random number generator that the authInfo object will use for
+# generating session cookies.  We need to give it a 64 bit salt value and an
+# unsigned integer seed value.  You should use a better (more random) salt
+# value and a different seed value.
+rng := StupidRNG(uint64(i'123abczx') << 16 | i'y475oKjW', 123763);
+
+# Create our authentication database and give it a user.  (The password isn't
+# stored in plain text.  Instead we follow the standard practice of storing
+# the hash of the password and salt.)
+authInfo := AuthInfoImpl(rng);
+authInfo.addUser('user', 'password', 'salt');
+
+# Our "hello user!" request handler.
+bool hello(Request req) {
+
+    # Get the User record for the request.  This gets stored by the AuthHandler.
+    user := User.get(req);
+
+    req.sendReply(200, 'text/plain', FStr() `Hello $(user.id)!`);
+    return true;
+}
+
+# Our root page handler.  Let's just have it redirect to the "/hello"
+# entrypoint.
+bool root(Request req) {
+    req.sendRedirect(303, '/hello');
+    return true;
+}
+
+# Create a path dispatcher to route requests to the correct entrypoints.
+disp := PathDispatcher();
+
+# Create a "/hello" entrypoint, stick an AuthHandler in front of it.
+disp['hello'] = Chain![AuthHandler(authInfo), MethodHandler('GET', hello)];
+
+# Add the login handler.  The name "login" is special because "/login?url=" is
+# wired into AuthInfoImpl.  To change this entrypoint, you must change it
+# here where it is registered and you must also override getLoginURL() in
+# AuthInfoImpl.
+disp['login'] = LoginHandler(authInfo);
+
+# Add a handler for the root page.
+disp[''] = HandlerFunc(root);
+
+# Add the path dispatcher and the NOT_FOUND handler, which serves a 404 if
+# nothing before it terminates the request processing.
+server.addHandler(disp);
+server.addHandler(NOT_FOUND);
+
+# Run the server.
+server.run();
+
+
