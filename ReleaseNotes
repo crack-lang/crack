@@ -1,3 +1,11 @@
+0.13
+    -   Restructured and expanded HTTP server modules.  Added various
+        utilities including authentication.
+    -   Made buffer ownership in WaveBuffer optional.
+    -   Fixed ManagedBuffer orphaning behavior, extension generator, ref
+        counting bug in cast(), duplicate class forward declarations, implicit
+        dependencies on crack.lang.
+
 0.12
     -   Added full support for special documentation comments, created the
         model builder which knows how to extract them and created the
