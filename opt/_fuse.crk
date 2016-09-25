@@ -95,10 +95,10 @@
         function[int, byteptr, byteptr] link;
         function[int, byteptr, int] chmod;
         function[int, byteptr, int, int] chown;
-        function[int, byteptr, uintz] truncate;
+        function[int, byteptr, uint64] truncate;
         function[int, byteptr, FuseFileInfo] open;
-        function[int, byteptr, byteptr, uintz, uintz, FuseFileInfo] read;
-        function[int, byteptr, byteptr, uintz, uintz, FuseFileInfo] write;
+        function[int, byteptr, byteptr, uintz, uint64, FuseFileInfo] read;
+        function[int, byteptr, byteptr, uintz, uint64, FuseFileInfo] write;
         function[int, byteptr, StatVFS] statfs;
         function[int, byteptr, FuseFileInfo] flush;
         function[int, byteptr, FuseFileInfo] release;
@@ -109,7 +109,7 @@
         function[int, byteptr, byteptr] removexattr;
         function[int, byteptr, FuseFileInfo] opendir;
         function[int, byteptr, voidptr,
-                 function[int, voidptr, byteptr, Stat, uintz], uintz,
+                 function[int, voidptr, byteptr, Stat, uint64], uint64,
                  FuseFileInfo
                  ] readdir;
         function[int, byteptr, FuseFileInfo] releasedir;
@@ -118,7 +118,7 @@
         function[void, voidptr] destroy;
         function[int, byteptr, int] access;
         function[int, byteptr, int, FuseFileInfo] create;
-        function[int, byteptr, uintz, FuseFileInfo] ftruncate;
+        function[int, byteptr, uint64, FuseFileInfo] ftruncate;
         function[int, byteptr, Stat, FuseFileInfo] fgetattr;
         function[int, byteptr, FuseFileInfo, int, Flock] lock;
         function[int, byteptr, DoubleTimeSpec] utimens;
