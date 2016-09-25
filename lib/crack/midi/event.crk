@@ -555,7 +555,7 @@ class Track {
     
     uint count() { return __events.count(); }
     
-    EventSource iter() { return TrackEventSource(__events, 0); }
+    TrackEventSource iter() { return TrackEventSource(__events, 0); }
 
     ## write all of the events in the track with their time deltas.
     void writeEvents(MidiWriter out) {
