@@ -44,16 +44,19 @@ if (true) {
     ai := makeAuthInfo();
     handler := AuthHandler(ai);
     test := TestRequest();
-    test.req.path = '/test';
+    test.req.path = '/test?a=1&b=2';
     @assert(handler(test.req));
     @assert(test.getResponse().startsWith('HTTP/1.1 303'));
-    @assert(test.getResponse().lfind('Location: /login?url=/test') != -1);
+    @assert(
+        test.getResponse().lfind('Location: /login?url=%2Ftest%3Fa=1%26b=2') !=
+         -1
+    );
 
     test = TestRequest();
     user := ai.addUser('foo', PASSWORD, 'salty');
     cookie := ai.makeCookie(user);
     test.req.headers['cookie'] = StringArray!['SpugAuth=' + cookie];
-    test.req.path = '/test';
+    test.req.path = '/test?a=1&b=2';
     @assert(!handler(test.req));
 }
 

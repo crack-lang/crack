@@ -15,7 +15,8 @@ import crack.fieldset FieldSet, HashMapFieldSet;
 import crack.functor Functor0, Functor1;
 import crack.hash.sha256 SHA256;
 import crack.http.core Request, RequestHandler;
-import crack.http.util parseQuery, MethodDispatcher, QueryParmMap;
+import crack.http.util encodeForURI, parseQuery, MethodDispatcher,
+    QueryParmMap, URI_QUERY_VAL;
 import crack.io FStr;
 import crack.lang Buffer, InvalidArgumentError;
 import crack.logger debug;
@@ -118,7 +119,8 @@ class AuthHandler @impl RequestHandler {
         }
 
         if (!user) {
-            req.sendRedirect(303, authInfo.getLoginURL()(req.path));
+            encodedPath := encodeForURI(req.path, URI_QUERY_VAL);
+            req.sendRedirect(303, authInfo.getLoginURL()(encodedPath));
             return true;
         }
 
