@@ -1,6 +1,6 @@
 ## Utility classes to help out with Server-side HTTP functionality.
 
-import crack.ascii parseInt;
+import crack.ascii isDigit, parseInt;
 import crack.cont.array Array;
 import crack.cont.hashmap HashMap;
 import crack.enc.base64 altEncode;
@@ -271,6 +271,134 @@ String decode(Buffer data, bool permissive, bool convertPlus) {
     }
 
     return String(result, true);
+}
+
+const int
+    ## userinfo field, subdelimiters are not reserved.
+    URI_USERINFO = 0,
+
+    ## The host component.
+    URI_HOST = 1,
+
+    ## The port segment.  This isn't very useful, as ports should only be
+    ## base-10 digits and encodeForURI does escaping but doesn't do
+    ## validation.  We include it only for completeness.
+    URI_PORT = 2,
+
+    ## The path component.  Only use this when the path will be used in a URI
+    ## with a scheme, otherwise a path of the form "foo:/bar/baz" will not
+    ## have the colon escaped properly.  URI_PATH is always safe.
+    URI_PATH_WITH_SCHEME = 3,
+
+    ## The path component for a URI that may not have a scheme.  This
+    ## currently causes the overly conservative approach of escaping every
+    ## colon (':') character in the path, though the algorithm could be
+    ## changed to escape only
+    URI_PATH = 4,
+
+    ## The query component.  Note that this doesn't escape '+' or '@', which
+    ## you probably want escped for multi-parameter query values.  For query
+    ## values, use URI_QUERY_VAL instead.  You can safely encode URI_QUERY on
+    ## the result.
+    URI_QUERY = 5,
+
+    ## Query values are the values associated with a query parameter.
+    ## Though not covered in RFC3986, query values are our primary concern, as
+    ## this is the main place where arbitrary input can come into play.
+    URI_QUERY_VAL = 6,
+
+    ## The fragment component.
+    URI_FRAGMENT = 7;
+
+## Encode a string for a URI.
+##
+## The parts of a URI are:
+##    scheme://userinfo@host:port/path?query#fragment
+##
+## See the URI_* constants in this module to be used as the value for
+## 'context'.
+String encodeForURI(String value, int context) {
+    AppendBuffer buf = {value.size * 2};
+    bool isSubdelim(byte b) {
+        return b == b'!' || b == b'$' || b == b'&' || b == b"'" ||
+               b ==  b'(' || b == b')' || b == b'*' || b == b'+' ||
+               b == b',' || b == b';' || b == b'=';
+    }
+
+    byte hexChar(byte val) {
+        if (val < 10)
+            return b'0' + val;
+        else
+            return b'A' + val - 10;
+    }
+
+    // Records the fact that we have encountered a slash, which is important
+    // for escaping URI_PATH.
+    bool gotSlash;
+
+    for (int i = 0; i < value.size; ++i) {
+        b := value[i];
+
+        if (b == b'/')
+            gotSlash = true;
+
+        if (
+
+            # Check for Unreserved character.  These are allowed unescaped
+            # everywhere.
+            b >= b'a' && b <= b'z' ||
+            b >= b'A' && b <= b'Z' ||
+            isDigit(b) ||
+            b == b'-' || b == b'_' || b == b'.' || b == b'~' ||
+
+            # Sub-delimiters are allowed in userinfo.
+            context == URI_USERINFO && (isSubdelim(b) || b == b':') ||
+
+            # Sub-delims, colons and brackets are allowed in the host name.
+            context == URI_HOST &&
+            (isSubdelim(b) || b == b':' || b == b'[' || b == b']') ||
+
+            # Only digits are legal for ports.  This function isn't intended
+            # to validate, though, so we just let reserved characters through
+            # unescaped.
+            context == URI_PORT ||
+
+            # Paths can contain sub-delims, '@' and also ':' if we've already
+            # found a slash (so that it can't be a scheme).
+            context == URI_PATH &&
+            (isSubdelim(b) || b == b'/' || b == b'@' ||
+             (gotSlash && b == b':')
+             ) ||
+
+            context == URI_PATH_WITH_SCHEME &&
+            (isSubdelim(b) || b == b'/' || b == b'@' || b == b':') ||
+
+            # Queries can contain sub-delims, '@' and ':'
+            context == URI_QUERY &&
+            (isSubdelim(b) || b == b':' || b == b'@') ||
+
+            # Query values can be any subdelim except for the ampersand which
+            # can indicate the next query parameter and the plus sign, which
+            # is translated to a space.
+            context == URI_QUERY_VAL &&
+            (isSubdelim(b) && b != b'&' && b != b'+' ||
+             b == b':' || b == b'@'
+             ) ||
+
+            context == URI_FRAGMENT &&
+            (isSubdelim(b) || b == b':' || b == b'@' || b == b'/' ||
+             b == b'?'
+             )
+            ) {
+            buf.append(b);
+        } else {
+            buf.append(b'%');
+            buf.append(hexChar(b >> 4));
+            buf.append(hexChar(b & 0xF));
+        }
+    }
+
+    return String(buf, true);
 }
 
 ## Parse query parameters out of a string with no escape sequences.
