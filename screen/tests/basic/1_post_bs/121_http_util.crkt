@@ -266,8 +266,10 @@ if (true) {
     @assert(encodeForURI('foo:@/bar:+%', URI_PATH_WITH_SCHEME) ==
              'foo:@/bar:+%25'
             );
-    @assert(encodeForURI('foo%+:@', URI_QUERY) == 'foo%25+:@');
-    @assert(encodeForURI('foo%+&=:@', URI_QUERY_VAL) == 'foo%25%2B%26=:@');
+    @assert(encodeForURI('foo%+:@?/', URI_QUERY) == 'foo%25+:@%3F%2F');
+    @assert(encodeForURI('foo%+&=:@?/', URI_QUERY_VAL) ==
+             'foo%25%2B%26=:@%3F%2F'
+            );
     @assert(encodeForURI('foo%+:@/?', URI_FRAGMENT) == 'foo%25+:@/?');
 }
 

@@ -373,13 +373,17 @@ String encodeForURI(String value, int context) {
             context == URI_PATH_WITH_SCHEME &&
             (isSubdelim(b) || b == b'/' || b == b'@' || b == b':') ||
 
-            # Queries can contain sub-delims, '@' and ':'
+            # Queries can contain sub-delims, '/', '?', '@' and ':'.  However,
+            # we take a very conservative approach and always escape '/' and
+            # '? because apparently these present problems for some buggy
+            # parsers.
             context == URI_QUERY &&
             (isSubdelim(b) || b == b':' || b == b'@') ||
 
             # Query values can be any subdelim except for the ampersand which
             # can indicate the next query parameter and the plus sign, which
-            # is translated to a space.
+            # is translated to a space.  As in URI_QUERY, the otherwise legal
+            # '?' and '/' characters are omitted from this set.
             context == URI_QUERY_VAL &&
             (isSubdelim(b) && b != b'&' && b != b'+' ||
              b == b':' || b == b'@'
