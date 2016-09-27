@@ -179,13 +179,13 @@ void crack_ext__fuse_cinit(crack::ext::Module *mod) {
         function_pint_c_sbyteptr_c_sbyteptr_q = function->getSpecialization(params);
     }
 
-    crack::ext::Type *function_pint_c_sbyteptr_c_suintz_q;
+    crack::ext::Type *function_pint_c_sbyteptr_c_suint64_q;
     {
         std::vector<crack::ext::Type *> params(3);
         params[0] = type_int;
         params[1] = type_byteptr;
-        params[2] = type_uintz;
-        function_pint_c_sbyteptr_c_suintz_q = function->getSpecialization(params);
+        params[2] = type_uint64;
+        function_pint_c_sbyteptr_c_suint64_q = function->getSpecialization(params);
     }
 
     crack::ext::Type *function_pint_c_sbyteptr_c_sFuseFileInfo_q;
@@ -197,16 +197,16 @@ void crack_ext__fuse_cinit(crack::ext::Module *mod) {
         function_pint_c_sbyteptr_c_sFuseFileInfo_q = function->getSpecialization(params);
     }
 
-    crack::ext::Type *function_pint_c_sbyteptr_c_sbyteptr_c_suintz_c_suintz_c_sFuseFileInfo_q;
+    crack::ext::Type *function_pint_c_sbyteptr_c_sbyteptr_c_suintz_c_suint64_c_sFuseFileInfo_q;
     {
         std::vector<crack::ext::Type *> params(6);
         params[0] = type_int;
         params[1] = type_byteptr;
         params[2] = type_byteptr;
         params[3] = type_uintz;
-        params[4] = type_uintz;
+        params[4] = type_uint64;
         params[5] = type_FuseFileInfo;
-        function_pint_c_sbyteptr_c_sbyteptr_c_suintz_c_suintz_c_sFuseFileInfo_q = function->getSpecialization(params);
+        function_pint_c_sbyteptr_c_sbyteptr_c_suintz_c_suint64_c_sFuseFileInfo_q = function->getSpecialization(params);
     }
 
     crack::ext::Type *function_pint_c_sbyteptr_c_sStatVFS_q;
@@ -261,27 +261,27 @@ void crack_ext__fuse_cinit(crack::ext::Module *mod) {
         function_pint_c_sbyteptr_c_sbyteptr_c_suintz_q = function->getSpecialization(params);
     }
 
-    crack::ext::Type *function_pint_c_svoidptr_c_sbyteptr_c_sStat_c_suintz_q;
+    crack::ext::Type *function_pint_c_svoidptr_c_sbyteptr_c_sStat_c_suint64_q;
     {
         std::vector<crack::ext::Type *> params(5);
         params[0] = type_int;
         params[1] = type_voidptr;
         params[2] = type_byteptr;
         params[3] = type_Stat;
-        params[4] = type_uintz;
-        function_pint_c_svoidptr_c_sbyteptr_c_sStat_c_suintz_q = function->getSpecialization(params);
+        params[4] = type_uint64;
+        function_pint_c_svoidptr_c_sbyteptr_c_sStat_c_suint64_q = function->getSpecialization(params);
     }
 
-    crack::ext::Type *function_pint_c_sbyteptr_c_svoidptr_c_sfunction_pint_c_svoidptr_c_sbyteptr_c_sStat_c_suintz_q_c_suintz_c_sFuseFileInfo_q;
+    crack::ext::Type *function_pint_c_sbyteptr_c_svoidptr_c_sfunction_pint_c_svoidptr_c_sbyteptr_c_sStat_c_suint64_q_c_suint64_c_sFuseFileInfo_q;
     {
         std::vector<crack::ext::Type *> params(6);
         params[0] = type_int;
         params[1] = type_byteptr;
         params[2] = type_voidptr;
-        params[3] = function_pint_c_svoidptr_c_sbyteptr_c_sStat_c_suintz_q;
-        params[4] = type_uintz;
+        params[3] = function_pint_c_svoidptr_c_sbyteptr_c_sStat_c_suint64_q;
+        params[4] = type_uint64;
         params[5] = type_FuseFileInfo;
-        function_pint_c_sbyteptr_c_svoidptr_c_sfunction_pint_c_svoidptr_c_sbyteptr_c_sStat_c_suintz_q_c_suintz_c_sFuseFileInfo_q = function->getSpecialization(params);
+        function_pint_c_sbyteptr_c_svoidptr_c_sfunction_pint_c_svoidptr_c_sbyteptr_c_sStat_c_suint64_q_c_suint64_c_sFuseFileInfo_q = function->getSpecialization(params);
     }
 
     crack::ext::Type *function_pvoidptr_c_sFuseConnInfo_q;
@@ -300,14 +300,14 @@ void crack_ext__fuse_cinit(crack::ext::Module *mod) {
         function_pvoid_c_svoidptr_q = function->getSpecialization(params);
     }
 
-    crack::ext::Type *function_pint_c_sbyteptr_c_suintz_c_sFuseFileInfo_q;
+    crack::ext::Type *function_pint_c_sbyteptr_c_suint64_c_sFuseFileInfo_q;
     {
         std::vector<crack::ext::Type *> params(4);
         params[0] = type_int;
         params[1] = type_byteptr;
-        params[2] = type_uintz;
+        params[2] = type_uint64;
         params[3] = type_FuseFileInfo;
-        function_pint_c_sbyteptr_c_suintz_c_sFuseFileInfo_q = function->getSpecialization(params);
+        function_pint_c_sbyteptr_c_suint64_c_sFuseFileInfo_q = function->getSpecialization(params);
     }
 
     crack::ext::Type *function_pint_c_sbyteptr_c_sStat_c_sFuseFileInfo_q;
@@ -465,13 +465,13 @@ void crack_ext__fuse_cinit(crack::ext::Module *mod) {
                                 CRACK_OFFSET(fuse_operations, chmod));
         type_FuseOperations->addInstVar(function_pint_c_sbyteptr_c_sint_c_sint_q, "chown",
                                 CRACK_OFFSET(fuse_operations, chown));
-        type_FuseOperations->addInstVar(function_pint_c_sbyteptr_c_suintz_q, "truncate",
+        type_FuseOperations->addInstVar(function_pint_c_sbyteptr_c_suint64_q, "truncate",
                                 CRACK_OFFSET(fuse_operations, truncate));
         type_FuseOperations->addInstVar(function_pint_c_sbyteptr_c_sFuseFileInfo_q, "open",
                                 CRACK_OFFSET(fuse_operations, open));
-        type_FuseOperations->addInstVar(function_pint_c_sbyteptr_c_sbyteptr_c_suintz_c_suintz_c_sFuseFileInfo_q, "read",
+        type_FuseOperations->addInstVar(function_pint_c_sbyteptr_c_sbyteptr_c_suintz_c_suint64_c_sFuseFileInfo_q, "read",
                                 CRACK_OFFSET(fuse_operations, read));
-        type_FuseOperations->addInstVar(function_pint_c_sbyteptr_c_sbyteptr_c_suintz_c_suintz_c_sFuseFileInfo_q, "write",
+        type_FuseOperations->addInstVar(function_pint_c_sbyteptr_c_sbyteptr_c_suintz_c_suint64_c_sFuseFileInfo_q, "write",
                                 CRACK_OFFSET(fuse_operations, write));
         type_FuseOperations->addInstVar(function_pint_c_sbyteptr_c_sStatVFS_q, "statfs",
                                 CRACK_OFFSET(fuse_operations, statfs));
@@ -491,7 +491,7 @@ void crack_ext__fuse_cinit(crack::ext::Module *mod) {
                                 CRACK_OFFSET(fuse_operations, removexattr));
         type_FuseOperations->addInstVar(function_pint_c_sbyteptr_c_sFuseFileInfo_q, "opendir",
                                 CRACK_OFFSET(fuse_operations, opendir));
-        type_FuseOperations->addInstVar(function_pint_c_sbyteptr_c_svoidptr_c_sfunction_pint_c_svoidptr_c_sbyteptr_c_sStat_c_suintz_q_c_suintz_c_sFuseFileInfo_q, "readdir",
+        type_FuseOperations->addInstVar(function_pint_c_sbyteptr_c_svoidptr_c_sfunction_pint_c_svoidptr_c_sbyteptr_c_sStat_c_suint64_q_c_suint64_c_sFuseFileInfo_q, "readdir",
                                 CRACK_OFFSET(fuse_operations, readdir));
         type_FuseOperations->addInstVar(function_pint_c_sbyteptr_c_sFuseFileInfo_q, "releasedir",
                                 CRACK_OFFSET(fuse_operations, releasedir));
@@ -505,7 +505,7 @@ void crack_ext__fuse_cinit(crack::ext::Module *mod) {
                                 CRACK_OFFSET(fuse_operations, access));
         type_FuseOperations->addInstVar(function_pint_c_sbyteptr_c_sint_c_sFuseFileInfo_q, "create",
                                 CRACK_OFFSET(fuse_operations, create));
-        type_FuseOperations->addInstVar(function_pint_c_sbyteptr_c_suintz_c_sFuseFileInfo_q, "ftruncate",
+        type_FuseOperations->addInstVar(function_pint_c_sbyteptr_c_suint64_c_sFuseFileInfo_q, "ftruncate",
                                 CRACK_OFFSET(fuse_operations, ftruncate));
         type_FuseOperations->addInstVar(function_pint_c_sbyteptr_c_sStat_c_sFuseFileInfo_q, "fgetattr",
                                 CRACK_OFFSET(fuse_operations, fgetattr));

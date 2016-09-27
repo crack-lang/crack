@@ -25,19 +25,19 @@ class Context;
 @interface Node {
     int getattr(Context ctx, Stat stbuf) { return -ENOSYS; }
     int readdir(Context ctx, voidptr buf,
-                function[int, voidptr, byteptr, Stat, uintz] filler,
-                uintz offset,
+                function[int, voidptr, byteptr, Stat, uint64] filler,
+                uint64 offset,
                 FuseFileInfo fi
                 )  {
         return -ENOSYS;
     }
     int open(Context ctx, FuseFileInfo fi) { return -ENOSYS; }
-    int read(Context ctx, byteptr buf, uintz size, uintz offset,
+    int read(Context ctx, byteptr buf, uintz size, uint64 offset,
              FuseFileInfo fi
              )  {
         return -ENOSYS;
     }
-    int write(Context ctx, byteptr buf, uintz size, uintz offset,
+    int write(Context ctx, byteptr buf, uintz size, uint64 offset,
               FuseFileInfo fi
               ) {
         return -ENOSYS;
@@ -183,8 +183,8 @@ class FileNode : NodeImpl {
     }
 
     int readdir(Context ctx, voidptr buf,
-                function[int, voidptr, byteptr, Stat, uintz] filler,
-                uintz offset,
+                function[int, voidptr, byteptr, Stat, uint64] filler,
+                uint64 offset,
                 FuseFileInfo fi
                 ) {
         return -ENOTDIR;
@@ -194,7 +194,7 @@ class FileNode : NodeImpl {
         return 0;
     }
 
-    int read(Context ctx, byteptr buf, uintz size, uintz offset,
+    int read(Context ctx, byteptr buf, uintz size, uint64 offset,
              FuseFileInfo fi
              )  {
         len := contents.size;
@@ -209,7 +209,7 @@ class FileNode : NodeImpl {
         return size;
     }
 
-    int write(Context ctx, byteptr buf, uintz size, uintz offset,
+    int write(Context ctx, byteptr buf, uintz size, uint64 offset,
               FuseFileInfo fi
               ) {
         # Create a writable buffer from the current contents.
@@ -232,11 +232,11 @@ class FileNode : NodeImpl {
     int readlink(Context ctx, byteptr buffer, intz size)  {
         return -EINVAL;
     }
-    int truncate(Context ctx, uintz size)  {
+    int truncate(Context ctx, uint64 size)  {
         contents = contents.substr(0, size);
         return 0;
     }
-    int ftruncate(Context ctx, uintz size, FuseFileInfo fi)  {
+    int ftruncate(Context ctx, uint64 size, FuseFileInfo fi)  {
         return truncate(ctx, size);
     }
     int mknod(Context ctx, int major, int minor)  { return -ENOTDIR; }
@@ -253,8 +253,8 @@ class DirNode : NodeImpl {
     oper init() : NodeImpl(S_IFDIR | 0755, 2) {}
 
     int readdir(Context ctx, voidptr buf,
-                function[int, voidptr, byteptr, Stat, uintz] filler,
-                uintz offset,
+                function[int, voidptr, byteptr, Stat, uint64] filler,
+                uint64 offset,
                 FuseFileInfo fi
                 ) {
         Stat stat = {};
@@ -270,12 +270,12 @@ class DirNode : NodeImpl {
         return 0;
     }
     int open(Context ctx, FuseFileInfo fi) { return -EISDIR; }
-    int read(Context ctx, byteptr buf, uintz size, uintz offset,
+    int read(Context ctx, byteptr buf, uintz size, uint64 offset,
              FuseFileInfo fi
              )  {
         return -EISDIR;
     }
-    int write(Context ctx, byteptr buf, uintz size, uintz offset,
+    int write(Context ctx, byteptr buf, uintz size, uint64 offset,
               FuseFileInfo fi
               ) {
         return -EISDIR;
@@ -284,8 +284,8 @@ class DirNode : NodeImpl {
     int readlink(Context ctx, byteptr buffer, intz size)  {
         return -EINVAL;
     }
-    int truncate(Context ctx, uintz size)  { return -EISDIR; }
-    int ftruncate(Context ctx, uintz size, FuseFileInfo fi)  {
+    int truncate(Context ctx, uint64 size)  { return -EISDIR; }
+    int ftruncate(Context ctx, uint64 size, FuseFileInfo fi)  {
         return -EISDIR;
     }
 
@@ -353,8 +353,8 @@ int _getattr(byteptr path, Stat stbuf)
 }
 
 int _readdir(byteptr path, voidptr buf,
-             function[int, voidptr, byteptr, Stat, uintz] filler,
-             uintz offset,
+             function[int, voidptr, byteptr, Stat, uint64] filler,
+             uint64 offset,
              FuseFileInfo fi
              ) {
     log `in readdir($path, buf, filler, $offset, $fi)\n`;
@@ -375,7 +375,7 @@ int _open(byteptr path, FuseFileInfo fi) {
         return -ENOENT;
 }
 
-int _read(byteptr path, byteptr buf, uintz size, uintz offset,
+int _read(byteptr path, byteptr buf, uintz size, uint64 offset,
           FuseFileInfo fi
           ) {
     log `in read($path, buf, $size, $offset, $fi)\n`;
@@ -386,7 +386,7 @@ int _read(byteptr path, byteptr buf, uintz size, uintz offset,
         return -ENOENT;
 }
 
-int _write(byteptr path, byteptr buf, uintz size, uintz offset,
+int _write(byteptr path, byteptr buf, uintz size, uint64 offset,
            FuseFileInfo fi
            ) {
     log `in write($path, buf, $size, $offset, $fi)\n`;
@@ -411,7 +411,7 @@ int _readlink(byteptr path, byteptr buffer, intz size) {
     return 0;
 }
 
-int _truncate(byteptr path, uintz size) {
+int _truncate(byteptr path, uint64 size) {
     log `in truncate($path, $size)\n`;
     ctx := Context.get(path);
     if (node := ctx.lookUp())
@@ -420,7 +420,7 @@ int _truncate(byteptr path, uintz size) {
         return -ENOENT;
 }
 
-int _ftruncate(byteptr path, uintz size, FuseFileInfo fi) {
+int _ftruncate(byteptr path, uint64 size, FuseFileInfo fi) {
     log `in ftruncate($path, $size)\n`;
     ctx := Context.get(path);
     if (node := ctx.lookUp())
