@@ -1,0 +1,17 @@
+%%TEST%%
+duplicate forward class declaration
+%%ARGS%%
+%%FILE%%
+class A;
+
+if (1) {
+    # We shouldn't fail here, this A is defined in a nested scope.
+    class A;
+    class A {};
+}
+
+class A;
+class A {}
+%%EXPECT%%
+ParseError: %SCRIPTNAME%:9:8: Duplicate forward declaration of class A
+%%STDIN%%

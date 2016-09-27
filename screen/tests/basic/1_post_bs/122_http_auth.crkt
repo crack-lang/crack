@@ -12,7 +12,7 @@ import crack.strutil StringArray;
 
 const PASSWORD := 'b4ds3cr3t';
 
-setLogLevel(DEBUG);
+#setLogLevel(DEBUG);
 
 AuthInfoImpl makeAuthInfo() {
     return AuthInfoImpl(StupidRNG(i'salty123', 12345678));

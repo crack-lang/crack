@@ -731,6 +731,11 @@ ModuleDefPtr Construct::getModule(Construct::StringVecIter moduleNameBegin,
 
         if (!cached) {
             if (!modPath.isDir) {
+                // Add an implicit dependency on crack.lang if we're
+                // post-bootstrap.
+                if (crackLang)
+                    modDef->addDependency(crackLang.get());
+
                 ifstream src(modPath.path.c_str());
                 // parse from scratch
                 parseModule(*context, modDef.get(), modPath.path, src);
@@ -915,6 +920,7 @@ int Construct::runScript(istream &src, const string &name, bool notAFile) {
             if (crackLang) {
                 ImportedDefVec symbols;
                 context->builder.initializeImport(crackLang.get(), symbols);
+                modDef->addDependency(crackLang.get());
             }
             parseModule(*context, modDef.get(), name, src);
             loadedModules.push_back(modDef);
