@@ -72,6 +72,12 @@ extern "C" int crk_open2(const char *pathname, int flags, mode_t mode) {
     return open(pathname, flags, mode);
 }
 
+// We wrap lseek because it doesn't seek to do argument passing quite right on
+// 32 bit systems.
+extern "C" int64_t crk_lseek(int fd, int64_t pos, int whence) {
+    return lseek(fd, pos, whence);
+}
+
 namespace crack { namespace runtime {
     sigset_t *SigAction_getMask(struct sigaction *sa) {
         return &sa->sa_mask;
@@ -823,7 +829,7 @@ extern "C" void crack_runtime_cinit(Module *mod) {
     f->addArg(byteptrType, "buf");
     f->addArg(uintType, "count");
 
-    f = mod->addFunc(int64Type, "lseek", (void *)lseek, "lseek");
+    f = mod->addFunc(int64Type, "lseek", (void *)crk_lseek, "lseek");
     f->addArg(intType, "fd");
     f->addArg(int64Type, "offset");
     f->addArg(intType, "whence");
