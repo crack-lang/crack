@@ -10,7 +10,7 @@ import crack.io.fmtutil Indenter;
 import crack.lang AppendBuffer, Buffer, IndexError;
 import crack.process Process, ProcessHandlerImpl, CRK_PIPE_STDIN,
     CRK_PIPE_STDOUT;
-import crack.regex Regex;
+import crack.regex Regex, PCRE_MULTILINE, PCRE_DOTALL;
 import crack.strutil StringArray;
 import crack.sys argv, exit;
 
@@ -18,11 +18,18 @@ import crack.sys argv, exit;
 
 debug := cerr;
 
+# Escape sequences for text highliting.
 const String
     BHDR = '\033[37;44m',
     EHDR = '\033[0m',
     BH2 = '\033[1m',
-    EH2 = '\033[0m';
+    EH2 = '\033[0m',
+
+    COMMENT = '\033[32m',
+    STRING = '\033[35m',
+    NORMAL = '\033[0m',
+    SYMBOL = '\033[33m',
+    BARF = '\033[33;41mBARF!\033[0m';
 
 class Arg {
     String name;
@@ -499,6 +506,59 @@ Array[Path] getLibPath() {
     return result;
 }
 
+## Display 'content' using #less -R#.
+void showInLess(String content) {
+    proc := Process(StringArray!['less', '-R'], CRK_PIPE_STDIN);
+    proc.putStdIn(content);
+    proc.closeStdIn();
+    proc.run();
+}
+
+const Regex
+    COMMENT_RX = {r'(#|//).*$|/\*([^\*]|\*[^/])\*/', PCRE_MULTILINE},
+
+    # The IString regex doesn't exactly work because IStrings can be nested,
+    # but in practice no code does that.
+    STRING_RX = {r'"([^"]|\\")*"|' r"'([^']|\\')*'|`([^`]|\\`)*`",
+                 PCRE_MULTILINE
+                 },
+    NORMAL_RX = {r'([^#"\'`/~!@#\$%\^&\*\(\)\-\+=\{\}\[\]:;<>,\.\?/]|/[^\*/])+', /*`*/ PCRE_MULTILINE},
+    SYMBOL_RX = {r'[~!@#\$%\^&\*\(\)\-\+=\{\}\[\]:;<>,\.\?/]+'};
+
+## Colorize the crack code in 'code'.
+String colorize(String code) {
+    AppendBuffer result = {code.size + code.size / 10};
+    splitter := Splitter(null, code);
+    while (splitter.rest) {
+        if (splitter.consume(NORMAL_RX)) {
+            result.extend(splitter.first);
+        } else if (splitter.consume(STRING_RX)) {
+            # less doesn't seem to preserve attributes across linebreaks, so
+            # we take the line apart and put it back together again with the
+            # escape sequences.
+            result.extend(STRING);
+            result.extend(
+                split(splitter.first, b'\n').join('\n' + STRING)
+            );
+            result.extend(NORMAL);
+        } else if (splitter.consume(COMMENT_RX)) {
+            result.extend(COMMENT);
+            result.extend(splitter.first);
+            result.extend(NORMAL);
+        } else if (splitter.consume(SYMBOL_RX)) {
+            result.extend(SYMBOL);
+            result.extend(splitter.first);
+            result.extend(NORMAL);
+        } else {
+            # Deal with something that may have slipped through our regexen.
+            result.extend(BARF);
+            result.extend(splitter.rest);
+            splitter.rest = null;
+        }
+    }
+    return String(result, true);
+}
+
 opts := CmdOptions![
     Option('crack', 'c',
            'The path to the crack executor to use to parse the file.',
@@ -515,6 +575,11 @@ opts := CmdOptions![
     Option('stdout', 's',
            I'If specified, dump the formatted module documentation to standard
              output instead of writing it through "less -R"',
+           'false',
+           CMD_BOOL
+           ),
+    Option('raw', 'r',
+           I'Show raw file contents instead of extracted documentation.',
            'false',
            CMD_BOOL
            ),
@@ -565,6 +630,12 @@ if (modPath is null) {
     exit(1);
 }
 
+# If the user has request raw output, just read the file and dup to less.
+if (opts.getBool('raw')) {
+    showInLess(colorize(modPath.readAll()));
+    exit(0);
+}
+
 # Add the -n (pre-bootstrap) option for the two modules that require it.
 cmd := StringArray![crack, '-KdB', 'model', modPath.getFullName()];
 if (objname == 'crack.lang' || objname == 'crack._poormac')
@@ -590,10 +661,7 @@ if (stdout) {
     # Write the output to "less -R"
     StringFormatter out = {};
     out `$(parser.contextStack[0])\n`;
-    proc = Process(StringArray!['less', '-R'], CRK_PIPE_STDIN);
-    proc.putStdIn(out.string());
-    proc.closeStdIn();
-    proc.run();
+    showInLess(out.string());
 }
 
 
