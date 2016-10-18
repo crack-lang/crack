@@ -467,7 +467,7 @@ cout := StandardFormatter(FDWriter(1));
 cerr := StandardFormatter(FDWriter(2));
 cin := FDReader(0);
 
-int64 _seek(int64 offset, int whence, uintz pos, uintz size) {
+int64 _seek(int64 offset, int whence, int64 pos, uintz size) {
     int64 newPos;
     if (whence == SEEK_SET) {
         newPos = offset;
@@ -518,7 +518,7 @@ class StringWriter : AppendBuffer, SeekableWriter {
     }
 
     int64 seek(int64 pos, int whence) {
-        return int64(__pos = _seek(pos, whence, __pos, size));
+        return int64(__pos = _seek(pos, whence, int64(__pos), size));
     }
 
     int64 tell() {
@@ -589,7 +589,7 @@ class BufferReader : Object, SeekableReader {
     }
 
     int64 seek(int64 offset, int whence) {
-        return int64(__pos = _seek(offset, whence, __pos, __src.size));
+        return int64(__pos = _seek(offset, whence, int64(__pos), __src.size));
     }
 
     int64 tell() {
