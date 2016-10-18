@@ -5,12 +5,14 @@ import crack.ascii isSpace, rstrip, strip;
 import crack.cmdline CmdOptions, Option, CMD_BOOL, CMD_STR;
 import crack.cont.array Array;
 import crack.fs makePath, Path;
+import crack.hash.md5 MD5;
 import crack.io cerr, cout, Formatter, StringFormatter;
 import crack.io.fmtutil Indenter;
-import crack.lang AppendBuffer, Buffer, IndexError;
+import crack.lang AppendBuffer, Buffer, IndexError, SystemError;
 import crack.process Process, ProcessHandlerImpl, CRK_PIPE_STDIN,
     CRK_PIPE_STDOUT;
 import crack.regex Regex, PCRE_MULTILINE, PCRE_DOTALL;
+import crack.runtime getenv;
 import crack.strutil StringArray;
 import crack.sys argv, exit;
 
@@ -559,6 +561,32 @@ String colorize(String code) {
     return String(result, true);
 }
 
+Path getCachePath() {
+    home := getenv('HOME'.buffer);
+    if (home) {
+        cachePath := makePath(String(home))/'.crack/doc';
+        try {
+            cachePath.makeDirs();
+            return cachePath;
+        } catch (SystemError ex) {
+            return null;
+        }
+    } else {
+        return null;
+    }
+}
+
+## Returns the MD5 digest for a file.
+String getSourceDigest(Path file) {
+    hasher := MD5();
+    src := file.reader();
+    while (data := src.read(4096))
+        hasher.update(data);
+    return hasher.digest();
+}
+
+# ---- MAIN ----
+
 opts := CmdOptions![
     Option('crack', 'c',
            'The path to the crack executor to use to parse the file.',
@@ -575,6 +603,11 @@ opts := CmdOptions![
     Option('stdout', 's',
            I'If specified, dump the formatted module documentation to standard
              output instead of writing it through "less -R"',
+           'false',
+           CMD_BOOL
+           ),
+    Option('nocache', 'n',
+           I"Don't read from the cache, even if the file is unchanged.",
            'false',
            CMD_BOOL
            ),
@@ -636,32 +669,64 @@ if (opts.getBool('raw')) {
     exit(0);
 }
 
-# Add the -n (pre-bootstrap) option for the two modules that require it.
-cmd := StringArray![crack, '-KdB', 'model', modPath.getFullName()];
-if (objname == 'crack.lang' || objname == 'crack._poormac')
-    cmd.insert(1, '-n');
+# If the user hasn't disabled the cache, check for a cached version.
+cachePath := getCachePath();
+Path cachedDocs;
+String docText;
+if (!opts.getBool('nocache') && cachePath) {
+    cachedDocs = cachePath/(objname + '.dc');
+    if (cachedDocs.exists()) {
 
-if (lib) {
-    cmd.insert(1, '-l');
-    cmd.insert(2, lib);
+        # Compare the source digest at the beginning of the cache file with
+        # that of the actual source file.
+        cacheRdr := cachedDocs.reader();
+        expectedSourceDigest := cacheRdr.read(16);
+
+        # If the digests match, just get the file from the cache.
+        if (getSourceDigest(modPath) == expectedSourceDigest) {
+            AppendBuffer appender = {4096};
+            while (data := cacheRdr.read(4096))
+                appender.extend(data);
+            docText = String(appender, true);
+        }
+    }
 }
 
-parser := Parser(objname);
-proc := Process(cmd, CRK_PIPE_STDOUT);
-handler := Handler(parser);
-result := proc.run(handler);
-if (handler.rc) {
-    cerr `Crack executor exited with rc $(handler.rc)\n`;
-    exit(1);
-}
+if (!docText) {
+    # Add the -n (pre-bootstrap) option for the two modules that require it.
+    cmd := StringArray![crack, '-KdB', 'model', modPath.getFullName()];
+    if (objname == 'crack.lang' || objname == 'crack._poormac')
+        cmd.insert(1, '-n');
 
-if (stdout) {
-    cout `$(parser.contextStack[0])\n`;
-} else {
-    # Write the output to "less -R"
+    if (lib) {
+        cmd.insert(1, '-l');
+        cmd.insert(2, lib);
+    }
+
+    parser := Parser(objname);
+    proc := Process(cmd, CRK_PIPE_STDOUT);
+    handler := Handler(parser);
+    result := proc.run(handler);
+    if (handler.rc) {
+        cerr `Crack executor exited with rc $(handler.rc)\n`;
+        exit(1);
+    }
+
     StringFormatter out = {};
     out `$(parser.contextStack[0])\n`;
-    showInLess(out.string());
+    docText = out.string();
+
+    # Write to cache if we can.
+    if (cachedDocs) {
+        out := cachedDocs.writer();
+        out.write(getSourceDigest(modPath));
+        out.write(docText);
+    }
 }
 
+if (stdout)
+    cout `$docText`;
+else
+    # Write the output to "less -R"
+    showInLess(docText);
 
