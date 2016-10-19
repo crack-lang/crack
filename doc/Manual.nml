@@ -12,7 +12,7 @@
 The Crack Programming Language Guide
 ====================================
 
-This is the Manual for version 0.13 of the Crack Programming Language.  We
+This is the Manual for version 0.13.1 of the Crack Programming Language.  We
 regard this version largely as an alpha 1.0 release - compatibility breakage
 between this and 1.0 should be very limited.  There are still some usability
 gaps in the system, mostly with respect to debugging and caching.  And as of
@@ -27,7 +27,7 @@ So without further caveats - let's do some Crack!
 Important Note on Caching
 -------------------------
 
-Crack 0.13 enables module caching by default.  When a Crack module is
+Crack 0.13.1 enables module caching by default.  When a Crack module is
 compiled, the compiler stores the modules metadata and LLVM bitcode in your
 `$HOME/.crack/cache` directory and reuses this information if it exists and is
 up to date with respect to the source file and all dependencies.
@@ -204,9 +204,11 @@ module:
     void bar() {}
 }}
 
-The #module# keyword is necessary to prevent the doc-comment from being
-consumed by the next element in the code and to instead be associated with
-the module.
+The #module# keyword is necessary in this case to prevent the doc-comment
+from being consumed by the next element in the code and to instead be
+associated with the module.  If there are import statements, the module
+documentation is consumed by the module upon arriving at the first import
+statement.
 
 Variables and Types
 -------------------
@@ -705,7 +707,7 @@ You'll generally want to use the memory-managed #Array# collection instead
 Control Structures
 ------------------
 
-Crack 0.13 supports four control structures: the "if\/else" statement,
+Crack 0.13.1 supports four control structures: the "if\/else" statement,
 the "while" statement, the "for" statement and the "try\/catch" statement.
 "if" runs code blocks depending on whether a condition is true or false:
 
@@ -4109,7 +4111,7 @@ extension, you'll want to:
 -   build it into a shared library, linked with whatever support code it needs
     (usually the code it's wrapping)
 -   Add the include directory for crack headers to the include path (usually
-    something like #`/usr/local/include/crack-0.13`#)
+    something like #`/usr/local/include/crack-0.13.1`#)
 
 The Extension Generator
 '''''''''''''''''''''''
@@ -4263,7 +4265,7 @@ threading.
 Debugging
 ---------
 
-Crack has only minimal support for debugging in 0.13.  If your program
+Crack has only minimal support for debugging in 0.13.1.  If your program
 seg-faults or aborts, you can at least get a sparse stack-trace by running it
 in JIT mode under a fairly recent version of GDB (7.0 or later).
 
@@ -4297,6 +4299,39 @@ The #encoding# annotation should be either the first or second line of the
 script.  If a script or module doesn't specify an encoding, tools are free to
 attempt to infer it from the contents of the script.  In the absence of
 high-byte values, the encoding is implicitly ASCII.
+
+Viewing Module Documentation with #crackdoc#
+--------------------------------------------
+
+The #crackdoc# program lets you view the contents of modules along with the
+contents of the "doc-comments" for each definition.  #crackdoc# is compiled
+and installed along with the crack runtime code, so it should always be
+available.  To use it, just specify the name of the module that you want to
+see the documentation for:
+
+{{
+    $ crackdoc crack.lang
+}}
+
+This will display the colorized documentation for #crack.lang# in the #less#
+paginator.
+
+By default, #crackdoc# searches for modules in the default library search
+locations, obtained from the crack executor itself.  The "-l" option can be
+used to specify an alternate search path.
+
+You can also use the "-r" option to view the colorized raw source code of the
+module.  This can be very useful in cases where #crackdoc# isn't good enough,
+the module hasn't been well documented or if you just want to see the full
+implementation of the module that will actually be used by the executor.
+
+#crackdoc# actually invokes the compiler on the target module, so the first
+time it is run it will take a few seconds.  After that, it caches the
+formatted documentation in the #`~/.crack/doc`# directory.
+
+#crackdoc# is still very much a work in progress.  It doesn't work for
+generics yet and doesn't do a very good job with inheritance.  Nevertheless,
+it's still quite useful.
 
 Appendix 1 - Libraries
 ======================
