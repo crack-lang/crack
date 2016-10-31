@@ -424,7 +424,7 @@ void _pngHandleWarning(png_struct png, byteptr msg) {
 
 void _pngRead(png_struct png, byteptr buffer, uint size) {
     Reader reader = Reader.unsafeCast(png_get_io_ptr(png));
-    WriteBuffer buf = {buffer, size};
+    WriteBuffer buf = {buffer, uint64(size)};
     reader.read(buf);
 }
 
