@@ -724,8 +724,13 @@ ModuleDefPtr Construct::getModule(Construct::StringVecIter moduleNameBegin,
                     modPath.path << endl;
                         
             modDef = context->createModule(canonicalName, modPath.path);
-            modDef->sourcePath = modPath.relPath;
-        }
+
+            // Store the source path only for non-generic classes, otherwise
+            // the module implementation is an interface dependency on the
+            // module that the generic is defined in.
+            modDef->sourcePath =
+                modDef->genericName.size() ? "" : modPath.relPath;
+         }
 
         moduleCache[canonicalName] = modDef;
 

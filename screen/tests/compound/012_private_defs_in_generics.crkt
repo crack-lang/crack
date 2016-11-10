@@ -33,15 +33,17 @@ test.run();
 
 # Rewrite mod2 to make several changes that should not affect the interface,
 # re-run test to verify that we don't recompile main.
+# Note that the line numbering inside a generic affects the interface at this
+# time, so don't change that!
 test.mod('mod2', I"
     import mod1 f, x;
 
-    void _hidden() {}
     class A[T] {
         void g() {
             f();
         }
     }
+    void _hidden() {}
     ");
 test.run();
 
