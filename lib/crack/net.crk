@@ -7,30 +7,30 @@
 #   file, You can obtain one at http://mozilla.org/MPL/2.0/.
 # 
 
-import crack.lang Buffer, CString, Exception, FreeBase, InvalidArgumentError,
-    InvalidStateError, ManagedBuffer, WriteBuffer, Formatter;
-import crack.io cerr, FileHandle, FStr, Reader, Writer, FDReader, FDWriter;
-import crack.sys strerror;
 import crack.cont.array Array;
 import crack.cont.hashmap HashMap;
-import crack.time TimeDelta;
-import crack.runtime connect, makeIPV4, setsockopt, accept, bind, free, 
-    AddrInfo, PollEvt, PollSet, SigSet, SockAddr, SockAddrIn, SockAddrUn,
-    TimeVal, close, listen, send, socket, recv, AF_UNIX, AF_LOCAL, AF_INET,
-    AF_INET6, AF_IPX, AF_NETLINK, AF_X25, AF_AX25, AF_ATMPVC, AF_APPLETALK,
-    AF_PACKET, SOCK_STREAM, SOCK_DGRAM, SOCK_SEQPACKET, SOCK_RAW, SOCK_RDM,
-    SOCK_PACKET, SOL_SOCKET, SO_REUSEADDR,
-    POLLIN, POLLOUT, POLLPRI, POLLERR, POLLHUP, POLLNVAL, INADDR_ANY,
-    setNonBlocking, PipeAddr, EAGAIN, EWOULDBLOCK, errno, strlen;
 import crack.functor Functor2;
+import crack.io cerr, FDReader, FDWriter, FileHandle, FStr, Reader, Writer;
+import crack.lang Buffer, CString, Exception, Formatter, FreeBase,
+    InvalidArgumentError, InvalidStateError, ManagedBuffer, WriteBuffer;
+import crack.runtime accept, bind, close, connect, errno, free, listen,
+    makeIPV4, recv, send, setNonBlocking, setsockopt, shutdown, socket, strlen,
+    AddrInfo, AF_AX25, AF_INET6, AF_X25, PipeAddr, PollEvt, PollSet, SigSet,
+    SockAddr, SockAddrIn, SockAddrUn, TimeVal, AF_APPLETALK, AF_ATMPVC, AF_INET,
+    AF_IPX, AF_LOCAL, AF_NETLINK, AF_PACKET, AF_UNIX, EAGAIN, EWOULDBLOCK,
+    INADDR_ANY, POLLERR, POLLHUP, POLLIN, POLLNVAL, POLLOUT, POLLPRI, SHUT_RD,
+    SHUT_RDWR, SHUT_WR, SOCK_DGRAM, SOCK_PACKET, SOCK_RAW, SOCK_RDM,
+    SOCK_SEQPACKET, SOCK_STREAM, SOL_SOCKET, SO_REUSEADDR;
+import crack.sys strerror;
+import crack.time TimeDelta;
 
 @import crack.ann implements;
 
 @export_symbols AF_UNIX, AF_LOCAL, AF_INET, AF_INET6, AF_IPX, AF_NETLINK, 
-    AF_X25, AF_AX25, AF_ATMPVC, AF_APPLETALK, AF_PACKET, SOCK_STREAM, 
-    SOCK_DGRAM, SOCK_SEQPACKET, SOCK_RAW, SOCK_RDM, SOCK_PACKET, 
-    SOL_SOCKET, SO_REUSEADDR, POLLIN, POLLOUT, 
-    POLLPRI, POLLERR, POLLHUP, POLLNVAL, INADDR_ANY, PollEventCallback;
+    AF_X25, AF_AX25, AF_ATMPVC, AF_APPLETALK, AF_PACKET, SHUT_RD, SHUT_RDWR, 
+    SHUT_WR, SOCK_STREAM, SOCK_DGRAM, SOCK_SEQPACKET, SOCK_RAW, SOCK_RDM, 
+    SOCK_PACKET, SOL_SOCKET, SO_REUSEADDR, POLLIN, POLLOUT, POLLPRI, POLLERR, 
+    POLLHUP, POLLNVAL, INADDR_ANY, PollEventCallback;
 
 ## An event received by a poller.
 ## Attributes are:
@@ -213,6 +213,12 @@ class Socket : FileHandle @implements Reader, Writer {
         rc := recv(fd, buf.buffer, buf.cap, flags);
         buf.size = (rc == -1) ? 0 : rc;
         return rc;
+    }
+
+    ## Shutdown the socket.  See 'man 2 shutdown'.  'how' is SHUT_WR, SHUT_RD,
+    ## or SHUT_RDWR.  Returns true on success, false on failure.
+    bool shutdown(int how) {
+        return shutdown(fd, how) == 0;
     }
 
     class Accepted {
