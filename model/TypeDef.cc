@@ -1224,7 +1224,7 @@ TypeDefPtr TypeDef::getSpecialization(Context &context,
         result = extractInstantiation(module.get(), types);
     }
 
-    // record a dependency on the owner's module
+    // Record a dependency on the instantiation module.
     if (!copersistent)
         context.ns->getModule()->addDependency(module.get());
     
@@ -1299,7 +1299,6 @@ void TypeDef::serializeDef(Serializer &serializer) const {
     serializer.write(objectId, "objectId/2");
     
     if (generic) {
-        Serializer::StackFrame<Serializer> digestState(serializer, false);
         genericInfo->serialize(serializer);
     } else {
         serializer.write(parents.size(), "#bases");
@@ -1477,7 +1476,6 @@ TypeDefPtr TypeDef::deserializeTypeDef(Deserializer &deser, const char *name) {
 
     // Read a generic or a real class.
     if (type->generic) {
-        Serializer::StackFrame<Deserializer> digestState(deser, false);
         type->genericInfo = Generic::deserialize(deser);
         type->genericInfo->ns = deser.context->ns.get();
         type->genericInfo->seedCompileNS(*deser.context);

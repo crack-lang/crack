@@ -236,7 +236,7 @@ string ModuleDef::joinName(const ModuleDef::StringVec &parts) {
     return result.str();
 }
 
-#define CRACK_METADATA_V1 471296818
+#define CRACK_METADATA_V1 471296819
 
 void ModuleDef::serialize(Serializer &serializer) {
     int id = serializer.registerObject(this);
@@ -440,26 +440,31 @@ ModuleDefPtr ModuleDef::deserialize(Deserializer &deser,
 
     // check the digest against that of the actual source file (if the source
     // file can be found)
-    Construct::ModulePath modPath =
-        deser.context->construct->searchSourcePath(sourcePath);
-    if (modPath.found) {
-        SourceDigest fileDigest = SourceDigest::fromFile(modPath.path);
-        if (fileDigest != recordedSourceDigest) {
-            if (Construct::traceCaching)
-                cerr << "digests don't match for " << sourcePath <<
-                    " got " << recordedSourceDigest.asHex() <<
-                    "\n  current = " <<
-                    fileDigest.asHex() << "\n  module: " <<
-                    canonicalName << endl;
-            mustRebuild = true;
+    if (sourcePath.size()) {
+        Construct::ModulePath modPath =
+            deser.context->construct->searchSourcePath(sourcePath);
+        if (modPath.found) {
+            SourceDigest fileDigest = SourceDigest::fromFile(modPath.path);
+            if (fileDigest != recordedSourceDigest) {
+                if (Construct::traceCaching)
+                    cerr << "digests don't match for " << sourcePath <<
+                        " got " << recordedSourceDigest.asHex() <<
+                        "\n  current = " <<
+                        fileDigest.asHex() << "\n  module: " <<
+                        canonicalName << endl;
+                mustRebuild = true;
+            }
+        } else if (!deser.context->construct->allowSourceless) {
+            deser.context->error(SPUG_FSTR("No source file found for cached "
+                                            "module " << canonicalName << ".  Use "
+                                            "--allow-sourceless to allow loading "
+                                            "from the cache."
+                                        )
+                                );
         }
-    } else if (!deser.context->construct->allowSourceless) {
-        deser.context->error(SPUG_FSTR("No source file found for cached "
-                                        "module " << canonicalName << ".  Use "
-                                        "--allow-sourceless to allow loading "
-                                        "from the cache."
-                                       )
-                             );
+    } else if (Construct::traceCaching) {
+        cerr << "Not checking source digest for sourceless module " <<
+            canonicalName << endl;
     }
 
     // See if the builder can open its file.

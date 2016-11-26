@@ -90,7 +90,12 @@ void Generic::serializeToken(Serializer &out, const Token &tok) {
         case Token::binLit:
             out.write(tok.getData(), "tokenData");
     }
-    out.write(tok.getLocation().getStartCol(), "column");
+
+    // We don't want column information to be part of the meta-data digest.
+    {
+        Serializer::StackFrame<Serializer> digestState(out, false);
+        out.write(tok.getLocation().getStartCol(), "column");
+    }
 }
 
 #define TOKTXT(type, txt) case Token::type: tokText = txt; break;
@@ -169,10 +174,16 @@ Token Generic::deserializeToken(Deserializer &src, string &fileName,
         TOKTXT(scoping, "::");
         TOKTXT(isKw, "is");
     }
-    int column = src.readUInt("column");
-    Location loc = new LocationImpl(fileName.c_str(), lineNum, column,
-                                    column + tokText.size()
-                                    );
+
+    // Read the column number (not part of meta-data digest)
+    Location loc;
+    {
+        Serializer::StackFrame<Deserializer> digestState(src, false);
+        int column = src.readUInt("column");
+        loc = new LocationImpl(fileName.c_str(), lineNum, column,
+                               column + tokText.size()
+                               );
+    }
     return Token(tokType, tokText, loc);
 }
 

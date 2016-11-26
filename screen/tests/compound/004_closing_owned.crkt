@@ -3,7 +3,7 @@ close modules owned by a deserialized module
 %%ARGS%%
 %%FILE%%
 # This verifies that modules that are owned by a serialized module get closed
-# (and serialized) when during the owning modules serialization.
+# (and serialized) during the owning module's serialization.
 # This was a bug that manifested as an out-of date generic instantiation
 # module not being persisted.
 import systest test;
