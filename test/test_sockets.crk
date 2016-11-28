@@ -1,9 +1,9 @@
 // Copyright 2010-2012 Google Inc.
-// 
+//
 //   This Source Code Form is subject to the terms of the Mozilla Public
 //   License, v. 2.0. If a copy of the MPL was not distributed with this
 //   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-// 
+//
 
 import crack.runtime fileExists, fileRemove, c_strerror;
 import crack.cont.array Array;
@@ -11,8 +11,11 @@ import crack.functor Function2;
 import crack.lang die, ManagedBuffer;
 import crack.io cout, FStr;
 import crack.net resolve, Address, InetAddress, Socket, UnixAddress, Poller,
-    PollEvent, AF_INET, AF_UNIX, INADDR_ANY, POLLIN, POLLERR, SOCK_STREAM;
+    PollEvent, AF_INET, AF_UNIX, INADDR_ANY, POLLIN, POLLERR, SHUT_RDWR,
+    SOCK_STREAM;
 import crack.time TimeDelta;
+
+@import crack.ann assert;
 
 # create a server socket, bind to a port and listen.
 srv := Socket(AF_INET, SOCK_STREAM, 0);
@@ -102,6 +105,12 @@ if (FStr() `$localhost` != '[127.0.0.1:0]')
     die('FAILED localhost lookup formatting');
 if (localhost != Array[Address]![InetAddress(127, 0, 0, 1, 0)])
     die('FAILED localhost lookup');
+
+# test shutdown.
+@assert(cln.shutdown(SHUT_RDWR));
+@assert(accepted.sock.shutdown(SHUT_RDWR));
+@assert(!cln.recv(buf, 0));
+@assert(!accepted.sock.recv(buf, 0));
 
 # create a unix domain socket
 if (1) {

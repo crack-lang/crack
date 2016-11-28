@@ -420,6 +420,10 @@ extern "C" void crack_runtime_cinit(Module *mod) {
     mod->addConstant(intType, "EAGAIN", EAGAIN);
     mod->addConstant(intType, "EWOULDBLOCK", EWOULDBLOCK);
     
+    mod->addConstant(intType, "SHUT_RD", SHUT_RD);
+    mod->addConstant(intType, "SHUT_WR", SHUT_WR);
+    mod->addConstant(intType, "SHUT_RDWR", SHUT_RDWR);
+
     f = mod->addFunc(uint32Type, "makeIPV4", 
                      (void*)crack::runtime::makeIPV4);
     f->addArg(byteType, "a");
@@ -770,6 +774,10 @@ extern "C" void crack_runtime_cinit(Module *mod) {
     f->addArg(byteptrType, "buf");
     f->addArg(uintType, "size");
     f->addArg(intType, "flags");
+
+    f = mod->addFunc(intType, "shutdown", (void *)shutdown, "shutdown");
+    f->addArg(intType, "fd");
+    f->addArg(intType, "how");
 
     f = mod->addFunc(voidType, "abort", (void *)abort, "abort");
 

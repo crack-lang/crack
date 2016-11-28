@@ -6,9 +6,9 @@ import crack.cont.hashmap HashMap;
 import crack.http.core Abort, HandlerArray, Request, RequestHandler;
 import crack.io FileHandle, Formatter, Writer;
 import crack.lang Buffer, Exception, ManagedBuffer, SystemError, WriteBuffer;
-import crack.logger debug, error, warn;
-import crack.net InetAddress, Poller, Socket, AF_INET, SOCK_STREAM, POLLIN,
-    POLLERR, POLLOUT ;
+import crack.logger debug, error, info, warn;
+import crack.net InetAddress, Poller, Socket, AF_INET, SHUT_RDWR,
+    SOCK_STREAM, POLLIN, POLLERR, POLLHUP, POLLOUT;
 import crack.runtime errno;
 import crack.strutil StringArray;
 import crack.sys strerror;
@@ -286,14 +286,30 @@ class Server {
     Array[FileHandle] __toRemove = {};
     HandlerArray __handlers = {};
 
-    oper init(int port) {
-        if (!__sock.bind(InetAddress(0, port)))
+    void __init(InetAddress addr) {
+        if (!__sock.setReuseAddr(true))
+            warn `reuseaddr failed: $(strerror())`;
+        if (!__sock.bind(addr))
             throw SystemError('bind failed', errno());
         if (!__sock.listen(5))
             throw SystemError('listen failed', errno());
-        if (!__sock.setReuseAddr(true))
-            warn `reuseaddr failed: $(strerror())`;
         __poller.add(__sock, POLLIN);
+    }
+
+    oper init(int port) {
+        __init(InetAddress(0, port));
+    }
+
+    oper init(InetAddress addr) {
+        __init(addr);
+    }
+
+    oper init(Poller poller, InetAddress addr) : __poller = poller {
+        __init(addr);
+    }
+
+    oper init(Poller poller, int port) : __poller = poller {
+        __init(InetAddress(0, port));
     }
 
     void __accept() {
@@ -330,6 +346,13 @@ $(clientAccepted.sock.refCount) on $(clientAccepted.sock.fd)`;
         }
     }
 
+    ## Close all sockets.
+    void shutdown() {
+        __sock.shutdown(SHUT_RDWR);
+        for (client :in __clients)
+            client.val.sock.shutdown(SHUT_RDWR);
+    }
+
     ## Adds the given handler to the chain.  Handlers are called in the order
     ## in which they were added until one of them returns true.
     void addHandler(RequestHandler handler) {
@@ -353,7 +376,7 @@ $(clientAccepted.sock.refCount) on $(clientAccepted.sock.fd)`;
         while (evt := __poller.nx()) {
             debug `  event is on $(evt.pollable)`;
             # if it's the server socket, do an accept
-            if (evt.pollable is __sock) {
+            if (evt.pollable is __sock && (POLLIN & evt.revents)) {
                 debug `  got new connection`;
                 __accept();
             # client events
@@ -366,6 +389,9 @@ $(clientAccepted.sock.refCount) on $(clientAccepted.sock.fd)`;
                     __processClientWrite(evt.pollable);
                 } else if (POLLERR & evt.revents) {
                     debug `  error on socket $(evt.pollable)`;
+                } else if (POLLHUP & evt.revents) {
+                    info `got HUP, shutting down connection evt.pollable`;
+                    __poller.remove(evt.pollable);
                 } else {
                     debug `  wtf???  pollable = $(evt.pollable), events = \
 $(evt.events), revents = $(evt.revents)`;
@@ -387,7 +413,7 @@ $(evt.events), revents = $(evt.revents)`;
     }
 
     void run() {
-        while (true) {
+        while (__poller) {
             processOnce(null);
         }
     }
