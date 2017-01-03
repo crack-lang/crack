@@ -68,9 +68,8 @@ ExprPtr VarRef::convert(Context &context, TypeDef *type) {
     }
 }
 
-bool VarRef::isProductive() const {
-    return false;
-}
+bool VarRef::isProductive() const { return false; }
+bool VarRef::isVolatile() const {return def->isVolatile(); }
 
 void VarRef::writeTo(ostream &out) const {
     out << "ref(" << def->name << ')';

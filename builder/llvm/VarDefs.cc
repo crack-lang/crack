@@ -67,6 +67,7 @@ void BArgVarDefImpl::emitAddr(Context &context, VarRef *var) {
 bool BArgVarDefImpl::hasInstSlot() const { return false; }
 int BArgVarDefImpl::getInstSlot() const { return -1; }
 bool BArgVarDefImpl::isInstVar() const { return false; }
+bool BArgVarDefImpl::isVolatile() const { return false; }
 
 // BMemVarDefImpl
 ResultExprPtr BMemVarDefImpl::emitRef(Context &context, VarRef *var) {
@@ -98,6 +99,10 @@ void BMemVarDefImpl::emitAddr(Context &context, VarRef *var) {
 bool BMemVarDefImpl::hasInstSlot() const { return false; }
 int BMemVarDefImpl::getInstSlot() const { return -1; }
 bool BMemVarDefImpl::isInstVar() const { return false; }
+bool BMemVarDefImpl::isVolatile() const { return true; }
+
+// BHeapVarDefImpl
+bool BHeapVarDefImpl::isVolatile() const { return false; }
 
 // BGlobalVarDefImpl
 BGlobalVarDefImpl::BGlobalVarDefImpl(llvm::GlobalVariable *rep,
@@ -167,6 +172,7 @@ void BConstDefImpl::emitAddr(Context &context, VarRef *var) {
 bool BConstDefImpl::hasInstSlot() const { return false; }
 int BConstDefImpl::getInstSlot() const { return -1; }
 bool BConstDefImpl::isInstVar() const { return false; }
+bool BConstDefImpl::isVolatile() const { return false; }
 
 void BConstDefImpl::fixModule(Module *oldMod, Module *newMod) {
     if (rep->getParent() == oldMod) {
@@ -191,6 +197,8 @@ void BInstVarDefImpl::emitFieldAssign(IRBuilder<> &builder, Value *aggregate,
     Value *fieldPtr = builder.CreateStructGEP(aggregate, index);
     builder.CreateStore(value, fieldPtr);
 }
+
+bool BFieldDefImpl::isVolatile() const { return true; }
 
 Value *BInstVarDefImpl::emitFieldRef(IRBuilder<> &builder,
                                      Type *fieldType,

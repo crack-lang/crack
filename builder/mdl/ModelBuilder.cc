@@ -158,6 +158,13 @@ namespace {
                 return hasInstSlot();
             }
 
+            virtual bool isVolatile() const {
+                // This should also be true for a global variable, which this
+                // doesn't capture.  Buf for the ModelBuilder, this method
+                // makes no real difference.
+                return hasInstSlot();
+            }
+
     };
 
     class BNegOpCall : public NegOpCall {

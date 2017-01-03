@@ -73,6 +73,27 @@ class Expr : public spug::RCBase {
         virtual bool isProductive() const;
         
         /**
+         * Returns a non-volatile form of the expression (one that can't be
+         * "oper released" out of existence by a called function).  This will
+         * either be the expression itself or the expression aggregated with
+         * a call to "oper bind()".
+         */
+        ExprPtr makeNonVolatile(Context &context);
+
+        /**
+         * Returns true if the expression is a direct reference to a variable
+         * whose value may be changed by a function.  (i.e. if the value is
+         * that of a global variable or a field).
+         */
+        virtual bool isVolatile() const;
+
+        /**
+         * Returns a call to "oper bind" for the expression if there is one,
+         * null if not.
+         */
+        ExprPtr makeOperBind(Context &context);
+
+        /**
          * Returns true if the expression changes type to adapt to the 
          * requirements of the context (integer and float constants).
          */

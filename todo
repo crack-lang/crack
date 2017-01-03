@@ -4,6 +4,7 @@ Crack ToDo File & Project Plan
 
 Copyright 2009 Google Inc.
 
+-   @struct doesn't deal with internal doc-comments correctly.
 -   Remove generic line information from the meta-digest
 
 Unassigned

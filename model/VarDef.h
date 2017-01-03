@@ -133,6 +133,12 @@ class VarDef : public virtual spug::RCBase {
          */
         bool isHidden() const;
 
+        /**
+         * Returns true if the definition is volatile - i.e. can be modified
+         * by functions other than the current one.
+         */
+        virtual bool isVolatile() const;
+
         virtual
         void dump(std::ostream &out, const std::string &prefix = "") const;
         

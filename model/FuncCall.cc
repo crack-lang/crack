@@ -7,6 +7,8 @@
 
 #include "FuncCall.h"
 
+#include "spug/stlutil.h"
+
 #include "builder/Builder.h"
 #include "VarDefImpl.h"
 #include "ArgDef.h"
@@ -29,7 +31,28 @@ FuncCall::FuncCall(FuncDef *funcDef, bool squashVirtual) :
 }
 
 ResultExprPtr FuncCall::emit(Context &context) {
-    return context.builder.emitFuncCall(context, this);
+    ResultExprPtr result;
+    if (func->name != "oper bind" && func->name != "oper release" &&
+        func->name != "oper init" && func->name != "oper del" &&
+        func->name.compare(0, 10, "oper from ")
+        ) {
+        ExprVec productiveArgs;
+        ExprPtr productiveReceiver;
+        SPUG_FOR(ExprVec, iter, args) {
+            ExprPtr prod;
+            productiveArgs.push_back(prod = (*iter)->makeNonVolatile(context));
+        }
+        args = productiveArgs;
+        if (receiver)
+            receiver = receiver->makeNonVolatile(context);
+
+        result =
+            context.builder.emitFuncCall(context, this);
+    } else {
+        result = context.builder.emitFuncCall(context, this);
+    }
+
+    return result;
 }
 
 void FuncCall::writeTo(std::ostream &out) const {

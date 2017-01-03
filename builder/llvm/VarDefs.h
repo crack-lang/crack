@@ -52,6 +52,7 @@ public:
     virtual bool hasInstSlot() const;
     virtual int getInstSlot() const;
     virtual bool isInstVar() const;
+    virtual bool isVolatile() const;
 };
 
 
@@ -76,8 +77,11 @@ public:
     virtual bool hasInstSlot() const;
     virtual int getInstSlot() const;
     virtual bool isInstVar() const;
+    virtual bool isVolatile() const;
 };
 
+// BHeapVarDefImpl is almost certainly misnamed since it appears to always be
+// used for local variables that are alloca'd on the stack.
 SPUG_RCPTR(BHeapVarDefImpl)
 class BHeapVarDefImpl : public BMemVarDefImpl {
 public:
@@ -90,6 +94,8 @@ public:
                                 ) {
         return rep;
     }
+
+    virtual bool isVolatile() const;
 };
 
 SPUG_RCPTR(BGlobalVarDefImpl);
@@ -172,6 +178,7 @@ public:
     virtual bool hasInstSlot() const;
     virtual int getInstSlot() const;
     virtual bool isInstVar() const;
+    virtual bool isVolatile() const;
 
     void fixModule(llvm::Module *oldMod, llvm::Module *newMod);
 };
@@ -218,6 +225,7 @@ class BFieldDefImpl : public model::VarDefImpl {
                                            llvm::Type *fieldType,
                                            llvm::Value *aggregate
                                            ) = 0;
+        virtual bool isVolatile() const;
 };
 
 SPUG_RCPTR(BInstVarDefImpl);

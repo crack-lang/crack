@@ -114,6 +114,10 @@ bool VarDef::isConstant() {
     return constant;
 }
 
+bool VarDef::isVolatile() const {
+    return impl && impl->isVolatile();
+}
+
 bool VarDef::isHidden() const {
     return owner->isHiddenScope();
 }

@@ -15,6 +15,7 @@
 namespace model {
 
 SPUG_RCPTR(GetRegisterExpr);
+SPUG_RCPTR(SetRegisterExpr);
     
 /** 
  * Expression that obtains the value of the register in the current context.

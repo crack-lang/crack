@@ -35,6 +35,7 @@ class Deref : public Expr {
 
         virtual ResultExprPtr emit(Context &context);
         virtual bool isProductive() const { return false; }
+        virtual bool isVolatile() const { return true; }
         virtual void writeTo(std::ostream &out) const;
         virtual ExprPtr makeCall(Context &context,
                                  std::vector<ExprPtr> &args

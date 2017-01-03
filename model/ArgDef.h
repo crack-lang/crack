@@ -27,6 +27,8 @@ class ArgDef : public VarDef {
                        const Namespace *ns
                        ) const;
         static ArgDefPtr deserialize(Deserializer &deser);
+
+        virtual bool isVolatile() const;
 };
 
 typedef std::vector<ArgDefPtr> ArgVec;

@@ -34,6 +34,9 @@ class VarRef : public Expr {
         // variable references are non-productive, so we override.
         virtual bool isProductive() const;
 
+        // Variable references depend on the class of variable, so we override.
+        virtual bool isVolatile() const;
+
         virtual void writeTo(std::ostream &out) const;
         virtual ExprPtr makeCall(Context &context, 
                                  std::vector<ExprPtr> &args

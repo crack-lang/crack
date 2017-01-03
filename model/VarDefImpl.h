@@ -50,6 +50,12 @@ class VarDefImpl : public spug::RCBase {
          * variables in extensions.
          */
         virtual bool isInstVar() const = 0;
+
+        /**
+         * True if the variable is volatile (can be changed from a function
+         * other than the current one).
+         */
+        virtual bool isVolatile() const = 0;
 };
 
 } // namespace model

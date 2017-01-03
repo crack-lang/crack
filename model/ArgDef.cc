@@ -35,3 +35,7 @@ ArgDefPtr ArgDef::deserialize(Deserializer &deser) {
                                                  type.get()
                                                  );
 }
+
+bool ArgDef::isVolatile() const {
+    return false;
+}

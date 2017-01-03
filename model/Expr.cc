@@ -11,6 +11,9 @@
 #include "spug/StringFmt.h"
 #include "builder/Builder.h"
 #include "Context.h"
+#include "GetRegisterExpr.h"
+#include "MultiExpr.h"
+#include "SetRegisterExpr.h"
 #include "TypeDef.h"
 
 using namespace model;
@@ -51,6 +54,86 @@ bool Expr::isProductive() const {
     // by default, all expresssions returning pointer types are productive
     return type->pointer;
 }
+
+bool Expr::isVolatile() const {
+    return false;
+}
+
+namespace {
+    /**
+     * Converts a volatile expression to a non-volatile one.
+     */
+    class NonVolatileExprAdapter : public Expr {
+        private:
+            ExprPtr sourceExpr;
+
+        public:
+            NonVolatileExprAdapter(Expr *sourceExpr) :
+                Expr(sourceExpr->type.get()),
+                sourceExpr(sourceExpr) {
+            }
+
+            virtual ResultExprPtr emit(Context &context) {
+                ResultExprPtr result = sourceExpr->emit(context);
+                result->sourceExpr = this;
+                return result;
+            }
+
+            virtual bool isProductive() const {
+                return true;
+            }
+            
+            virtual bool isVolatile() const {
+                return true;
+            }
+
+            virtual void writeTo(std::ostream &out) const {
+                out << "productive(" << *sourceExpr << ')';
+            }
+    };
+}
+
+ExprPtr Expr::makeNonVolatile(Context &context) {
+    // We don't need this if the expression is already productive or
+    // non-volatile.
+    if (isProductive() || !isVolatile())
+        return this;
+
+    MultiExprPtr seq = new MultiExpr();
+    GetRegisterExprPtr getRegExpr = new GetRegisterExpr(type.get());
+    SetRegisterExprPtr setRegExpr =
+        new SetRegisterExpr(getRegExpr.get(), new NonVolatileExprAdapter(this));
+    seq->add(setRegExpr.get());
+
+    // If there's no "oper bind", just return this.
+    // XXX be nice to check this before allocating all that stuff.
+    ExprPtr bindCall = getRegExpr->makeOperBind(context);
+    if (!bindCall)
+        return this;
+
+    seq->add(bindCall.get());
+    seq->add(getRegExpr.get());
+    seq->type = getRegExpr->type;
+//    cerr << "Converted to productive: " << *seq << endl;
+    return seq;
+}
+
+ExprPtr Expr::makeOperBind(Context &context) {
+    FuncCall::ExprVec args;
+    FuncDefPtr bindFunc = context.lookUpNoArgs("oper bind", false, type.get());
+    if (!bindFunc) {
+        if (!type->noBindInferred) type->noBindInferred = context.getLocation();
+        return 0;
+    }
+
+    // got a bind function: create a bind call and emit it.  (emit should
+    // return a ResultExpr for a void object, so we don't need to do anything
+    // special for it).
+    FuncCallPtr bindCall = context.builder.createFuncCall(bindFunc.get());
+    bindCall->receiver = this;
+    return bindCall;
+}
+
 
 bool Expr::isAdaptive() const {
     return false;

@@ -44,43 +44,49 @@ class Foo {
 }
 
 if (1) {
-    Foo f = {};
-    f.oper bind(); check(1, 'FAILED bind');
-    f.oper release(); check(2, 'FAILED release');
-    f.oper [](100); check(3, 'FAILED []');
-    f.oper []=(100, 200); check(4, 'FAILED []=');
-    f.oper -(f); check(5, 'FAILED minus');
-    f.oper ~(); check(6, 'FAILED tilde');
-    f.oper !(); check(7, 'FAILED bang');
-    f.oper --x(); check(8, 'FAILED decr');
-    f.oper ==(f); check(9, 'FAILED ==');
-    f.oper !=(f); check(10, 'FAILED !=');
-    f.oper <(f); check(11, 'FAILED <');
-    f.oper <=(f); check(12, 'FAILED <=');
-    f.oper >=(f); check(13, 'FAILED >=');
-    f.oper >(f); check(14, 'FAILED >');
-    f.oper +(f); check(15, 'FAILED +');
-    f.oper /(f); check(16, 'FAILED /');
-    f.oper *(f); check(17, 'FAILED *');
-    f.oper %(f); check(18, 'FAILED %');
-    f.oper init(); check(19, 'FAILED init');
-    f.oper del(); check(20, 'FAILED del');
-    f.oper >>=(21); check(21, 'FAILED >>=');
-    f >>= 22; check(22, 'FAILED >>= (normal syntax)');
-    f | 23; check(23, 'FAILED |');
-    100 + f; check(100, 'FAILED implicit oper r+()');
-    f.oper r+(101); check(101, 'FAILED explicit oper r+()');
-    
-    if (int(101) != f) puts('FAILED conversion operator definition');
-    if (f(102) != 102) puts('FAILED implicit oper call');
-    if (f.oper call(103) != 103) puts('FAILED explicit oper call');
+    # We have to run these in a function, if we don't then 'f' is a global
+    # variable and it gets made productive with every call, resulting in
+    # calls to 'oper bind'/'oper release'.
+    void runTests() {
+        Foo f = {};
+        f.oper bind(); check(1, 'FAILED bind');
+        f.oper release(); check(2, 'FAILED release');
+        f.oper [](100); check(3, 'FAILED []');
+        f.oper []=(100, 200); check(4, 'FAILED []=');
+        f.oper -(f); check(5, 'FAILED minus');
+        f.oper ~(); check(6, 'FAILED tilde');
+        f.oper !(); check(7, 'FAILED bang');
+        f.oper --x(); check(8, 'FAILED decr');
+        f.oper ==(f); check(9, 'FAILED ==');
+        f.oper !=(f); check(10, 'FAILED !=');
+        f.oper <(f); check(11, 'FAILED <');
+        f.oper <=(f); check(12, 'FAILED <=');
+        f.oper >=(f); check(13, 'FAILED >=');
+        f.oper >(f); check(14, 'FAILED >');
+        f.oper +(f); check(15, 'FAILED +');
+        f.oper /(f); check(16, 'FAILED /');
+        f.oper *(f); check(17, 'FAILED *');
+        f.oper %(f); check(18, 'FAILED %');
+        f.oper init(); check(19, 'FAILED init');
+        f.oper del(); check(20, 'FAILED del');
+        f.oper >>=(21); check(21, 'FAILED >>=');
+        f >>= 22; check(22, 'FAILED >>= (normal syntax)');
+        f | 23; check(23, 'FAILED |');
+        100 + f; check(100, 'FAILED implicit oper r+()');
+        f.oper r+(101); check(101, 'FAILED explicit oper r+()');
 
-    # we only need to check broad classes of the implicit operators - the 
-    # logic is all the same.
-    f == f; check(9, 'FAILED implicit ==');
-    !f; check(7, 'FAILED implicit !');
-    -f; check(21, 'FAILED implicit unary -');
-    f - f; check(5, 'FAILED implicit binary -');
+        if (int(101) != f) puts('FAILED conversion operator definition');
+        if (f(102) != 102) puts('FAILED implicit oper call');
+        if (f.oper call(103) != 103) puts('FAILED explicit oper call');
+    
+        # we only need to check broad classes of the implicit operators - the
+        # logic is all the same.
+        f == f; check(9, 'FAILED implicit ==');
+        !f; check(7, 'FAILED implicit !');
+        -f; check(21, 'FAILED implicit unary -');
+        f - f; check(5, 'FAILED implicit binary -');
+    }
+    runTests();
 }
 
 # test of integer augmented assignment
