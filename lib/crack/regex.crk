@@ -193,7 +193,6 @@ class Regex : _RegexBase {
     ## Returns a Match object if it is found or null if not.
     Match search(String subject, int start) {
         captures := array[int](__captureCount * 3);
-        Match result;
         rc := pcre_exec(_rx, null, subject.buffer, subject.size, start, 0, 
                         captures,
                         __captureCount * 3

@@ -11,7 +11,7 @@ import crack.io.fmtutil Indenter;
 import crack.lang AppendBuffer, Buffer, IndexError, SystemError;
 import crack.process Process, ProcessHandlerImpl, CRK_PIPE_STDIN,
     CRK_PIPE_STDOUT;
-import crack.regex Regex, PCRE_MULTILINE, PCRE_DOTALL;
+import crack.regex Regex, PCRE_ANCHORED, PCRE_MULTILINE, PCRE_DOTALL;
 import crack.runtime getenv;
 import crack.strutil StringArray;
 import crack.sys argv, exit;
@@ -517,15 +517,17 @@ void showInLess(String content) {
 }
 
 const Regex
-    COMMENT_RX = {r'(#|//).*$|/\*([^\*]|\*[^/])\*/', PCRE_MULTILINE},
+    COMMENT_RX = {r'(#|//).*$|/\*([^\*]|\*[^/])\*/',
+                  PCRE_MULTILINE | PCRE_ANCHORED},
 
     # The IString regex doesn't exactly work because IStrings can be nested,
     # but in practice no code does that.
     STRING_RX = {r'"([^"]|\\")*"|' r"'([^']|\\')*'|`([^`]|\\`)*`",
-                 PCRE_MULTILINE
+                 PCRE_MULTILINE | PCRE_ANCHORED
                  },
-    NORMAL_RX = {r'([^#"\'`/~!@#\$%\^&\*\(\)\-\+=\{\}\[\]:;<>,\.\?/]|/[^\*/])+', /*`*/ PCRE_MULTILINE},
-    SYMBOL_RX = {r'[~!@#\$%\^&\*\(\)\-\+=\{\}\[\]:;<>,\.\?/]+'};
+    NORMAL_RX = {r'([^#"\'`/~!@#\$%\^&\*\(\)\-\+=\{\}\[\]:;<>,\.\?/]|/[^\*/])+',
+                 /*`*/ PCRE_MULTILINE | PCRE_ANCHORED},
+    SYMBOL_RX = {r'[~!@#\$%\^&\*\(\)\-\+=\{\}\[\]:;<>,\.\?/]+', PCRE_ANCHORED};
 
 ## Colorize the crack code in 'code'.
 String colorize(String code) {
