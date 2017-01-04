@@ -1,14 +1,14 @@
 # Copyright 2011-2012 Google Inc.
 # Copyright 2012 Conrad Steenberg <conrad.steenberg@gmail.com>
-# 
+#
 #   This Source Code Form is subject to the terms of the Mozilla Public
 #   License, v. 2.0. If a copy of the MPL was not distributed with this
 #   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-# 
+#
 # minimal serialization system
 
 import crack.runtime free;
-import crack.lang AppendBuffer, Buffer, CString, Exception, ManagedBuffer, 
+import crack.lang AppendBuffer, Buffer, CString, Exception, ManagedBuffer,
     WriteBuffer;
 import crack.io cerr, Formatter, Reader, Writer, StandardFormatter;
 
@@ -16,34 +16,34 @@ const BUFSIZE := uint(1024);
 const uint END = ~0;
 
 class BufferDeserializer : Buffer {
-    
+
     # If an external buffer is provided, this variable keeps it in existence.
     Buffer __rep;
-    
+
     # buffer and position.
     uint pos;
-    
+
     # Set to true if the last read succeeded, false if not.
     bool success;
-    
+
     # The last value read.
     uint lastUInt;
     CString lastString;
     float32 lastFloat32;
     float64 lastFloat64;
-    
-    oper init(Buffer buffer) : 
-        Buffer(buffer.buffer, buffer.size), 
+
+    oper init(Buffer buffer) :
+        Buffer(buffer.buffer, buffer.size),
         __rep = buffer {
     }
-    oper init(Buffer buffer, uint pos) : 
-        Buffer(buffer.buffer, buffer.size), 
+    oper init(Buffer buffer, uint pos) :
+        Buffer(buffer.buffer, buffer.size),
         __rep = buffer,
         pos = pos {
     }
 
     oper init(byteptr buffer, uintz size) : Buffer(buffer, size) {}
-    
+
     void reset(Buffer newBuffer) {
         buffer = newBuffer.buffer;
         size = newBuffer.size;
@@ -57,13 +57,13 @@ class BufferDeserializer : Buffer {
         __rep = newBuffer;
         pos = newPos;
     }
-    
+
     void reset(byteptr newBuffer, uintz newSize) {
         buffer = newBuffer;
         size = newSize;
         pos = 0;
     }
-    
+
     BufferDeserializer readUInt() {
         uint cur = pos;
         byte b = 0x80;
@@ -93,7 +93,7 @@ class BufferDeserializer : Buffer {
         if (!readUInt().success)
             return this;
         uintz stringSize = lastUInt;
-        
+
         # see if we've got enough space in the buffer.
         if (size - pos >= stringSize) {
             lastString = CString(buffer + pos, stringSize, false);
@@ -121,7 +121,7 @@ class BufferDeserializer : Buffer {
         }
         return this;
     }
-    
+
     ## returns the number of bytes available in the buffer.
     uint getAvailable() {
         return size - pos;
@@ -129,7 +129,7 @@ class BufferDeserializer : Buffer {
 }
 
 class SerialReader {
-    
+
     Reader __src;
     ManagedBuffer buf = {BUFSIZE};
     uint pos;
@@ -137,7 +137,7 @@ class SerialReader {
     oper init(Reader src) : __src = src {
         buf.size = 0;
     }
-    
+
     void underflow() {
         throw Exception('Ran out of data.');
     }
@@ -159,7 +159,7 @@ class SerialReader {
                 subbuf := WriteBuffer(buf.buffer + pos, 0,
                                       buf.cap - pos);
                 if (!__src.read(subbuf)) {
-                    
+
                     # Reset the position so if we come back here we'll start
                     # from the beginning of the varint.
                     pos = 0;
@@ -182,7 +182,7 @@ class SerialReader {
 
         return val;
     }
-    
+
     ## Reads a uint, raises an exception if we run out of data.
     @final uint readUInt() { return readUInt(true); }
 
@@ -195,13 +195,13 @@ class SerialReader {
             pos += size;
             return result;
         }
-        
+
         # Grow the buffer so that it's big enough to accommodate the
         # remainder of the string in addition to what it already contains.
         requiredCap := pos + size + 1;
         if (buf.cap < requiredCap)
             buf.grow(requiredCap);
-        
+
         # read the rest of the string
         while (buf.size - pos < size) {
             amtRead := __src.read(WriteBuffer(buf.buffer + buf.size,
@@ -216,7 +216,7 @@ class SerialReader {
 
             buf.size += amtRead;
         }
-        
+
         result := CString(buf.buffer + pos, size, false);
 
         # Clear out the buffer.
@@ -226,7 +226,7 @@ class SerialReader {
         return result;
     }
 
-    ## If errorOnUnderflow is false, returns null if we run out of data 
+    ## If errorOnUnderflow is false, returns null if we run out of data
     ## during read.
     @final CString readString(bool errorOnUnderflow) {
         startPos := pos;
@@ -237,7 +237,7 @@ class SerialReader {
             else
                 return null;
         }
-        
+
         result := readFixedString(size, errorOnUnderflow);
 
         # Restore the start position if we underflowed.
@@ -247,16 +247,16 @@ class SerialReader {
         return result;
     }
 
-    ## Reads a string, throws an exception if there is not enough data.    
+    ## Reads a string, throws an exception if there is not enough data.
     @final CString readString() { return readString(true); }
-    
-    
-    # Ensure that the buffer contains at least 'size' bytes of data.    
+
+
+    # Ensure that the buffer contains at least 'size' bytes of data.
     @final void ensureBufferSize(uint size) {
         if (buf.size - pos < size) {
             buf.compact(pos);
             pos = 0;
-            buf.size += __src.read(WriteBuffer(buf.buffer + buf.size, 
+            buf.size += __src.read(WriteBuffer(buf.buffer + buf.size,
                                                buf.cap - buf.size
                                                )
                                    );
@@ -265,14 +265,14 @@ class SerialReader {
         }
     }
 
-    # the floating point serialization routines rely on the in-memory 
-    # representation of a float being IEEE.  I'm not sure if this is true on 
+    # the floating point serialization routines rely on the in-memory
+    # representation of a float being IEEE.  I'm not sure if this is true on
     # all systems.
-    
+
     float32 readFloat32() {
         # make sure we have 4 bytes
         ensureBufferSize(4);
-        
+
         result := array[float32](buf.buffer + pos)[0];
         pos += 4;
         return result;
@@ -281,7 +281,7 @@ class SerialReader {
     float64 readFloat64() {
         # make sure we have 8 bytes
         ensureBufferSize(8);
-        
+
         result := array[float64](buf.buffer + pos)[0];
         pos += 8;
         return result
@@ -299,14 +299,14 @@ class SerialReader {
 }
 
 class SerialWriter {
-    
+
     Writer __dst;
     AppendBuffer buf = {1024};
-    
+
     oper init(Writer dst) : __dst = dst {}
-    
+
     void write(uint val) {
-        
+
         # special case 0
         if (!val) {
             __dst.write('\0');
@@ -325,22 +325,22 @@ class SerialWriter {
         __dst.write(Buffer(buf.buffer, buf.size));
         buf.size = 0;
     }
-    
+
     void write(Buffer val) {
         write(uint32(val.size));
         __dst.write(val);
     }
-    
+
     void write(float32 val) {
         array[float32](buf.buffer)[0] = val;
         __dst.write(Buffer(buf.buffer, 4));
     }
-    
+
     void write(float64 val) {
         array[float64](buf.buffer)[0] = val;
         __dst.write(Buffer(buf.buffer, 8));
     }
-    
+
     void flush() {
         __dst.flush();
     }

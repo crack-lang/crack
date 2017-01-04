@@ -1,10 +1,10 @@
 // CrossRoads I/O
 // Copyright 2012 Conrad Steenberg <conrad.steenberg@gmail.com>
-// 
+//
 //   This Source Code Form is subject to the terms of the Mozilla Public
 //   License, v. 2.0. If a copy of the MPL was not distributed with this
 //   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-// 
+//
 // 6/15/2012
 
 // For more information on library use , see http://crossroads.io
@@ -73,7 +73,7 @@ class Xs {
             throw Exception(FStr() I`Could not initialize Xs: \
                                      $(getErrMsg())`);
     }
-    
+
     oper del() {
         if (xs_term(ctx) == -1)
             throw Exception(FStr() I`Could not terminate Xs context: \

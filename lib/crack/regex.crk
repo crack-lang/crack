@@ -1,11 +1,11 @@
 // Copyright 2011-2012 Google Inc.
 // Copyright 2012 Shannon Weyrick <weyrick@mozek.us>
 // Copyright 2012 Conrad Steenberg <conrad.steenberg@gmail.com>
-// 
+//
 //   This Source Code Form is subject to the terms of the Mozilla Public
 //   License, v. 2.0. If a copy of the MPL was not distributed with this
 //   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-// 
+//
 ## Regular expressions (based on PCRE)
 
 import crack.lang free, AppendBuffer, Buffer, CString, Exception, SubString,
@@ -15,8 +15,8 @@ import crack.exp.bindings ByteptrWrapper, Opaque;
 import crack.functor Functor2;
 @import crack.ann define;
 
-import crack.ext._pcre pcre_compile2, pcre_exec, pcre_fullinfo, 
-    pcre_get_stringnumber, PCRE, PCRE_ANCHORED, PCRE_AUTO_CALLOUT, 
+import crack.ext._pcre pcre_compile2, pcre_exec, pcre_fullinfo,
+    pcre_get_stringnumber, PCRE, PCRE_ANCHORED, PCRE_AUTO_CALLOUT,
     PCRE_CASELESS, PCRE_DOLLAR_ENDONLY, PCRE_DOTALL, PCRE_EXTENDED,
     PCRE_EXTRA, PCRE_FIRSTLINE, PCRE_NO_AUTO_CAPTURE, PCRE_UNGREEDY,
     PCRE_UTF8, PCRE_NO_UTF8_CHECK, PCRE_MULTILINE;
@@ -31,7 +31,7 @@ int _PCRE_INFO_CAPTURECOUNT = 2;
 ## regex base class that we can store in a Match object.
 class _RegexBase {
     PCRE _rx;
-    
+
     oper init(PCRE rx) : _rx = rx {}
 };
 
@@ -46,16 +46,16 @@ class Match {
     _RegexBase regex;
     array[int] __captures;
     uint __captureCount;
-    
-    oper init(_RegexBase regex, String subject, array[int] captures, 
+
+    oper init(_RegexBase regex, String subject, array[int] captures,
               uint captureCount
-              ) : 
+              ) :
         regex = regex,
         subject = subject,
         __captures = captures,
         __captureCount = captureCount {
     }
-    
+
     oper del() {
         free(__captures);
     }
@@ -67,19 +67,19 @@ class Match {
 $__captureCount)`
             );
     }
-    
-    ## Returns the match group by index.  Groups are indexed from left to 
-    ## right by the position of the starting parenthesis.  Group 0 is the 
+
+    ## Returns the match group by index.  Groups are indexed from left to
+    ## right by the position of the starting parenthesis.  Group 0 is the
     ## entire expression.
     String group(uint index) {
         __checkGroupIndex(index);
-        
+
         i := index * 2;
         start := __captures[i];
         end := __captures[i + 1];
         return SubString(subject, uint(start), uint(end - start));
     }
-    
+
     String group() { return group(0); }
 
     uint __getIndex(String name) {
@@ -94,27 +94,27 @@ $__captureCount)`
         __checkGroupIndex(index);
         return uint(__captures[index * 2]);
     }
-    
+
     ## Returns the index of the beginning of the named group.
     uint begin(String name) {
         return begin(__getIndex(name));
     }
-    
+
     uint begin() { return begin(0); }
-    
+
     ## Returns the index of the end of the indexed group.
     uint end(uint index) {
         __checkGroupIndex(index);
         return uint(__captures[index * 2 + 1]);
     }
-    
+
     uint end(String name) {
         return end(__getIndex(name));
     }
-    
+
     uint end() { return end(0); }
 
-    ## Returns the value of the named group.    
+    ## Returns the value of the named group.
     String group(String name) {
         i := __getIndex(name);
         return group(i);
@@ -132,13 +132,13 @@ $__captureCount)`
 
 ## A compiled regular expression.
 class Regex : _RegexBase {
-    
+
     ## the original pattern
     CString pattern;
-    
+
     ## regex compile options.
     int __options;
-    
+
     # the number of sub-expressions to capture.
     uint __captureCount;
 
@@ -158,42 +158,42 @@ class Regex : _RegexBase {
             throw RegexError(f.string());
         }
         free(errorText);
-        
+
         # figure out how many capturing sub-patterns there are
         pcre_fullinfo(_rx, null, _PCRE_INFO_CAPTURECOUNT, intReturns);
         __captureCount = uint(intReturns[0]) + 1;
         free(intReturns);
     }
-    
-    ## Compile a regular expression from 'pattern'.  The regex library uses 
+
+    ## Compile a regular expression from 'pattern'.  The regex library uses
     ## PCRE, see the 'pcresyntax' man page for regular expression syntax.
     oper init(CString pattern) : _RegexBase(null), pattern = pattern {
         __init();
     }
-    
+
     oper init(String pattern) : _RegexBase(null), pattern = CString(pattern) {
         __init();
     }
-    
-    oper init(CString pattern, int options) : 
-        _RegexBase(null), 
+
+    oper init(CString pattern, int options) :
+        _RegexBase(null),
         pattern = pattern,
         __options = options {
         __init();
     }
-    
-    oper init(String pattern, int options) : 
-        _RegexBase(null), 
+
+    oper init(String pattern, int options) :
+        _RegexBase(null),
         pattern = CString(pattern),
         __options = options {
         __init();
     }
-    
-    ## Search 'subject' for the regular expression starting at 'start'.  
+
+    ## Search 'subject' for the regular expression starting at 'start'.
     ## Returns a Match object if it is found or null if not.
     Match search(String subject, int start) {
         captures := array[int](__captureCount * 3);
-        rc := pcre_exec(_rx, null, subject.buffer, subject.size, start, 0, 
+        rc := pcre_exec(_rx, null, subject.buffer, subject.size, start, 0,
                         captures,
                         __captureCount * 3
                         );
@@ -204,14 +204,14 @@ class Regex : _RegexBase {
             return null;
         }
     }
-    
-    ## Search 'subject' for the regular expression starting at the beginning 
+
+    ## Search 'subject' for the regular expression starting at the beginning
     ## of the string.  Returns a Match object if it is found or null if not.
     Match search(String subject) {
         return search(subject, 0);
     }
-    
-    ## If 'subject' starts with a match for the regular expression, return the 
+
+    ## If 'subject' starts with a match for the regular expression, return the
     ## match.  Otherwise return null.
     Match match(String subject) {
         m := search(subject, 0);
@@ -226,7 +226,7 @@ class Regex : _RegexBase {
             mx := search(subject);
             if (!mx)
                 return subject;
-    
+
             StringWriter result = {};
             int last = 0;
             while (mx && count--) {
@@ -235,50 +235,50 @@ class Regex : _RegexBase {
                 last = mx.end();
                 mx = search(subject, mx.end());
             }
-            
+
             # write any remaining substring
             if (last < subject.size)
                 result.write(subject.slice(last));
-            
+
             return result.string();
         }
     }
 
-    ## Replace the first 'count' instances of the regular expression in 
-    ## 'subject' using the function.  If count >= 0, it is the number of 
+    ## Replace the first 'count' instances of the regular expression in
+    ## 'subject' using the function.  If count >= 0, it is the number of
     ## instances to replace.
     @define __arg() { function[void, Match, Writer] func }
     @__subst(@__arg(), func(mx, result));
-    
-    ## Replace the first 'count' instances of the regular expression in 
-    ## 'subject' using the functor.  If count >= 0, it is the number of 
+
+    ## Replace the first 'count' instances of the regular expression in
+    ## 'subject' using the functor.  If count >= 0, it is the number of
     ## instances to replace.
-    @define __functorArg() { Functor2[void, Match, Writer] func } 
+    @define __functorArg() { Functor2[void, Match, Writer] func }
     @__subst(@__functorArg(), func(mx, result));
-    
-    ## Replace the first 'count'instances of the regular expression in 
-    ## 'subject' with the specified string.  If count >= 0, it is the number 
+
+    ## Replace the first 'count'instances of the regular expression in
+    ## 'subject' with the specified string.  If count >= 0, it is the number
     ## of instances to replace.
     @__subst(String replacement, result.write(replacement));
 
-    ## Replace all instances of the regular expression in 'subject' using the 
+    ## Replace all instances of the regular expression in 'subject' using the
     ## function.
     String subst(String subject, @__arg()) {
         return subst(subject, func, -1);
     }
-    
-    ## Replace all instances of the regular expression in 'subject' with the 
+
+    ## Replace all instances of the regular expression in 'subject' with the
     ## specified string.
     String subst(String subject, String replacement) {
         return subst(subject, replacement, -1);
     }
-    
+
     oper del() { free(_rx); }
 };
 
 ## Escape all special characters in the pattern.
 String escape(String pattern) {
-    # since the pcre api doesn't seem to define a function to do this, we'll 
+    # since the pcre api doesn't seem to define a function to do this, we'll
     # have to do it ourselves.
     AppendBuffer result = {pattern.size};
     for (int i = 0; i < pattern.size; ++i) {
@@ -287,6 +287,6 @@ String escape(String pattern) {
             result.append(b'\\');
         result.append(ch);
     }
-    
+
     return String(result, true);
 }

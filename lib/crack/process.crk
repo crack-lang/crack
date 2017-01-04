@@ -1,11 +1,11 @@
 ## This module provides a Process class for managing sub processes
 ## Copyright 2011-2012 Google Inc.
 ## Copyright 2012 Conrad Steenberg <conrad.steenberg@gmail.com>
-## 
+##
 ##   This Source Code Form is subject to the terms of the Mozilla Public
 ##   License, v. 2.0. If a copy of the MPL was not distributed with this
 ##   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-## 
+##
 
 import crack.runtime close, runChildProcess, waitProcess, signalProcess,
     SIGKILL, SIGTERM, PipeDesc, free, closeProcess;
@@ -30,7 +30,7 @@ const int
     CRK_PROC_STOPPED = 0x400,
     CRK_PROC_EXITED = 0x800,
     CRK_PROC_FAILED = 0x1000,
-    
+
     ## Process exit code when we fail to "exec" a binary.
     CRK_PROC_EXECFAIL = 0xff;
 
@@ -47,10 +47,10 @@ FDWriter _makeWriter(Process proc, int fd);
     @abstract void onOutLine(Buffer data);
     @abstract void onErrData(Buffer data);
     @abstract void onErrLine(Buffer data);
-    
-    ## Called when the process is terminated with the process result code.  
-    ## The process result code is composed of one of the CRK_PROC values above 
-    ## ored with the process exit code.  In the case of CRK_PROC_KILLED, the 
+
+    ## Called when the process is terminated with the process result code.
+    ## The process result code is composed of one of the CRK_PROC values above
+    ## ored with the process exit code.  In the case of CRK_PROC_KILLED, the
     ## process exit code should be the signal that killed the process.
     ##
     ## It is not necessary for this handler to remove any process handles from
@@ -58,12 +58,12 @@ FDWriter _makeWriter(Process proc, int fd);
     @abstract void onTerminate(int resultCode);
 }
 
-## Implements ProcessHandler and provides the translation from the data 
-## handlers to the line handlers, making it easy to implement any combination 
+## Implements ProcessHandler and provides the translation from the data
+## handlers to the line handlers, making it easy to implement any combination
 ## of line reader and data reader for a process.
 ##
-## If a handler implements both line handlers and onTerminate(), it should 
-## call ProcessHandlerImpl.onTerminate() to ensure that any final output 
+## If a handler implements both line handlers and onTerminate(), it should
+## call ProcessHandlerImpl.onTerminate() to ensure that any final output
 ## without a newline is flushed through to the on*Line() handlers.
 class ProcessHandlerImpl @impl ProcessHandler {
     AppendBuffer outBuf = {1024}, errBuf = {1024};
@@ -81,13 +81,13 @@ class ProcessHandlerImpl @impl ProcessHandler {
             if (pos)
                 dst$$Buf.compact(pos);
         }
-        
+
         void on$$cap$$Line(Buffer line) {}
     }
-    
+
     @output_handlers(out, Out);
     @output_handlers(err, Err);
-    
+
     void onTerminate(int resultCode) {
         # If there's unconsumed output, flush through to the line handlers.
         if (outBuf)
@@ -110,36 +110,36 @@ class Process {
         int pid, exitCode;
         ProcessHandler handler;
 
-        # We store 'process' just to ensure that the process doesn't get 
+        # We store 'process' just to ensure that the process doesn't get
         # deleted (and its output streams closed) while we're processing.
         Process process;
-        
-        oper init(Process process, ProcessHandler handler, int pid, 
-                  bool outDone, 
+
+        oper init(Process process, ProcessHandler handler, int pid,
+                  bool outDone,
                   bool errDone
-                  ) : 
-            handler = handler, 
+                  ) :
+            handler = handler,
             pid = pid,
             outDone = outDone,
             errDone = errDone,
             process = process {
         }
-        
+
         void onStreamsClosed() {
-            # XXX if a child process closes its stdout and stderr streams 
-            # before termmination, this can hang the polling thread.  What we 
+            # XXX if a child process closes its stdout and stderr streams
+            # before termmination, this can hang the polling thread.  What we
             # should do is handle SIGCHLD in the poller and then call
             # onTerminate() from that.
             exitCode = waitProcess(pid, 0);
             if (handler)
                 handler.onTerminate(exitCode);
         }
-        
-        void onOutDone() { 
-            outDone = true; 
+
+        void onOutDone() {
+            outDone = true;
             if (errDone) onStreamsClosed();
         }
-        
+
         void onErrDone() {
             errDone = true;
             if (outDone) onStreamsClosed();
@@ -147,14 +147,14 @@ class Process {
     }
 
     # defines __OutCallback and __ErrCallback, two callback functors
-    # that react to input events by reading from the appropriate stream and 
+    # that react to input events by reading from the appropriate stream and
     # passing the data the cooresponding methods in ProcessHandler.
     @define __callback(dst) {
         class __$$dst$$Callback @impl Functor2[int, Poller, PollEvent] {
             ManagedBuffer buf = {1024};
             __Status status;
-            
-            oper init(__Status status) : 
+
+            oper init(__Status status) :
                 status = status {
             }
 
@@ -167,7 +167,7 @@ class Process {
                         poller.remove(event.pollable);
                         status.on$$dst$$Done();
                     }
-                
+
                 # POLLERR, POLLHUP, etc - just shut down.
                 } else if (event.revents) {
                     if (status.handler)
@@ -209,7 +209,7 @@ class Process {
     }
 
     oper init(StringArray args, StringArray env): _pd() {
-        __init(args.makePrimArray(), env.makePrimArray(), 
+        __init(args.makePrimArray(), env.makePrimArray(),
                CRK_PIPE_STDOUT | CRK_PIPE_STDERR
                );
     }
@@ -260,7 +260,7 @@ class Process {
     void addTo(Poller poller, ProcessHandler handler) {
         __addTo(poller, __Status(this, handler, _pid, !__stdout, !__stderr));
     }
-    
+
     ## Remove the file descriptors from the poller.
     void removeFrom(Poller poller) {
         if (__stdout)
@@ -268,8 +268,8 @@ class Process {
         if (__stderr)
             poller.remove(__stderr);
     }
-    
-    ## Run the process to completion, managing communication and dispatching 
+
+    ## Run the process to completion, managing communication and dispatching
     ## events to the handler.
     ## XXX needs to deal with stdin.
     int run(ProcessHandler handler) {
@@ -283,10 +283,10 @@ class Process {
             # no output streams - just wait for termination.
             status.onStreamsClosed();
         }
-        
+
         return status.exitCode;
     }
-    
+
     ## Run the process to completion, return the exit code.
     @final int run() { return run(null); }
 
@@ -302,8 +302,8 @@ class Process {
     }
 
     ## Returns the entirety of the child process' standard output.
-    ## This won't work if you use "run()" or "addTo()" to manage the output 
-    ## streams with a Poller, it's intended for use with commands to be run 
+    ## This won't work if you use "run()" or "addTo()" to manage the output
+    ## streams with a Poller, it's intended for use with commands to be run
     ## synchronously with limited output.
     String getStdOut() {
         if (__stdout)
@@ -311,12 +311,12 @@ class Process {
         else
             return "";
     }
-    
+
     FileHandle getOutHandle() { return __stdout; }
-    
+
     ## Returns the entirety of the child process' standard error.
     ## See getStdOut() for caveats.
-    String getStdErr() { 
+    String getStdErr() {
         if (__stderr)
             return _readPipe(__stderr);
         else
@@ -429,7 +429,7 @@ class Process {
             closeProcess(_pd);
             free(_pd);
             _pd = null;
-        }   
+        }
     }
 
     oper del() {

@@ -1,9 +1,9 @@
 // Copyright 2012 Google Inc.
-// 
+//
 //   This Source Code Form is subject to the terms of the Mozilla Public
 //   License, v. 2.0. If a copy of the MPL was not distributed with this
 //   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-// 
+//
 
 import crack.ascii isDigit, parseInt, strip, toLower;
 import crack.cont.array Array;
@@ -51,7 +51,7 @@ void headerToAnchor(Formatter out, Array[Object] words) {
             headerToAnchor(out, TextBlock.cast(word).words);
     }
 }
-        
+
 String headerToAnchor(Array[Object] words) {
     StringFormatter out = {};
     headerToAnchor(out, words);
@@ -75,15 +75,15 @@ const int
     ## Flag for HTMLFormatter.write().
     ## Reflow all output to fit in 80 character lines.
     HTML_REFLOW = 2;
-   
+
 # used to define the maximum line width for the output.
 const int _MAX_LINE_WIDTH = 79;
 
 class HTMLFormatter : StdFormatter {
-    
+
     Writer __out;
     int __last;
-    
+
     alias CustomFormatter = Functor2[void, HTMLFormatter, TextBlock];
 
     # Special formatters for custom block types.
@@ -102,7 +102,7 @@ class HTMLFormatter : StdFormatter {
         String start, end;
         oper init(String start, String end) : start = start, end = end {}
     }
-    
+
     ## Returns a tuple of the leading and trailing tags for the given type.
     @static TagPair _getTags(String type) {
         if (type == 'para')
@@ -140,11 +140,11 @@ class HTMLFormatter : StdFormatter {
     ## block or "img" block.  Default is to convert it to a string, derived
     ## classes may override to provide more sophisticated referencing
     ## behavior.
-    ## 
+    ##
     ## parms:
     ##  ref: Should be a String or TextBlock
     @static String _fixRef(Object ref) {
-        
+
         if (ref.isa(String)) {
             return String.cast(ref);
         } else {
@@ -169,16 +169,16 @@ class HTMLFormatter : StdFormatter {
         # through the following for loop that the previous object needed
         # to be followed by whitespace.
         bool needSpace;
-      
+
         for (cur :in blocks) {
             if (cur.isa(String)) {
-                # if we need some whitespace, write it.  Otherwise indicate 
+                # if we need some whitespace, write it.  Otherwise indicate
                 # that we need some space next time.
                 if (needSpace)
                     _writeSpace();
                 else
                     needSpace = true;
-                
+
                 _write(_fix(String.cast(cur)));
             } else {
                 format(TextBlock.cast(cur));
@@ -193,7 +193,7 @@ class HTMLFormatter : StdFormatter {
             _write(String.cast(block_or_text));
             return;
         }
-        
+
         TextBlock block = TextBlock.cast(block_or_text);
         if (!block.tightLeft)
             _writeSpace();
@@ -251,7 +251,7 @@ two words: $(block)\n`);
             _writeWords(block.words);
             _write(pair.end);
         }
-      
+
         if (!block.tightRight)
             _writeSpace();
     }
@@ -271,7 +271,7 @@ two words: $(block)\n`);
             _write('\n');
             _write(baseIndent);
             _write('<OL>');
-    
+
             for (item :in headerList) {
                 if (item.isa(Array[Object])) {
                     __emitHeaders(Array[Object].cast(item), level + 1);
@@ -286,13 +286,13 @@ two words: $(block)\n`);
                     _write('</A>');
                 }
             }
-            
+
             _write('\n');
             _write(baseIndent);
             _write('</OL>');
         }
     }
-               
+
     void generateIndex(Array[Object] words) {
 
         level := 1;
@@ -306,7 +306,7 @@ two words: $(block)\n`);
                 _headerRx.match( (tb := TextBlock.cast(block)).type )
                 ) {
                 headerLevel = parseInt(tb.type);
-            
+
                 # for a greater header level, insert a new list
                 while (headerLevel > level) {
                     parent := curList;
@@ -315,18 +315,18 @@ two words: $(block)\n`);
                     parent.append(curList);
                     ++level;
                 }
-            
+
                 # for a lesser header level, pop to that level
                 while (headerLevel < level) {
                     stack.pop();
                     --level;
                     curList = stack[-1];
                 }
-    
+
                 curList.append(block);
             }
         }
-      
+
         # now emit them
         __emitHeaders(stack[0], 1);
     }
@@ -334,7 +334,7 @@ two words: $(block)\n`);
     ## Formats /text/ (an NML @TextBlock) as a complete HTML document.
     void formatAll(TextBlock text) {
         __out.write('<HTML>');
- 
+
         # see if we there's a title, write it if there is
         header := getHeader(text);
         if (header) {
@@ -342,7 +342,7 @@ two words: $(block)\n`);
             __out.write(encode(header));
             __out.write('</TITLE></HEAD>\n');
         }
-	
+
         # generate an index
         generateIndex(text.words);
 
@@ -351,7 +351,7 @@ two words: $(block)\n`);
         close();
         __out.write('</BODY></HTML>');
     }
-    
+
     void expandTemplate(FullReader src, TextBlock block) {
         for (line :in src) {
             line = strip(line);
@@ -390,28 +390,28 @@ two words: $(block)\n`);
 }
 
 /*
- 
+
 class HTMLFormatter(StdFormatter):
    """
       An HTML Formatter formats TextBlock objects into HTML.
    """
-   
+
    # states of the last word written (used to determine how much whitespace
    # to put before the next word.
    newline = 0
    punct = 1
    word = 2
    period = 3
-   
+
    # regular expressions for determining if the current word matches
    # one of the above states
    punctrx = re.compile(r'.*[^\w\.]$')
    wordrx = re.compile(r'\w+')
    periodrx = re.compile(r'.*\.')
-   
+
    # used to define the maximum line width for the output.
    maxLineWidth = 79
-   
+
    def __init__(self, out):
       """
          Constructs an HTML formatted from an output stream.
@@ -521,7 +521,7 @@ class HTMLFormatter(StdFormatter):
          self._write(lead)
          self._writeWords(block.words)
          self._write(trail)
-      
+
       if not block.tightRight:
          self._writeSpace()
 
@@ -533,22 +533,22 @@ class HTMLFormatter(StdFormatter):
       # through the following for loop that the previous object needed
       # to be followed by whitespace.
       needSpace = 0
-      
+
       for cur in words:
          if type(cur) is StringType:
-         
+
             # if we need some whitespace, write it.  Otherwise indicate that
             # we need some space next time.
             if needSpace:
                self._writeSpace()
             else:
                needSpace = 1
-               
+
             self._write(self._fix(cur))
          else:
             self.format(cur)
             needSpace = 0
-      
+
    def __emitHeaders(self, headerList, level):
       # if the list is empty, we do nothing
       if headerList:
@@ -565,9 +565,9 @@ class HTMLFormatter(StdFormatter):
                               )
                self._writeWords(item.words)
                self._write('</A>')
-         
+
          self._write('\n%s</OL>' % baseIndent)
-               
+
    def generateIndex(self, words):
 
       level = 1
@@ -579,7 +579,7 @@ class HTMLFormatter(StdFormatter):
       for block in words:
          if isinstance(block, TextBlock) and headerRx.match(block.type):
             headerLevel = int(block.type)
-            
+
             # for a greater header level, insert a new list
             while headerLevel > level:
                parent = curList
@@ -587,7 +587,7 @@ class HTMLFormatter(StdFormatter):
                stack.append(curList)
                parent.append(curList)
                level += 1
-            
+
             # for a lesser header level, pop to that level
             while headerLevel < level:
                stack.pop()
@@ -595,7 +595,7 @@ class HTMLFormatter(StdFormatter):
                curList = stack[-1]
 
             curList.append(block)
-      
+
       # now emit them
       self.__emitHeaders(stack[0], 1)
 
@@ -604,14 +604,14 @@ class HTMLFormatter(StdFormatter):
          Formats /text/ (an NML @TextBlock) as a complete HTML document.
       """
       self.out.write('<HTML>')
- 
+
       # see if we there's a title, write it if there is
       header = getHeader(text)
       if header:
 	 self.out.write('<HEAD><TITLE>')
 	 self.out.write(encode(header))
 	 self.out.write('</TITLE></HEAD>\n')
-	
+
       # generate an index
       self.generateIndex(text.words)
 

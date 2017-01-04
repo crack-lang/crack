@@ -33,7 +33,7 @@ AppendBuffer uuid(uint numbytes) {
         hashInts := array[uint32](result.buffer);
 
         srandom(uint(t.nsecs));
-        
+
         for (uint i = 0; i < pages; i++) {
             t.setToNow(null);
             sourceInts[0] = t.nsecs;

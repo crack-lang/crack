@@ -1,16 +1,16 @@
 ## This module provides access to system internals.
 ## Copyright 2010-2012 Google Inc.
 ## Copyright 2011 Conrad Steenberg <conrad.steenberg@gmail.com>
-## 
+##
 ##   This Source Code Form is subject to the terms of the Mozilla Public
 ##   License, v. 2.0. If a copy of the MPL was not distributed with this
 ##   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-## 
+##
 
-import crack.lang IndexError, InvalidResourceError, CString, 
+import crack.lang IndexError, InvalidResourceError, CString,
     InvalidArgumentError, SystemError;
 import crack.io FStr, cout;
-import crack.runtime c_strerror, errno, exit, get_environ, putenv, getenv, 
+import crack.runtime c_strerror, errno, exit, get_environ, putenv, getenv,
     setenv, unsetenv, EINVAL, ENOMEM;
 import crack.strutil StringArray;
 import crack.cont.hashmap HashMap;
@@ -28,7 +28,7 @@ StringArray _createArgv() {
 
 class _Environment: HashMap[String, String] {
    void _update();
-   oper init(){ 
+   oper init(){
       _update();
    }
 

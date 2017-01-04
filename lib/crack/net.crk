@@ -1,11 +1,11 @@
 # Copyright 2010-2012 Google Inc.
 # Copyright 2012 Shannon Weyrick <weyrick@mozek.us>
 # Copyright 2012 Conrad Steenberg <conrad.steenberg@gmail.com>
-# 
+#
 #   This Source Code Form is subject to the terms of the Mozilla Public
 #   License, v. 2.0. If a copy of the MPL was not distributed with this
 #   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-# 
+#
 
 import crack.cont.array Array;
 import crack.cont.hashmap HashMap;
@@ -26,10 +26,10 @@ import crack.time TimeDelta;
 
 @import crack.ann implements;
 
-@export_symbols AF_UNIX, AF_LOCAL, AF_INET, AF_INET6, AF_IPX, AF_NETLINK, 
-    AF_X25, AF_AX25, AF_ATMPVC, AF_APPLETALK, AF_PACKET, SHUT_RD, SHUT_RDWR, 
-    SHUT_WR, SOCK_STREAM, SOCK_DGRAM, SOCK_SEQPACKET, SOCK_RAW, SOCK_RDM, 
-    SOCK_PACKET, SOL_SOCKET, SO_REUSEADDR, POLLIN, POLLOUT, POLLPRI, POLLERR, 
+@export_symbols AF_UNIX, AF_LOCAL, AF_INET, AF_INET6, AF_IPX, AF_NETLINK,
+    AF_X25, AF_AX25, AF_ATMPVC, AF_APPLETALK, AF_PACKET, SHUT_RD, SHUT_RDWR,
+    SHUT_WR, SOCK_STREAM, SOCK_DGRAM, SOCK_SEQPACKET, SOCK_RAW, SOCK_RDM,
+    SOCK_PACKET, SOL_SOCKET, SO_REUSEADDR, POLLIN, POLLOUT, POLLPRI, POLLERR,
     POLLHUP, POLLNVAL, INADDR_ANY, PollEventCallback;
 
 ## An event received by a poller.
@@ -56,47 +56,47 @@ class PollEvent : Object, PollEvt {
 ## IPv4 address.
 class InetAddress : Address {
 
-    ## Construct an address from the dotted values of the IP address and a 
+    ## Construct an address from the dotted values of the IP address and a
     ## port number represented as a host-style integer (for example
     ## InetAddr(127, 0, 0, 1, 80) would talk to the local HTTP server)
-    oper init(byte a, byte b, byte c, byte d, int port) : 
+    oper init(byte a, byte b, byte c, byte d, int port) :
         Address(SockAddrIn(a, b, c, d, port)) {
     }
 
-    ## Constructs an address from an IP address and port, both represented as 
+    ## Constructs an address from an IP address and port, both represented as
     ## host-style integers.
     oper init(uint32 addr, uint port) :
         Address(SockAddrIn(addr, port)) {
     }
-    
+
     ## Returns the IPv4 address as a host-style integer.
     uint32 getAddr() {
         return SockAddrIn.unsafeCast(_addr).addr;
     }
-    
+
     ## Returns the port number as a host-style integer.
     uint16 getPort() {
         return SockAddrIn.unsafeCast(_addr).port;
     }
-    
-    ## Construct a new address from the specified IP address and the given 
+
+    ## Construct a new address from the specified IP address and the given
     ## port.
     oper init(InetAddress other, uint port) :
         Address(SockAddrIn(other.getAddr(), port)) {
     }
-    
+
     Address create() {
         i := SockAddrIn.unsafeCast(_addr);
         return InetAddress(i.addr, i.port);
     }
-    
+
     void formatTo(Formatter fmt) {
         i := SockAddrIn.unsafeCast(_addr);
         addr := i.addr;
         fmt `$(addr >> 24).$((addr >> 8) & 0xff).$((addr >> 16) & 0xff)\
 .$(addr & 0xff):$(i.port)`;
     }
-    
+
     int cmp(Object other) {
         if (!other.isa(InetAddress))
             return Object.cmp(other);
@@ -125,13 +125,13 @@ Array[Address] resolve(CString hostname) {
     info := AddrInfo(hostname.buffer, null, null);
     while (!(info is null)) {
         if (info.ai_family == AF_INET) {
-            
+
             # create an address instance
             inAddr := info.getInAddr();
-            addr := InetAddress(SockAddrIn.htonl(inAddr.addr), 
+            addr := InetAddress(SockAddrIn.htonl(inAddr.addr),
                                 SockAddrIn.htons(inAddr.port)
                                 );
-            
+
             # make sure it's not in the existing list
             bool exists;
             for (existing :in result) {
@@ -140,13 +140,13 @@ Array[Address] resolve(CString hostname) {
                     break;
                 }
             }
-            
+
             if (!exists)
                 result.append(addr);
         }
         info = info.ai_next;
     }
-    
+
     return result;
 }
 
@@ -156,14 +156,14 @@ Array[Address] resolve(String hostname) {
 
 ## Wrapper around a socket.
 class Socket : FileHandle @implements Reader, Writer {
-    
+
     # the address the socket is bound to.
     Address __bound;
 
-    oper init(int domain, int type, int protocol) : 
+    oper init(int domain, int type, int protocol) :
         FileHandle(socket(domain, type, protocol)) {
     }
-    
+
     oper init(int fd) : FileHandle(fd) {}
 
     void close() {
@@ -172,18 +172,18 @@ class Socket : FileHandle @implements Reader, Writer {
           fd = -1;
         }
     }
-        
+
     oper del() {
         if (fd != -1)
             close();
     }
-    
+
     ## Connect to the address.  Returns true on success, false on failure.
     bool connect(Address addr) {
         return connect(fd, addr._addr) == 0;
     }
 
-    ## Bind to the address.  Returns true on success, false on failure.    
+    ## Bind to the address.  Returns true on success, false on failure.
     bool bind(Address addr) {
         if (bind(fd, addr._addr) == 0) {
             __bound = addr;
@@ -192,11 +192,11 @@ class Socket : FileHandle @implements Reader, Writer {
             return false;
         }
     }
-    
+
     bool listen(int backlog) {
         return listen(fd, backlog) == 0;
     }
-    
+
     bool setReuseAddr(bool val) {
         return setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, val ? 1 : 0) == 0;
     }
@@ -224,7 +224,7 @@ class Socket : FileHandle @implements Reader, Writer {
     class Accepted {
         Socket sock;
         Address addr;
-    
+
         oper init(Socket sock, Address addr) :
             sock = sock,
             addr = addr {
@@ -245,7 +245,7 @@ class Socket : FileHandle @implements Reader, Writer {
             fmt.write(")");
         }
     }
-    
+
     ## Returns null if there was an error, errno should contain the error.
     Accepted accept() {
         if (!__bound)
@@ -258,7 +258,7 @@ class Socket : FileHandle @implements Reader, Writer {
             return null;
         return Accepted(Socket(rc), addr);
     }
-    
+
     void formatTo(Formatter fmt) {
         fmt `Socket (fd: $fd)`;
     }
@@ -274,7 +274,7 @@ class Socket : FileHandle @implements Reader, Writer {
         }
         return uint(rc);
     }
-    
+
     # Writer interface
 
     void _write(byteptr cstr, uint len){
@@ -296,7 +296,7 @@ class Socket : FileHandle @implements Reader, Writer {
 
 ## Wrapper around a Pipe.
 ##
-## The file descriptor of the pipe is the file descriptor of the read end, so 
+## The file descriptor of the pipe is the file descriptor of the read end, so
 ## you can use a pipe for communication to a poller thread.
 class Pipe : FileHandle @implements Reader, Writer {
     PipeAddr __addr;
@@ -393,9 +393,9 @@ class Pipe : FileHandle @implements Reader, Writer {
 
 class Poller;
 alias PollEventCallback = Functor2[int, Poller, PollEvent];
-        
-## A poller is a collection of FileHandle's that you can use to wait for an 
-## event on any of the pollables and then iterate over the set of events that 
+
+## A poller is a collection of FileHandle's that you can use to wait for an
+## event on any of the pollables and then iterate over the set of events that
 ## occurred.
 class Poller {
     Array[FileHandle] __pollables;
@@ -409,14 +409,14 @@ class Poller {
     uint __nextIndex;
     uint __capacity;
     int __iter;
-    
-    oper init() : 
+
+    oper init() :
         __pollables(256),
         __fds = PollSet(256),
         __pollTimeout(0,0),
         __capacity = 256 {
     }
-    
+
     oper del() {
         __fds.destroy();
         // XXX no mem mangement for TimeVal
@@ -426,9 +426,9 @@ class Poller {
     void grow(uint newCapacity) {
         if (newCapacity < __capacity)
             throw Exception('cannot shrink');
-        
+
         __pollables.grow(newCapacity);
-        
+
         # create a new pollset and copy the existing one.
         newFDs := PollSet(newCapacity);
         newFDs.copy(__fds, __capacity);
@@ -436,7 +436,7 @@ class Poller {
         __capacity = newCapacity;
     }
 
-    ## Add the pollable to be managed by the poller.  'events' is the set of 
+    ## Add the pollable to be managed by the poller.  'events' is the set of
     ## events that we listen for, or'ed together.
     ## The known events are:
     ##  POLLIN - p is ready to read.
@@ -447,10 +447,10 @@ class Poller {
     ##  POLLHUP - p's connection has hung up on it while trying to output.
     ##  POLLNVAL - p has received an invalid request.
     ##
-    ## Throws InvalidArgumentError if the pollable's file descriptor. is 
+    ## Throws InvalidArgumentError if the pollable's file descriptor. is
     ## already managed by this poller.
     void add(FileHandle p, int events) {
-        
+
         # make sure it's not already present
         for (cur :in __pollables)
             if (p.fd == cur.fd)
@@ -458,21 +458,21 @@ class Poller {
                                                     is already managed by \
                                                     this poller.`
                                            );
-        
+
         # grow if there's not enough space
         if (__nextIndex == __capacity) grow(__capacity * 2);
-        
+
         # add it to the pollables and to the fds.
         __pollables.append(p);
         __fds.set(__nextIndex, p.fd, events, 0);
-        
+
         ++__nextIndex;
     }
-    
-    ## Adds the pollable to be managed by the poller, but also specifies a 
-    ## callback for event processing.  It is the handler that will be 
-    ## responsible for defining the set of events for the pollable (it will 
-    ## be requested to do so initially upon being added and then after 
+
+    ## Adds the pollable to be managed by the poller, but also specifies a
+    ## callback for event processing.  It is the handler that will be
+    ## responsible for defining the set of events for the pollable (it will
+    ## be requested to do so initially upon being added and then after
     ## handling every request).
     void add(FileHandle p, PollEventCallback callback) {
         add(p, callback(this, PollEvent(p)));
@@ -480,7 +480,7 @@ class Poller {
             __callbacks = HashMap[FileHandle, CallbackWrapper]();
         __callbacks[p] = CallbackWrapper(callback);
     }
-    
+
     void remove(FileHandle p) {
         int i;
         for (i = 0; i < __pollables.count() && __pollables[i] != p; ++i) ;
@@ -492,9 +492,9 @@ class Poller {
             __callbacks.delete(p);
         --__nextIndex;
     }
-    
-    ## Sets the events that we will wait on from the pollable.  Note that you 
-    ## probably don't want to use this if you've added 'pollable' with a 
+
+    ## Sets the events that we will wait on from the pollable.  Note that you
+    ## probably don't want to use this if you've added 'pollable' with a
     ## handler - in that case the event mask will be set by the handler.
     void setEvents(FileHandle pollable, int events) {
         # find the index of the pollable
@@ -504,14 +504,14 @@ class Poller {
                 break;
             else
                 ++i;
-        
+
         if (i == __pollables.count())
             throw InvalidArgumentError(FStr() `File handle not in Poller`);
-        
+
         __fds.set(i, pollable.fd, events, 0);
     }
-    
-    ## Call all of the handler callbacks and get the events that we want to 
+
+    ## Call all of the handler callbacks and get the events that we want to
     ## wait on in the next iteration.
     void checkHandlers() {
         if (__callbacks) {
@@ -529,11 +529,11 @@ class Poller {
         }
     }
 
-    ## Wait for up to timeout or until the next event.  'timeout' may be null, 
+    ## Wait for up to timeout or until the next event.  'timeout' may be null,
     ## in which case we wait indefinitely.
-    ## Calling wait() resets the internal iterator - the next call to nx() 
+    ## Calling wait() resets the internal iterator - the next call to nx()
     ## will return the first available event.
-    ## Returns the number of sockets selected, -1 if there was an error.  0 if 
+    ## Returns the number of sockets selected, -1 if there was an error.  0 if
     ## there was a timeout.
     int wait(TimeDelta timeout) {
         __iter = 0;
@@ -546,7 +546,7 @@ class Poller {
                           null
                           );
     }
-    
+
     @final void __callCallback(int descriptorIndex, PollEvent pollEvent) {
         if (__callbacks && (cbw := __callbacks.get(pollEvent.pollable))) {
             events := cbw.callback(this, pollEvent);
@@ -567,17 +567,17 @@ class Poller {
 
         # store the pollable in the result
         result.pollable = __pollables[__iter];
-        
+
         # if there is a handler, call it and reset the event mask.
         __callCallback(__iter, result);
-        
+
         # increment the iterator
         ++__iter;
-        return result;   
+        return result;
     }
-    
-    ## wait for the next event and then process all events (this is equivalent 
-    ## to "poller.wait(timeout); while (poller.nx()) ;").  This should only be 
+
+    ## wait for the next event and then process all events (this is equivalent
+    ## to "poller.wait(timeout); while (poller.nx()) ;").  This should only be
     ## used when all pollables have event handlers.
     ## 'timeout' may be null, in which case we wait indefinitely.
     void waitAndProcess(TimeDelta timeout) {
@@ -596,7 +596,7 @@ class Poller {
 
     ## A poller is true if it contains pollables.
     bool isTrue() { return __pollables; }
-    
+
     ## Return the number of pollables
     uint count() { return __pollables.count(); }
 

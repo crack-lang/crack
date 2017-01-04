@@ -1,11 +1,11 @@
 // Copyright 2011-2012 Google Inc.
 // Copyright 2011 Shannon Weyrick <weyrick@mozek.us>
 // Copyright 2011-2012 Conrad Steenberg <conrad.steenberg@gmail.com>
-// 
+//
 //   This Source Code Form is subject to the terms of the Mozilla Public
 //   License, v. 2.0. If a copy of the MPL was not distributed with this
 //   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-// 
+//
 import crack.lang Formatter;
 import crack.lang Buffer, AppendBuffer, CString, InvalidArgumentError;
 import crack.io Writer, cout;
@@ -18,8 +18,8 @@ class StringArray : Array[String] {
     Array[CString] __nullTermStore = null;
 
     oper init(uint size) : Array[String](size) {}
-    oper init() {}    
-    
+    oper init() {}
+
     void formatTo(Formatter fmt) {
         fmt `[`;
         bool first = true;
@@ -33,8 +33,8 @@ class StringArray : Array[String] {
         fmt `]`;
     }
 
-    ## Returns a primitive array based on the array (useful for communicating 
-    ## to C bindings). The strings will be null terminated, and the array 
+    ## Returns a primitive array based on the array (useful for communicating
+    ## to C bindings). The strings will be null terminated, and the array
     ## will contain one extra null at the end
     ## @unsafe
     array[byteptr] makePrimArray() {
@@ -68,23 +68,23 @@ class StringArray : Array[String] {
             total += elem.size;
         return total;
     }
-    
-    ## Join all of the elements into a single string with elements separated 
+
+    ## Join all of the elements into a single string with elements separated
     ## by 'sep'
     String join(String sep) {
-        
+
         # deal with the empty case
         size := count();
         if (!size)
             return '';
-        
+
         # figure out how much space we need
         total := __countBytes() + sep.size * (size - 1);
-        
+
         AppendBuffer buf = {total};
         first := true;
         for (elem :in this) {
-        
+
             # add the separator for everything but the first string.
             if (first)
                 first = false;
@@ -93,14 +93,14 @@ class StringArray : Array[String] {
 
             buf.extend(elem);
         }
-        
+
         return String(buf, true);
     }
-        
+
 }
 
-## Split the string into an array of words delimited by one or more of the 
-## given array of bytes.  For example, split('foo-bar/.baz', '-./') would 
+## Split the string into an array of words delimited by one or more of the
+## given array of bytes.  For example, split('foo-bar/.baz', '-./') would
 ## return ['foo', 'bar', 'baz'].
 StringArray tsplit(String val, String delims) {
 
@@ -110,7 +110,7 @@ StringArray tsplit(String val, String delims) {
 
     # set to true if we are currently in a block of non-whitespace characters
     bool inWord = true;
-    
+
     # figure out how big we need to make the array
     uint count = 1;
     for (uint i = 0; i < val.size; ++i) {
@@ -124,7 +124,7 @@ StringArray tsplit(String val, String delims) {
     if (!inWord) ++count;
 
     result := StringArray(count);
-    
+
     # do it again, this time create substrings
     int start = 0;
     inWord = true;
@@ -226,7 +226,7 @@ String center(String text, uint width){
 ## with another
 String replace(String text, byte orig, byte new){
     newString := String(text);
-    newBuf := newString.buffer; 
+    newBuf := newString.buffer;
     for (uint i = 0; i < text.size; i++)
         if (newBuf[i] == orig)
             newBuf[i] = new;
@@ -237,8 +237,8 @@ String replace(String text, byte orig, byte new){
 ## array replaced with the corresponding charecters in the second  array
 String replace(String text, Array[byte] orig, Array[byte] new){
     newString := String(text);
-    newBuf := newString.buffer; 
-    
+    newBuf := newString.buffer;
+
     if (orig.count() != new.count())
         throw InvalidArgumentError("Length of original and new character arrays must match");
 
@@ -253,7 +253,7 @@ String replace(String text, Array[byte] orig, Array[byte] new){
 String remove(String text, byte find){
     oldBuf := text.buffer;
     newString := String(text);
-    newBuf := newString.buffer; 
+    newBuf := newString.buffer;
 
     uint newSize = 0;
     for (uint i = 0; i < text.size; i++){

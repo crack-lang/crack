@@ -1,16 +1,16 @@
 # Copyright 2010-2012 Google Inc.
 # Copyright 2010-2011 Shannon Weyrick <weyrick@mozek.us>
 # Copyright 2010-2012 Conrad Steenberg <conrad.steenberg@gmail.com>
-# 
+#
 #   This Source Code Form is subject to the terms of the Mozilla Public
 #   License, v. 2.0. If a copy of the MPL was not distributed with this
 #   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-# 
+#
 
-import crack.runtime abort, backtrace, backtrace_symbols_fd, c_strerror, 
-    errno, free, getLocation, printuint64, sigaction, strcpy, strlen, malloc, 
-    memcpy, memset, memcmp, memmove, registerHook, write, SigAction, SigInfo, 
-    BAD_CAST_FUNC, EXCEPTION_FRAME_FUNC, EXCEPTION_MATCH_FUNC, 
+import crack.runtime abort, backtrace, backtrace_symbols_fd, c_strerror,
+    errno, free, getLocation, printuint64, sigaction, strcpy, strlen, malloc,
+    memcpy, memset, memcmp, memmove, registerHook, write, SigAction, SigInfo,
+    BAD_CAST_FUNC, EXCEPTION_FRAME_FUNC, EXCEPTION_MATCH_FUNC,
     EXCEPTION_RELEASE_FUNC, EXCEPTION_UNCAUGHT_FUNC, SA_SIGINFO, SIGFPE, SIGILL, SIGSEGV;
 @import crack._poormac define;
 
@@ -105,9 +105,9 @@ class Object : VTableBase {
         return this is null ? false : (other is null ? true : cmp(other) > 0);
     }
 
-    ## Returns the hash value of the object.  Hash values have a special 
-    ## relationsip with equality, a.cmp(b) == 0 implies a.makeHashVal() == 
-    ## b.makeHashVal().  If you override this, you must also override cmp() 
+    ## Returns the hash value of the object.  Hash values have a special
+    ## relationsip with equality, a.cmp(b) == 0 implies a.makeHashVal() ==
+    ## b.makeHashVal().  If you override this, you must also override cmp()
     ## and vice-versa in order to preserve this relationship.
     uint makeHashVal() {
         v := uintz(this);
@@ -120,8 +120,8 @@ class Object : VTableBase {
         else
             return isTrue();
     }
-    
-    ## Returns true if the object is a direct or indirect instance of the 
+
+    ## Returns true if the object is a direct or indirect instance of the
     ## class.
     @final bool isa(Class cls) {
         return this.class.isSubclass(cls);
@@ -189,7 +189,7 @@ $$
     @_iface_methods FieldSet
 }
 
-## Interface for all classes implementing the format methods.  Formatters can 
+## Interface for all classes implementing the format methods.  Formatters can
 ## be used with the interpolation operator, e.g.:
 ##    MyFormatter f = {};
 ##    f `this is your $value\n`;
@@ -237,13 +237,13 @@ class Buffer : Object {
         return size;
     }
 
-    ## Returns true if the buffer is empty (has 
+    ## Returns true if the buffer is empty (has
     @final bool isEmpty() {
         return (size == 0);
     }
-    
-    ## Returns the number of elements in the buffer.  This is the same as the 
-    ## 'size' attribute, it is included for consistency with other container 
+
+    ## Returns the number of elements in the buffer.  This is the same as the
+    ## 'size' attribute, it is included for consistency with other container
     ## types.
     @final uint count() {
         return size;
@@ -272,7 +272,7 @@ class Buffer : Object {
         # deal with the simple case
         if (this is other)
             return 0;
-            
+
         if (other is null)
             return 1;
 
@@ -302,7 +302,7 @@ class Buffer : Object {
             return 1;
         }
     }
-    
+
     uint makeHashVal() {
         uint hash;
         for (int i = 0; i < size; ++i)
@@ -328,18 +328,18 @@ class Buffer : Object {
                 @$1;
         @$2
     $$
-    
+
     @define __lfind 0 @__lfindLoop __findReturn __findFail $$
     @define __rfind 0 @__rfindLoop __findReturn __findFail $$
-    
+
     @define __findPosChecks 0
         if (pos < 0)
             pos += size;
 
         if (pos >= size || pos < 0)
             return -1;
-    $$        
-    
+    $$
+
     ## Find the rightmost index of a byte in a the buffer, starting at
     ## index 'pos'.
     ## returns -1 if not found
@@ -355,15 +355,15 @@ class Buffer : Object {
         int pos = size - 1;
         @__rfind
     }
-    
-    ## Find the rightmost index of the substring 'sub' in the string at or 
+
+    ## Find the rightmost index of the substring 'sub' in the string at or
     ## before 'pos'.  Returns -1 if not found.
     @final int rfind(Buffer sub, int pos) {
         @__findPosChecks
         c := sub.buffer[0];
         while (true) {
             @__rfindLoop __findBreak __findCheck
-            if (pos + sub.size > size || 
+            if (pos + sub.size > size ||
                 memcmp(sub.buffer, buffer + pos, sub.size)
                 )
                 --pos;
@@ -372,12 +372,12 @@ class Buffer : Object {
         }
         return -1;
     }
-    
+
     ## Find the rightmost index of the sub-buffer 'sub' in the string.
     @final int rfind(Buffer sub) {
         return rfind(sub, -1);
     }
-    
+
     ## Find the leftmost index of a byte in a buffer, starting at
     ## index pos
     ## returns -1 if not found
@@ -398,7 +398,7 @@ class Buffer : Object {
     ## Returns -1 if not found.
     @final int lfind(Buffer sub, int pos) {
         @__findPosChecks
-        
+
         c := sub.buffer[0];
         while (true) {
             @__lfindLoop __findBreak __findCheck
@@ -413,29 +413,29 @@ class Buffer : Object {
         }
         return -1;
     }
-    
+
     ## Find the leftmost index of the sub-buffer 'sub'.
     @final int lfind(Buffer sub) { return lfind(sub, 0); }
 
     ## Returns true if the buffer starts with 'prefix'.
     @final bool startsWith(Buffer prefix) {
-        return size >= prefix.size && 
+        return size >= prefix.size &&
                !memcmp(buffer, prefix.buffer, prefix.size);
     }
-    
+
     ## Returns true if the buffer ends with 'suffix'.
     @final bool endsWith(Buffer suffix) {
         return size >= suffix.size &&
-               !memcmp(buffer + (size - suffix.size), suffix.buffer, 
+               !memcmp(buffer + (size - suffix.size), suffix.buffer,
                       suffix.size
                       );
     }
-    
+
     String getRepr() {
         return _getRepr(this);
     }
 
-    ## Returns the buffer converted to the CString (or the object itself, if 
+    ## Returns the buffer converted to the CString (or the object itself, if
     ## it already is a CString).
     CString toCString() {
         return _makeCString(this);
@@ -446,8 +446,8 @@ void _writeObject(Writer out) {
     out.write(Buffer('<Object>', 8));
 }
 
-void _formatObject(Formatter f, Object o) { 
-    f.write(Buffer('<Object>', 8)); 
+void _formatObject(Formatter f, Object o) {
+    f.write(Buffer('<Object>', 8));
 }
 
 ## A writable buffer.  You can assume that it is safe to write to one of these.
@@ -458,15 +458,15 @@ class WriteBuffer : Buffer {
 
     oper init(byteptr buffer, uintz size) : Buffer(buffer, size), cap = size {}
 
-    ## Construct a new buffer from a buffer pointer, an initial size and 
+    ## Construct a new buffer from a buffer pointer, an initial size and
     ## capacity.
     oper init(byteptr buffer, uintz size, uintz cap) :
-        Buffer(buffer, size), 
+        Buffer(buffer, size),
         cap = cap {
     }
 
-    ## Move data from an arbitrary byteptr into the buffer.  The end of the 
-    ## new data must not exceed buffer capacity, if it exceeds the current 
+    ## Move data from an arbitrary byteptr into the buffer.  The end of the
+    ## new data must not exceed buffer capacity, if it exceeds the current
     ## size the size will be adjusted to fit it.
     @final void move(uintz start, byteptr ptr, uintz count) {
         if (start + count > cap)
@@ -476,7 +476,7 @@ class WriteBuffer : Buffer {
             size = start + count;
     }
 
-    ## move data from one place in the buffer to another place in the buffer.  
+    ## move data from one place in the buffer to another place in the buffer.
     ## Rules concerning size and capacity in move(uintz, byteptr, int) apply.
     @final void move(uintz newStart, uintz oldStart, uintz count) {
         if (oldStart + count > size)
@@ -495,10 +495,10 @@ class WriteBuffer : Buffer {
         if (newStart + buf.size > size)
             size = newStart + buf.size;
     }
-    
-    ## Move the contents of the buffer from pos to size to the beginning of 
+
+    ## Move the contents of the buffer from pos to size to the beginning of
     ## the buffer, and modify size accordingly (the new size is size - pos).
-    ## This effectively truncates the beginning of the buffer without doing 
+    ## This effectively truncates the beginning of the buffer without doing
     ## any memory allocation/deallocation.
     @final void compact(uint pos) {
         if (pos > size)
@@ -508,12 +508,12 @@ class WriteBuffer : Buffer {
     }
 }
 
-## A managed buffer.  Growable, and deletes the bytebuf when it goes out of 
+## A managed buffer.  Growable, and deletes the bytebuf when it goes out of
 ## scope.
 class ManagedBuffer : WriteBuffer {
 
     oper init(uintz cap) : WriteBuffer(malloc(cap), 0, cap) {}
-    
+
     ## Orphan's the byte buffer, returning it for use by the caller.  The
     ## caller is responsible for freeing it.
     @final byteptr orphan() {
@@ -561,7 +561,7 @@ class AppendBuffer : ManagedBuffer {
         buffer[size++] = c;
     }
 
-    ## Extend the buffer from the pointer and size.  That is, concatenate the 
+    ## Extend the buffer from the pointer and size.  That is, concatenate the
     ## buffer defined by buf, bufSize onto the end of the current buffer.
     #unsafe
     @final void extend(byteptr buf, uintz bufSize) {
@@ -752,7 +752,7 @@ class String : Buffer {
         return String(newRawBuffer, newBufferSize, true);
     }
 
-    ## Returns a new string that is the concatenation of the receiver and the 
+    ## Returns a new string that is the concatenation of the receiver and the
     ## null-terminated 'rhs'.
     @final String oper +(byteptr rhs) {
         uintz rhs_size = strlen(rhs);
@@ -762,12 +762,12 @@ class String : Buffer {
         memcpy(newRawBuffer + size, rhs, rhs_size);
         return String(newRawBuffer, newBufferSize, true);
     }
-    
-    ## Returns a new string consisting of 'times' instances of the receiver 
+
+    ## Returns a new string consisting of 'times' instances of the receiver
     ## arranged sequentially.
     @final String oper *(uint times) {
         String newString;
-        
+
         if (size == 1)
             newString = String(times, buffer[0]);
         else {
@@ -808,7 +808,7 @@ class String : Buffer {
         f.write(this);
     }
 
-    ## If the string begins with 'prefix', returns the remainder of the string 
+    ## If the string begins with 'prefix', returns the remainder of the string
     ## after 'prefix'.
     @final SubString getSuffix(String prefix) {
         if (startsWith(prefix))
@@ -992,8 +992,8 @@ class CString : String {
     }
 
     ## Initialize from a ManagedBuffer and optionally take ownership of the
-    ## buffer.  Note that this is subtly different from the corresponding 
-    ## String constructor as "size" will be the number of bytes in the buffer 
+    ## buffer.  Note that this is subtly different from the corresponding
+    ## String constructor as "size" will be the number of bytes in the buffer
     ## before the first null, and not the total size of the buffer.
     oper init(ManagedBuffer buf, bool takeOwnership) :
         String(buf, strlen(buf.buffer), takeOwnership) {
@@ -1008,12 +1008,12 @@ CString _makeCString(Buffer val) {
     return CString(val);
 }
 
-## This class is used to represent static strings parsed out of the language 
-## source code (after bootstrapping).  You can safely use it to wrap raw byte 
+## This class is used to represent static strings parsed out of the language
+## source code (after bootstrapping).  You can safely use it to wrap raw byte
 ## arrays as long as:
-## 1) the arrays have a null character either within them or immediately 
+## 1) the arrays have a null character either within them or immediately
 ##    following them (i.e. they are null terminated)
-## 2) they are guaranteed to stay in existence and remain unchanged for the 
+## 2) they are guaranteed to stay in existence and remain unchanged for the
 ##    life of the StaticString object.
 class StaticString : CString {
 
@@ -1029,7 +1029,7 @@ class StaticString : CString {
 class StackFrame : Object {
     String func, file;
     uint lineNumber;
-    
+
     oper init(String func, String file, uint lineNumber) :
         func = func,
         file = file,
@@ -1046,7 +1046,7 @@ class Exception : Object {
 
     oper init(String text) : text = text {}
     oper init() {}
-    
+
     oper del() {
         for (int i; i < __stackTraceSize; ++i)
             __stackTrace[i].oper release();
@@ -1057,18 +1057,18 @@ class Exception : Object {
     ## the stack trace.
     @final void append(StackFrame frame) {
         if (__stackTraceSize == __stackTraceCap) {
-            
+
             # out of room, reallocate.
             __stackTraceCap *= 2;
             temp := array[StackFrame](__stackTraceCap);
-            
+
             # move everything to the new array
             for (int i; i < __stackTraceSize; ++i)
                 temp[i] = __stackTrace[i];
             free(__stackTrace);
             __stackTrace = temp;
         }
-        
+
         __stackTrace[__stackTraceSize++] = frame;
         frame.oper bind();
     }
@@ -1095,14 +1095,14 @@ class Exception : Object {
     }
 }
 
-## Thrown when you attempt to cast an object to a type that it is not an 
+## Thrown when you attempt to cast an object to a type that it is not an
 ## instance of.
 class BadCastError : Exception {
     oper init(String text) : Exception(text) {}
 }
 
 bool exceptionMatchFunc(Class classObj, Object obj) {
-    # if the class object is null, this is a "catch all" exception.  Otherwise 
+    # if the class object is null, this is a "catch all" exception.  Otherwise
     # see if the exception object is an instance of the class.
     return classObj is null || obj.isa(classObj);
 }
@@ -1126,21 +1126,21 @@ void exceptionReleaseFunc(Object ex) {
 void exceptionFrameFunc(Object ex, voidptr last_ip) {
     if (ex.isa(Exception)) {
         e := Exception.cast(ex);
-        
+
         info := array[byteptr](3);
         getLocation(last_ip, info);
-        
-        e.append(StackFrame(StaticString(info[0]), StaticString(info[1]), 
+
+        e.append(StackFrame(StaticString(info[0]), StaticString(info[1]),
                             uintz(info[2])
                             )
                  );
     }
 }
 
-## gets called at the toplevel exception handler when an exception is not 
+## gets called at the toplevel exception handler when an exception is not
 ## caught
 void uncaughtExceptionHandler(Object ex) {
-    
+
     # this can run after cleanups, so we can't use cerr here...
     class StdErr : Object, Writer {
         void write(Buffer buf) { write(2, buf.buffer, buf.size); }
@@ -1189,11 +1189,11 @@ void _throwIndexError(byteptr text) {
     throw IndexError(StaticString(text));
 }
 
-## Raised when code attempts to use a resource that doesn't exist or is 
+## Raised when code attempts to use a resource that doesn't exist or is
 ## inappropriate for the use.
 @except InvalidResourceError
 
-## Raised when an operation is performed on an object that is not in a state 
+## Raised when an operation is performed on an object that is not in a state
 ## appropriate for that operation (like reading from a closed file).
 @except InvalidStateError
 
@@ -1222,7 +1222,7 @@ class SystemError : Exception {
         Exception(__makeMessage(context)),
         __errno = _errno {
     }
-    
+
     oper init(String context) :
         Exception(__makeMessage(context)),
         __errno = errno() {
@@ -1244,7 +1244,7 @@ void _trapHandler(int signal, SigInfo si, voidptr ucontext) {
         write(2, '[stack trace truncated]', 23);
     for (int i = numFrames - 1; i; --i) {
         getLocation(_addrs[i], _addrInfo);
-        if (strlen(_addrInfo[0]) >= 8 && 
+        if (strlen(_addrInfo[0]) >= 8 &&
             !memcmp(_addrInfo[0], ':unknown', 8)) {
             # If we got an unknown address, let the C function deal with it.
             backtrace_symbols_fd(_addrs + i, 1, 2);
@@ -1331,7 +1331,7 @@ int cmp(voidptr a, voidptr b) {
 
 $$
 
-int cmp(bool a, bool b) { 
+int cmp(bool a, bool b) {
     if ((a && b) || (!a && !b)) return 0;
     return 1;
 }
@@ -1346,7 +1346,7 @@ int cmp(bool a, bool b) {
 @heavycmp float32
 @heavycmp float64
 
-# define PDNTs last, anything can convert to them (this shouldn't matter if 
+# define PDNTs last, anything can convert to them (this shouldn't matter if
 # all other types are defined)
 @lightcmp int
 @heavycmp uint
@@ -1373,7 +1373,7 @@ $$
 @lighthash int32
 @lighthash uint32
 
-# These don't really work very well, they end up just converting the floats to 
+# These don't really work very well, they end up just converting the floats to
 # int.
 @lighthash float32
 @lighthash float64

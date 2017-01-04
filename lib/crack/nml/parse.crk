@@ -1,9 +1,9 @@
 # Copyright 2012 Google Inc.
-# 
+#
 #   This Source Code Form is subject to the terms of the Mozilla Public
 #   License, v. 2.0. If a copy of the MPL was not distributed with this
 #   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-# 
+#
 
 import crack.functor Functor4, Function4;
 import crack.lang AssertionError, Exception, CString; # XXX remove CStrign
@@ -24,7 +24,7 @@ class DocParseError : Exception {
     String fileName;
     int lineNum;
     TextBlock block;
-    
+
     oper init(String text, String fileName, int lineNum, TextBlock block) :
         Exception(text),
         fileName = fileName,
@@ -42,7 +42,7 @@ class DocParseError : Exception {
                 out `parsing $(block.type) from line \
 $(block.sourceName):$(block.lineNumber) $text`;
         }
-        
+
         return out.string();
     }
 }
@@ -54,7 +54,7 @@ Regex _makeSpecial(HashMap[byte, BlockType] types) {
     for (x :in types)
         special `$(x.val.tag)|`;
 
-    special `$(r'(\\.)')`;   
+    special `$(r'(\\.)')`;
     return Regex(special.string());
 }
 
@@ -102,11 +102,11 @@ class DocParser2 {
     String srcName;
     LineReader src;
     int tabSize = 8;
-    
+
     ## Constructs a DocParser from the given source stream.
     oper init(LineReader src, String srcName) : src = src, srcName = srcName {}
-    
-    
+
+
     void parseText(TextBlock block) {
         String curWord;
         int wordStart;
@@ -130,7 +130,7 @@ class DocParser {
     String debugOut = '';
     HashMap[String, Regex] terminatorRxSet = {};
     Functor4[TextBlock, String, int, String, bool] __makeBlock;
-    
+
 
     ## Constructs a DocParser from the given source stream.
     oper init(LineReader src, String srcName) :
@@ -181,10 +181,10 @@ line $lineNum: $msg\n`;
     String _getCurLine() {
         if (!buffer)
             buffer = _pullLine();
-         
+
         return buffer;
      }
-   
+
     ## Returns the next line of the stream (following the current line).
     String _getNextLine() {
         if (nextLine is null) {
@@ -193,18 +193,18 @@ line $lineNum: $msg\n`;
         }
         return nextLine;
     }
-   
+
     ## Like getCurLine(), but keeps reading lines until it encounters
     ## a line devoid of whitespace or the until end of the file.
     String _getNextFullLine() {
-        
+
         # if there's nothing in the buffer, get the next line
         if (!buffer) {
             buffer = _pullLine();
             if (!buffer)
                 return null;
         }
-      
+
         # keep reading until we get a line without whitespace
         ws := _wsrx.search(buffer);
         while (ws && ws.group() == buffer) {
@@ -212,16 +212,16 @@ line $lineNum: $msg\n`;
             if (!buffer) break;
             ws = _wsrx.search(buffer);
         }
-      
+
         return buffer;
     }
 
     ## 'Harvests' the entire buffer or up till the regular expression
     ## match if one is supplied.
-    ## 
+    ##
     ## If no regular expression is given, returns the entire buffer
     ## and replaces it with an empty string.
-    ## 
+    ##
     ## If a regular expression is provided, returns up to the beginning
     ## of the regular expression and truncates up to the end of the regular
     ## expression.  In this mode of operation, the buffer is never left empty,
@@ -243,14 +243,14 @@ line $lineNum: $msg\n`;
         }
         return crop;
     }
-    
+
     ## Harvests the entire buffer.
     String _harvestBuffer() { return _harvestBuffer(null, null); }
-    
+
     ## Harvests the entire buffer up to the beginning of the match.
     String _harvestBuffer(Match mx) { return _harvestBuffer(mx, null); }
 
-    ## Sets the current line to /newCur/.  *Deprecated*.  Use 
+    ## Sets the current line to /newCur/.  *Deprecated*.  Use
     ## _harvestBuffer()
     void _setCurLine(String newCur) {
         buffer = newCur;
@@ -261,18 +261,18 @@ line $lineNum: $msg\n`;
     ##
     ## Returns *null* if neither is available.
     Match _searchSpecial(String target, int startPos, Regex terminator) {
-   
+
         # first search for special characters, if there are any obvious
         # reasons not to care about searching for the terminator after this,
         # return it
         specialMatch := _special.search(target, startPos);
         if (!terminator || specialMatch && specialMatch.group() == terminator)
             return specialMatch;
-        
+
         # search for instances of the terminator.  If we find one, create a
         # bogus match object for it.
         termMatch := terminator.search(target);
-        
+
         # return the first matching expression
         if (specialMatch && termMatch) {
             if (specialMatch.begin() < termMatch.begin())
@@ -285,37 +285,37 @@ line $lineNum: $msg\n`;
            return termMatch;
         }
     }
-        
+
 
     # Parses a literal text block.  Literal blocks have no special
     # character sequences except for the terminator and escape characters.
     TextBlock _parseLiteral(TextBlock txt, Regex term) {
-      
+
         lastMatch := 0;
-      
+
         # create a special regular expression that will match a terminator
         # or escape sequence
         termrx := Regex(r'(\\.)|' + term.pattern);
-        
+
         # assume that we don't have a full line for starters
         fullLine := 0;
-        
+
         while (true) {
-        
+
             # get the next line and make sure that we got one.
             line := _getCurLine();
             if (!line)
                throw DocParseError('Premature end of file', srcName, lineNum,
                                    txt
                                    );
-   
+
             # search for the first instance of an escape sequence or the
             # terminator
             special := termrx.search(line, lastMatch);
-           
+
             # if an escape sequence was found, remove the backslash
             if (special && special.group()[0] == b'\\') {
-                line = line.slice(0, special.begin()) + 
+                line = line.slice(0, special.begin()) +
                      line.slice(special.begin() + 1);
                 _setCurLine(line);
                 lastMatch = special.end() - 1;
@@ -323,7 +323,7 @@ line $lineNum: $msg\n`;
             # if the terminator was found, we're done
             } else if (special) {
                 txt.consume(line.slice(0, special.begin()));
-              
+
                 # truncate up to and including the terminator, if this leaves
                 # us with an empty line, tack on a newline.
                 line = line.slice(special.end());
@@ -334,19 +334,19 @@ line $lineNum: $msg\n`;
                 return txt;
             # otherwise, add all of the words in the line to the block
             } else {
-           
+
                 # warn the user of embedded block terminators
                 if ( fullLine &&
                      (_wsrx.search(line) || _blockTerminatorrx.search(line)))
                     _warn("Unexpected block terminator.", txt);
-           
+
                 txt.consume(line);
                 _setCurLine('');
                 fullLine = 1;
                 lastMatch = 0;
             }
         }
-        
+
         // should never get here.
         return null;
     }
@@ -355,39 +355,39 @@ line $lineNum: $msg\n`;
     # interred by the block as a single string.  The only characters
     # that are special are the terminator and the necessary escape characters
     # (`\<terminator> and \\\\`).
-    # 
+    #
     # For a line terminated preformatted literal, /lineTerm/ must contain
     # a regular expression that matches the entire contents of the line,
     # excluding trailing and leading whitespace.
-    TextBlock _parsePreformattedLiteral(TextBlock txt, Regex lineTerm, 
+    TextBlock _parsePreformattedLiteral(TextBlock txt, Regex lineTerm,
                                         Regex term
                                         ) {
-   
-        
+
+
         Match special;
-        
+
         Regex termrx = term;
         if (!lineTerm) {
-       
+
             # construct a regular expression for the terminator and two
             # escape sequences
-            termrx = Regex(r'(\\\\)|(\\' + term.pattern + ')|(' + 
+            termrx = Regex(r'(\\\\)|(\\' + term.pattern + ')|(' +
                             term.pattern + ')'
                            );
         }
-       
+
         # last position that we searched on
         lastPos := 0;
-        
+
         while (true) {
             line := _getCurLine();
-            
+
             if (!line)
-                throw DocParseError("Unexpected end of file.", srcName, 
+                throw DocParseError("Unexpected end of file.", srcName,
                                     lineNum,
                                     txt
                                     );
-            
+
             # if this is line terminated, check whether the line matches
             # the line terminator
             if (lineTerm && lineTerm.match(line)) {
@@ -395,18 +395,18 @@ line $lineNum: $msg\n`;
                 _harvestBuffer();
                 return txt;
             } else if (lineTerm) {
-            
+
                 # want to move on at this point because the rest of the body
                 # of the loop deals with non-line-terminated blocks
                 txt.consume(_harvestBuffer());
                 continue;
             }
-   
+
             # check to see if the line has any special stuff in it
             if (termrx)
                 special = termrx.search(line, lastPos);
             if (special) {
-        
+
                 # if this is a terminator, end this now.
                 if (special.group(3)) {
                     # just stick everything into it and go
@@ -423,7 +423,7 @@ line $lineNum: $msg\n`;
                 lastPos = 0;
             }
         }
-        
+
         return null;
     }
 
@@ -444,11 +444,11 @@ line $lineNum: $msg\n`;
 
     ## Computes the level of indentation for the given /line/.
     int _levelOfIndent(String line) {
-   
+
         if (!line)
             return 0;
 
-        int col;        
+        int col;
         for (int i = 0; i < line.size; ++i) {
             ch := line[i];
             if (ch == b' ')
@@ -463,33 +463,33 @@ line $lineNum: $msg\n`;
 
     ## Parses the next text block.
     ## type: the block type.
-    ## term: the terminator string or regular expression.  If this value is 
-    ##     *null*, the text block returns on an empty (all whitepsace) line 
-    ##     or a line matching one of the kinds of line that starts a new 
+    ## term: the terminator string or regular expression.  If this value is
+    ##     *null*, the text block returns on an empty (all whitepsace) line
+    ##     or a line matching one of the kinds of line that starts a new
     ##     block.
     ## tightLeft: If true, the text block binds tightly (with no interspersed
     ##     whitespace) to the text to the left of it.
-    ## indent: If this is not zero, it represent the level of indentation 
-    ##     that the text block must maintain.  If a line is encountered that 
+    ## indent: If this is not zero, it represent the level of indentation
+    ##     that the text block must maintain.  If a line is encountered that
     ##     is below that level of indentation, block processing is terminated.
     TextBlock _parseText(String type, Regex term, bool tightLeft, int indent) {
 
         txt := __makeBlock(srcName, lineNum, type, tightLeft);
-  
+
         if (txt.preformatted && txt.literal)
            return _parsePreformattedLiteral(txt, null, term);
         else if (txt.isExec)
            return _parseExec(txt, term);
         else if (txt.literal)
            return _parseLiteral(txt, term);
-  
+
         lastMatch := 0;
         checkSpecialTerm := true;
-        
+
         while (true) {
             # get the next line of the buffer
             line := _getCurLine();
-            
+
             # make sure that there was one
             if (!line && term)
                throw DocParseError('Premature end of file', srcName, lineNum,
@@ -497,12 +497,12 @@ line $lineNum: $msg\n`;
                                    );
             else if (!line)
                return txt;
-            
+
             # if we are checking indentation, and the next line has
             # lower indentation than the current level, return
             if (checkSpecialTerm && indent && indent > _levelOfIndent(line))
                return txt;
-            
+
             # if there's no terminator, we need to check for all of the
             # conditions that constitute a new block - empty line and
             # special format header lines
@@ -510,21 +510,21 @@ line $lineNum: $msg\n`;
                ws := _wsrx.match(line);
                if (ws && ws.group() == line || _blockTerminatorrx.match(line))
                   return txt;
-            
+
             # see if the regular expression matches the current line
             } else if (checkSpecialTerm && term && term.match(line))
                return txt;
-   
+
             # if we are not parsing a block formatter and we encounter
             # a block terminator, issue a warning (this probably means that
             # an end terminator is missing)
             if (checkSpecialTerm && term && txt.words &&
                 (allWhitespace(line) || _blockTerminatorrx.match(line)))
                 _warn("Block terminator encountered.", txt);
-            
+
             # if the terminator is a regular expression (and not just a simple
-            # string) search for special characters excluding the termination 
-            # sequence.  Otherwise, search for the termination sequence as 
+            # string) search for special characters excluding the termination
+            # sequence.  Otherwise, search for the termination sequence as
             # well
             Match match;
 #            if (term && term.pattern == escape(term.pattern)) {
@@ -532,47 +532,47 @@ line $lineNum: $msg\n`;
                 match = _searchSpecial(line, lastMatch, term);
             else
                 match = _searchSpecial(line, lastMatch, null);
-              
+
             # first of all, if we matched a backslash expression, remove the
             # backslash from the line and set the lastMatch pointer to the
             # location after the backslash
             if (match && match.group()[0] == b'\\' && match.group().size == 2) {
-                _setCurLine(line.slice(0, match.begin()) + 
+                _setCurLine(line.slice(0, match.begin()) +
                              line.slice(match.end() - 1)
                             );
                 lastMatch = match.end() - 1;
-                
+
                 # since we don't have a complete line, turn off checking for
                 # special termination conditions
                 checkSpecialTerm = false;
-               
+
             } else if (match) {
-            
+
                 matchVal := match.group();
-    
+
                 # add the words before the special character to the document
                 txt.consume(_harvestBuffer(match));
-                
+
                 # reset the lastMatch pointer (since we`re done with it)
                 lastMatch = 0;
-             
+
                 # if the special character is the terminating character for
                 # the current text block, return now
                 if (term && term.match(matchVal))
                    return txt;
-    
+
                 # get the child information
                 childType := _TYPES[matchVal[0]];
-    
+
                 # parse a new text block ending with the matching terminator
-                childBlock := _parseText(childType.getName(matchVal), 
+                childBlock := _parseText(childType.getName(matchVal),
                                          childType.getTerminator(matchVal),
                                          false,
                                          0
                                          );
-                
+
                 _debug("Child: ", childBlock);
-    
+
                 # if the last character before where we start is a whitespace
                 # character, mark the fact that we need whitespace before the
                 # textblock.
@@ -581,33 +581,33 @@ line $lineNum: $msg\n`;
                    childBlock.tightLeft = 1;
                 else
                    childBlock.tightLeft = 0;
-    
+
                 # add the new child to the list of children for the block
                 txt.addChild(childBlock);
-                
+
                 # if there is whitepsace immediately after the child block, the
                 # child block binds tightly to the right
                 line = _getCurLine();
                 if (line && !isSpace(line[0]))
                    childBlock.tightRight = 1;
-                
+
                 # if we care about indentation or structure, we need to indicate
                 # that we do not currently have a complete line so that
                 # checking for structural termination conditions is turned off
                 checkSpecialTerm = false;
-            
+
             } else {
                 # add the entire line to the text block, reset everything to
                 # indicate that we`ve consumed it.
                 txt.consume(_harvestBuffer());
                 lastMatch = 0;
-                
+
                 # turn on checking for special termination conditions (since we've
                 # got a complete line)
                 checkSpecialTerm = 1;
             }
         }
-        
+
         return null;
     }
 
@@ -623,19 +623,19 @@ line $lineNum: $msg\n`;
 
         # create a new definition list
         dl := __makeBlock(srcName, lineNum, 'definitionList', false);
-  
+
         # trick to get the string that the line actually terminates with
         line := _getNextFullLine();
         termStr := _definitiontokrx.match(line).group(1);
         term := _getTerminatorRx(termStr);
-  
+
         # get the item being defined, which should be a text block
         item := _parseText('text', term, false, 0);
-        
+
         _debug("Defined: ", item);
-        
+
         while (true) {
-            # get the next line, if the indentation is less than the current 
+            # get the next line, if the indentation is less than the current
             # level
             line = _getNextFullLine();
             lineIndent := _levelOfIndent(line);
@@ -646,44 +646,44 @@ line $lineNum: $msg\n`;
                                     lineNum,
                                     item
                                     );
-            
+
             definition := __makeBlock(srcName, lineNum, 'doc', false);
             parseAnything(definition, lineIndent);
             _debug("Definition: ", definition);
-            
+
             # create a new definition item block containing the item and its
             # definition
             block := __makeBlock(srcName, lineNum, 'definitionItem', false);
             block.addChild(item);
             block.addChild(definition);
-            
+
             # add the item to the definition list
             dl.addChild(block);
-            
+
             # get the next line
             line = _getNextFullLine();
             lineIndent = _levelOfIndent(line);
-            
+
             # if the next line is not a definition, we're done.
             if (!line || lineIndent < indent || !_definitionrx.match(line))
                 return dl;
-   
+
             # get the line terminator
             term = _getTerminatorRx(_definitiontokrx.match(line).group(1));
-            
+
             # reset item to the next definition.
             item = _parseText('text', term, false, 0);
-            
+
             _debug("Defined: ", item);
         }
-        
+
         return null;
     }
 
     ## Parses an unordered list.
     TextBlock _parseUnorderedList(int indent) {
         String line;
-   
+
         # quick little procedure to replace the hyphen
         String replaceHyphen(DocParser parser, String l) {
             String line = l;
@@ -692,46 +692,46 @@ line $lineNum: $msg\n`;
             parser._setCurLine(line);
             return line;
         }
-     
+
         ol := __makeBlock(srcName, lineNum, 'unorderedList', false);
-     
+
         # replace the leading hyphen in the current line with a space
         line = _getCurLine();
         line = replaceHyphen(this, line);
-        
+
         # get the current indentation
         lineIndent := _levelOfIndent(line);
-        
+
         while (true) {
             # create a new doc block for the item
             item := __makeBlock(srcName, lineNum, 'doc', false);
             parseAnything(item, lineIndent);
-            
+
             # add the new item to the list
             ol.addChild(item);
-            
+
             # get the next line with stuff in it
             line = _getNextFullLine();
             if (!line)
                 return ol;
-            
+
             # if its indentation is less than that of the unordered list itself,
             # quit now
             lineIndent = _levelOfIndent(line);
             if (lineIndent < indent)
                 return ol;
-   
+
             # if it is something other than an unordered list element, quit now
             if (!_unorderedrx.match(line))
                 return ol;
-   
+
             # go through the replacement game again
             line = replaceHyphen(this, line);
-            
+
             # get the current indentation
             lineIndent = _levelOfIndent(line);
         }
-        
+
         return null;
     }
 
@@ -751,19 +751,19 @@ line $lineNum: $msg\n`;
     ## recognizes special sequences for unordered lists and definition lists
     ## and paragraphs.
     void parseAnything(TextBlock block, int indent) {
-   
+
         while (true) {
             line := _getNextFullLine();
-            
+
             # if this is the end of the file, we're done
             if (!line)
                return;
-            
+
             # if this line is indented less than the current level of indent,
             # return.
             if (_levelOfIndent(line) < indent)
                 return;
-            
+
             # if this is a definition, parse a definition list
             if (_definitionrx.match(line)) {
                 #cout `def list\n`;
@@ -786,7 +786,7 @@ line $lineNum: $msg\n`;
                 _parsePreformattedLiteral(tmp, _prelitEndrx, null);
                 _debug('Preformatted literal: ', tmp);
                 block.addChild(tmp);
-            
+
             # if this is preformatted, parse a preformatted block
             } else if (_preStartrx.match(line)) {
                 #cout `preformatted\n`;
@@ -797,10 +797,10 @@ line $lineNum: $msg\n`;
                 _harvestBuffer();
                 _debug('preformatted: ', tmp);
                 block.addChild(tmp);
-   
+
             # if this is a line of text followed by an "underline line",
             # treat it as a header
-            } else if (line && (nextLine := _getNextLine()) && 
+            } else if (line && (nextLine := _getNextLine()) &&
                        _underlinerx.match(nextLine)) {
                 #cout `header\n`;
                 underline := strip(nextLine)[0];
@@ -815,7 +815,7 @@ line $lineNum: $msg\n`;
                     throw AssertionError(
                         FStr() `Unknown underline type $underline\n`
                     );
-                tmp := _parseText(header, _underlinerx, false, 
+                tmp := _parseText(header, _underlinerx, false,
                                   _levelOfIndent(line)
                                   );
                 _harvestBuffer();
@@ -847,7 +847,7 @@ Regex _makeSpecialChars() {
     }
     return Regex(tmp.string());
 }
-    
+
 _specialChars := _makeSpecialChars();
 
 ## This function is used to take a string that contains literal text

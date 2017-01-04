@@ -7,18 +7,18 @@
 #  Copyright 1999 Michael A. Muller <mmuller@enduden.com>
 #  Copyright 2011-2012 Google Inc.
 #  Copyright 2012 Conrad Steenberg <conrad.steenberg@gmail.com>
-#  
+#
 #    This Source Code Form is subject to the terms of the Mozilla Public
 #    License, v. 2.0. If a copy of the MPL was not distributed with this
 #    file, You can obtain one at http://mozilla.org/MPL/2.0/.
-#  
+#
 #
 #==============================================================================
 
 import crack.ascii hex, radix;
 import crack.cont.array Array;
 import crack.lang AssertionError, InvalidArgumentError, InvalidStateError, ManagedBuffer;
-import crack.io cerr, StandardFormatter, FStr, Formatter, StringFormatter, 
+import crack.io cerr, StandardFormatter, FStr, Formatter, StringFormatter,
     Reader, Writer;
 
 @import crack.ann assert, interface, implements;
@@ -35,7 +35,7 @@ const int
 # if this is true, all received midi events will be printed
 bool _printEvents;
 
-## Wrapper to help write to a midi stream.  Manages a buffer and allows you to 
+## Wrapper to help write to a midi stream.  Manages a buffer and allows you to
 ## keep track of a status byte.
 class MidiWriter {
     Writer out;
@@ -48,13 +48,13 @@ class MidiWriter {
         out.write(buffer);
         buffer.size = 0;
     }
-    
+
     @final void write(byte b) {
         if (buffer.size == 1024)
             flush();
         buffer.buffer[buffer.size++] = b;
     }
-    
+
     ## Writes the status byte but only if it is not already the current status.
     @final void writeStatus(byte b) {
         if (status != b) {
@@ -62,7 +62,7 @@ class MidiWriter {
             write(b);
         }
     }
-    
+
     @final void encodeVarLen(uint val) {
         if (!val) {
             write(0);
@@ -79,18 +79,18 @@ class MidiWriter {
 
         while (--shifts)
             write(byte( (val >> (7 * shifts)) & 0x7f | 0x80 ));
-        
+
         # write the last byte
         write(byte(val & 0x7f));
     }
-    
+
     oper del() {
         flush();
     }
 }
 
 ##  A MIDI event.  An abstract base class.
-##  
+##
 ##  Public variables:
 ##      time: Absolute time of the event.
 @abstract class Event {
@@ -103,29 +103,29 @@ class MidiWriter {
         byte status;
         String rep;
         oper init(byte status, byteptr rep, uintz size) :
-            status = status, 
+            status = status,
             rep(rep, size, true)  {
         }
-        
+
         oper init(byte status, String rep) : status = status, rep = rep {}
     }
 
     ## Used to convert the event to a string of bytes suitable for inclusion
     ## in a midi stream of some sort.  /status/ is the current, running
     ## status byte.
-    ## 
+    ##
     ## This method returns a tuple consisting of the new status byte and
     ## the string representation of the event.
     @abstract StatAndString toMidiString(byte status);
-    
+
     @abstract void writeTo(MidiWriter writer);
-    
+
     ## Make a copy of the event object.
     @abstract Event clone();
 }
 
 ## Abstract base class for all events that apply to a particular channel.
-## 
+##
 ## Public variables:
 ##  channel: The channel that the event occurred on.  An integer from 0-15.
 @abstract class ChannelEvent : Event {
@@ -136,12 +136,12 @@ class MidiWriter {
 
 ##  Base class for midi "note on" and "note off" events, both of which have
 ##  the same public interface.
-##  
+##
 ##  Public variables:
 ##  note: Numeric note (0-127)
 ##  velocity: Numeric velocity (0-127)
 @abstract class NoteEvent : ChannelEvent {
-   
+
    byte note, velocity;
    oper init(uint time, byte channel, byte note, byte velocity) :
         ChannelEvent(time, channel),
@@ -156,7 +156,7 @@ class NoteOn : NoteEvent {
     oper init(uint time, byte channel, byte note, byte velocity) :
         NoteEvent(time, channel, note, velocity) {
     }
-   
+
     StatAndString toMidiString(byte status) {
         if (status == (0x90 | channel)) {
             return StatAndString(status, byteptr![note, velocity], 2);
@@ -165,24 +165,24 @@ class NoteOn : NoteEvent {
             return StatAndString(status, byteptr![status, note, velocity], 3);
         }
     }
-    
+
     Event clone() {
         return NoteOn(time, channel, note, velocity);
     }
-    
+
     void writeTo(MidiWriter out) {
         out.writeStatus(0x90 | channel);
         out.write(note);
         out.write(velocity);
     }
-    
+
     void formatTo(Formatter f) {
         f `ch: $channel, note $note on, velocity $velocity`;
     }
 }
 
 ##  Midi "note off" event.
-##  
+##
 ##  This may be in conflict with the actual midi spec, but I am assuming
 ##  that only a note off with a velocity of 0 can be used in a running
 ##  "note on" status (as a "note on" event with a velocity of 0).  Any
@@ -193,7 +193,7 @@ class NoteOff : NoteEvent {
     oper init(uint time, byte channel, byte note, byte velocity) :
         NoteEvent(time, channel, note, velocity) {
     }
-   
+
     StatAndString toMidiString(byte status) {
         if (status == (0x80 | channel)) {
             return StatAndString(status, byteptr![note, velocity], 2);
@@ -204,17 +204,17 @@ class NoteOff : NoteEvent {
             return StatAndString(status, byteptr![status, note, velocity], 3);
         }
     }
-    
+
     void writeTo(MidiWriter out) {
         # handle the "note on" status specially - if we're in note on, and the
-        # velocity is 0 (which it should always be) we can just emit note on 
+        # velocity is 0 (which it should always be) we can just emit note on
         # with velocity zero.
-        if (out.status != (0x90 | channel) || velocity) 
+        if (out.status != (0x90 | channel) || velocity)
             out.writeStatus(0x80 | channel);
         out.write(note);
         out.write(velocity);
     }
-    
+
     Event clone() {
         return NoteOff(time, channel, note, velocity);
     }
@@ -238,29 +238,29 @@ class ProgramChange : ChannelEvent {
         program = program {
     }
 
-    StatAndString toMidiString(byte status) {   
+    StatAndString toMidiString(byte status) {
         # since there is no reason to do running program changes on the same
         # channel, we just always send a status byte.
         status = 0xC0 | channel;
         return StatAndString(status, byteptr![status, program], 2);
     }
-    
+
     void writeTo(MidiWriter out) {
         out.writeStatus(0xC0 | channel);
         out.write(program);
     }
-    
+
     Event clone() {
         return ProgramChange(time, channel, program);
     }
-    
+
     void formatTo(Formatter f) {
         f `ch: $channel, change to program $program`;
     }
 }
 
 ##  Midi "pitch wheel" event.
-##  
+##
 ##  Public variables:
 ##  /value/::
 ##     Numeric value of the pitch wheel.  A value of 0x2000 is centered.
@@ -276,29 +276,29 @@ class PitchWheel : ChannelEvent {
 
     StatAndString toMidiString(byte status) {
         if (status == (0xE0 | channel)) {
-            return StatAndString(status, 
-                                 byteptr![byte(value & 0x7F), byte(value >> 7)], 
+            return StatAndString(status,
+                                 byteptr![byte(value & 0x7F), byte(value >> 7)],
                                  2
                                  );
         } else {
             status = 0xE0 | channel;
             return StatAndString(status,
                                  byteptr![
-                                    status, 
-                                    byte(value & 0x7F), 
+                                    status,
+                                    byte(value & 0x7F),
                                     byte(value >> 7)
                                  ],
                                  3
                                  );
         }
     }
-    
+
     void writeTo(MidiWriter out) {
         out.writeStatus(0xE0 | channel);
         out.write(byte(value & 0x7F));
         out.write(byte(value >> 7 & 0xFF));
     }
-    
+
     Event clone() {
         return PitchWheel(time, channel, value);
     }
@@ -309,7 +309,7 @@ class PitchWheel : ChannelEvent {
 }
 
 ##  Midi "control change" event.
-##  
+##
 ##  Public variables:
 ##  /controller/::
 ##     The controller in question.
@@ -317,7 +317,7 @@ class PitchWheel : ChannelEvent {
 ##     The new value for the controller.
 class ControlChange : ChannelEvent {
     byte controller, value;
-    
+
     oper init(uint time, byte channel, byte controller, byte value) :
         ChannelEvent(time, channel),
         controller = controller,
@@ -334,13 +334,13 @@ class ControlChange : ChannelEvent {
                                  );
         }
     }
-    
+
     void writeTo(MidiWriter out) {
         out.writeStatus(0xB0 | channel);
         out.write(controller);
         out.write(value);
     }
-    
+
     Event clone() {
         return ControlChange(time, channel, controller, value);
     }
@@ -352,9 +352,9 @@ class ControlChange : ChannelEvent {
 
 ##  Midi "system exclusive" event.  Just a big bag of data passed into
 ##  the system.
-##  
+##
 ##  Public Variables:
-##  data: A string of binary data to be passed into the remote system. 
+##  data: A string of binary data to be passed into the remote system.
 ##     The leading F0 and trailing F7 bytes should be omitted: they will
 ##     be generated by the @asMidiString() method.
 class SysEx : Event {
@@ -368,7 +368,7 @@ class SysEx : Event {
         temp `\xF0$data\xF7`;
         return StatAndString(0xF0, temp.string());
     }
-    
+
     Event clone() {
         return SysEx(time, data);
     }
@@ -380,7 +380,7 @@ class SysEx : Event {
             out.write(data[i]);
         out.write(0xF7);
     }
-    
+
     void formatTo(Formatter f) {
         f `SysEx: `;
         for (uintz i = 0; i < data.size; ++i)
@@ -389,9 +389,9 @@ class SysEx : Event {
 }
 
 ## Pseudo-event used as a marker for the end of the track.
-## When a track is deserialized, the EndTrack is automatically added from the 
-## end track marker in the stream.  When a track is serialized, if it doesn't 
-## have an EndTrack event one will be written at the time of the last existing 
+## When a track is deserialized, the EndTrack is automatically added from the
+## end track marker in the stream.  When a track is serialized, if it doesn't
+## have an EndTrack event one will be written at the time of the last existing
 ## event on the track.
 class EndTrack : Event {
     oper init(uint time) : Event(time) {}
@@ -399,7 +399,7 @@ class EndTrack : Event {
     typeof(EndTrack(0).toMidiString(0)) toMidiString(byte status) {
         return null;
     }
-    
+
     void writeTo(MidiWriter out) {
         out.write(0xFF);
         out.write(0x2F);
@@ -409,7 +409,7 @@ class EndTrack : Event {
     Event clone() {
         return EndTrack(time);
     }
-    
+
     void formatTo(Formatter f) {
         f `EndEvent`;
     }
@@ -420,7 +420,7 @@ class EndTrack : Event {
 #     ChannelPressure
 #     RealTime
 
-## Abstract base class for all event sources.  Implements the iterator 
+## Abstract base class for all event sources.  Implements the iterator
 ## protocol.
 @abstract class EventSource {
     @abstract void next();
@@ -435,25 +435,25 @@ class EndTrack : Event {
     ## Sets the position within the event stream.  /pos/ is an
     ## absolute midi clock value.
     @abstract void setPos(uint pos);
-   
+
     ## Returns the position within the event stream as an absolute value.
     @abstract uint getPos();
- 
-    ## Returns the position of the last event in the event stream.  
+
+    ## Returns the position of the last event in the event stream.
     @abstract uint getEnd();
 }
 
 ##  A *Track* is a list of events, sorted in order of their time.
-##  
+##
 ##  Public variables:
 ##  name:
 ##     Every track can have an associated name.  If the tracks is part of
 ##     a "piece", use Piece.renameTrack() to rename the track instead
 ##     of setting this attribute directly.
-##     
+##
 ##     A track name must be unique within the piece.
 class Track {
-   
+
     String name;
     Array[Event] __events;
 
@@ -467,7 +467,7 @@ class Track {
         bool isTrue() { return __i < __events.count(); }
         void next() { ++__i; }
         Event elem() { return __events[__i]; }
-        
+
         void setPos(uint pos) {
             uint binsearch(Array[Event] events, uint bottom, uint top,
                            uint target) {
@@ -475,23 +475,23 @@ class Track {
                     return bottom;
                 else if (bottom - top == 1)
                     return top;
-                
+
                 mid := bottom + (top - bottom) / 2;
                 if (target < events[mid].time)
                     return binsearch(events, bottom, mid, target);
                 else
                     return binsearch(events, mid, top, target);
             }
-            
+
             # rule out some simple conditions
             if (!__events || pos <= __events[0].time)
                 __i = 0;
             else if (pos > __events[-1].time)
                 __i =  __events.count();
-            
+
             __i = binsearch(__events, 0, __events.count(), pos);
         }
-        
+
         uint getPos() {
             if (__i < __events.count())
                 return __events[__i].time;
@@ -500,7 +500,7 @@ class Track {
             else
                 return __events[-1].time + 1;
         }
-        
+
         uint getEnd() {
             if (__events)
                 return __events[-1].time;
@@ -508,15 +508,15 @@ class Track {
                 return 0;
         }
     }
-    
+
     oper init(String name, Array[Event] events) :
         name = name,
         __events = events {
     }
-    
+
     oper init(String name) : name = name, __events() {}
 
-    ## Add the event to the track at the correct location (with respect to the 
+    ## Add the event to the track at the correct location (with respect to the
     ## time of the other events).
     void add(Event event) {
         if (!__events) {
@@ -531,17 +531,17 @@ class Track {
                     return;
                 }
             }
-            
+
             throw AssertionError('found no location to insert an event');
         }
     }
-    
-    ## Adds a new event to the end of the track.  The time of the event must 
-    ## be later than or equal to the time of the last event in the track, 
+
+    ## Adds a new event to the end of the track.  The time of the event must
+    ## be later than or equal to the time of the last event in the track,
     ## otherwise this throws InvalidArgumentError.
     void append(Event evt) {
         if (__events && evt.time < __events[-1].time)
-            throw InvalidArgumentError(FStr() 
+            throw InvalidArgumentError(FStr()
                                        I`Appending event $evt which is earlier \
                                          than the last event of the track \
                                          ($(__events[-1].time)).`
@@ -552,9 +552,9 @@ class Track {
     Event oper [](int index) {
         return __events[index];
     }
-    
+
     uint count() { return __events.count(); }
-    
+
     TrackEventSource iter() { return TrackEventSource(__events, 0); }
 
     ## write all of the events in the track with their time deltas.
@@ -566,7 +566,7 @@ class Track {
             lastTime = event.time;
         }
     }
-    
+
     void writeTo(MidiWriter out) {
         writeEvents(out);
         out.write(0);  # time from last event.
@@ -574,13 +574,13 @@ class Track {
         out.write(0x2f);
         out.write(0);
     }
-    
+
     void formatTo(Formatter out) {
         for (event :in this)
             out `$(event.time): $event\n`;
     }
 
-/*   
+/*
    def merge(self, other):
       """
          Returns a new track consisting of the events of /self/ and /other/
@@ -616,12 +616,12 @@ Track merge(String name, Array[Track] tracks) {
     Array[Iter] iters = {tracks.count()};
     for (t :in tracks)
         iters.append(t.iter());
-    
+
     Track result = {name};
 
-    # repeat until there are no more events in any of the iterators        
+    # repeat until there are no more events in any of the iterators
     while (iters) {
-        
+
         # find the earliest event in all of the iterators
         Event first;
         int firstIndex;
@@ -631,7 +631,7 @@ Track merge(String name, Array[Track] tracks) {
                 first = iter.elem();
                 firstIndex = index;
             }
-            
+
             ++index;
         }
 
@@ -642,7 +642,7 @@ Track merge(String name, Array[Track] tracks) {
 
         result.append(first);
     }
-    
+
     return result;
 }
 
@@ -653,9 +653,9 @@ class MidiReader {
     Reader src;
     ManagedBuffer buf = {BUF_SIZE};
     uint pos;
-    
+
     oper init(Reader src) : src = src {}
-    
+
     @final void needByte() {
         if (pos == buf.size) {
             src.read(buf);
@@ -664,12 +664,12 @@ class MidiReader {
             pos = 0;
         }
     }
-    
+
     @final byte readByte() {
         needByte();
         return buf.buffer[pos++];
     }
-    
+
     uint readVarLen() {
         uint val;
         byte b = 0x80;
@@ -679,17 +679,17 @@ class MidiReader {
         }
         return val;
     }
-    
-    ## This gets called when we read an event with an unknown status byte.  
+
+    ## This gets called when we read an event with an unknown status byte.
     ## Override it to deal with special events.
     Event readUserEvent() {
         @assert(false);
         return null;
     }
-    
+
     @final Event readEvent() {
         byte first = readByte();
-        
+
         # is it a status byte?
         if (first & 0x80) {
             status = first;
@@ -734,7 +734,7 @@ class MidiReader {
             return readUserEvent();
         }
     }
-    
+
     Track readTrack(String name) {
         Track track = {name};
         uint t;
@@ -749,7 +749,7 @@ class MidiReader {
             if (evt.isa(EndTrack))
                 break;
         }
-        
+
         return track;
     }
 }
@@ -759,10 +759,10 @@ class MidiReader {
       self._events = []
       tracks = map(TrackCursor, tracks)
       event = 1
-      
+
       # build an ordered list of the events in each of the tracks
       while event:
-      
+
          # find the track with the next available event
          event = None
          for track in tracks:
@@ -771,25 +771,25 @@ class MidiReader {
                   bestTrack = track
                   event = track.peekNextEvent()
                   continue
-                  
+
                trackEvent = track.peekNextEvent()
                if trackEvent.time < event.time:
                   bestTrack = track
                   event = trackEvent
-         
+
          if event:
             self._addEvent(event, bestTrack, tracks)
             bestTrack.nextEvent()
-      
+
       self.__index = 0
       self.__pos = 0
 
    def _addEvent(self, event, track, tracks):
       self._events.append(event)
-   
+
    def hasMoreEvents(self):
       return self.__index < len(self._events)
-   
+
    def nextEvent(self):
       if self.__index < len(self._events):
          evt = self._events[self.__index]
@@ -801,7 +801,7 @@ class MidiReader {
          return evt
       else:
          return None
-   
+
    def peekNextEvent(self):
       if self._events:
          return self._events[0]
@@ -814,25 +814,25 @@ class MidiReader {
          it changes the instance.
       """
       return self._events
-   
+
    def getPos(self):
       return self.__pos
-   
+
    def setPos(self, pos):
       self.__pos = pos
-      
+
       # if there are no events, this is not an issue
       if not self._events:
          self.__index = 1
          return
-      
+
       # see if it is later than the last event
       if pos > self._events[-1].time:
          self.__index = len(self._events)
          print 'pos is %d, index past the end (%d)' % \
             (pos, self._events[-1].time)
          return
-      
+
       # look for it
       for i in range(len(self._events)):
          if pos <= self._events[i].time:
@@ -841,7 +841,7 @@ class MidiReader {
             break
       else:
          # should never get here
-         assert 0 
+         assert 0
 
    def getEnd(self):
       return self._events[-1].time
@@ -852,17 +852,17 @@ class TrackOverwriter(TrackZipper):
       This currently implements a "clean-cut" overwriter.  Given a list of two
       tracks, removes all events from the first track which occur during the
       "period of activity" of the second track.  Any NoteOn events which
-      are left dangling are turned off at the beginning of this period, 
+      are left dangling are turned off at the beginning of this period,
       any NoteOn events which occur during the period that are not turned off
       during the period are turned on at the end of the period.
    """
-   
+
    def __init__(self, tracks):
       assert len(tracks) == 2
       self.__map = [None] * 128
       self.__done = 0
       TrackZipper.__init__(self, tracks)
-   
+
    def __mapEvent(self, event):
       # store the index of the event that turned them on.
       if isinstance(event, NoteOn):
@@ -871,7 +871,7 @@ class TrackOverwriter(TrackZipper):
       elif isinstance(event, NoteOff):
          self.__map[event.note] = None
          print 'mapping note off: %d, %d' % (event.time, event.note)
-   
+
    def _addEvent(self, event, track, tracks):
       if track is tracks[0]:
          # keep track of which notes are on and which notes are off,
@@ -884,14 +884,14 @@ class TrackOverwriter(TrackZipper):
                self._events.append(NoteOff(event.time, event.channel, i, 0))
                print 'truncating %d' % i
                self.__map[i] = None
-         
+
          # add the new event
          self._events.append(event)
-         
+
          # walk through all events on the first track that occur before the
          # end of the second track, build a map so that we'll know what to
          # turn off.
-         
+
          endTime = track.getTrack()[-1].time
          print 'end time %d' % endTime
          firstTrack = tracks[0]
@@ -907,16 +907,16 @@ class TrackOverwriter(TrackZipper):
          while track.hasMoreEvents():
             e = track.nextEvent()
             self._events.append(e)
-         
-         # turn on all notes that are going to be turned off          
+
+         # turn on all notes that are going to be turned off
          for i in range(len(self.__map)):
             if self.__map[i] is not None:
                print 'starting %d' % i
                self._events.append(NoteOn(endTime, event.channel, i,
                                           self.__map[i][1]
                                           )
-                                   )        
-         
+                                   )
+
 
 class TrackCursor(SeekableEventSource):
    """
@@ -940,23 +940,23 @@ class TrackCursor(SeekableEventSource):
          self.__pos = event.time
       else:
          self.__pos = self.__track[-1].time + 1
-      return event      
-   
+      return event
+
    def peekNextEvent(self):
       try:
          return self.__track[self.__index]
       except IndexError:
-         return None      
+         return None
 
    def getTrack(self):
       """
          Returns the associated track.
       """
       return self.__track
-   
+
    def getPos(self):
       return self.__pos
-   
+
    def setPos(self, pos):
       self.__pos = pos
       if pos > self.__track[-1].time:
@@ -970,20 +970,20 @@ class TrackCursor(SeekableEventSource):
             assert 0 # should never get here
 
    def getEnd(self):
-      return self.__track[-1].time   
+      return self.__track[-1].time
 
 class Piece:
 
    """
       A *Piece* is a collection of tracks.
    """
-   
+
    def __init__(self):
       self.__tracks = {}
 
    def addTrack(self, track):
       self.__tracks[track.name] = track
-   
+
    def getTracks(self):
       return self.__tracks.values()
 
@@ -1000,7 +1000,7 @@ class Piece:
       del self.__tracks[track]
 
 class PieceCursor(TrackZipper):
-   
+
    def __init__(self, piece):
       TrackZipper.__init__(self, piece.getTracks())
 
@@ -1025,7 +1025,7 @@ class StreamReader:
       self.__buf = []
       self.__state = self.NO_STATE
       self.__channel = 0
-      
+
       # list of events being input
       self._inputEvents = []
 
@@ -1056,7 +1056,7 @@ class StreamReader:
          elif cmd == 0xF7:
             evt = SysEx(time, self.__buf)
             self.__buf = []
-         
+
          # change the channel if the status byte has channel information in
          # it
          if highNyb != 0xF0:
@@ -1110,7 +1110,7 @@ class StreamReader:
          evt = self.__eventFilter(evt)
          if not evt:
             print 'event filtered:', oldEvt
-         
+
       if evt:
          self._inputEvents.append(evt)
 
@@ -1118,7 +1118,7 @@ class StreamReader:
       """
          Sets the object or function that is used to translate and filter
 	 events that are read from the midi stream.
-         
+
          /filter/ should be a callable object that accepts an @Event
          as a parameter.
 
@@ -1135,37 +1135,37 @@ class StreamReader:
       pass
 
 class Sequencer(EventSource, StreamReader):
-   
+
    """
       Wrapper class around /dev/sequencer.
    """
-   
-   
+
+
    def __init__(self, device = '/dev/sequencer'):
       StreamReader.__init__(self)
       self.__src = os.open(device, os.O_RDWR | os.O_NONBLOCK, 0)
-      
+
       # the last status byte written
       self.__status = 0
-      
+
       # this is the queue where we store raw data chunks that are ready to
       # be written to the sequencer.
       self.__outputQueue = []
-      
+
       # this is the current source of output events
       self.__outputEvents = None
-      
+
       self.__timeOffset = 0
-      
+
    def __del__(self):
       os.close(self.__src)
 
    def hasMoreEvents(self):
       pass
-      
+
    def nextEvent(self):
       pass
-   
+
    def peekNextEvent(self):
       pass
 
@@ -1190,25 +1190,25 @@ class Sequencer(EventSource, StreamReader):
          self.__resetTime()
       while 1:
          selected = select([self.__src, control], [self.__src], [])
-         
+
          # first check for incoming events
          if self.__src in selected[0]:
             time, cmd = self.__read()
             self._processCmd(time, cmd)
-         
+
          # check to see if the sequencer is ready to accept more events
          elif (self.__outputQueue or eventSource.hasMoreEvents()) \
               and self.__src in selected[1]:
             self.__writeSeqEvent()
 #            self.__writeEvent(eventSource.nextEvent())
-         
+
          # otherwise, this is an event from the controller or we have
          # run out of output events
          else:
             if isinstance(eventSource, SeekableEventSource):
                eventSource.setPos(self.__getPos())
             break
-      
+
       # if we terminated with an event from the controller, reset the
       # sequencer
       if control in selected[0]:
@@ -1224,7 +1224,7 @@ class Sequencer(EventSource, StreamReader):
       if self.__playAndRecord(control):
          # read any remaining events in the input queue
          self.__recordOnly(control)
-      
+
       track = Track(events = self._inputEvents)
       self._inputEvents = []
       return track
@@ -1236,10 +1236,10 @@ class Sequencer(EventSource, StreamReader):
       if _printEvents:
          print '%02x %02x %02x %02x' % \
             struct.unpack('BBBB', self.__outputQueue[0])
-      
+
       os.write(self.__src, self.__outputQueue[0])
       del self.__outputQueue[0]
-   
+
    def __queueEvent(self):
       event = self.__outputEvents.nextEvent()
       self.__status, data = event.asMidiString(self.__status)
@@ -1249,7 +1249,7 @@ class Sequencer(EventSource, StreamReader):
                            event.time >> 16
                            )
       self.__outputQueue.append(seqEvt)
-      
+
       for cmd in data:
          seqEvt = struct.pack('=BBh', 5, ord(cmd), 0)
          self.__outputQueue.append(seqEvt)
@@ -1260,7 +1260,7 @@ class Sequencer(EventSource, StreamReader):
          self.__resetTime(eventSource.getPos())
       else:
          self.__resetTime()
-      
+
       if control is not None:
          inputs = [ control ]
       else:
@@ -1270,14 +1270,14 @@ class Sequencer(EventSource, StreamReader):
       eventsWritten = 0
       while 1:
          selected = select(inputs, [self.__src], [])
-         
+
          # check to see if we got an interrupt
          if control is not None and control in selected[0]:
             if isinstance(eventSource, SeekableEventSource):
                eventSource.setPos(self.__getPos())
             self.__reset()
             break
-         
+
          # check to see if the sequencer is ready to accept more events
          elif (self.__outputQueue or eventSource.hasMoreEvents()) \
               and self.__src in selected[1]:
@@ -1285,14 +1285,14 @@ class Sequencer(EventSource, StreamReader):
             self.__writeSeqEvent()
          else:
             break
-      
+
       if control is not None:
-         self.__syncOrSwim(control)   
+         self.__syncOrSwim(control)
       else:
          self.__sync()
-         
+
       print 'events written: %d has more: %d' % (eventsWritten, eventSource.hasMoreEvents())
-   
+
    def __recordOnly(self, control):
       """
          Records events without playing any.
@@ -1326,7 +1326,7 @@ class Sequencer(EventSource, StreamReader):
 
    def __read(self):
       """
-         Reads the next 8 byte /dev/sequencer event, returns a tuple 
+         Reads the next 8 byte /dev/sequencer event, returns a tuple
          consisting of timestamp and command ("command" is really just the
          next byte from the midi event stream).
       """
@@ -1334,7 +1334,7 @@ class Sequencer(EventSource, StreamReader):
       code, time, timeHigh, five, cmd, zeroes = struct.unpack('=bHBBBh', data)
       time = self.__fixInputTime(time + (timeHigh << 16))
       return time, cmd
-      
+
    def __reopen(self):
       # XXX not sure if we need this - keeping it around because it's
       # XXX useful for now
@@ -1381,17 +1381,17 @@ class Sequencer(EventSource, StreamReader):
       self.__timeOffset = time
       os.write(self.__src, struct.pack('=BHB', 4, 0, 0))
       self.__systemStartTime = os.times()[4]
-   
+
    def __getPos(self):
       return int((os.times()[4] - self.__systemStartTime) * 100) + \
          self.__timeOffset
-   
+
    def showTimeBase(self):
       timebase = struct.pack('i', 200)
       data = fcntl.ioctl(self.__src, SNDCTL_SEQ_CTRLRATE, timebase)
       print 'timebase:', struct.unpack('i', timebase), struct.unpack('i', data)
 
-'''         
+'''
 import sys
 seq = Sequencer()
 print 'recording track1'

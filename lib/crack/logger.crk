@@ -1,10 +1,10 @@
 // Logger module
 // Copyright 2012 Conrad Steenberg <conrad.steenberg@gmail.com>
-// 
+//
 //   This Source Code Form is subject to the terms of the Mozilla Public
 //   License, v. 2.0. If a copy of the MPL was not distributed with this
 //   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-// 
+//
 // 2/23/2012
 
 import crack.ascii escape, strip, wsplit;
@@ -23,9 +23,9 @@ import crack.time Date;
 defaultTimeFormat := "%Y-%m-%dT%H:%M:%S";
 
 uint
-    FATAL = 0, 
-    ERROR = 1, 
-    WARN  = 2, 
+    FATAL = 0,
+    ERROR = 1,
+    WARN  = 2,
     INFO  = 3,
     DEBUG = 4;
 
@@ -156,7 +156,7 @@ class Logger @impl Functor2[void, uint, String] {
     void setNamedField(String name, MessageField field) {
         _availableFields[name] = field;
     }
-    
+
     oper init(Formatter fmt, uint level) :
                 _fields(), options(), _availableFields()
     {

@@ -7,11 +7,11 @@
 #
 #  Copyright 1998 Michael A. Muller <mmuller@enduden.com>
 #  Copyright 2012 Google Inc.
-#  
+#
 #    This Source Code Form is subject to the terms of the Mozilla Public
 #    License, v. 2.0. If a copy of the MPL was not distributed with this
 #    file, You can obtain one at http://mozilla.org/MPL/2.0/.
-#  
+#
 #
 #==============================================================================
 
@@ -41,7 +41,7 @@ class BlockType {
     String getName(String pattern) {
         return name;
     }
-   
+
     Regex getTerminator(String pattern) {
         return terminator;
     }
@@ -59,12 +59,12 @@ class AnyBlockType : BlockType {
 
     Regex templateRx = {ANY_BLOCK_TEMPLATE};
 
-    oper init() : BlockType('', ANY_BLOCK_TEMPLATE, null) {}   
-   
+    oper init() : BlockType('', ANY_BLOCK_TEMPLATE, null) {}
+
     String getName(String pattern) {
         return templateRx.match(pattern).group(1);
     }
-   
+
     Regex getTerminator(String pattern) {
         initiator := templateRx.match(pattern).group(2);
         if (t := __terminators.get(initiator))
@@ -88,7 +88,7 @@ class AnyBlockType : BlockType {
 }
 
 ## Represents a block of text with a particular style.
-## 
+##
 ## These are the standard types of text blocks:
 ## *doc*::
 ##       Document type.  A structural type which can contain other structural
@@ -97,18 +97,18 @@ class AnyBlockType : BlockType {
 ##       Paragragh type.  A structural type which can not contain other
 ##       structural types.
 ## *unorderedList*::
-##       Unordered list.  A structural type in which each of the words are 
+##       Unordered list.  A structural type in which each of the words are
 ##       of type *doc*.
 ## *definitionList*::
 ##       Definition list.  A structural type in which each of the words are
 ##       of type *definitionItem*.
 ## *definitionItem*::
-##       An item in a definition list.  A structural type that always contains 
+##       An item in a definition list.  A structural type that always contains
 ##       exactly two words: a *text* item and a *doc* item.
 ## *table*::
 ##       A table object.  Contents should only be *row* objects.
 ## *row*::
-##       A table row.  Should only be embedded in a *table*, and contents 
+##       A table row.  Should only be embedded in a *table*, and contents
 ##       should ony be *column* objects.
 ## *col*::
 ##       A table column.  Should only be embedded in a *row* objects.
@@ -127,7 +127,7 @@ class AnyBlockType : BlockType {
 ##       The first word of the text is the name of an image file.  The remainder
 ##       of the text is ignored.
 ## *exec*::
-##       Executes its contents as a shell command.  In the event of an error, 
+##       Executes its contents as a shell command.  In the event of an error,
 ##       raises a parsing error.  Output from the command is treated as NML
 ##       source which is parsed in context.
 ## *n*::
@@ -140,7 +140,7 @@ class AnyBlockType : BlockType {
 ## *C*::
 ##       The enclosed text is a comment, and should not be visible when
 ##       the document is rendered.
-##       
+##
 ## There are a variety of special types of text blocks:
 ## *literal*::
 ##       backquoted type - everything in it is literal except the backslash.
@@ -166,7 +166,7 @@ class TextBlock {
     bool tightLeft, tightRight = false, literal, preformatted, isExec,
         blankLineTerminated;
     Array[Object] words = {};
-   
+
     ## Constructs a text block.
     ## sourceName: Name of the source file.
     ## lineNumber: line number of where the block appears in source.
@@ -182,19 +182,19 @@ class TextBlock {
         lineNumber = lineNumber,
         type = typeName,
         tightLeft = tightLeft {
-   
+
         # *literal*, *prelit* and *C* types are both literal.
         literal = type == 'literal' || type == 'prelit' || type == 'C';
-        
+
         # *pre*, *prelit* and *C* types are both preformatted.
         preformatted = type == 'pre' || type == 'prelit' || type == 'C';
-  
+
         # exec types are very special
         isExec = type == 'exec';
-  
+
         blankLineTerminated = type == 'para';
     }
-    
+
     ## adds the given sequence of /words/ to the receiver.
     void addWords(Array[Object] moreWords) {
         words.extend(moreWords);
@@ -204,22 +204,22 @@ class TextBlock {
     void addChild(TextBlock child) {
         words.append(child);
     }
-    
+
     void append(Object child) { words.append(child); }
 
     ## Consumes a string in a manner appropriate to the text block.
     void consume(String str) {
         if (preformatted) {
-  
+
             # was there a last word?
             Object lastWord;
             if (words)
                 lastWord = words[-1];
             else
                 lastWord = null;
-   
+
             # if the last word was also a string, just append this word
-            # to the last word         
+            # to the last word
             if (lastWord && lastWord.isa(String))
                 words[-1] = String.cast(lastWord) + str;
             else
@@ -231,7 +231,7 @@ class TextBlock {
                     words.append(word);
         }
     }
-         
+
     ## Finds the first block with type /blockType/ in all of the child
     ## blocks.  Returns null if the block type is not found.
     TextBlock find(String blockType) {
@@ -240,7 +240,7 @@ class TextBlock {
                 block := TextBlock.cast(child);
                 if (block.type == blockType) {
                     return block;
-            
+
                 } else {
                     result := block.find(blockType);
                     if (!(result is null))
@@ -254,7 +254,7 @@ class TextBlock {
     ## Prints the block in a form useful to der programmer.  Returns the last
     ## line as a string.
     String debug(String soFar) {
-        class FLite : AppendBuffer { 
+        class FLite : AppendBuffer {
             oper init() : AppendBuffer(1024) {}
             void format(String s) { extend(s); }
             void writeLine() {
@@ -267,7 +267,7 @@ class TextBlock {
         if (fmt.size > 76)
             fmt.writeLine();
         fmt ` \\$type(`;
-      
+
         for (x :in words) {
             if (wordStr := String.cast(x, null)) {
                 if (fmt.size + wordStr.size + 1 > 79)
@@ -281,12 +281,12 @@ class TextBlock {
 
         if (fmt.size > 78)
             fmt.writeLine();
-        
+
         fmt `)`;
 
         return String(fmt, true);
     }
-    
+
     void formatTo(Formatter out) {
         first := true;
         out `\\$type{`;
@@ -300,13 +300,13 @@ class TextBlock {
         }
         out.write('}');
     }
-    
+
     String makeString() {
         StringFormatter out = {};
         formatTo(out);
         return out.string();
     }
-    
+
     void flattenTo(Writer out) {
         first := true;
         for (child :in words) {
@@ -315,7 +315,7 @@ class TextBlock {
             } else {
                 first = false;
             }
-            
+
             if (child.isa(String))
                 out.write(String.cast(child));
             else
