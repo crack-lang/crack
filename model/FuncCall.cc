@@ -1,9 +1,9 @@
 // Copyright 2009-2010 Google Inc.
-// 
+//
 //   This Source Code Form is subject to the terms of the Mozilla Public
 //   License, v. 2.0. If a copy of the MPL was not distributed with this
 //   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-// 
+//
 
 #include "FuncCall.h"
 
@@ -22,7 +22,7 @@ using namespace model;
 FuncCall::FuncCall(FuncDef *funcDef, bool squashVirtual) :
     Expr(funcDef->returnType.get()),
     func(funcDef),
-    virtualized(squashVirtual ? false : 
+    virtualized(squashVirtual ? false :
                                 (funcDef->flags & FuncDef::virtualized)
                 ) {
     if (!funcDef->returnType)
@@ -67,7 +67,7 @@ void FuncCall::writeTo(std::ostream &out) const {
     out << ")";
 }
 
-std::ostream &model::operator <<(std::ostream &out, 
+std::ostream &model::operator <<(std::ostream &out,
                                  const FuncCall::ExprVec &args
                                  ) {
     for (int i = 0; i < args.size(); i++) {

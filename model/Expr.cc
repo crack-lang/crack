@@ -1,9 +1,9 @@
 // Copyright 2009-2011 Google Inc.
-// 
+//
 //   This Source Code Form is subject to the terms of the Mozilla Public
 //   License, v. 2.0. If a copy of the MPL was not distributed with this
 //   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-// 
+//
 
 #include "Expr.h"
 
@@ -32,11 +32,11 @@ void Expr::emitCond(Context &context) {
 }
 
 ExprPtr Expr::convert(Context &context, TypeDef *newType) {
-    
+
     // see if we're already of the right type
     if (newType->matches(*type))
         return this;
-    
+
     // see if there's a converter
     FuncDefPtr converter = type->getConverter(context, *newType);
     if (converter) {
@@ -45,7 +45,7 @@ ExprPtr Expr::convert(Context &context, TypeDef *newType) {
         convCall->receiver = this;
         return convCall;
     }
-    
+
     // can't convert
     return 0;
 }
@@ -82,7 +82,7 @@ namespace {
             virtual bool isProductive() const {
                 return true;
             }
-            
+
             virtual bool isVolatile() const {
                 return true;
             }

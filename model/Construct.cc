@@ -1,10 +1,10 @@
 // Copyright 2011-2012 Shannon Weyrick <weyrick@mozek.us>
 // Copyright 2011-2012 Google Inc.
-// 
+//
 //   This Source Code Form is subject to the terms of the Mozilla Public
 //   License, v. 2.0. If a copy of the MPL was not distributed with this
 //   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-// 
+//
 
 #include "Construct.h"
 
@@ -141,7 +141,7 @@ Construct::ModulePath Construct::searchPath(
         if (isFile(fullName))
             return ModulePath(*pathIter, relPath, fullName, true, false);
     }
-    
+
     // try to find a matching directory.
     string empty;
     for (StringVecIter pathIter = path.begin();
@@ -153,7 +153,7 @@ Construct::ModulePath Construct::searchPath(
         if (isDir(fullName))
             return ModulePath(*pathIter, relPath, fullName, true, true);
     }
-    
+
     return ModulePath(empty, empty, empty, false, false);
 }
 
@@ -173,7 +173,7 @@ Construct::ModulePath Construct::searchPath(
         if (isFile(fullName))
             return ModulePath(*pathIter, relPath, fullName, true, false);
     }
-    
+
     // try to find a matching directory.
     string empty;
     for (StringVecIter pathIter = path.begin();
@@ -184,15 +184,15 @@ Construct::ModulePath Construct::searchPath(
         if (isDir(fullName))
             return ModulePath(*pathIter, relPath, fullName, true, true);
     }
-    
+
     return ModulePath(empty, empty, empty, false, false);
 }
 
 Construct::ModulePath Construct::searchSourcePath(const string &path) const {
-    
+
     if (path[0] == '/')
         return ModulePath("", path, path, isFile(path), isDir(path));
-    
+
     return searchPath(sourceLibPath, path, rootBuilder->options->verbosity);
 }
 
@@ -200,7 +200,7 @@ bool Construct::isFile(const std::string &name) {
     struct stat st;
     if (stat(name.c_str(), &st))
         return false;
-    
+
     // XXX should check symlinks, too
     return S_ISREG(st.st_mode);
 }
@@ -209,7 +209,7 @@ bool Construct::isDir(const std::string &name) {
     struct stat st;
     if (stat(name.c_str(), &st))
         return false;
-    
+
     // XXX should check symlinks, too
     return S_ISDIR(st.st_mode);
 }
@@ -226,7 +226,7 @@ std::string Construct::joinName(Construct::StringVecIter pathBegin,
     }
     for (; iter != pathEnd; ++iter )
         result += "/" + *iter;
-    
+
     return result + ext;
 }
 
@@ -236,7 +236,7 @@ std::string Construct::joinName(const std::string &base,
     return base + "/" + rel;
 }
 
-Construct::Construct(const Options &options, Builder *builder, 
+Construct::Construct(const Options &options, Builder *builder,
                      Construct *primary
                      ) :
     Options(options),
@@ -248,7 +248,7 @@ Construct::Construct(const Options &options, Builder *builder,
 
     builderStack.push(builder);
     createRootContext();
-    
+
     // steal any stuff from the primary we want to use as a default.
     if (primary)
         sourceLibPath = primary->sourceLibPath;
@@ -299,29 +299,29 @@ ContextPtr Construct::createRootContext() {
          ++i) {
          rootContext->ns->addUnsafeAlias(i->first, i->second.get());
     }
-    
+
     // attach the builtin module to the root namespace
     rootContext->ns = builtinMod.get();
     moduleCache[".builtin"] = builtinMod;
-    
-    // since there's no "close()" on this, we need to explicitly mark it as 
+
+    // since there's no "close()" on this, we need to explicitly mark it as
     // finished.
     builtinMod->finished = true;
-    
+
     return rootContext;
 }
 
 void Construct::loadBuiltinModules() {
-    // loads the compiler extension.  If we have a compile-time construct, 
+    // loads the compiler extension.  If we have a compile-time construct,
     // the extension belongs to him and we just want to steal his defines.
     // Otherwise, we initialize them ourselves.
     NamespacePtr ns;
     if (compileTimeConstruct) {
         ns = compileTimeConstruct->rootContext->compileNS;
     } else {
-        // initialize the built-in compiler extension and store the 
+        // initialize the built-in compiler extension and store the
         // CrackContext type in global data.
-        ModuleDefPtr ccMod = 
+        ModuleDefPtr ccMod =
             initExtensionModule("crack.compiler", &compiler::init, 0);
         rootContext->construct->crackContext = ccMod->lookUp("CrackContext");
         moduleCache["crack.compiler"] = ccMod;
@@ -343,7 +343,7 @@ void Construct::loadBuiltinModules() {
     crackRuntimeName[0] = "crack";
     crackRuntimeName[1] = "runtime";
     string name;
-    ModuleDefPtr rtMod = 
+    ModuleDefPtr rtMod =
         rootContext->construct->getModule(crackRuntimeName.begin(),
                                           crackRuntimeName.end(),
                                           name
@@ -368,7 +368,7 @@ void Construct::loadBuiltinModules() {
     a = rtMod->lookUp("printint");
     if (a)
         rootContext->ns->addUnsafeAlias("printint", a.get());
-    
+
     // for jit builders, get the uncaught exception handler
     if (rootBuilder->isExec()) {
         FuncDefPtr uncaughtExceptionFuncDef =
@@ -376,12 +376,12 @@ void Construct::loadBuiltinModules() {
                                     rtMod.get()
                                     );
         if (uncaughtExceptionFuncDef)
-            uncaughtExceptionFunc = 
+            uncaughtExceptionFunc =
                 reinterpret_cast<bool (*)()>(
                     uncaughtExceptionFuncDef->getFuncAddr(*rootBuilder)
                 );
         else
-            cerr << "Uncaught exception function not found in runtime!" << 
+            cerr << "Uncaught exception function not found in runtime!" <<
                 endl;
     }
 }
@@ -391,7 +391,7 @@ void Construct::parseModule(Context &context,
                             const std::string &path,
                             istream &src
                             ) {
-    // first calculate the source digest (we'll need to assign that to any 
+    // first calculate the source digest (we'll need to assign that to any
     // ephemeral modules that we produce)
     if (rootContext->construct->cacheMode)
         module->sourceDigest = SourceDigest::fromFile(path);
@@ -456,7 +456,7 @@ namespace {
     }
 }
 
-ModuleDefPtr Construct::loadSharedLib(const string &path, 
+ModuleDefPtr Construct::loadSharedLib(const string &path,
                                       Construct::StringVecIter moduleNameBegin,
                                       Construct::StringVecIter moduleNameEnd,
                                       string &canonicalName
@@ -465,7 +465,7 @@ ModuleDefPtr Construct::loadSharedLib(const string &path,
     void *handle = rootBuilder->loadSharedLibrary(path);
 
     // construct the full init function name
-    // XXX should do real name mangling. also see 
+    // XXX should do real name mangling. also see
     // LLVMLinkerBuilder::initializeImport
     std::string initFuncName;
     for (StringVecIter iter = moduleNameBegin;
@@ -474,7 +474,7 @@ ModuleDefPtr Construct::loadSharedLib(const string &path,
          )
         initFuncName += *iter + '_';
 
-    CompileFunc cfunc = (CompileFunc)loadFunc(handle, path, 
+    CompileFunc cfunc = (CompileFunc)loadFunc(handle, path,
                                               initFuncName + "cinit"
                                               );
     InitFunc rfunc = (InitFunc)loadFunc(handle, path, initFuncName + "rinit");
@@ -491,8 +491,8 @@ ModuleDefPtr Construct::getModule(const string &canonicalName) {
 
     string cname;
     ModuleDefPtr m = getModule(name.begin(), name.end(), cname);
-    SPUG_CHECK(cname == canonicalName, 
-               "canonicalName mismatch.  constructed = " << cname << 
+    SPUG_CHECK(cname == canonicalName,
+               "canonicalName mismatch.  constructed = " << cname <<
                 ", requested = " << canonicalName
                );
     return m;
@@ -507,7 +507,7 @@ namespace {
 }
 
 ModuleDefPtr Construct::getCachedModule(const string &canonicalName) {
-    // see if it's in the in-memory cache    
+    // see if it's in the in-memory cache
     Construct::ModuleMap::iterator iter = moduleCache.find(canonicalName);
     if (iter != moduleCache.end())
         return iter->second;
@@ -520,7 +520,7 @@ ModuleDefPtr Construct::getCachedModule(const string &canonicalName) {
     builderStack.push(builder);
     ContextPtr context =
         new Context(*builder, Context::module, rootContext.get(),
-                    new GlobalNamespace(rootContext->ns.get(), 
+                    new GlobalNamespace(rootContext->ns.get(),
                                         canonicalName
                                         ),
                     new GlobalNamespace(rootContext->compileNS.get(),
@@ -537,7 +537,7 @@ ModuleDefPtr Construct::getCachedModule(const string &canonicalName) {
             stats->incCached();
         moduleCache[canonicalName] = modDef;
     }
-    
+
     builderStack.pop();
     return modDef;
 }
@@ -608,7 +608,7 @@ ModuleDefPtr Construct::getModule(Construct::StringVecIter moduleNameBegin,
 #endif
                                     rootBuilder->options->verbosity
                                     );
-    
+
     ModuleDefPtr modDef;
     if (modPath.found && !modPath.isDir) {
         modDef = loadSharedLib(modPath.path, moduleNameBegin,
@@ -617,7 +617,7 @@ ModuleDefPtr Construct::getModule(Construct::StringVecIter moduleNameBegin,
                                );
         moduleCache[canonicalName] = modDef;
     } else {
-        
+
         // not in in-memory cache, not a shared library
 
         // create a new builder, context and module
@@ -634,14 +634,14 @@ ModuleDefPtr Construct::getModule(Construct::StringVecIter moduleNameBegin,
                         );
         context->toplevel = true;
 
-        // before parsing the module from scratch, check the persistent cache 
+        // before parsing the module from scratch, check the persistent cache
         // for it.
         bool cached = false;
         GenericModuleInfo genModInfo;
         if (rootContext->construct->cacheMode)
             modDef = context->materializeModule(canonicalName, &genModInfo);
         if (modDef) {
-            if (traceCaching) 
+            if (traceCaching)
                 cerr << "Reusing cached module " << canonicalName << endl;
             cached = true;
             if (rootBuilder->options->statsMode)
@@ -707,22 +707,22 @@ ModuleDefPtr Construct::getModule(Construct::StringVecIter moduleNameBegin,
                 return result;
             }
 
-            modPath = searchPath(sourceLibPath, moduleNameBegin, 
-                                 moduleNameEnd, ".crk", 
+            modPath = searchPath(sourceLibPath, moduleNameBegin,
+                                 moduleNameEnd, ".crk",
                                  rootBuilder->options->verbosity
                                  );
             if (!modPath.found) {
                 if (traceCaching)
-                    cerr << "Source for " << canonicalName << 
+                    cerr << "Source for " << canonicalName <<
                         " not found.  Not compiling it at this time." << endl;
                 return 0;
             }
 
             if (traceCaching)
-                cerr << canonicalName << 
-                    " out-of-date or not in the cache.  Building from: " << 
+                cerr << canonicalName <<
+                    " out-of-date or not in the cache.  Building from: " <<
                     modPath.path << endl;
-                        
+
             modDef = context->createModule(canonicalName, modPath.path);
 
             // Store the source path only for non-generic classes, otherwise
@@ -756,7 +756,7 @@ ModuleDefPtr Construct::getModule(Construct::StringVecIter moduleNameBegin,
     modDef->finished = true;
     loadedModules.push_back(modDef);
     return modDef;
-}    
+}
 
 void Construct::registerModule(ModuleDef *module) {
     moduleCache[module->getFullName()] = module;
@@ -764,7 +764,7 @@ void Construct::registerModule(ModuleDef *module) {
 }
 
 namespace {
-    // extract a class from a module and verify that it is a class - returns 
+    // extract a class from a module and verify that it is a class - returns
     // null on failure.
     TypeDef *extractClass(ModuleDef *mod, const char *name) {
         VarDefPtr var = mod->lookUp(name);
@@ -785,10 +785,10 @@ bool Construct::loadBootstrapModules() {
         crackLangName[1] = "lang";
         string name;
         ModuleDefPtr mod = getModule(crackLangName.begin(),
-                                     crackLangName.end(), 
+                                     crackLangName.end(),
                                      name
                                      );
-        
+
         if (!mod) {
             cerr << "Bootstrapping module crack.lang not found." << endl;
             return false;
@@ -799,18 +799,18 @@ bool Construct::loadBootstrapModules() {
         rootContext->ns->addAlias(rootContext->construct->objectType.get());
         rootContext->construct->stringType = extractClass(mod.get(), "String");
         rootContext->ns->addAlias(rootContext->construct->stringType.get());
-        rootContext->construct->staticStringType = 
+        rootContext->construct->staticStringType =
             extractClass(mod.get(), "StaticString");
         rootContext->ns->addAlias(
             rootContext->construct->staticStringType.get()
         );
 
-        // replace the bootstrapping context with a new context that 
-        // delegates to the original root context - this is the "bootstrapped 
-        // context."  It contains all of the special definitions that were 
+        // replace the bootstrapping context with a new context that
+        // delegates to the original root context - this is the "bootstrapped
+        // context."  It contains all of the special definitions that were
         // extracted from the bootstrapping modules.
         rootContext = rootContext->createSubContext(Context::module);
-        
+
         // extract some constants
         VarDefPtr v = mod->lookUp("true");
         if (v)
@@ -821,31 +821,31 @@ bool Construct::loadBootstrapModules() {
         v = mod->lookUp("print");
         if (v)
             rootContext->ns->addUnsafeAlias("print", v.get());
-        
+
         crackLang = mod;
-        return rootContext->construct->objectType && 
+        return rootContext->construct->objectType &&
                rootContext->construct->stringType;
     } catch (const spug::Exception &ex) {
         cerr << ex << endl;
         return false;
     } catch (...) {
         if (!uncaughtExceptionFunc)
-            cerr << "Uncaught exception, no uncaught exception handler!" << 
+            cerr << "Uncaught exception, no uncaught exception handler!" <<
                 endl;
         else if (!uncaughtExceptionFunc())
             cerr << "Unknown exception caught." << endl;
     }
-    
+
     return true;
 }
 
 namespace {
-    
-    // Returns a "brief path" for the filename.  A brief path consists of an 
-    // md5 hash of the absolute path of the directory of the file, followed by 
+
+    // Returns a "brief path" for the filename.  A brief path consists of an
+    // md5 hash of the absolute path of the directory of the file, followed by
     // an underscore and the file name.
     string briefPath(const string &filename) {
-        
+
         // try to expand the name to the real path
         char path[PATH_MAX];
         string fullName;
@@ -853,7 +853,7 @@ namespace {
             fullName = path;
         else
             fullName = filename;
-        
+
         // convert the directory to a hash
         int lastSlash = fullName.rfind('/');
         if (lastSlash == fullName.size()) {
@@ -864,9 +864,9 @@ namespace {
                 << '_' << fullName.substr(lastSlash + 1);
             return tmp.str();
         }
-    }            
-    
-    // Converts a script name to its canonical module name.  Module names for 
+    }
+
+    // Converts a script name to its canonical module name.  Module names for
     // scripts are of the form ".main._<abs-path-hash>_<escaped-filename>"
     string modNameFromFile(const string &filename) {
         ostringstream tmp;
@@ -878,16 +878,16 @@ namespace {
             else
                 tmp << "_" << hex << static_cast<int>(base[i]);
         }
-        
+
         return tmp.str();
     }
 }
 
 int Construct::runScript(istream &src, const string &name, bool notAFile) {
-    
+
     // get the canonical name for the script
     string canName = modNameFromFile(name);
-    
+
     // create the builder and context for the script.
     BuilderPtr builder = rootBuilder->createChildBuilder();
     builderStack.push(builder);

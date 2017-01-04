@@ -1,10 +1,10 @@
 // Copyright 2009-2012 Google Inc.
 // Copyright 2010-2012 Shannon Weyrick <weyrick@mozek.us>
-// 
+//
 //   This Source Code Form is subject to the terms of the Mozilla Public
 //   License, v. 2.0. If a copy of the MPL was not distributed with this
 //   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-// 
+//
 
 #include "Context.h"
 
@@ -103,8 +103,8 @@ void Context::showSourceLoc(const Location &loc, ostream &out) {
 
 void Context::warnOnHide(const string &name) {
     if (ns->lookUp(name))
-        cerr << loc.getName() << ":" << loc.getLineNumber() << ": " << 
-            "Symbol " << name << 
+        cerr << loc.getName() << ":" << loc.getLineNumber() << ": " <<
+            "Symbol " << name <<
             " hides another definition in an enclosing context." << endl;
 }
 
@@ -113,7 +113,7 @@ OverloadDefPtr Context::replicateOverload(const std::string &varName,
                                           ) {
     OverloadDefPtr overload = new OverloadDef(varName);
     overload->type = construct->overloadType;
-    
+
     // merge in the overloads from the parents
     overload->collectAncestors(srcNs);
     srcNs->addDef(overload.get());
@@ -128,11 +128,11 @@ Context::Context(builder::Builder &builder, Context::Scope scope,
     loc(parentContext ? parentContext->loc : emptyLoc),
     parent(parentContext),
     ns(ns),
-    compileNS(compileNS ? compileNS : 
+    compileNS(compileNS ? compileNS :
                 (parentContext ?
                   new LocalNamespace(parentContext->compileNS.get(),
                                      ns ? ns->getNamespaceName() : ""
-                                     ) : 
+                                     ) :
                   NamespacePtr(0))
                  ),
     builder(builder),
@@ -187,13 +187,13 @@ ContextPtr Context::createSubContext(Scope newScope, Namespace *ns,
                 break;
             case composite:
             case instance:
-                assert(false && 
+                assert(false &&
                         "missing namespace when creating composite or instance "
                         "context"
                        );
         }
     }
-    
+
     return new Context(builder, newScope, this, ns, cns);
 }
 
@@ -259,10 +259,10 @@ ModuleDefPtr Context::materializeModule(const string &canonicalName,
                                            canonicalName,
                                            "crkmeta"
                                            );
-    
+
     if (!Construct::isFile(metaDataPath))
         return 0;
-    
+
     ifstream src(metaDataPath.c_str());
     Deserializer deser(src, this);
 
@@ -289,42 +289,42 @@ void Context::cacheModule(ModuleDef *mod) {
                                            mod->getNamespaceName(),
                                            "crkmeta"
                                            );
-    
+
     // Here's how collision-safe caching works:
-    // 1) We try to open the metadata file ('canonical-name.crkmeta') and 
+    // 1) We try to open the metadata file ('canonical-name.crkmeta') and
     //    read it if successful:
-    //    a) Verify that it contains the correct hash of the source 
+    //    a) Verify that it contains the correct hash of the source
     //       file and fail if it doesn't.
-    //    b) Try to open the builder file (Builder::getCacheFile()) and fail 
+    //    b) Try to open the builder file (Builder::getCacheFile()) and fail
     //       if we can't.
     //    c) Read the remainder of the metadata file (after the header).
     //    d) Load the builder file.
     // 2) If we fail at any point during 1):
     //    a) recompile the module.
-    //    b) Write a copy of the metadata file qualified by a GUID so that no 
+    //    b) Write a copy of the metadata file qualified by a GUID so that no
     //       other process could be writing or reading that copy.
-    //    c) Delete the existing builder file and begin writing the builder 
+    //    c) Delete the existing builder file and begin writing the builder
     //      file also qualified by the GUID.
-    //    d) Rename the metadata file so it no longer contains the GUID (other 
+    //    d) Rename the metadata file so it no longer contains the GUID (other
     //      processes can now load it in 1)
     //    e) Rename the builder file so that it no longer contains the GUID.
-    // This algorithm assumes serializetion of remove/rename operations.  It 
-    // should also be noted that failure in step 1.c and 1.d is catastrophic: 
-    // it currently breaks the running process and requires manual 
+    // This algorithm assumes serializetion of remove/rename operations.  It
+    // should also be noted that failure in step 1.c and 1.d is catastrophic:
+    // it currently breaks the running process and requires manual
     // intervention to repair the cache.  This is desirable for 0.10 where
-    // we want to see instances of cache failure, but should probably be fixed 
+    // we want to see instances of cache failure, but should probably be fixed
     // for 1.0.
-    
-    // Try to construct a globally unique filename to prevent one process from 
+
+    // Try to construct a globally unique filename to prevent one process from
     // reading a cachefile while another process is writing it.
     char hostname[256];
     gethostname(hostname, 256);
     hostname[255] = 0;
     pid_t pid = getpid();
-    
+
     string uniquifier = SPUG_FSTR('.' << hostname << '.' << pid);
     string tempFileName = metaDataPath + uniquifier;
-    
+
     try {
         ofstream dst(tempFileName.c_str());
         Serializer ser(dst);
@@ -335,16 +335,16 @@ void Context::cacheModule(ModuleDef *mod) {
         throw;
     }
 
-    try {    
+    try {
         builder.cacheModule(*this, mod, uniquifier);
-        
-        // When the builder is done, we can move the meta-file into place because 
+
+        // When the builder is done, we can move the meta-file into place because
         // it's ready to be used by another process.
         if (Construct::traceCaching)
             cerr << "Moving cached file from " << tempFileName << " to " <<
                 metaDataPath << endl;
         bool metaDataMoved = move(tempFileName, metaDataPath);
-        
+
         // Now let the builder move its cache files into place.
         builder.finishCachedModule(*this, mod, uniquifier, metaDataMoved);
         if (!metaDataMoved)
@@ -357,10 +357,10 @@ void Context::cacheModule(ModuleDef *mod) {
 }
 
 ExprPtr Context::getStrConst(const std::string &value, bool raw) {
-    
+
     // look up the raw string constant
     StrConstPtr strConst;
-    Construct::StrConstTable::iterator iter = 
+    Construct::StrConstTable::iterator iter =
         construct->strConstTable.find(value);
     if (iter != construct->strConstTable.end()) {
         strConst = iter->second;
@@ -369,12 +369,12 @@ ExprPtr Context::getStrConst(const std::string &value, bool raw) {
         strConst = builder.createStrConst(*this, value);
         construct->strConstTable[value] = strConst;
     }
-    
+
     // if we don't have a StaticString type yet (or the caller wants a raw
     // bytestr), we're done.
     if (raw || !construct->staticStringType)
         return strConst;
-    
+
     // create the "new" expression for the string.
     vector<ExprPtr> args;
     args.push_back(strConst);
@@ -386,7 +386,7 @@ ExprPtr Context::getStrConst(const std::string &value, bool raw) {
         lookUp("oper new", args, construct->staticStringType.get());
     FuncCallPtr funcCall = builder.createFuncCall(newFunc.get());
     funcCall->args = args;
-    return funcCall;    
+    return funcCall;
 }
 
 CleanupFramePtr Context::createCleanupFrame() {
@@ -414,27 +414,27 @@ void Context::checkForUnresolvedForwards() {
          iter != ns->endDefs();
          ++iter
          ) {
-        
+
         // check for an overload
         OverloadDef *overload;
         if (overload = OverloadDefPtr::rcast(iter->second)) {
-            for (OverloadDef::FuncList::iterator fi = 
+            for (OverloadDef::FuncList::iterator fi =
                     overload->beginTopFuncs();
                  fi != overload->endTopFuncs();
                  ++fi
                  )
                 if ((*fi)->flags & FuncDef::forward)
                     error(SPUG_FSTR("Forward declared function not defined at "
-                                     "the end of the block: " << 
+                                     "the end of the block: " <<
                                      (*fi)->getDisplayName()
                                     )
                           );
         }
-        
+
         // Check for an unresolved type.
         if (TypeDef *type = TypeDefPtr::rcast(iter->second)) {
             if (type->forward && type->getOwner() == ns)
-                error(SPUG_FSTR("Forward declared type not defined at the end " 
+                error(SPUG_FSTR("Forward declared type not defined at the end "
                                  "of the block: " << type->getDisplayName()
                                 )
                       );
@@ -453,7 +453,7 @@ VarDefPtr Context::emitVarDef(Context *defCtx, TypeDef *type,
 
     VarDefPtr varDef;
 
-    // if this is a constant, and the expression is a constant integer or 
+    // if this is a constant, and the expression is a constant integer or
     // float, create a ConstVarDef.
     if (constant && (IntConstPtr::cast(initializer) ||
                      FloatConstPtr::cast(initializer)
@@ -471,7 +471,7 @@ VarDefPtr Context::emitVarDef(Context *defCtx, TypeDef *type,
     return varDef;
 }
 
-VarDefPtr Context::emitVarDef(TypeDef *type, const parser::Token &tok, 
+VarDefPtr Context::emitVarDef(TypeDef *type, const parser::Token &tok,
                               Expr *initializer,
                               bool constant
                               ) {
@@ -486,7 +486,7 @@ VarDefPtr Context::emitVarDef(TypeDef *type, const parser::Token &tok,
         }
     }
 
-    // make sure we aren't using a forward declared type (we disallow this 
+    // make sure we aren't using a forward declared type (we disallow this
     // because we don't know if oper release() is defined for the type)
     if (type->forward) {
         setLocation(tok.getLocation());
@@ -495,11 +495,11 @@ VarDefPtr Context::emitVarDef(TypeDef *type, const parser::Token &tok,
                         )
               );
     }
-    
-    // if the definition context is an instance context, make sure that we 
+
+    // if the definition context is an instance context, make sure that we
     // haven't generated any constructors.
     ContextPtr defCtx = getDefContext();
-    if (defCtx->scope == Context::instance && 
+    if (defCtx->scope == Context::instance &&
         TypeDefPtr::arcast(defCtx->ns)->initializersEmitted) {
         throw parser::ParseError(tok.getLocation(),
                                  "Adding an instance variable "
@@ -540,16 +540,16 @@ ExprPtr Context::createTernary(Expr *cond, Expr *trueVal, Expr *falseVal) {
         // the types are equal
         type = trueVal->type;
     }
-    
-    return builder.createTernary(*this, boolCond.get(), trueVal, falseVal, 
+
+    return builder.createTernary(*this, boolCond.get(), trueVal, falseVal,
                                  type.get()
                                  );
 }
 
-ExprPtr Context::emitConstSequence(TypeDef *type, 
+ExprPtr Context::emitConstSequence(TypeDef *type,
                                    const std::vector<ExprPtr> &elems
                                    ) {
-    // see if there is a new function for the type that accepts an element 
+    // see if there is a new function for the type that accepts an element
     // count.
     vector<ExprPtr> consArgs(1);
     consArgs[0] = builder.createIntConst(*this, elems.size());
@@ -568,15 +568,15 @@ ExprPtr Context::emitConstSequence(TypeDef *type,
     ConstSequenceExprPtr expr = new ConstSequenceExpr(type);
     expr->container = builder.createFuncCall(cons.get());
     expr->container->args = consArgs;
-    
+
     // create append calls for each of the elements
     for (int i = 0; i < elems.size(); ++i) {
         ExprPtr elem = elems[i];
-        
+
         vector<ExprPtr> args(1);
         args[0] = elem;
         FuncDefPtr appender = lookUp("append", args, type);
-        
+
         FuncCallPtr appendCall;
         if (appender && appender->flags & FuncDef::method) {
             appendCall = builder.createFuncCall(appender.get());
@@ -588,28 +588,28 @@ ExprPtr Context::emitConstSequence(TypeDef *type,
             args.insert(args.begin(),
                         builder.createIntConst(*this, i, uintType)
                         );
-            
+
             appender = lookUp("oper []=", args, type);
             if (!appender || !(appender->flags & FuncDef::method))
-                error(SPUG_FSTR(type->name << 
+                error(SPUG_FSTR(type->name <<
                                  " has neither an append() nor an oper []= "
                                  " method accepting " << elem->type->name <<
                                  " for element at index " << i
                                 )
                       );
-            
+
             appendCall = builder.createFuncCall(appender.get());
             appendCall->args = args;
         }
-        
+
         // add the append to the sequence expression
         expr->elems.push_back(appendCall);
     }
-    
+
     return expr;
 }
 
-ModuleDefPtr Context::emitImport(Namespace *ns, 
+ModuleDefPtr Context::emitImport(Namespace *ns,
                                  const std::vector<string> &moduleName,
                                  const ImportedDefVec &imports,
                                  bool annotation,
@@ -618,7 +618,7 @@ ModuleDefPtr Context::emitImport(Namespace *ns,
                                  vector<Location> *symLocs
                                  ) {
     string canonicalName;
-    
+
     // The raw shared library case is simple, deal with it up front.
     if (rawSharedLib) {
         try {
@@ -629,24 +629,24 @@ ModuleDefPtr Context::emitImport(Namespace *ns,
             error(ex.getMessage());
         }
     }
-    
-    ModuleDefPtr mod = construct->getModule(moduleName.begin(), 
+
+    ModuleDefPtr mod = construct->getModule(moduleName.begin(),
                                             moduleName.end(),
                                             canonicalName
                                             );
     if (!mod)
         error(SPUG_FSTR("unable to find module " << canonicalName));
-    
+
     // make sure the module is finished (no recursive imports)
     else if (!mod->finished)
         error(SPUG_FSTR("Attempting to import module " << canonicalName <<
                          " recursively."
                         )
               );
-    
-    // add an implicit dependency to the current module (assuming we're 
+
+    // add an implicit dependency to the current module (assuming we're
     // currently in a module, in an annotation we might not be).
-    if (ModuleDef *curMod = 
+    if (ModuleDef *curMod =
           ModuleDefPtr::rcast(getModuleContext()->ns)
         )
         curMod->imports.push_back(mod);
@@ -667,11 +667,11 @@ ModuleDefPtr Context::emitImport(Namespace *ns,
         // make sure that the symbol is not private
         if (iter->source[0] == '_')
             error(symLocs ? (*symLocs)[st] : loc,
-                  SPUG_FSTR("Can not import private symbol " << iter->source << 
+                  SPUG_FSTR("Can not import private symbol " << iter->source <<
                              "."
                             )
                   );
-        
+
         // make sure we don't already have it in the local context
         if (ns->lookUp(iter->local, false))
             error(symLocs ? (*symLocs)[st] : loc, SPUG_FSTR("imported name " << iter->local <<
@@ -680,15 +680,15 @@ ModuleDefPtr Context::emitImport(Namespace *ns,
                   );
         VarDefPtr symVal = mod->lookUp(iter->source);
         if (!symVal)
-            error(symLocs ? (*symLocs)[st] : loc, 
+            error(symLocs ? (*symLocs)[st] : loc,
                   SPUG_FSTR("name " << iter->source <<
-                             " is not defined in module " << 
+                             " is not defined in module " <<
                              canonicalName
                             )
                   );
-        
-        // make sure the symbol either belongs to the module or was 
-        // explicitly exported by the module (no implicit second-order 
+
+        // make sure the symbol either belongs to the module or was
+        // explicitly exported by the module (no implicit second-order
         // imports).
         if (!symVal->isImportableFrom(mod.get(), iter->source)) {
             if (OverloadDef *ovld = OverloadDefPtr::rcast(symVal)) {
@@ -723,19 +723,19 @@ ModuleDefPtr Context::emitImport(Namespace *ns,
                             )
                   );
         }
-        
+
         {
             StatState s1(this, ConstructStats::builder);
             builder.registerImportedDef(*this, symVal.get());
         }
-        
+
         ns->addAlias(iter->local, symVal.get());
         if (curModule) {
             VarDef::Set added;
             symVal->addDependenciesTo(curModule.get(), added);
         }
     }
-    
+
     // Add a dependency on the module itself.  We don't do this for
     // annotations, dependencies on annotations are recorded separately
     // because a module needs to be recompiled if even the implementation of
@@ -750,7 +750,7 @@ ModuleDefPtr Context::emitImport(Namespace *ns,
         parent->compileNSImports.push_back(new Import(moduleName, imports));
         parent->ns->getModule()->addCompileTimeDependency(mod.get());
     }
-    
+
     return mod;
 }
 
@@ -762,14 +762,14 @@ bool Context::inSameFunc(Namespace *varNS) {
     // see if the namespace is our namespace
     if (varNS == ns)
         return true;
-        
+
     // if this isn't the toplevel context, check the parent
     else if (!toplevel)
         return parent->inSameFunc(varNS);
     else
         return false;
 }
-    
+
 
 ExprPtr Context::createVarRef(VarDef *varDef) {
 
@@ -779,19 +779,19 @@ ExprPtr Context::createVarRef(VarDef *varDef) {
         return constDef->expr;
 
     // verify that the variable is reachable
-    
+
     // functions and types don't have reachability issues
-    if (TypeDefPtr::cast(varDef) || FuncDefPtr::cast(varDef) || 
+    if (TypeDefPtr::cast(varDef) || FuncDefPtr::cast(varDef) ||
         OverloadDefPtr::cast(varDef)) {
 
         return builder.createVarRef(varDef);
-    
+
     // if the variable is in a module context, it is accessible
     } else if (ModuleDefPtr::cast(varDef->getOwner()) ||
                GlobalNamespacePtr::cast(varDef->getOwner())
                ) {
         return builder.createVarRef(varDef);
-    
+
     // if it's in an instance context, verify that this is either the composite
     // context of the class or a method of the class that contains the variable.
     } else if (TypeDefPtr::cast(varDef->getOwner())) {
@@ -800,13 +800,13 @@ ExprPtr Context::createVarRef(VarDef *varDef) {
             ) {
             return builder.createVarRef(varDef);
         }
-    
+
     // if it's in a function context, make sure it's this function
     } else if (inSameFunc(varDef->getOwner())) {
         return builder.createVarRef(varDef);
     }
-    
-    error(SPUG_FSTR("Variable '" << varDef->name << 
+
+    error(SPUG_FSTR("Variable '" << varDef->name <<
                      "' is not accessible from within this context."
                     )
           );
@@ -820,7 +820,7 @@ VarRefPtr Context::createFieldRef(Expr *aggregate, VarDef *var) {
                          "' is not accessible from within this context."
                         )
               );
-    
+
     return builder.createFieldRef(aggregate, var);
 }
 
@@ -839,7 +839,7 @@ void Context::setCatchBranchpoint(Branchpoint *branch) {
 Branchpoint *Context::getBreak() {
     if (breakBranch)
         return breakBranch.get();
-    
+
     // don't attempt to propagate out of an execution scope
     if (!toplevel && parent) {
         return parent->getBreak();
@@ -880,7 +880,7 @@ ExprPtr Context::makeThisRef(const string &memberName) {
                        "\" may not be used in a static context."
                       )
             );
-          
+
    return createVarRef(thisVar.get());
 }
 
@@ -902,24 +902,24 @@ void Context::expandIteration(const std::string &name, bool defineVar,
         error(SPUG_FSTR("iteration expression has no 'iter' method "
                         "(was type " << seqExpr->type->getFullName() << ")")
                         );
-    
+
     // create an expression from it
     FuncCallPtr iterCall = builder.createFuncCall(iterFunc.get());
     if (iterFunc->flags & FuncDef::method)
         iterCall->receiver = seqExpr;
-    
-    // if the variable provided is an iterator, just use it and clear the 
+
+    // if the variable provided is an iterator, just use it and clear the
     // "var" argument as an indicator to later code.
     VarDefPtr iterVar, var;
     FuncDefPtr elemFunc;
     if (isIter) {
         // this is a "for on" and the variable is an iterator.
         if (defineVar) {
-            assert(scope != composite && 
+            assert(scope != composite &&
                     "iteration expanded in a non-definition context"
                 );
             warnOnHide(name);
-            iterVar = 
+            iterVar =
                 emitVarDef(this, iterCall->type.get(), name, iterCall.get());
         } else {
             iterVar = ns->lookUp(name);
@@ -938,34 +938,34 @@ void Context::expandIteration(const std::string &name, bool defineVar,
             closeCleanupFrame();
         }
     } else {
-        // we're passing in "this" and assuming that the current context is a 
+        // we're passing in "this" and assuming that the current context is a
         // definition context.
-        assert(scope != composite && 
+        assert(scope != composite &&
                 "iteration expanded in a non-definition context"
                );
-        iterVar = emitVarDef(this, iterCall->type.get(), ":iter", 
+        iterVar = emitVarDef(this, iterCall->type.get(), ":iter",
                              iterCall.get()
                              );
 
         elemFunc = lookUpNoArgs("elem", true, iterCall->type.get());
         if (!elemFunc)
-            error(SPUG_FSTR("Iterator type " << 
+            error(SPUG_FSTR("Iterator type " <<
                             iterCall->type->getDisplayName() <<
                             " does not have an 'elem()' method."
                             )
                   );
-                            
-        
+
+
         if (defineVar) {
             warnOnHide(name);
-            
-            // if the element type doesn't have a default initializer, we need 
+
+            // if the element type doesn't have a default initializer, we need
             // to create a null identifier for it so we don't seg-fault.
             ExprPtr initializer;
             if (!elemFunc->returnType->defaultInitializer)
                 initializer = new NullConst(elemFunc->returnType.get());
 
-            var = emitVarDef(this, elemFunc->returnType.get(), name, 
+            var = emitVarDef(this, elemFunc->returnType.get(), name,
                              initializer.get()
                              );
         } else {
@@ -978,10 +978,10 @@ void Context::expandIteration(const std::string &name, bool defineVar,
                       );
         }
     }
-    
+
     // create a reference expression for the iterator
     ExprPtr iterRef = createVarRef(iterVar.get());
-    
+
     if (var) {
         // assign the variable before the body
         FuncCallPtr elemCall = builder.createFuncCall(elemFunc.get());
@@ -989,12 +989,12 @@ void Context::expandIteration(const std::string &name, bool defineVar,
             elemCall->receiver = iterRef;
         beforeBody = AssignExpr::create(*this, var.get(), elemCall.get());
     }
-    
+
     // convert it to a boolean for the condition
     cond = iterRef->convert(*this, construct->boolType.get());
     if (!cond)
         error("The iterator in a 'for' loop must convert to boolean.");
-    
+
     // create the "iter.next()" expression
     FuncDefPtr nextFunc = lookUpNoArgs("next", true, iterRef->type.get());
     if (!nextFunc)
@@ -1011,7 +1011,7 @@ VarDefPtr Context::lookUp(const std::string &varName, Namespace *srcNs) {
     VarDefPtr def = srcNs->lookUp(varName);
 
     // if we got an overload, we may need to create an overload in this
-    // context.  (we can get away with checking the owner because overloads 
+    // context.  (we can get away with checking the owner because overloads
     // are never aliased)
     OverloadDef *overload = OverloadDefPtr::rcast(def);
     if (overload && overload->getOwner() != srcNs)
@@ -1055,8 +1055,8 @@ FuncDefPtr Context::lookUp(const std::string &varName,
     VarDefPtr var = lookUp(varName, srcNs);
     if (!var)
         return 0;
-    
-    // if "var" is a class definition, convert this to a lookup of the "oper 
+
+    // if "var" is a class definition, convert this to a lookup of the "oper
     // new" function on the class.
     TypeDef *typeDef = TypeDefPtr::rcast(var);
     if (typeDef) {
@@ -1065,15 +1065,15 @@ FuncDefPtr Context::lookUp(const std::string &varName,
         // make sure we got it, and we didn't inherit it
         if (!operNew || operNew->getOwner() != typeDef)
             return 0;
-        
+
         return operNew;
     }
-    
+
     // make sure we got an overload
     OverloadDefPtr overload = OverloadDefPtr::rcast(var);
     if (!overload)
         return 0;
-    
+
     // look up the signature in the overload
     return overload->getMatch(*this, args, allowOverrides);
 }
@@ -1096,7 +1096,7 @@ VarDefPtr Context::addDef(VarDef *varDef, Namespace *srcNs) {
         srcNs = ns.get();
     FuncDef *funcDef = FuncDefPtr::cast(varDef);
     if (funcDef) {
-        OverloadDefPtr overload = 
+        OverloadDefPtr overload =
             OverloadDefPtr::rcast(lookUp(varDef->name, srcNs));
         if (!overload)
             overload = replicateOverload(varDef->name, srcNs);
@@ -1116,9 +1116,9 @@ void Context::insureOverloadPath(Context *ancestor, OverloadDef *overload) {
     if (!localOverload)
         return;
 
-    // this code assumes that 'ancestor' must always be a direct ancestor of 
-    // our namespace.  This isn't strictly essential, but it shouldn't be 
-    // necessary to support the general case.  If we change this assumption, 
+    // this code assumes that 'ancestor' must always be a direct ancestor of
+    // our namespace.  This isn't strictly essential, but it shouldn't be
+    // necessary to support the general case.  If we change this assumption,
     // we'll get an assertion failure to warn us.
 
     // see if the overload is one of our overload's parents, if so we're done.
@@ -1131,7 +1131,7 @@ void Context::insureOverloadPath(Context *ancestor, OverloadDef *overload) {
         if (parent.get() == ancestor)
             break;
     assert(parent && "insureOverloadPath(): parent is not a direct parent.");
-    
+
     localOverload->addParent(overload, /* before */ true);
 }
 
@@ -1145,8 +1145,8 @@ AnnotationPtr Context::lookUpAnnotation(const std::string &name) {
     if (ann = AnnotationPtr::rcast(result))
         return ann;
 
-    // create the arg list for the signature of an annotation (we don't need 
-    // the builder to create an ArgDef here because it's just for a signature 
+    // create the arg list for the signature of an annotation (we don't need
+    // the builder to create an ArgDef here because it's just for a signature
     // match).
     ArgVec args(1);
     args[0] = new ArgDef(construct->crackContext.get(), "context");
@@ -1160,7 +1160,7 @@ AnnotationPtr Context::lookUpAnnotation(const std::string &name) {
         compileNS->addDef(ann.get());
         return ann;
     }
-    
+
     // XXX can't deal with variables yet
     return 0;
 }
@@ -1168,7 +1168,7 @@ AnnotationPtr Context::lookUpAnnotation(const std::string &name) {
 void Context::collectCompileNSImports(vector<ImportPtr> &imports) const {
     if (parent)
         parent->collectCompileNSImports(imports);
-        
+
     for (vector<ImportPtr>::const_iterator i = compileNSImports.begin();
          i != compileNSImports.end();
          ++i
@@ -1183,7 +1183,7 @@ namespace {
     };
 
     ostream &operator <<(ostream &out, ContextStack a) {
-        for (list<string>::const_iterator iter = a.stack.begin(); 
+        for (list<string>::const_iterator iter = a.stack.begin();
              iter != a.stack.end();
              ++iter
              )
@@ -1192,10 +1192,10 @@ namespace {
     }
 }
 
-void Context::error(const Location &loc, const string &msg, 
+void Context::error(const Location &loc, const string &msg,
                     bool throwException
                     ) {
-    
+
     list<string> &ec = construct->errorContexts;
     if (throwException) {
         stringstream diag;
@@ -1216,7 +1216,7 @@ void Context::error(const Location &loc, const string &msg,
             ContextStack(ec) << endl;
         exit(1);
     }
-    
+
 }
 
 void Context::warn(const Location &loc, const string &msg) {
@@ -1237,7 +1237,7 @@ void Context::checkAccessible(VarDef *var, const string &name) {
     size_t nameSize = name.size();
     if (nameSize && name[0] == '_') {
 
-        // See if the variable is aliased in the current module.  This is 
+        // See if the variable is aliased in the current module.  This is
         // to accomodate generic arguments, which can alias private types.
         if (getModuleContext()->ns->hasAliasFor(var))
             return;
@@ -1266,10 +1266,10 @@ void Context::checkAccessible(VarDef *var, const string &name) {
                                  "context."
                                 )
                       );
-            
+
         } else {
 
-            // module protected variable: no problem if part of the same 
+            // module protected variable: no problem if part of the same
             // module (use the owner module if there is one)
             ModuleDefPtr varMod = var->getOwner()->getRealModule();
             ModuleDefPtr curMod = getModuleContext()->ns->getRealModule();
@@ -1279,15 +1279,15 @@ void Context::checkAccessible(VarDef *var, const string &name) {
             // see if this class is derived from the variable's class
             ContextPtr myClassCtx = getClassContext();
             TypeDef *varClass = TypeDefPtr::cast(var->getOwner());
-            if (varClass && myClassCtx && 
+            if (varClass && myClassCtx &&
                 TypeDefPtr::rcast(myClassCtx->ns)->isDerivedFrom(varClass)
                 )
                 return;
-            
-            // the symbol is from a different module and we are not in a 
+
+            // the symbol is from a different module and we are not in a
             // derived class.
             error(SPUG_FSTR(name << " is private to module " <<
-                             varMod->getNamespaceName() << 
+                             varMod->getNamespaceName() <<
                              " and not accessible in this context."
                             )
                   );

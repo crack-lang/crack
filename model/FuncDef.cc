@@ -1,10 +1,10 @@
 // Copyright 2009-2012 Google Inc.
 // Copyright 2010-2011 Shannon Weyrick <weyrick@mozek.us>
-// 
+//
 //   This Source Code Form is subject to the terms of the Mozilla Public
 //   License, v. 2.0. If a copy of the MPL was not distributed with this
 //   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-// 
+//
 
 #include "FuncDef.h"
 
@@ -31,7 +31,7 @@ void FuncDef::Spec::deserialize(Deserializer &deser) {
 
     args = deserializeArgs(deser);
 
-    // read the optional data, the only field we're interested in is the 
+    // read the optional data, the only field we're interested in is the
     // receiverType
     CRACK_PB_BEGIN(deser, 256, optional)
         CRACK_PB_FIELD(1, ref)
@@ -51,7 +51,7 @@ FuncDef::FuncDef(Flags flags, const std::string &name, size_t argCount) :
     vtableSlot(0) {
 }
 
-bool FuncDef::matches(Context &context, const vector<ExprPtr> &vals, 
+bool FuncDef::matches(Context &context, const vector<ExprPtr> &vals,
                       vector<ExprPtr> &newVals,
                       FuncDef::Convert convertFlag
                       ) {
@@ -71,7 +71,7 @@ bool FuncDef::matches(Context &context, const vector<ExprPtr> &vals,
                     newVals[i] = (*val)->convert(context, (*arg)->type.get());
                     if (!newVals[i])
                         return false;
-                } else if ((*val)->type && 
+                } else if ((*val)->type &&
                             (*arg)->type->matches(*(*val)->type)
                            ) {
                     newVals[i] = *val;
@@ -85,7 +85,7 @@ bool FuncDef::matches(Context &context, const vector<ExprPtr> &vals,
                     return false;
                 break;
             case noConvert:
-                // We have to check for a null value type because we could 
+                // We have to check for a null value type because we could
                 // have a VarRef to an OverloadDef, whose type is null.
                 if (!(*val)->type || !(*arg)->type->matches(*(*val)->type))
                     return false;
@@ -96,7 +96,7 @@ bool FuncDef::matches(Context &context, const vector<ExprPtr> &vals,
     // make sure that we checked everything in both lists
     if (arg != args.end() || val != vals.end())
         return false;
-    
+
     return true;
 }
 
@@ -111,10 +111,10 @@ bool FuncDef::matches(const ArgVec &other_args) {
         if ((*arg)->type.get() != (*other_arg)->type.get())
             return false;
 
-    // make sure that we checked everything in both lists   
+    // make sure that we checked everything in both lists
     if (arg != args.end() || other_arg != other_args.end())
         return false;
-    
+
     return true;
 }
 
@@ -128,13 +128,13 @@ bool FuncDef::matchesWithNames(const ArgVec &other_args) {
         // if the types don't _exactly_ match, the signatures don't match.
         if ((*arg)->type.get() != (*other_arg)->type.get())
             return false;
-        
+
         // if the arg names don't exactly match, the signatures don't match.
         if ((*arg)->name != (*other_arg)->name)
             return false;
     }
 
-    // make sure that we checked everything in both lists   
+    // make sure that we checked everything in both lists
     if (arg != args.end() || other_arg != other_args.end())
         return false;
 
@@ -165,7 +165,7 @@ string FuncDef::getDisplayName() const {
 
 string FuncDef::getUniqueId(Namespace *ns) const {
     ostringstream out;
-    SPUG_CHECK(owner || ns, 
+    SPUG_CHECK(owner || ns,
                "getUniqueId() called without a namespace or owner for "
                 "function " << name
                );
@@ -213,7 +213,7 @@ TypeDefPtr FuncDef::getFuncType(Context &context) {
     TypeDefPtr functionType = context.construct->functionType;
     if (!functionType)
         return 0;
-    
+
     // we have function, specialize based on return and argument types
     TypeDef::TypeVecObjPtr types = new TypeDef::TypeVecObj();
 
@@ -245,7 +245,7 @@ void FuncDef::dump(ostream &out, const string &prefix) const {
 void FuncDef::dump(ostream &out, const ArgVec &args) {
     out << '(';
     bool first = true;
-    for (ArgVec::const_iterator iter = args.begin(); iter != args.end(); 
+    for (ArgVec::const_iterator iter = args.begin(); iter != args.end();
          ++iter
          ) {
         if (!first)
@@ -254,13 +254,13 @@ void FuncDef::dump(ostream &out, const ArgVec &args) {
             first = false;
         out << (*iter)->type->getFullName() << ' ' << (*iter)->name;
     }
-    out << ")";    
+    out << ")";
 }
 
 void FuncDef::display(ostream &out, const ArgVec &args) {
     out << '(';
     bool first = true;
-    for (ArgVec::const_iterator iter = args.begin(); iter != args.end(); 
+    for (ArgVec::const_iterator iter = args.begin(); iter != args.end();
          ++iter
          ) {
         if (!first)
@@ -269,11 +269,11 @@ void FuncDef::display(ostream &out, const ArgVec &args) {
             first = false;
         out << (*iter)->type->getDisplayName() << ' ' << (*iter)->name;
     }
-    out << ")";    
+    out << ")";
 }
 
 void FuncDef::display(ostream &out, const string &prefix) const {
-    out << prefix << returnType->getDisplayName() << " " << 
+    out << prefix << returnType->getDisplayName() << " " <<
         VarDef::getDisplayName();
     display(out, args);
 }
@@ -288,8 +288,8 @@ void FuncDef::addDependenciesTo(ModuleDef *mod, VarDef::Set &added) const {
 }
 
 bool FuncDef::isUsableFrom(const Context &context) const {
-    // Functions are always usable because even if there are methods we can 
-    // reference the address (they may not be callable as methods, but we can 
+    // Functions are always usable because even if there are methods we can
+    // reference the address (they may not be callable as methods, but we can
     // deal with that later).
     return true;
 }
@@ -313,15 +313,15 @@ void FuncDef::serializeArgs(Serializer &serializer) const {
 void FuncDef::serializeCommon(Serializer &serializer) const {
     returnType->serialize(serializer, false, 0);
     serializer.write(static_cast<unsigned>(flags), "flags");
-    
+
     serializeArgs(serializer);
-    
+
     if (flags & method) {
         ostringstream temp;
         Serializer sub(serializer, temp);
         sub.write(CRACK_PB_KEY(1, ref), "receiverType.header");
         receiverType->serialize(sub, false, 0);
-        
+
         if (flags & virtualized) {
             sub.write(CRACK_PB_KEY(2, varInt), "vtableSlot.header");
             sub.write(vtableSlot, "vtableSlot");
@@ -333,7 +333,7 @@ void FuncDef::serializeCommon(Serializer &serializer) const {
     }
 }
 
-void FuncDef::serialize(Serializer &serializer) const { 
+void FuncDef::serialize(Serializer &serializer) const {
     serializeCommon(serializer);
 }
 
@@ -346,7 +346,7 @@ void FuncDef::serializeAlias(Serializer &serializer) const {
 void FuncDef::serialize(Serializer &serializer, bool writeKind,
                         const Namespace *ns
                         ) const {
-    SPUG_CHECK(false, 
+    SPUG_CHECK(false,
                "Directly called FuncDef::serialize() for function " <<
                 *this
                );
@@ -370,12 +370,12 @@ FuncDefPtr FuncDef::deserializeAlias(Deserializer &deser) {
 FuncDefPtr FuncDef::deserialize(Deserializer &deser, const string &name) {
     Spec spec;
     spec.deserialize(deser);
-    
+
     FuncDefPtr result = deser.context->builder.materializeFunc(
         *deser.context,
         name,
         spec
     );
-    
+
     return result;
 }
