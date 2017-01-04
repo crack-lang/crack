@@ -1,9 +1,9 @@
 # Copyright 2012 Google Inc.
-# 
+#
 #   This Source Code Form is subject to the terms of the Mozilla Public
 #   License, v. 2.0. If a copy of the MPL was not distributed with this
 #   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-# 
+#
 
 AC_DEFUN([AM_PATH_SDLGFX], [dnl
     AC_ARG_ENABLE(sdlgfx,
@@ -21,7 +21,7 @@ AC_DEFUN([AM_PATH_SDLGFX], [dnl
         CPPFLAGS="$CPPFLAGS $SDLGFX_CPPFLAGS"
         AC_TRY_RUN([
             #include <SDL/SDL_gfxPrimitives.h>
-            
+
             int main() {
                 exit(SDL_GFXPRIMITIVES_MAJOR < 2);
             }

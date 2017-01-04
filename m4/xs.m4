@@ -1,10 +1,10 @@
 // Copyright 2011 Google Inc.
 // Copyright 2012 Conrad Steenberg <conrad.steenberg@gmail.com>
-// 
+//
 //   This Source Code Form is subject to the terms of the Mozilla Public
 //   License, v. 2.0. If a copy of the MPL was not distributed with this
 //   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-// 
+//
 
 AC_DEFUN([AM_PATH_XS], [dnl
     AC_ARG_ENABLE(xs,
@@ -23,7 +23,7 @@ AC_DEFUN([AM_PATH_XS], [dnl
         AC_TRY_RUN([
             #include <xs/xs.h>
             #include <stdio.h>
-            
+
             int main() {
                 return XS_VERSION < 10200 ? 1 : 0;
             }

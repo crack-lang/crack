@@ -1,9 +1,9 @@
 // Copyright 2011 Google Inc.
-// 
+//
 //   This Source Code Form is subject to the terms of the Mozilla Public
 //   License, v. 2.0. If a copy of the MPL was not distributed with this
 //   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-// 
+//
 
 AC_DEFUN([AM_PATH_CAIRO], [dnl
     AC_ARG_ENABLE(cairo,
@@ -21,7 +21,7 @@ AC_DEFUN([AM_PATH_CAIRO], [dnl
         CPPFLAGS="$CPPFLAGS $CAIRO_CPPFLAGS"
         AC_TRY_RUN([
             #include <cairo/cairo.h>
-            
+
             int main() {
                 cairo_version_string();
                 return CAIRO_VERSION < 11000 ? 1 : 0;

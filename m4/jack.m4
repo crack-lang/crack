@@ -1,9 +1,9 @@
 # Copyright 2012 Google Inc.
-# 
+#
 #   This Source Code Form is subject to the terms of the Mozilla Public
 #   License, v. 2.0. If a copy of the MPL was not distributed with this
 #   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-# 
+#
 # check for OpenGL
 
 AC_DEFUN([AM_PATH_JACK], [dnl
@@ -14,7 +14,7 @@ AC_DEFUN([AM_PATH_JACK], [dnl
     LIBS="$LIBS $JACK_LIBS"
     AC_TRY_RUN([
         #include <jack/jack.h>
-        
+
         int main(int argc, const char **argv) {
             int result;
             jack_client_name_size();

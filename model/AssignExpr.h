@@ -1,9 +1,9 @@
 // Copyright 2009-2010 Google Inc.
-// 
+//
 //   This Source Code Form is subject to the terms of the Mozilla Public
 //   License, v. 2.0. If a copy of the MPL was not distributed with this
 //   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-// 
+//
 
 #ifndef _model_AssignExpr_h_
 #define _model_AssignExpr_h_
@@ -41,20 +41,20 @@ class AssignExpr : public Expr {
          */
         static AssignExprPtr create(Context &context,
                                     Expr *aggregate,
-                                    VarDef *var, 
+                                    VarDef *var,
                                     Expr *value
                                     );
 
         /**
-         * Create a new AssignExpr, check for errors.  Just like the other 
-         * create() method only for non-instance variables (statics, globals 
+         * Create a new AssignExpr, check for errors.  Just like the other
+         * create() method only for non-instance variables (statics, globals
          * and locals)
-         * 
+         *
          * @param var the variable
          * @param value the value to be assigned to the variable.
          */
         static AssignExprPtr create(Context &context,
-                                    VarDef *var, 
+                                    VarDef *var,
                                     Expr *value
                                     ) {
             return create(context, 0, var, value);
@@ -63,7 +63,7 @@ class AssignExpr : public Expr {
         /** Emit the expression in the given context. */
         virtual ResultExprPtr emit(Context &context);
 
-        // overrides Expr, assignments are non-productive.        
+        // overrides Expr, assignments are non-productive.
         virtual bool isProductive() const;
         virtual void writeTo(std::ostream &out) const;
 };
