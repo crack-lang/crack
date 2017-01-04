@@ -1,9 +1,9 @@
 // Copyright 2010-2011 Google Inc.
-// 
+//
 //   This Source Code Form is subject to the terms of the Mozilla Public
 //   License, v. 2.0. If a copy of the MPL was not distributed with this
 //   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-// 
+//
 # Crack GL bindings.
 
 @import crack.extgen generateExtension;
@@ -20,8 +20,8 @@
 
     void glMatrixMode(uint mode);
     void glLoadIdentity();
-    void glFrustum(float64 left, float64 right, float64 bottom, float64 top, 
-                   float64 nearVal, 
+    void glFrustum(float64 left, float64 right, float64 bottom, float64 top,
+                   float64 nearVal,
                    float64 farVal
                    );
     void glFlush();
@@ -54,30 +54,30 @@
                GL_QUADS,
                GL_QUAD_STRIP,
                GL_POLYGON;
-    
+
     void glBegin(uint mode);
     void glEnd();
 
     void  glVertex2d( float64 x, float64 y );
     void  glVertex2f( float32 x, float32 y );
     void  glVertex2i( int x, int y );
-   
+
     void  glVertex3d( float64 x, float64 y, float64 z );
     void  glVertex3f( float32 x, float32 y, float32 z );
     void  glVertex3i( int x, int y, int z );
-   
+
     void  glVertex4d( float64 x, float64 y, float64 z, float64 w );
     void  glVertex4f( float32 x, float32 y, float32 z, float32 w );
     void  glVertex4i( int x, int y, int z, int w );
-   
+
     void  glVertex2dv( array[float64] v );
     void  glVertex2fv( array[float32] v );
     void  glVertex2iv( array[int] v );
-   
+
     void  glVertex3dv( array[float64] v );
     void  glVertex3fv( array[float32] v );
     void  glVertex3iv( array[int] v );
-   
+
     void  glVertex4dv( array[float64] v );
     void  glVertex4fv( array[float32] v );
     void  glVertex4iv( array[int] v );
@@ -97,7 +97,7 @@
     void glColor3f( float32 red, float32 green, float32 blue );
     void glColor3i( int red, int green, int blue );
     void glColor3ui( uint red, uint green, uint blue );
-    
+
     void  glColor4b( byte red, byte green,
                                     byte blue, byte alpha );
     void  glColor4d(float64 red, float64 green, float64 blue, float64 alpha);
@@ -145,15 +145,15 @@
                GL_ALL_ATTRIB_BITS;
 
     void glClear(uint mask);
-    
+
     # polygons
     const uint GL_FILL;
-    
+
     const uint GL_SMOOTH,
                GL_FRONT_AND_BACK;
-    
+
     void glShadeModel(uint mode);
-    void glPolygonMode( uint face, uint mode );     
+    void glPolygonMode( uint face, uint mode );
 
     const uint GL_LIGHTING,
                GL_LIGHT0,
@@ -195,18 +195,18 @@
     void glLighti( uint light, uint pname, int param );
     void glLightfv( uint light, uint pname, array[float32] params );
     void glLightiv( uint light, uint pname, array[int] params );
-    
+
     const uint GL_DEPTH_TEST, GL_TEXTURE_2D, GL_LIGHTING;
-     
+
     void glEnable(uint cap);
     void glDisable(uint cap);
-     
+
     # depth stuff
     const uint GL_LEQUAL;
-     
+
     void glDepthFunc(uint func);
     void glDepthMask(bool flag);
-    
+
     # hints
     const uint GL_PERSPECTIVE_CORRECTION_HINT,
                GL_POINT_SMOOTH_HINT,
@@ -217,7 +217,7 @@
                GL_FASTEST,
                GL_NICEST;
 
-    
+
     void glHint(uint target, uint mode);
 
     # textures
@@ -243,8 +243,8 @@
 
     void glTexImage2D( uint target, int level, int internalFormat,
                        int width, int height,
-                       int border, 
-                       uint format, 
+                       int border,
+                       uint format,
                        uint type,
                        voidptr pixels
                        );
@@ -271,31 +271,31 @@
     void glTexCoord1d( float64 s );
     void glTexCoord1f( float32 s );
     void glTexCoord1i( int s );
-    
+
     void glTexCoord2d( float64 s, float64 t );
     void glTexCoord2f( float32 s, float32 t );
     void glTexCoord2i( int s, int t );
-    
+
     void glTexCoord3d( float64 s, float64 t, float64 r );
     void glTexCoord3f( float32 s, float32 t, float32 r );
     void glTexCoord3i( int s, int t, int r );
-    
+
     void glTexCoord4d( float64 s, float64 t, float64 r, float64 q );
     void glTexCoord4f( float32 s, float32 t, float32 r, float32 q );
     void glTexCoord4i( int s, int t, int r, int q );
-    
+
     void glTexCoord1dv( array[float64] v );
     void glTexCoord1fv( array[float32] v );
     void glTexCoord1iv( array[int] v );
-    
+
     void glTexCoord2dv( array[float64] v );
     void glTexCoord2fv( array[float32] v );
     void glTexCoord2iv( array[int] v );
-    
+
     void glTexCoord3dv( array[float64] v );
     void glTexCoord3fv( array[float32] v );
     void glTexCoord3iv( array[int] v );
-    
+
     void glTexCoord4dv( array[float64] v );
     void glTexCoord4fv( array[float32] v );
     void glTexCoord4iv( array[int] v );

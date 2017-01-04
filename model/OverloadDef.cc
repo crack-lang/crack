@@ -1,10 +1,10 @@
 // Copyright 2009-2012 Google Inc.
 // Copyright 2010 Shannon Weyrick <weyrick@mozek.us>
-// 
+//
 //   This Source Code Form is subject to the terms of the Mozilla Public
 //   License, v. 2.0. If a copy of the MPL was not distributed with this
 //   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-// 
+//
 
 #include "OverloadDef.h"
 
@@ -30,7 +30,7 @@ void OverloadDef::setImpl(FuncDef *func) {
 }
 
 void OverloadDef::flatten(OverloadDef::FuncList &flatFuncs) const {
-    
+
     // first do all of the local functions.  It's ok to have multiple
     // functions with the same signature in this list, when we do lookups we
     // will traverse the list in the normal order and do the right thing with
@@ -40,7 +40,7 @@ void OverloadDef::flatten(OverloadDef::FuncList &flatFuncs) const {
          ++iter
          )
         flatFuncs.push_back(iter->get());
-    
+
     // now flatten all of the parents
     for (ParentVec::const_iterator parent = parents.begin();
          parent != parents.end();
@@ -57,12 +57,12 @@ FuncDef *OverloadDef::getMatch(Context &context, vector<ExprPtr> &args,
     for (FuncList::const_iterator iter = funcs.begin();
          iter != funcs.end();
          ++iter) {
-        
-        // ignore the function if it is a virtual override and we're not 
+
+        // ignore the function if it is a virtual override and we're not
         // looking for those
         if (!allowOverrides && (*iter)->isVirtualOverride())
             continue;
-        
+
         // see if the function matches
         if ((*iter)->matches(context, args, newArgs, convertFlag)) {
             if (convertFlag != FuncDef::noConvert)
@@ -70,7 +70,7 @@ FuncDef *OverloadDef::getMatch(Context &context, vector<ExprPtr> &args,
             return iter->get();
         }
     }
-    
+
     for (ParentVec::const_iterator parent = parents.begin();
          parent != parents.end();
          ++parent
@@ -81,7 +81,7 @@ FuncDef *OverloadDef::getMatch(Context &context, vector<ExprPtr> &args,
         if (result)
             return result;
     }
-    
+
     return 0;
 }
 
@@ -99,16 +99,16 @@ FuncDef *OverloadDef::getMatch(Context &context, std::vector<ExprPtr> &args,
             someAdaptive = true;
         else
             allAdaptive = false;
-    
+
     // if any of the arguments are adaptive, convert the adaptive arguments.
     FuncDef::Convert convertFlag = FuncDef::noConvert;
     if (someAdaptive)
         convertFlag = FuncDef::adapt;
 
-    // if _all_ of the arguments are adaptive, 
+    // if _all_ of the arguments are adaptive,
     if (allAdaptive)
         convertFlag = FuncDef::adaptSecondary;
-    
+
     FuncDef *result = getMatch(context, args, convertFlag, allowOverrides);
     if (!result)
         result = getMatch(context, args, FuncDef::convert, allowOverrides);
@@ -126,7 +126,7 @@ FuncDef *OverloadDef::getMatch(TypeDef *funcType) const {
         if (result)
             return result;
     }
-    
+
     return 0;
 }
 
@@ -145,18 +145,18 @@ FuncDef *OverloadDef::getSigMatch(const FuncDef::ArgVec &args,
         if (result)
             return result;
     }
-    
+
     return 0;
 }
 
 FuncDef *OverloadDef::getNoArgMatch(bool acceptAlias) {
-    
+
     // check the local functions.
     for (FuncList::iterator iter = funcs.begin();
          iter != funcs.end();
          ++iter
          )
-        if ((*iter)->args.empty() && 
+        if ((*iter)->args.empty() &&
             (acceptAlias || (*iter)->getOwner() == owner)
             )
             return iter->get();
@@ -170,7 +170,7 @@ FuncDef *OverloadDef::getNoArgMatch(bool acceptAlias) {
         if (result)
             return result;
     }
-    
+
     return 0;
 }
 
@@ -292,10 +292,10 @@ void OverloadDef::collectAncestors(Namespace *ns) {
             collectAncestors(parent.get());
         } else {
             parentOvld = OverloadDefPtr::rcast(var);
-            // if there is a variable of this name but it is not an overload, 
-            // we have a situation where there is a non-overload definition in 
-            // an ancestor namespace that will block resolution of the 
-            // overloads in all derived namespaces.  This is a bad thing, 
+            // if there is a variable of this name but it is not an overload,
+            // we have a situation where there is a non-overload definition in
+            // an ancestor namespace that will block resolution of the
+            // overloads in all derived namespaces.  This is a bad thing,
             // but not something we want to deal with here.
 
             if (parentOvld)
@@ -327,7 +327,7 @@ bool OverloadDef::hasAncestor(OverloadDef *parent) {
     return false;
 }
 
-FuncDefPtr OverloadDef::getFuncDef(Context &context, 
+FuncDefPtr OverloadDef::getFuncDef(Context &context,
                                    std::vector<ExprPtr> &args,
                                    bool allowOverrides
                                    ) const {
@@ -338,16 +338,16 @@ FuncDefPtr OverloadDef::getFuncDef(Context &context,
         context.maybeExplainOverload(msg, name, getOwner());
         context.error(msg.str());
     }
-    
-    // For functions initially defined as abstract, the normal method 
-    // resolution (which we want) gives us the abstract function.  But we 
-    // don't want that here because we need to give an error on explicitly 
-    // scoped abstract functions.  So we have to go through and look the 
-    // function up again now that we've nailed down the signature to get the 
+
+    // For functions initially defined as abstract, the normal method
+    // resolution (which we want) gives us the abstract function.  But we
+    // don't want that here because we need to give an error on explicitly
+    // scoped abstract functions.  So we have to go through and look the
+    // function up again now that we've nailed down the signature to get the
     // implementation if there is one.
     if (result->flags & FuncDef::abstract)
         result = getSigMatch(result->args, /* matchNames */ true);
-    
+
     return result;
 }
 
@@ -358,18 +358,18 @@ bool OverloadDef::hasInstSlot() const {
 bool OverloadDef::isStatic() const {
     FuncList flatFuncs;
     flatten(flatFuncs);
-    assert((flatFuncs.size() == 1) && 
+    assert((flatFuncs.size() == 1) &&
            "isStatic() check applied to a multi-function overload"
            );
     return flatFuncs.front()->isStatic();
 }
 
-bool OverloadDef::isImportableFrom(ModuleDef *module, 
+bool OverloadDef::isImportableFrom(ModuleDef *module,
                                    const string &impName
                                    ) const {
     if (module->exports.find(impName) != module->exports.end())
         return true;
-    
+
     // the overload is importable if all of its functions are importable.
     for (FuncList::const_iterator iter = funcs.begin();
          iter != funcs.end();
@@ -381,7 +381,7 @@ bool OverloadDef::isImportableFrom(ModuleDef *module,
     return true;
 }
 
-bool OverloadDef::isImportable(const Namespace *ns, 
+bool OverloadDef::isImportable(const Namespace *ns,
                                const std::string &name
                                ) const {
     // the overload is importable if any of its functions are importable.
@@ -402,7 +402,7 @@ bool OverloadDef::isImportable(const Namespace *ns,
 }
 
 bool OverloadDef::isUsableFrom(const Context &context) const {
-    // Overloads are always usable because they have an address (we can say 
+    // Overloads are always usable because they have an address (we can say
     // x := A.f).  We decide at call time if they need (and have) a receiver.
     return true;
 }
@@ -414,11 +414,11 @@ bool OverloadDef::needsReceiver() const {
         if (!(*iter)->needsReceiver())
             return false;
 
-    // Check the parents.    
+    // Check the parents.
     SPUG_FOR(ParentVec, iter, parents)
         if (!(*iter)->needsReceiver())
             return false;
-    
+
     return true;
 }
 
@@ -458,7 +458,7 @@ bool OverloadDef::isImportedIn(const Context &context) const {
 bool OverloadDef::isSingleFunction() const {
     FuncList flatFuncs;
     flatten(flatFuncs);
-    
+
     return flatFuncs.size() == 1;
 }
 
@@ -470,11 +470,11 @@ FuncDefPtr OverloadDef::getSingleFunction() const {
         return flatFuncs.front();
     else
         return 0;
-}    
+}
 
 void OverloadDef::createImpl() {
     if (!impl) {
-        
+
         // get the impl from the first parent with one.
         for (ParentVec::iterator parent = parents.begin();
              parent != parents.end();
@@ -486,7 +486,7 @@ void OverloadDef::createImpl() {
                 break;
             }
         }
-    
+
         assert(impl);
     }
 }
@@ -581,13 +581,13 @@ OverloadDefPtr OverloadDef::deserialize(Deserializer &deser,
                                         ) {
     string name = deser.readString(Serializer::modNameSize, "name");
     OverloadDefPtr ovld;
-    
+
     if (Serializer::trace)
         cerr << "# begin overload " << name << endl;
 
     // In order to deal with local aliases (which need to be defined after the
-    // functions they reference) overloads can be serialized multiple times, 
-    // so if the overload is already defined in the namespace, just use the 
+    // functions they reference) overloads can be serialized multiple times,
+    // so if the overload is already defined in the namespace, just use the
     // existing one.
     if (!(ovld = owner->lookUp(name, false))) {
         ovld = new OverloadDef(name);
@@ -613,7 +613,7 @@ OverloadDefPtr OverloadDef::deserialize(Deserializer &deser,
 }
 
 namespace {
-    // Returns true if the overload def should include the function in its 
+    // Returns true if the overload def should include the function in its
     // aliase tree node.
     bool shouldInclude(bool privateAliases, const OverloadDef *ovld,
                        OverloadDef::FuncList::const_iterator entry

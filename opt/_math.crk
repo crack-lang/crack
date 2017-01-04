@@ -1,10 +1,10 @@
 // Copyright 2010-2014 Google Inc.
 // Copyright 2011 Conrad Steenberg <conrad.steenberg@gmail.com>
-// 
+//
 //   This Source Code Form is subject to the terms of the Mozilla Public
 //   License, v. 2.0. If a copy of the MPL was not distributed with this
 //   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-// 
+//
 # Crack SDL bindings.
 
 @import crack.extgen generateExtension;
@@ -165,7 +165,7 @@ int64_t crk_usecs(void) {
                   INFINITY,
                   NAN;
 
-    const int 
+    const int
         ERANGE,
         EINVAL,
         ENOMEM,
@@ -181,7 +181,7 @@ int64_t crk_usecs(void) {
         DIVBYZERO = 'FE_DIVBYZERO',
         OVERFLOW = 'FE_OVERFLOW',
         UNDERFLOW = 'FE_UNDERFLOW';
-    
+
     @cname crk_sin float64 sin(float64 angle);
     @cname crk_sinf float32 sin(float32 angle);
     @cname crk_cos float64 cos(float64 angle);
@@ -248,7 +248,7 @@ int64_t crk_usecs(void) {
     @cname expm1f float32 expm1(float32 val);
     @cname ilogb int ilogb(float32 val);
     @cname ilogbf int ilogb(float32 val);
-    
+
     @cname crk_fpclassify32 int fpclassify(float32 val);
     @cname crk_fpclassify64 int fpclassify(float64 val);
     @cname crk_isfinite32 int isfinite(float32 val);
@@ -261,7 +261,7 @@ int64_t crk_usecs(void) {
     @cname crk_isnormal64 int isnormal(float64 val);
     @cname crk_signbit32 int sign(float32 val);
     @cname crk_signbit64 int sign(float64 val);
-    
+
     @cname hypot float64 hypot(float64 x, float64 y);
     @cname hypotf float32 hypot(float32 x, float32 y);
 
@@ -279,13 +279,13 @@ int64_t crk_usecs(void) {
     @cname fdimf float32 fdim(float32 val);
     @cname crk_pow float64 pow(float64 val);
     @cname powf float32 pow(float32 val);
-    
+
     @cname crk_get_errno int errno();
     @cname crk_set_errno void setErrno(int errno);
-    
+
     @cname fetestexcept int testexcept(int errors);
     @cname feclearexcept int clearexcept(int errors);
-    
+
     int atoi(byteptr str);
     float atof(byteptr str);
     @cname crk_strtoi int strtoi(byteptr str);

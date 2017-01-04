@@ -1,9 +1,9 @@
 // Copyright 2009-2011 Google Inc.
-// 
+//
 //   This Source Code Form is subject to the terms of the Mozilla Public
 //   License, v. 2.0. If a copy of the MPL was not distributed with this
 //   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-// 
+//
 
 #include "ResultExpr.h"
 
@@ -17,7 +17,7 @@
 using namespace model;
 
 void ResultExpr::handleAssignment(Context &context) {
-    // if the expression is productive, the assignment will just consume its 
+    // if the expression is productive, the assignment will just consume its
     // reference.
     if (sourceExpr->isProductive())
         return;
@@ -29,9 +29,9 @@ void ResultExpr::handleAssignment(Context &context) {
         if (!type->noBindInferred) type->noBindInferred = context.getLocation();
         return;
     }
-    
-    // got a bind function: create a bind call and emit it.  (emit should 
-    // return a ResultExpr for a void object, so we don't need to do anything 
+
+    // got a bind function: create a bind call and emit it.  (emit should
+    // return a ResultExpr for a void object, so we don't need to do anything
     // special for it).
     FuncCallPtr bindCall = context.builder.createFuncCall(bindFunc.get());
     bindCall->receiver = this;
@@ -43,33 +43,33 @@ void ResultExpr::handleTransient(Context &context) {
     // non-productive expressions.
     if (context.emittingCleanups || !sourceExpr->isProductive())
         return;
-    
+
     // the expression is productive - clean it up
     forceCleanup(context);
 }
 
 void ResultExpr::forceCleanup(Context &context) {
     // check for a release function
-    FuncDefPtr releaseFunc = context.lookUpNoArgs("oper release", false, 
+    FuncDefPtr releaseFunc = context.lookUpNoArgs("oper release", false,
                                                   type.get()
                                                   );
     if (!releaseFunc) {
         if (!type->noReleaseInferred) type->noReleaseInferred = context.getLocation();
         return;
     }
-    
-    // got a release function: create a release call and store it in the 
+
+    // got a release function: create a release call and store it in the
     // cleanups.
-    FuncCallPtr releaseCall = 
+    FuncCallPtr releaseCall =
         context.builder.createFuncCall(releaseFunc.get());
     releaseCall->receiver = this;
     context.cleanupFrame->addCleanup(releaseCall.get());
 }
 
 bool ResultExpr::isProductive() const {
-    // result expressions are always non-productive, since they always 
-    // reference the result of an existing expression.  This means that the 
-    // ResultExpression returned from ResultExpression::emit() will treat a 
+    // result expressions are always non-productive, since they always
+    // reference the result of an existing expression.  This means that the
+    // ResultExpression returned from ResultExpression::emit() will treat a
     // re-used result as a non-productive expression, which is what we want.
     return false;
 }

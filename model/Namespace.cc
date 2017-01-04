@@ -1,10 +1,10 @@
 // Copyright 2010,2012 Shannon Weyrick <weyrick@mozek.us>
 // Copyright 2010-2012 Google Inc.
-// 
+//
 //   This Source Code Form is subject to the terms of the Mozilla Public
 //   License, v. 2.0. If a copy of the MPL was not distributed with this
 //   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-// 
+//
 
 
 #include "Namespace.h"
@@ -33,23 +33,23 @@ void Namespace::OrderedTypes::add(const TypeDef *type,
                                   const ModuleDef *master
                                   ) {
     // We can quit now if:
-    // 1) We've already got the type in the collection.  
-    // 2) We find a type outside of the copseristence group (since we know that 
+    // 1) We've already got the type in the collection.
+    // 2) We find a type outside of the copseristence group (since we know that
     //    all cycles must be contained to a copersistence group).
-    // 3) The type is not serializable.  (Serializable types are very special 
-    //    [meta-types and internal types whose names start with ':'] so we can 
-    //    safely assume that none of their dependencies are serializable 
+    // 3) The type is not serializable.  (Serializable types are very special
+    //    [meta-types and internal types whose names start with ':'] so we can
+    //    safely assume that none of their dependencies are serializable
     //    either.
-    if (contains(type) || 
+    if (contains(type) ||
         const_cast<TypeDef *>(type)->getModule()->getMaster() != master ||
         !type->isSerializable()
         )
         return;
-    
+
     // Do the base classes.
     for (int i = 0; i < type->parents.size(); ++i)
         add(type->parents[i].get(), master);
-        
+
     // If this is a generic instantiation, do the generic.
     if (type->templateType)
         add(type->templateType, master);
@@ -60,14 +60,14 @@ void Namespace::OrderedTypes::add(const TypeDef *type,
 }
 
 void Namespace::storeDef(VarDef *def) {
-    assert(!FuncDefPtr::cast(def) && 
+    assert(!FuncDefPtr::cast(def) &&
            "it is illegal to store a FuncDef directly (should be wrapped "
            "in an OverloadDef)");
     defs[def->name] = def;
     orderedForCache.push_back(def);
 }
 
-void Namespace::getTypeDefs(std::vector<TypeDef*> &typeDefs, 
+void Namespace::getTypeDefs(std::vector<TypeDef*> &typeDefs,
                             ModuleDef *master
                             ) {
     for (VarDefMap::const_iterator iter = defs.begin();
@@ -80,7 +80,7 @@ void Namespace::getTypeDefs(std::vector<TypeDef*> &typeDefs,
             if (def->getOwner() == this && def->isSerializable())
                 typeDefs.push_back(def);
         } else {
-            SPUG_CHECK(!NamespacePtr::rcast(iter->second), 
+            SPUG_CHECK(!NamespacePtr::rcast(iter->second),
                        "found a non-type namespace: " << iter->first
                        );
         }
@@ -116,18 +116,18 @@ void Namespace::deserializeDefs(Deserializer &deser, const char *countName,
                 break;
             case Serializer::typeAliasId:
             case Serializer::aliasId: {
-                string alias = 
+                string alias =
                     deser.readString(Serializer::varNameSize, "alias");
                 VarDefPtr varDef;
-                if (static_cast<Serializer::DefTypes>(kind) == 
+                if (static_cast<Serializer::DefTypes>(kind) ==
                     Serializer::typeAliasId
                     )
                     varDef = TypeDef::deserializeRef(deser);
                 else
                     varDef = VarDef::deserializeAlias(deser);
                 addAlias(alias, varDef.get());
-                
-                // if we are doing public defs in module scope, this alias 
+
+                // if we are doing public defs in module scope, this alias
                 // has to be a second-order import.
                 if (publicDefs) {
                     ModuleDef *mod = ModuleDefPtr::cast(this);
@@ -137,7 +137,7 @@ void Namespace::deserializeDefs(Deserializer &deser, const char *countName,
                 break;
             }
             case Serializer::genericId:
-                // XXX don't think we need this, generics are probably stored 
+                // XXX don't think we need this, generics are probably stored
                 // in a type.
                 SPUG_CHECK(false, "can't deserialize generics yet");
 //                addDef(Generic::deserialize(deser));
@@ -181,7 +181,7 @@ VarDefPtr Namespace::lookUp(const std::string &varName, bool recurse) {
             if (def = parent->lookUp(varName))
                 break;
 
-        return def;        
+        return def;
     }
 
     return 0;
@@ -215,7 +215,7 @@ ModuleDefPtr Namespace::getRealModule() {
 }
 
 bool Namespace::hasAliasFor(VarDef *def) const {
-    for (VarDefMap::const_iterator iter = defs.begin(); iter != defs.end(); 
+    for (VarDefMap::const_iterator iter = defs.begin(); iter != defs.end();
          ++iter
          )
         if (iter->second.get() == def)
@@ -248,7 +248,7 @@ void Namespace::removeDef(VarDef *def) {
         ordered.erase(iter);
         break;
     }
-    
+
     // remove it from the ordered for cache defs
     for (VarDefVec::iterator iter = orderedForCache.begin();
          iter != orderedForCache.end();
@@ -263,7 +263,7 @@ void Namespace::addAlias(VarDef *def) {
     // make sure that the symbol is already bound to a context.
     assert(def->getOwner());
 
-    // overloads should never be aliased - otherwise the new context could 
+    // overloads should never be aliased - otherwise the new context could
     // extend them.
     OverloadDef *overload = OverloadDefPtr::cast(def);
     if (overload) {
@@ -283,21 +283,21 @@ OverloadDefPtr Namespace::addAlias(const string &name, VarDef *def) {
     // See if the alias name exposes any private members of the overload.
     bool exposes = def->isImportable(this, name);
 
-    // overloads should never be aliased - otherwise the new context could 
+    // overloads should never be aliased - otherwise the new context could
     // extend them.
     OverloadDef *overload = OverloadDefPtr::cast(def);
     if (overload) {
         OverloadDefPtr child = overload->createAlias(exposes);
-        
+
         // Since we own the overload, we can rename it.
         child->name = name;
-        
+
         defs[name] = child.get();
         child->setOwner(this);
         return child;
     } else {
         defs[name] = def;
-        
+
         // See if the alias exposes a private def.
         if (exposes && !def->isImportable(owner, def->name))
             def->exposed = true;
@@ -319,8 +319,8 @@ void Namespace::aliasAll(Namespace *other) {
          )
         if (!lookUp(iter->first))
             addAlias(iter->first, iter->second.get());
-    
-    // do parents afterwards - since we don't clobber existing aliases, we 
+
+    // do parents afterwards - since we don't clobber existing aliases, we
     // want to do the innermost names first.
     NamespacePtr parent;
     for (int i = 0; parent = other->getParent(i++);) {
@@ -329,8 +329,8 @@ void Namespace::aliasAll(Namespace *other) {
 }
 
 OverloadDefPtr Namespace::replaceDef(Context &context, VarDef *def) {
-    SPUG_CHECK(!def->getOwner(), 
-               "Namespace::replaceDef() called on " << def->getFullName() << 
+    SPUG_CHECK(!def->getOwner(),
+               "Namespace::replaceDef() called on " << def->getFullName() <<
                ", which already has an owner."
                );
     StubDefPtr existing = defs[def->name];
@@ -338,12 +338,12 @@ OverloadDefPtr Namespace::replaceDef(Context &context, VarDef *def) {
                "Namespace::replaceDef() called on " << def->getFullName() <<
                ", which is not a stub (the code currently assumes a stub)"
                );
-            
+
     OverloadDefPtr ovld;
     if (!(ovld = OverloadDefPtr::cast(def))) {
         FuncDefPtr func = FuncDefPtr::cast(def);
-        SPUG_CHECK(func, 
-                   "Replacing " << def->getFullName() << 
+        SPUG_CHECK(func,
+                   "Replacing " << def->getFullName() <<
                    " with a non function."
                    );
         ovld = new OverloadDef(def->name);
@@ -367,7 +367,7 @@ void Namespace::dump(ostream &out, const string &prefix) const {
         out << childPfx << "parent namespace ";
         parent->dump(out, childPfx);
     }
-    
+
     for (VarDefMap::const_iterator varIter = defs.begin();
          varIter != defs.end();
          ++varIter
@@ -395,7 +395,7 @@ void Namespace::serializeTypeDecls(Serializer &serializer, ModuleDef *master) {
     // We build a vector so we can determine the count up front.
     vector<TypeDef *> typeDefs;
     getTypeDefs(typeDefs, master);
-    
+
     serializer.write(typeDefs.size(), "#decls");
     for (vector<TypeDef *>::const_iterator iter = typeDefs.begin();
          iter != typeDefs.end();
@@ -405,24 +405,24 @@ void Namespace::serializeTypeDecls(Serializer &serializer, ModuleDef *master) {
     }
 }
 
-void Namespace::serializeNonTypeDefs(const vector<const Namespace *>& namespaces, 
+void Namespace::serializeNonTypeDefs(const vector<const Namespace *>& namespaces,
                                      Serializer &serializer
                                      ) const {
-    // Count the number of definitions to serialize and separate out the 
+    // Count the number of definitions to serialize and separate out the
     // types, other defs, and aliases.
     vector<VarDef *> defs, privateDefs;
     SPUG_FOR(vector<const Namespace *>, ns, namespaces) {
-        // If the namespace has generics, we need to serialize private 
+        // If the namespace has generics, we need to serialize private
         // definitions.
         bool serializePrivates = (*ns)->hasGenerics();
-        
+
         SPUG_FOR(VarDefMap, i, (*ns)->defs) {
             if (i->second->isSerializable()) {
-                
+
                 // is it an alias?
                 if (isAlias(i->second.get(), i->first))
                     continue;
-                
+
                 // Is it an overload?
                 if (OverloadDefPtr ovld = OverloadDefPtr::rcast(i->second)) {
 
@@ -430,7 +430,7 @@ void Namespace::serializeNonTypeDefs(const vector<const Namespace *>& namespaces
                     if (!ovld->hasNonAliases())
                         continue;
 
-                    if (i->second->isImportable(*ns, i->first) || 
+                    if (i->second->isImportable(*ns, i->first) ||
                         ovld->hasExposedFuncs()
                         )
                         defs.push_back(i->second.get());
@@ -438,9 +438,9 @@ void Namespace::serializeNonTypeDefs(const vector<const Namespace *>& namespaces
                         privateDefs.push_back(i->second.get());
                     continue;
                 }
-    
+
                 if (!TypeDefPtr::rcast(i->second)) {
-                    if (i->second->isImportable(*ns, i->first) || 
+                    if (i->second->isImportable(*ns, i->first) ||
                         i->second->exposed
                         ) {
                         defs.push_back(i->second.get());
@@ -457,7 +457,7 @@ void Namespace::serializeNonTypeDefs(const vector<const Namespace *>& namespaces
     serializer.write(defs.size(), "#defs");
     SPUG_FOR(vector<VarDef *>, i, defs)
         (*i)->serialize(serializer, true, this);
-    
+
     // now do the privates
     {
         Serializer::StackFrame<Serializer> digestState(serializer, false);
@@ -474,7 +474,7 @@ void Namespace::serializeNonTypeDefs(const vector<const Namespace *>& namespaces
 void Namespace::deserializeTypeDecls(Deserializer &deser) {
     unsigned count = deser.readUInt("#decls");
     for (int i = 0; i < count; ++i)
-        // This triggers the side-effect of populating the deserializer's 
+        // This triggers the side-effect of populating the deserializer's
         // object registry with an instance of the type.
         TypeDef::deserializeDecl(deser);
 }

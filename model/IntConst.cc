@@ -1,11 +1,11 @@
 // Copyright 2009-2011 Google Inc.
 // Copyright 2010 Shannon Weyrick <weyrick@mozek.us>
 // Copyright 2012 Conrad Steenberg <conrad.steenberg@gmail.com>
-// 
+//
 //   This Source Code Form is subject to the terms of the Mozilla Public
 //   License, v. 2.0. If a copy of the MPL was not distributed with this
 //   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-// 
+//
 
 #include "IntConst.h"
 
@@ -37,7 +37,7 @@ IntConst::IntConst(TypeDef *type, uint64_t val0) :
     val.uval = val0;
 }
 
-ResultExprPtr IntConst::emit(Context &context) { 
+ResultExprPtr IntConst::emit(Context &context) {
     return context.builder.emitIntConst(context, this);
 }
 
@@ -59,7 +59,7 @@ ExprPtr IntConst::convert(Context &context, TypeDef *newType) {
                ) {
         if (!(reqUnsigned || uneg) && val.sval < 0)
             return 0;
-            // since we can't currently give these errors, at least record 
+            // since we can't currently give these errors, at least record
             // them in the comments.
             // context.error = "Negative constant can not be converted to "
             //                  "uint64"
@@ -172,7 +172,7 @@ TypeDef *IntConst::selectType(Context &context, int64_t val) {
         }                                                                   \
     }
 
-// folding for arithmetic operations (result is never uneg and never "req 
+// folding for arithmetic operations (result is never uneg and never "req
 // unsigned" - just to keep things simple)
 #define FOLDA(name, sym, signed) \
     ExprPtr IntConst::fold##name(Expr *other) {                             \
@@ -242,7 +242,7 @@ ExprPtr IntConst::foldBitNot() {
 ExprPtr IntConst::foldAShr(Expr *other) {
     IntConstPtr o = IntConstPtr::cast(other);
     if (o) {
-        // convert the shift to a logical shift if the constant must be an 
+        // convert the shift to a logical shift if the constant must be an
         // unsigned
         o = reqUnsigned ? create(val.uval >> o->val.sval) :
                           create(val.sval >> o->val.sval);
@@ -277,13 +277,13 @@ ExprPtr IntConst::foldShl(Expr *other) {
     if (o) {
         o = create(val.sval << o->val.sval);
         o->uneg = uneg;
-        
-        // a left-shift requires negative if any of the bits being shifted 
+
+        // a left-shift requires negative if any of the bits being shifted
         // away are not of the same polarity of the sign.
         bool negative = uneg || (reqUnsigned && HIBIT(this));
         o->reqUnsigned = negative ? (HISET >> (o->val.sval + 1)) & ~val.uval :
                                     (HISET >> (o->val.sval + 1)) & val.uval;
-            
+
         return o;
     } else {
         return 0;

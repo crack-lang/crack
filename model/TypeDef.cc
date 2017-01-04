@@ -1,10 +1,10 @@
 // Copyright 2009-2012 Google Inc.
 // Copyright 2010-2012 Shannon Weyrick <weyrick@mozek.us>
-// 
+//
 //   This Source Code Form is subject to the terms of the Mozilla Public
 //   License, v. 2.0. If a copy of the MPL was not distributed with this
 //   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-// 
+//
 
 #include "TypeDef.h"
 
@@ -49,10 +49,10 @@ using namespace parser;
 bool TypeDef::isAbstract(FuncDef *func) {
     if (func && (func->flags & FuncDef::abstract)) {
 
-        // found one.  do a look-up on the function, if there is a 
-        // non-abstract implementation we should get a match that is 
-        // _not_ abstract and has the same receiver type (to rule out the 
-        // possibility that the implementation is for a method with the same 
+        // found one.  do a look-up on the function, if there is a
+        // non-abstract implementation we should get a match that is
+        // _not_ abstract and has the same receiver type (to rule out the
+        // possibility that the implementation is for a method with the same
         // signature in a different class).
         OverloadDefPtr overloads =
             OverloadDefPtr::rcast(lookUp(func->name));
@@ -63,11 +63,11 @@ bool TypeDef::isAbstract(FuncDef *func) {
             )
             return true;
     }
-    
+
     return false;
 }
 
-// if overload contains abstract functions, returns true and adds them to 
+// if overload contains abstract functions, returns true and adds them to
 // abstractFuncs (assuming abstractFuncs is non-null)
 bool TypeDef::hasAbstractFuncs(OverloadDef *overload,
                                vector<FuncDefPtr> *abstractFuncs
@@ -85,7 +85,7 @@ bool TypeDef::hasAbstractFuncs(OverloadDef *overload,
                 return true;
             }
     }
-    
+
     return gotAbstract;
 }
 
@@ -106,7 +106,7 @@ void TypeDef::storeDef(VarDef *def) {
 
 TypeDef *TypeDef::extractInstantiation(ModuleDef *module, TypeVecObj *types) {
     TypeDefPtr result = module->getType(name);
-    SPUG_CHECK(result, 
+    SPUG_CHECK(result,
                "Instantiated generic " << module->getNamespaceName() <<
                 " not defined in its module."
                );
@@ -150,13 +150,13 @@ bool TypeDef::hasGenerics() const {
     return genericInfo || Namespace::hasGenerics();
 }
 
-FuncDefPtr TypeDef::getFuncDef(Context &context, 
+FuncDefPtr TypeDef::getFuncDef(Context &context,
                                std::vector<ExprPtr> &args,
                                bool allowOverrides
                                ) const {
-    // Fixing "const" in lookup is a can of worms, so we just cast away const 
+    // Fixing "const" in lookup is a can of worms, so we just cast away const
     // for now.  Lookups don't mutate.
-    FuncDefPtr func = context.lookUp("oper new", args, 
+    FuncDefPtr func = context.lookUp("oper new", args,
                                      const_cast<TypeDef *>(this));
 
     if (!func) {
@@ -170,7 +170,7 @@ FuncDefPtr TypeDef::getFuncDef(Context &context,
         else
             context.error(
                 SPUG_FSTR("No constructor for " << name <<
-                           " with these argument types: (" << args << 
+                           " with these argument types: (" << args <<
                            ")"
                           )
             );
@@ -185,8 +185,8 @@ FuncDefPtr TypeDef::getFuncDef(Context &context,
         else
             context.error(
                 SPUG_FSTR("No constructor for " << name <<
-                           " with these argument types: (" << args << 
-                           ").  (Ancestor class " << 
+                           " with these argument types: (" << args <<
+                           ").  (Ancestor class " <<
                            TypeDefPtr::cast(func->getOwner())->getDisplayName()
                            << " has a matching constructor)"
                           )
@@ -196,10 +196,10 @@ FuncDefPtr TypeDef::getFuncDef(Context &context,
     return func;
 }
 
-FuncDefPtr TypeDef::getOperNew(Context &context, 
+FuncDefPtr TypeDef::getOperNew(Context &context,
                                std::vector<ExprPtr> &args
                                ) const {
-    FuncDefPtr func = context.lookUp("oper new", args, 
+    FuncDefPtr func = context.lookUp("oper new", args,
                                      const_cast<TypeDef *>(this)
                                      );
     if (func && func->returnType.get() != this)
@@ -223,19 +223,19 @@ void TypeDef::addToAncestors(Context &context, TypeVec &ancestors) {
     if (this == context.construct->vtableBaseType)
         return;
 
-    // make sure this isn't a primitive class (we use the "pointer" attribute 
+    // make sure this isn't a primitive class (we use the "pointer" attribute
     // to make this determination)
     if (!pointer)
-        context.error(SPUG_FSTR("You may not inherit from " << 
+        context.error(SPUG_FSTR("You may not inherit from " <<
                                 getDisplayName() <<
                                  " because it's a primitive class."
                                 )
                       );
 
-    // store the current endpoint so we don't bother checking against our own 
+    // store the current endpoint so we don't bother checking against our own
     // ancestors.
     size_t initAncSize = ancestors.size();
-    
+
     // if this is the object class, make sure that it's the first ancestor.
     if (initAncSize && this == context.construct->objectType)
         context.error("If you directly or indirectly inherit from Object, "
@@ -282,7 +282,7 @@ VarDefPtr TypeDef::emitVarDef(Context &container, const std::string &name,
 bool TypeDef::matches(const TypeDef &other) const {
     if (&other == this)
         return true;
-    
+
     // try the parents
     for (TypeVec::const_iterator iter = other.parents.begin();
          iter != other.parents.end();
@@ -290,11 +290,11 @@ bool TypeDef::matches(const TypeDef &other) const {
          )
         if (matches(**iter))
             return true;
-    
-    return false;
-}    
 
-FuncDefPtr TypeDef::createOperInit(Context &classContext, 
+    return false;
+}
+
+FuncDefPtr TypeDef::createOperInit(Context &classContext,
                                    const ArgVec &args
                                    ) {
     assert(classContext.ns.get() == this); // needed for final addDef()
@@ -305,7 +305,7 @@ FuncDefPtr TypeDef::createOperInit(Context &classContext,
     ArgDefPtr thisDef = classContext.builder.createArgDef(this, "this");
     funcContext->addDef(thisDef.get());
     VarRefPtr thisRef = new VarRef(thisDef.get());
-    
+
     TypeDef *voidType = classContext.construct->voidType.get();
     FuncDefPtr newFunc = classContext.builder.emitBeginFunc(*funcContext,
                                                             FuncDef::method,
@@ -320,7 +320,7 @@ FuncDefPtr TypeDef::createOperInit(Context &classContext,
          ++ibase
          ) {
 
-        // if the base class contains no constructors at all, either it's a 
+        // if the base class contains no constructors at all, either it's a
         // special class or it has no need for constructors, so ignore it.
         OverloadDefPtr overloads = (*ibase)->lookUp("oper init");
         if (!overloads)
@@ -330,15 +330,15 @@ FuncDefPtr TypeDef::createOperInit(Context &classContext,
         bool useDefaultCons = false;
         FuncDefPtr baseInit = overloads->getSigMatch(args, true);
         if (!baseInit || baseInit->getOwner() != ibase->get()) {
-            
-            // we must get a default initializer and it must be specific to the 
+
+            // we must get a default initializer and it must be specific to the
             // base class (not inherited from an ancestor of the base class)
             useDefaultCons = true;
             baseInit = overloads->getNoArgMatch(false);
             if (!baseInit || baseInit->getOwner() != ibase->get())
                 classContext.error(SPUG_FSTR("Cannot create a default "
                                               "constructor because base "
-                                              "class " << 
+                                              "class " <<
                                               (*ibase)->name <<
                                               " has no default constructor."
                                              )
@@ -348,7 +348,7 @@ FuncDefPtr TypeDef::createOperInit(Context &classContext,
         FuncCallPtr funcCall =
             classContext.builder.createFuncCall(baseInit.get());
         funcCall->receiver = thisRef;
-        
+
         // construct an argument list if we're not using the default arguments
         if (!useDefaultCons && args.size()) {
             for (int i = 0; i < args.size(); ++i)
@@ -356,24 +356,24 @@ FuncDefPtr TypeDef::createOperInit(Context &classContext,
                     funcContext->builder.createVarRef(args[i].get())
                 );
         }
-        
+
         funcCall->emit(*funcContext);
     }
 
-    // generate constructors for all of the instance variables in the order 
+    // generate constructors for all of the instance variables in the order
     // that they were declared.
     for (VarDefVec::iterator iter = beginOrderedDefs();
          iter != endOrderedDefs();
          ++iter
          ) {
         InstVarDef *ivar = InstVarDefPtr::arcast(*iter);
-        
+
         // when creating a default constructor, everything has to have an
         // initializer.
         // XXX make this a parser error
         if (!ivar->initializer)
-            classContext.error(SPUG_FSTR("no initializer for variable " << 
-                                         ivar->name << 
+            classContext.error(SPUG_FSTR("no initializer for variable " <<
+                                         ivar->name <<
                                          " while creating default "
                                          "constructor."
                                         )
@@ -387,7 +387,7 @@ FuncDefPtr TypeDef::createOperInit(Context &classContext,
                                              assign.get()
                                              );
         }
-    
+
     classContext.builder.emitReturn(*funcContext, 0);
     classContext.builder.emitEndFunc(*funcContext, newFunc.get());
     classContext.addDef(newFunc.get());
@@ -407,17 +407,17 @@ void TypeDef::createDefaultDestructor(Context &classContext) {
     // create the "this" variable
     ArgDefPtr thisDef = classContext.builder.createArgDef(this, "this");
     funcContext->addDef(thisDef.get());
-    
-    FuncDef::Flags flags = 
-        FuncDef::method | 
+
+    FuncDef::Flags flags =
+        FuncDef::method |
         (hasVTable ? FuncDef::virtualized : FuncDef::noFlags);
-    
+
     // check for an override, if this is a virtual destructor but the function
     // we're overriding _isn't_ virtual, ignore it.
     FuncDefPtr override = classContext.lookUpNoArgs("oper del", true, this);
     if (override && hasVTable && !(override->flags & FuncDef::virtualized))
         override = 0;
-    
+
     ArgVec args(0);
     TypeDef *voidType = classContext.construct->voidType.get();
     FuncDefPtr delFunc = classContext.builder.emitBeginFunc(*funcContext,
@@ -441,7 +441,7 @@ void TypeDef::createNewFunc(Context &classContext, FuncDef *initFunc) {
     ContextPtr funcContext = classContext.createSubContext(Context::local);
     funcContext->toplevel = true;
     funcContext->returnType = this;
-    
+
     // copy the original arg list
     ArgVec args;
     for (ArgVec::iterator iter = initFunc->args.begin();
@@ -449,14 +449,14 @@ void TypeDef::createNewFunc(Context &classContext, FuncDef *initFunc) {
          ++iter
          ) {
         ArgDefPtr argDef =
-            classContext.builder.createArgDef((*iter)->type.get(), 
+            classContext.builder.createArgDef((*iter)->type.get(),
                                               (*iter)->name
                                               );
         args.push_back(argDef);
         funcContext->addDef(argDef.get());
     }
-    
-    FuncDefPtr newFunc = classContext.builder.emitBeginFunc(*funcContext, 
+
+    FuncDefPtr newFunc = classContext.builder.emitBeginFunc(*funcContext,
                                                             FuncDef::noFlags,
                                                             "oper new",
                                                             this,
@@ -471,8 +471,8 @@ void TypeDef::createNewFunc(Context &classContext, FuncDef *initFunc) {
                                                         false
                                                         );
     VarRefPtr thisRef = new VarRef(thisVar.get());
-    
-    // initialize all vtable_base pointers. XXX hack.  Replace this with code 
+
+    // initialize all vtable_base pointers. XXX hack.  Replace this with code
     // in vtable_base.oper init() once we get proper constructor composition
     if (hasVTable) {
         thisRef->emit(*funcContext);
@@ -488,7 +488,7 @@ void TypeDef::createNewFunc(Context &classContext, FuncDef *initFunc) {
         initFuncCall->args.push_back(new VarRef(iter->get()));
     initFuncCall->receiver = thisRef;
     initFuncCall->emit(*funcContext);
-    
+
     // return the resulting object and close the new function
     classContext.builder.emitReturn(*funcContext, thisRef.get());
     classContext.builder.emitEndFunc(*funcContext, newFunc.get());
@@ -555,7 +555,7 @@ FuncDefPtr TypeDef::createCastForward(Context &outer, bool throws) {
                                    "val"
                                    )
     );
-    
+
     // if this isn't the throwing variety, add a "defaultValue" arg.
     if (!throws)
         args.push_back(
@@ -711,7 +711,7 @@ bool TypeDef::gotAbstractFuncs(vector<FuncDefPtr> *abstractFuncs,
 
     // iterate over the definitions, locate all abstract functions
     for (VarDefMap::iterator iter = ancestor->beginDefs();
-         iter != ancestor->endDefs(); 
+         iter != ancestor->endDefs();
          ++iter
          ) {
         OverloadDef *ovld = OverloadDefPtr::rcast(iter->second);
@@ -722,7 +722,7 @@ bool TypeDef::gotAbstractFuncs(vector<FuncDefPtr> *abstractFuncs,
                 return true;
         }
     }
-    
+
     // recurse through all of the parents
     TypeDefPtr parent;
     for (int i = 0; parent = ancestor->getParent(i++);)
@@ -731,7 +731,7 @@ bool TypeDef::gotAbstractFuncs(vector<FuncDefPtr> *abstractFuncs,
                 gotAbstract = true;
             else
                 return true;
-    
+
     return gotAbstract;
 }
 
@@ -747,13 +747,13 @@ void TypeDef::aliasBaseMetaTypes() {
              ++var
              ) {
             // add all overloads that we haven't already defined.
-            // XXX this check is extremely lame.  First of all, we should be 
-            // separating namespace qualification from attribute/method access 
-            // and we should probably do so explicitly.  Secondly, if we were 
-            // going to continue in the current direction, what we need here 
-            // is to do our checking at the signature level for each function, 
+            // XXX this check is extremely lame.  First of all, we should be
+            // separating namespace qualification from attribute/method access
+            // and we should probably do so explicitly.  Secondly, if we were
+            // going to continue in the current direction, what we need here
+            // is to do our checking at the signature level for each function,
             // and allow Parser's addDef() to override existing values.
-            if (OverloadDefPtr::rcast(var->second) && 
+            if (OverloadDefPtr::rcast(var->second) &&
                 !type->lookUp(var->first) &&
                 var->first != "cast")
                 type->addAlias(var->second.get());
@@ -762,11 +762,11 @@ void TypeDef::aliasBaseMetaTypes() {
 }
 
 void TypeDef::rectify(Context &classContext) {
-    
-    // if this is an abstract class, make sure we have abstract methods.  If 
+
+    // if this is an abstract class, make sure we have abstract methods.  If
     // it is not, make sure we don't have abstract methods.
     if (abstract && !gotAbstractFuncs()) {
-        classContext.warn(SPUG_FSTR("Abstract class " << name << 
+        classContext.warn(SPUG_FSTR("Abstract class " << name <<
                                      " has no abstract functions."
                                     )
                           );
@@ -774,14 +774,14 @@ void TypeDef::rectify(Context &classContext) {
         vector<FuncDefPtr> funcs;
         if (gotAbstractFuncs(&funcs)) {
             ostringstream tmp;
-            tmp << "Non-abstract class " << name << 
+            tmp << "Non-abstract class " << name <<
                 " has abstract methods:\n";
             for (int i = 0; i < funcs.size(); ++i)
                 tmp << "  " << *funcs[i] << '\n';
             classContext.error(tmp.str());
         }
     }
-    
+
     // if there are no init functions specific to this class, create a
     // default constructor and possibly wrap it in a new function.
     if (!lookUp("oper init", false)) {
@@ -789,8 +789,8 @@ void TypeDef::rectify(Context &classContext) {
         if (!abstract)
             createNewFunc(classContext, initFunc.get());
     }
-    
-    // if the class doesn't already define a delete operator specific to the 
+
+    // if the class doesn't already define a delete operator specific to the
     // class, generate one.
     FuncDefPtr operDel = classContext.lookUpNoArgs("oper del");
     if (!operDel || operDel->getOwner() != this)
@@ -804,7 +804,7 @@ bool TypeDef::isParent(TypeDef *type) {
          )
         if (type == iter->get())
             return true;
-    
+
     return false;
 }
 
@@ -812,7 +812,7 @@ FuncDefPtr TypeDef::getConverter(Context &context, const TypeDef &other) {
     return context.lookUpNoArgs("oper to " + other.getFullName(), true, this);
 }
 
-bool TypeDef::getPathToAncestor(const TypeDef &ancestor, 
+bool TypeDef::getPathToAncestor(const TypeDef &ancestor,
                                 TypeDef::AncestorPath &path,
                                 unsigned depth
                                 ) {
@@ -820,7 +820,7 @@ bool TypeDef::getPathToAncestor(const TypeDef &ancestor,
         path.resize(depth);
         return true;
     }
-        
+
     int i = 0;
     for (TypeVec::iterator iter = parents.begin();
          iter != parents.end();
@@ -833,14 +833,14 @@ bool TypeDef::getPathToAncestor(const TypeDef &ancestor,
             return true;
         }
     }
-    
+
     return false;
 }
 
 void TypeDef::emitInitializers(Context &context, Initializers *inits) {
 
     VarDefPtr thisDef = context.ns->lookUp("this");
-    assert(thisDef && 
+    assert(thisDef &&
             "trying to emit initializers in a context with no 'this'");
     VarRefPtr thisRef = new VarRef(thisDef.get());
 
@@ -850,7 +850,7 @@ void TypeDef::emitInitializers(Context &context, Initializers *inits) {
          ) {
         TypeDef *base = ibase->get();
 
-        // see if there's a constructor for the base class in our list of 
+        // see if there's a constructor for the base class in our list of
         // initializers.
         FuncCallPtr initCall = inits->getBaseInitializer(base);
         if (initCall) {
@@ -858,19 +858,19 @@ void TypeDef::emitInitializers(Context &context, Initializers *inits) {
             continue;
         }
 
-        // if the base class contains no constructors at all, either it's a 
+        // if the base class contains no constructors at all, either it's a
         // special class or it has no need for constructors, so ignore it.
         OverloadDefPtr overloads = base->lookUp("oper init");
         if (!overloads)
             continue;
 
-        // we must get a default initializer and it must be specific to the 
+        // we must get a default initializer and it must be specific to the
         // base class (not inherited from an ancestor of the base class)
         ArgVec args;
         FuncDefPtr baseInit = overloads->getSigMatch(args);
         if (!baseInit || baseInit->getOwner() != base)
             context.error(SPUG_FSTR("Cannot initialize base classes "
-                                     "because base class " << 
+                                     "because base class " <<
                                      base->name <<
                                      " has no default constructor."
                                     )
@@ -887,30 +887,30 @@ void TypeDef::emitInitializers(Context &context, Initializers *inits) {
          ++iter
          ) {
         InstVarDef *ivar = InstVarDefPtr::arcast(*iter);
-        
+
         // see if the user has supplied an initializer, use it if so.
         ExprPtr initializer = inits->getFieldInitializer(ivar);
         if (!initializer)
             initializer = ivar->initializer;
-        
+
         // when creating a default constructor, everything has to have an
         // initializer.
         // XXX make this a parser error
         if (!initializer)
-            context.error(SPUG_FSTR("no initializer for variable " << 
-                                     ivar->name << 
+            context.error(SPUG_FSTR("no initializer for variable " <<
+                                     ivar->name <<
                                      " while creating default "
                                      "constructor."
                                     )
                            );
-        
+
         SPUG_CHECK(initializer->type->isDerivedFrom(ivar->type.get()),
                    "initializer for " << ivar->name << " should be of type " <<
-                    ivar->type->getDisplayName() << 
+                    ivar->type->getDisplayName() <<
                     " but is of incompatible type  " <<
                     initializer->type->getDisplayName()
                    );
-                                    
+
 
         AssignExprPtr assign = new AssignExpr(thisRef.get(),
                                               ivar,
@@ -920,31 +920,31 @@ void TypeDef::emitInitializers(Context &context, Initializers *inits) {
                                         assign.get()
                                         );
     }
-    
+
     initializersEmitted = true;
 }
 
 void TypeDef::addDestructorCleanups(Context &context) {
     VarRefPtr thisRef = new VarRef(context.ns->lookUp("this").get());
-    
-    // first add the cleanups for the base classes, in order defined, then the 
-    // cleanups for the derived classes.  Cleanups are applied in the reverse 
-    // order that they are added, so this will result in the expected 
+
+    // first add the cleanups for the base classes, in order defined, then the
+    // cleanups for the derived classes.  Cleanups are applied in the reverse
+    // order that they are added, so this will result in the expected
     // destruction order of instance variables followed by base classes.
-    
+
     // generate calls to the destructors for all of the base classes.
     for (TypeVec::iterator ibase = parents.begin();
          ibase != parents.end();
          ++ibase
          ) {
         TypeDef *base = ibase->get();
-        
-        // check for a delete operator (the primitive base classes don't have 
+
+        // check for a delete operator (the primitive base classes don't have
         // them and don't need cleanup)
         FuncDefPtr operDel = context.lookUpNoArgs("oper del", true, base);
         if (!operDel)
             continue;
-        
+
         // create a cleanup function and don't call it through the vtable.
         FuncCallPtr funcCall =
             context.builder.createFuncCall(operDel.get(), true);
@@ -953,15 +953,15 @@ void TypeDef::addDestructorCleanups(Context &context) {
         context.cleanupFrame->addCleanup(funcCall.get());
     }
 
-    // generate destructors for all of the instance variables in order of 
-    // definition (cleanups run in the reverse order that they were added, 
+    // generate destructors for all of the instance variables in order of
+    // definition (cleanups run in the reverse order that they were added,
     // which is exactly what we want).
     for (VarDefVec::iterator iter = beginOrderedDefs();
          iter != endOrderedDefs();
          ++iter
          )
         context.cleanupFrame->addCleanup(iter->get(), thisRef.get());
-    
+
     initializersEmitted = true;
 }
 
@@ -982,17 +982,17 @@ string TypeDef::getSpecializedName(TypeVecObj *types, bool fullName) {
 void instantiateGeneric(TypeDef *type, Context &context, Context &localCtx,
                         TypeDef::TypeVecObj *types
                         ) {
-    // alias all global symbols in the original module.  For the compile 
+    // alias all global symbols in the original module.  For the compile
     // namespace, just reuse that of the generic.
     localCtx.ns->aliasAll(type->genericInfo->ns.get());
     localCtx.compileNS = type->genericInfo->compileNS;
 
     // alias the template arguments to their parameter names
     for (int i = 0; i < types->size(); ++i)
-        localCtx.ns->addAlias(type->genericInfo->parms[i]->name, 
+        localCtx.ns->addAlias(type->genericInfo->parms[i]->name,
                               (*types)[i].get()
                               );
-    
+
     istringstream fakeInput;
     Toker toker(fakeInput, "ignored-name");
     type->genericInfo->replay(toker);
@@ -1021,7 +1021,7 @@ void instantiateGeneric(TypeDef *type, Context &context, Context &localCtx,
     localCtx.popErrorContext();
 }
 
-TypeDefPtr TypeDef::getSpecialization(Context &context, 
+TypeDefPtr TypeDef::getSpecialization(Context &context,
                                       TypeDef::TypeVecObj *types,
                                       bool checkCache
                                       ) {
@@ -1029,7 +1029,7 @@ TypeDefPtr TypeDef::getSpecialization(Context &context,
 
     ModuleDefPtr currentModule = context.ns->getModule();
     ModuleDefPtr currentMaster = currentModule->getMaster();
-    
+
     // check the type's specialization cache
     TypeDef *result = findSpecialization(types);
     if (result) {
@@ -1040,13 +1040,13 @@ TypeDefPtr TypeDef::getSpecialization(Context &context,
             currentModule->addDependency(module.get());
         return result;
     }
-    
+
     // construct the module name from the class name plus type parameters
     string moduleName = getSpecializedName(types, true);
     string newTypeName = getSpecializedName(types, false);
-    
-    // the name that the specialization will be stored as in the 
-    // specialization module.  This varies depending on whether we are 
+
+    // the name that the specialization will be stored as in the
+    // specialization module.  This varies depending on whether we are
     // building the specialization or loading from the precompiled module cache.
     string nameInModule;
 
@@ -1058,8 +1058,8 @@ TypeDefPtr TypeDef::getSpecialization(Context &context,
     }
     copersistent = copersistent || getModule()->getMaster() == currentMaster;
 
-    // check the precompiled module cache.  We don't do this for copersistent 
-    // modules: if there is an existing copy in the cache, we can't depend on 
+    // check the precompiled module cache.  We don't do this for copersistent
+    // modules: if there is an existing copy in the cache, we can't depend on
     // it because it's from a non-copersistent version.
     ModuleDefPtr module;
     if (checkCache && !copersistent)
@@ -1070,15 +1070,15 @@ TypeDefPtr TypeDef::getSpecialization(Context &context,
         // make sure we've got the right number of arguments
         if (types->size() != genericInfo->parms.size())
             context.error(SPUG_FSTR("incorrect number of arguments for "
-                                    "generic " << moduleName << 
+                                    "generic " << moduleName <<
                                     ".  Expected " <<
                                     genericInfo->parms.size() << " got " <<
                                     types->size()
                                     )
                         );
-        
-        // if any of the parameters of the generic or the generic itself are 
-        // in a hidden scope, we don't want to create an ephemeral module for 
+
+        // if any of the parameters of the generic or the generic itself are
+        // in a hidden scope, we don't want to create an ephemeral module for
         // it.
         bool hidden = false;
         if (isHidden()) {
@@ -1092,22 +1092,22 @@ TypeDefPtr TypeDef::getSpecialization(Context &context,
             }
         }
         if (hidden) {
-            ModuleDefPtr dummyMod = new DummyModuleDef(moduleName, 
+            ModuleDefPtr dummyMod = new DummyModuleDef(moduleName,
                                                        context.ns.get()
                                                        );
             // create a dummy module in the current context.
             dummyMod->setOwner(
                 genericInfo->getInstanceModuleOwner(context.isGeneric()).get()
             );
-            ContextPtr instantiationContext = 
+            ContextPtr instantiationContext =
                 context.createSubContext(Context::module, dummyMod.get());
             instantiationContext->toplevel = true;
             instantiationContext->generic = true;
             instantiateGeneric(this, context, *instantiationContext, types);
-            
-            // The dummy module may have picked up some new dependencies which 
-            // we need to transfer to the current module.  These are not 
-            // compile-time dependencies, so we could possibly optimize them 
+
+            // The dummy module may have picked up some new dependencies which
+            // we need to transfer to the current module.  These are not
+            // compile-time dependencies, so we could possibly optimize them
             // into a separate category.
             ModuleDefPtr curModule = context.ns->getModule();
             SPUG_FOR(ModuleDefMap, iter, dummyMod->dependencies)
@@ -1115,14 +1115,14 @@ TypeDefPtr TypeDef::getSpecialization(Context &context,
 
             return extractInstantiation(dummyMod.get(), types);
         }
-        
+
         // create an ephemeral module for the new class
         Context *rootContext = context.construct->rootContext.get();
         NamespacePtr compileNS =
             new GlobalNamespace(rootContext->compileNS.get(),
                                 moduleName
                                 );
-        BuilderPtr moduleBuilder = 
+        BuilderPtr moduleBuilder =
             context.construct->rootBuilder->createChildBuilder();
         ContextPtr modContext =
             new Context(*moduleBuilder, Context::module, rootContext,
@@ -1132,18 +1132,18 @@ TypeDefPtr TypeDef::getSpecialization(Context &context,
                         );
         modContext->toplevel = true;
         modContext->generic = true;
-        
-        // create the new module with the current module as the owner.  Use 
-        // the newTypeName instead of moduleName, since this is how we should 
-        // have done it for modules in the first place and we're going to 
+
+        // create the new module with the current module as the owner.  Use
+        // the newTypeName instead of moduleName, since this is how we should
+        // have done it for modules in the first place and we're going to
         // override the canonical name later anyway.
         if (!currentModule)
             cout << "no current module for " << newTypeName << endl;
-        module = modContext->createModule(newTypeName, "", 
-                                          copersistent ? currentModule.get() : 
+        module = modContext->createModule(newTypeName, "",
+                                          copersistent ? currentModule.get() :
                                                          0
                                           );
-        
+
         // Add the path to the generic's variable to the module.
         {
             string sourceModFullName = getModule()->getFullName();
@@ -1185,33 +1185,33 @@ TypeDefPtr TypeDef::getSpecialization(Context &context,
             module->addDependency((*typeIter)->getModule().get());
             module->genericParams.push_back(*typeIter);
         }
-        
-        // XXX this is confusing: there's a "owner" that's part of some kinds of 
-        // ModuleDef that's different from VarDef::owner - we set VarDef::owner 
-        // here so that we can accept protected variables from the original 
+
+        // XXX this is confusing: there's a "owner" that's part of some kinds of
+        // ModuleDef that's different from VarDef::owner - we set VarDef::owner
+        // here so that we can accept protected variables from the original
         // module's context
         ModuleDefPtr owner = genericInfo->ns->getRealModule();
         module->setOwner(
             genericInfo->getInstanceModuleOwner(context.isGeneric()).get()
         );
 
-        // Fix up the canonical name of the module.  The previous setOwner() 
-        // sets the canonical as if the module were directly owned by the 
-        // parent module, but that may not be the case if the generic is 
+        // Fix up the canonical name of the module.  The previous setOwner()
+        // sets the canonical as if the module were directly owned by the
+        // parent module, but that may not be the case if the generic is
         // defined in a nested context (e.g. in a class).
         module->setNamespaceName(moduleName);
-        
+
         instantiateGeneric(this, context, *modContext, types);
-        
-        // after we're done parsing, change the owner to the actual owner so 
+
+        // after we're done parsing, change the owner to the actual owner so
         // that names are generated correctly.
-        
+
         // use the source path of the owner
         module->sourcePath = owner->sourcePath;
         module->sourceDigest = owner->sourceDigest;
         result = extractInstantiation(module.get(), types);
 
-        module->cacheable = true;    
+        module->cacheable = true;
         module->close(*modContext);
         module->finished = true;
 
@@ -1227,7 +1227,7 @@ TypeDefPtr TypeDef::getSpecialization(Context &context,
     // Record a dependency on the instantiation module.
     if (!copersistent)
         context.ns->getModule()->addDependency(module.get());
-    
+
     return result;
 }
 
@@ -1240,7 +1240,7 @@ void TypeDef::getDependents(std::vector<TypeDefPtr> &deps) {}
 void TypeDef::dump(ostream &out, const string &prefix) const {
     out << prefix << "class " << getFullName() << " {" << endl;
     string childPrefix = prefix + "  ";
-    
+
     for (TypeVec::const_iterator baseIter = parents.begin();
          baseIter != parents.end();
          ++baseIter
@@ -1248,7 +1248,7 @@ void TypeDef::dump(ostream &out, const string &prefix) const {
         out << childPrefix << "parent:" << endl;
         (*baseIter)->dump(out, childPrefix+"  ");
     }
-    
+
     for (VarDefMap::const_iterator iter = beginDefs(); iter != endDefs();
          ++iter
          )
@@ -1276,7 +1276,7 @@ void TypeDef::addDependenciesTo(ModuleDef *mod, VarDef::Set &added) const {
     mod->addDependency(VarDef::getModule());
 
     // compute dependencies from all non-private symbols
-    for (VarDefMap::const_iterator iter = defs.begin(); iter != defs.end(); 
+    for (VarDefMap::const_iterator iter = defs.begin(); iter != defs.end();
          ++iter
          ) {
         if (iter->first.compare(0, 2, "__"))
@@ -1297,12 +1297,12 @@ void TypeDef::serializeDef(Serializer &serializer) const {
                 "declarations for this module."
                );
     serializer.write(objectId, "objectId/2");
-    
+
     if (generic) {
         genericInfo->serialize(serializer);
     } else {
         serializer.write(parents.size(), "#bases");
-            
+
         for (TypeVec::const_iterator i = parents.begin();
              i != parents.end();
              ++i
@@ -1320,7 +1320,7 @@ void TypeDef::serializeDef(Serializer &serializer) const {
                  ++iter
                  ) {
                 // field id = 2 (<< 3) | type = 3 (reference)
-                sub.write(CRACK_PB_KEY(2, ref), 
+                sub.write(CRACK_PB_KEY(2, ref),
                           "genericParms[i].header"
                           );
                 (*iter)->serialize(sub, false, 0);
@@ -1329,14 +1329,14 @@ void TypeDef::serializeDef(Serializer &serializer) const {
         } else {
             serializer.write(0, "optional");
         }
-        
+
         Namespace::serializeNonTypeDefs(serializer);
     }
     if (Serializer::trace)
         cerr << ">> Done serializing " << getFullName() << endl;
 }
 
-void TypeDef::serializeAlias(Serializer &serializer, 
+void TypeDef::serializeAlias(Serializer &serializer,
                              const string &alias,
                              bool newAlgo
                              ) const {
@@ -1355,24 +1355,24 @@ void TypeDef::serialize(Serializer &serializer, bool writeKind,
         ModuleDefPtr module = VarDef::getModule();
         if (module != serializer.module) {
 
-            // write an "Extern" (but not a reference, we're already in a 
+            // write an "Extern" (but not a reference, we're already in a
             // reference to the object we'd be externing)
             if (templateType) {
-                
-                // If this is a generic instantiation, write the base type 
+
+                // If this is a generic instantiation, write the base type
                 // with our parameters.
-                templateType->serializeExternCommon(serializer, 
+                templateType->serializeExternCommon(serializer,
                                                     &genericParms
                                                     );
             } else {
                 serializeExternCommon(serializer, 0);
             }
         } else {
-            // For local types, this function should always just produce an 
-            // object reference because local types are declared before defs.  
+            // For local types, this function should always just produce an
+            // object reference because local types are declared before defs.
             // If we got here, something's wrong.
             SPUG_CHECK(false,
-                       "Serializing full type " << getFullName() << 
+                       "Serializing full type " << getFullName() <<
                         " from a reference."
                        );
         }
@@ -1398,7 +1398,7 @@ void TypeDef::serializeDecl(Serializer &serializer, ModuleDef *master) {
         {
             ostringstream temp;
             Serializer sub(serializer, temp);
-            
+
             // If we're module-scoped to a slave module, record the owner.
             ModuleDefPtr module = ModuleDefPtr::cast(getOwner());
             if (module && module->isSlave()) {
@@ -1427,7 +1427,7 @@ TypeDefPtr TypeDef::deserializeRef(Deserializer &deser, const char *name) {
 }
 
 namespace {
-    
+
     void materializeOneCastFunc(Context &metaClassContext, TypeDef *type,
                                 const ArgVec &args
                                 ) {
@@ -1435,8 +1435,8 @@ namespace {
         spec.returnType = type;
         spec.args = args;
         FuncDefPtr func = metaClassContext.builder.materializeFunc(
-            metaClassContext, 
-            "cast", 
+            metaClassContext,
+            "cast",
             spec
         );
         metaClassContext.addDef(func.get());
@@ -1445,7 +1445,7 @@ namespace {
     void materializeCastFuncs(Context &classContext, TypeDef *type) {
         ContextPtr metaClassContext =
             classContext.createSubContext(Context::instance, type->type.get());
-                                           
+
         ArgVec args;
         args.reserve(2);
         args.push_back(
@@ -1456,7 +1456,7 @@ namespace {
         );
 
         materializeOneCastFunc(*metaClassContext, type, args);
-    
+
         // Now materialize the two argument form.
         args.push_back(
             classContext.builder.createArgDef(type, "defaultValue")
@@ -1471,7 +1471,7 @@ TypeDefPtr TypeDef::deserializeTypeDef(Deserializer &deser, const char *name) {
     TypeDefPtr type = deser.getObject(objectId);
     SPUG_CHECK(type, "Type object " << objectId << " not registered.");
     if (Serializer::trace)
-        cerr << ">> deserializing body of type " << type->getFullName() << 
+        cerr << ">> deserializing body of type " << type->getFullName() <<
             endl;
 
     // Read a generic or a real class.
@@ -1485,13 +1485,13 @@ TypeDefPtr TypeDef::deserializeTypeDef(Deserializer &deser, const char *name) {
         TypeDef::TypeVec bases(count);
         for (int i = 0; i < count; ++i)
             bases[i] = TypeDef::deserializeRef(deser, "bases[i]");
-    
+
         type->parents = bases;
-        
+
         // check for optional fields
         CRACK_PB_BEGIN(deser, 256, optional);
             CRACK_PB_FIELD(1, ref)
-                type->templateType = 
+                type->templateType =
                     deserializeRef(optionalDeser, "templateType").get();
                 break;
             CRACK_PB_FIELD(2, ref)
@@ -1501,13 +1501,13 @@ TypeDefPtr TypeDef::deserializeTypeDef(Deserializer &deser, const char *name) {
                 break;
         CRACK_PB_END
 
-        // If it's a generic instantiation, add it to it's template's 
+        // If it's a generic instantiation, add it to it's template's
         // specialization cache.
         if (type->templateType) {
             TypeVecObjPtr types = new TypeVecObj(type->genericParms);
             (*type->templateType->generic)[types.get()] = type;
         }
-    
+
         ContextPtr classContext =
             deser.context->createSubContext(Context::instance,
                                             type.get(),
@@ -1521,14 +1521,14 @@ TypeDefPtr TypeDef::deserializeTypeDef(Deserializer &deser, const char *name) {
         ContextStackFrame<Deserializer> cstack(deser, classContext.get());
         type->deserializeDefs(deser);
 
-        // If we need to reconstruct the vtable, give the type the chance to 
-        // do that here.        
+        // If we need to reconstruct the vtable, give the type the chance to
+        // do that here.
         if (type->hasVTable)
             type->materializeVTable(*deser.context);
     }
     if (Serializer::trace)
         cerr << ">> done deserializing type " << type->getFullName() << endl;
-    
+
     type->complete = true;
     return type;
 }
@@ -1558,8 +1558,8 @@ namespace {
 
             // Read the flags.
             int flags = deser.readUInt("flags");
-            bool isGeneric = (flags & 8) ? true : false; 
-        
+            bool isGeneric = (flags & 8) ? true : false;
+
             // Deserialize optional fields.
             CRACK_PB_BEGIN(deser, 256, optional)
                 CRACK_PB_FIELD(2, ref) {
@@ -1568,25 +1568,25 @@ namespace {
                     break;
                 }
             CRACK_PB_END
-        
+
             TypeDefPtr type;
             if (isGeneric) {
                 type = deser.context->builder.createGenericClass(
                     *deser.context,
                     name
                 );
-                
-                // We mainly initialize this here as an indicator that we 
-                // expect a generic for when we deserialize the full 
+
+                // We mainly initialize this here as an indicator that we
+                // expect a generic for when we deserialize the full
                 // definition later.
                 type->generic = new TypeDef::SpecializationCache();
             } else {
-                // Create a subcontext linked the class' owner so 
-                // type materialization works for slave modules.  At this time 
-                // we need to do this so that the meta-class is properly 
+                // Create a subcontext linked the class' owner so
+                // type materialization works for slave modules.  At this time
+                // we need to do this so that the meta-class is properly
                 // registered.
                 ContextPtr classContext =
-                    deser.context->createSubContext(Context::instance, 
+                    deser.context->createSubContext(Context::instance,
                                                     owner.get()
                                                     );
                 type = classContext->builder.materializeType(
@@ -1613,9 +1613,9 @@ void TypeDef::deserializeDecl(Deserializer &deser) {
     if (result.definition) {
         TypeDefPtr type = result.object;
         NamespacePtr owner = type->getOwner();
-            
+
         // do the nested declarations against the new context.
-        ContextPtr classContext = 
+        ContextPtr classContext =
             deser.context->createSubContext(Context::instance, type.get(),
                                             &type->name
                                             );

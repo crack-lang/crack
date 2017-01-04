@@ -82,7 +82,7 @@ gint64 bson_cursor_get_int64_crk(bson_cursor* c){
 bool mongo_sync_cmd_insert_crk(mongo_sync_connection *conn,
                                             byteptr ns, bson *doc) {
        return mongo_sync_cmd_insert(conn, (const gchar *) ns, doc, NULL);
-        
+
     }
 
 

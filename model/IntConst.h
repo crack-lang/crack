@@ -1,10 +1,10 @@
 // Copyright 2009-2011 Google Inc.
 // Copyright 2010 Shannon Weyrick <weyrick@mozek.us>
-// 
+//
 //   This Source Code Form is subject to the terms of the Mozilla Public
 //   License, v. 2.0. If a copy of the MPL was not distributed with this
 //   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-// 
+//
 
 #ifndef _model_IntConst_h_
 #define _model_IntConst_h_
@@ -18,7 +18,7 @@ namespace model {
 
 SPUG_RCPTR(IntConst);
 
-// There's only one kind of integer constant - it can be specialized based on 
+// There's only one kind of integer constant - it can be specialized based on
 // context - e.g. 32 bit, 64 bit, signed versus unsigned...
 class IntConst : public Expr {
     public:
@@ -33,15 +33,15 @@ class IntConst : public Expr {
 
         IntConst(TypeDef *type, int64_t val);
         IntConst(TypeDef *type, uint64_t val);
-        
+
         virtual ResultExprPtr emit(Context &context);
         virtual ExprPtr convert(Context &context, TypeDef *newType);
         virtual void writeTo(std::ostream &out) const;
         virtual bool isAdaptive() const;
-        
+
         virtual IntConstPtr create(int64_t v);
         virtual IntConstPtr create(uint64_t v);
-        
+
         /** Return the default type for the value. */
         static TypeDef *selectType(Context &context, int64_t val);
 

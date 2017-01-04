@@ -1,9 +1,9 @@
 // Copyright 2011 Google Inc.
-// 
+//
 //   This Source Code Form is subject to the terms of the Mozilla Public
 //   License, v. 2.0. If a copy of the MPL was not distributed with this
 //   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-// 
+//
 
 #include "MultiExpr.h"
 
@@ -17,7 +17,7 @@
 using namespace model;
 
 ResultExprPtr MultiExpr::emit(Context &context) {
-    // must be at least one element    
+    // must be at least one element
     assert(elems.size());
 
     // emit all but the last of formatter functions
@@ -27,7 +27,7 @@ ResultExprPtr MultiExpr::emit(Context &context) {
 
     return elems[i]->emit(context);
 }
-    
+
 void MultiExpr::writeTo(std::ostream &out) const {
     out << "(";
     for (int i = 0; i < elems.size(); ++i) {

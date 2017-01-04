@@ -1,7 +1,7 @@
 // Crack binding of cairosdl.h
 // Copyright 2011 Conrad Steenberg <conrad.steenberg@gmail.com>
 
-// This is an almost verbatim translation of cairosdl.h from 
+// This is an almost verbatim translation of cairosdl.h from
 // http://cgit.freedesktop.org/~joonas/cairosdl/
 
 //
@@ -74,7 +74,7 @@
 
 
    /* Returns the SDL_Surface bound to the image surface. */
-   SDL_Surface 
+   SDL_Surface
       cairosdl_surface_get_target (cairo_surface_t surface);
 
 
@@ -119,11 +119,11 @@
    /* Context convenience functions. */
 
    /* Equivalent to cairo_create(cairosdl_surface_create(sdl_surface)); */
-   cairo_t 
+   cairo_t
       cairosdl_create (SDL_Surface sdl_surface);
 
    /* Equivalent to cairosdl_surface_get_target(cairo_get_target(cr));  */
-   SDL_Surface 
+   SDL_Surface
       cairosdl_get_target (cairo_t cr);
 
    /* Calls cairosdl_surface_flush() on the target of the cairo context

@@ -2,11 +2,11 @@
 # Adapted from SDL binding
 # Copyright 2011 Google Inc.
 # Copyright 2011-2012 Conrad Steenberg <conrad.steenberg@gmail.com>
-# 
+#
 #   This Source Code Form is subject to the terms of the Mozilla Public
 #   License, v. 2.0. If a copy of the MPL was not distributed with this
 #   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-# 
+#
 
 @import crack.extgen generateExtension;
 
@@ -63,7 +63,7 @@
    @boundclass(FontFace, font_face, cairo_font_face, _, cairo_font_face_t)
    @boundclass(ScaledFont, scaled_font, cairo_scaled_font, _, cairo_scaled_font_t)
    @boundclass(Glyph, glyph, cairo_glyph, _, cairo_glyph_t)
-   
+
 
    // Features
    const uint
@@ -83,8 +83,8 @@
       CAIRO_HAS_XLIB_XRENDER_SURFACE;
 
    // Status constants
-   const uint 
-      CAIRO_STATUS_SUCCESS, 
+   const uint
+      CAIRO_STATUS_SUCCESS,
       CAIRO_STATUS_NO_MEMORY,
       CAIRO_STATUS_INVALID_RESTORE,
       CAIRO_STATUS_INVALID_POP_GROUP,
@@ -339,7 +339,7 @@
 
    @cname Undef
    class cairo_pattern_t;
-   
+
    // Rectangle
    @inject 'cairo_rectangle_t *cairo_rectangle_new() { return new cairo_rectangle_t; }\n'
    class cairo_rectangle_t{
@@ -355,7 +355,7 @@
       array[cairo_rectangle_t] rectangles;
       int                      num_rectangles;
 
-      @cname cairo_rectangle_list_destroy 
+      @cname cairo_rectangle_list_destroy
       oper del (cairo_rectangle_list_t rectangle_list);
    }
 
@@ -375,7 +375,7 @@
 
    // Text cluster
    class cairo_text_cluster_t;
-   
+
    // Text extents
    @inject 'cairo_text_extents_t *cairo_text_extents_new() { return new cairo_text_extents_t; }\n'
    class cairo_text_extents_t {
@@ -400,11 +400,11 @@
    class cairo_path_data_t;
    class cairo_path_t;
    class cairo_rectangle_int_t;
-   
+
    @cname Undef
    class cairo_region_t;
 
-   @inject 'cairo_surface_t *cairo_surface_new(cairo_surface_t *existing_surface) { 
+   @inject 'cairo_surface_t *cairo_surface_new(cairo_surface_t *existing_surface) {
       return existing_surface;
    }\n'
 
@@ -431,7 +431,7 @@
                 float64 alpha);
 
    void cairo_set_source_surface (cairo_t  cr,
-              cairo_surface_t surface, 
+              cairo_surface_t surface,
               float64   x, float64   y);
 
    void cairo_set_tolerance (cairo_t cr, float64 tolerance);
@@ -539,7 +539,7 @@
    cairo_rectangle_list_t cairo_copy_clip_rectangle_list (cairo_t cr);
    void cairo_rectangle_list_destroy (cairo_rectangle_list_t rectangle_list);
 
-   // Glyphs 
+   // Glyphs
    cairo_glyph_t cairo_glyph_allocate (int num_glyphs);
    void cairo_glyph_free (cairo_glyph_t glyphs);
 
@@ -628,7 +628,7 @@
                function[void, voidptr] destroy);
 
    // Portable interface to general font features.
-   cairo_scaled_font_t 
+   cairo_scaled_font_t
       cairo_scaled_font_create (cairo_font_face_t     font_face,
                                 cairo_matrix_t        font_matrix,
                                 cairo_matrix_t        ctm,
@@ -643,7 +643,7 @@
    void cairo_scaled_font_get_user_data (cairo_scaled_font_t scaled_font,
                                          cairo_user_data_key_t key);
 
-   uint 
+   uint
    cairo_scaled_font_set_user_data (cairo_scaled_font_t scaled_font,
                                         cairo_user_data_key_t key,
                                         voidptr    user_data,
@@ -675,7 +675,7 @@
                                    int                          num_clusters,
                                    array[uint]                cluster_flags);
 
-   cairo_font_face_t 
+   cairo_font_face_t
       cairo_scaled_font_get_font_face (cairo_scaled_font_t scaled_font);
 
    void
@@ -714,7 +714,7 @@
    cairo_pattern_t cairo_get_source (cairo_t cr);
    float64 cairo_get_tolerance (cairo_t cr);
    uint cairo_get_antialias (cairo_t cr);
-   
+
    bool cairo_has_current_point (cairo_t cr);
    void cairo_get_current_point (cairo_t cr, array[float64] x, array[float64] y);
    uint cairo_get_fill_rule (cairo_t cr);
@@ -762,13 +762,13 @@
 
 
    // Surface manipulation
-   cairo_surface_t 
+   cairo_surface_t
       cairo_surface_create_similar (cairo_surface_t other,
                                     uint   content,
                                     int      width,
                                     int      height);
 
-   cairo_surface_t 
+   cairo_surface_t
       cairo_surface_create_for_rectangle (cairo_surface_t target,
                                           float64       x,
                                           float64       y,
@@ -789,7 +789,7 @@
                                       byteptr filename);
 
    uint cairo_surface_write_to_png_stream (cairo_surface_t surface,
-                                             function[uint, voidptr, byteptr, 
+                                             function[uint, voidptr, byteptr,
                                                       uint] write_func,
                                              voidptr         closure);
 }
@@ -853,7 +853,7 @@
    int cairo_format_stride_for_width (uint   format,
                                        int     width);
 
-   cairo_surface_t 
+   cairo_surface_t
       cairo_image_surface_create_for_data (byteptr    data,
                                            uint     format,
                                            int        width,
@@ -872,12 +872,12 @@
    cairo_surface_t cairo_image_surface_create_from_png (byteptr filename);
 }
 
-   //~ cairo_surface_t 
+   //~ cairo_surface_t
       //~ cairo_image_surface_create_from_png_stream (cairo_read_func_t  read_func,
                    //~ voidptr closure);
 
    // Recording-surface functions
-   cairo_surface_t 
+   cairo_surface_t
       cairo_recording_surface_create (uint     content,
                                       cairo_rectangle_t extents);
 
@@ -888,17 +888,17 @@
                                               array[float64] height);
 
    // Pattern creation functions
-   cairo_pattern_t 
+   cairo_pattern_t
       cairo_pattern_create_rgb (float64 red, float64 green, float64 blue);
-   cairo_pattern_t 
+   cairo_pattern_t
       cairo_pattern_create_rgba (float64 red, float64 green, float64 blue,
                                  float64 alpha);
-   cairo_pattern_t 
+   cairo_pattern_t
       cairo_pattern_create_for_surface (cairo_surface_t surface);
-   cairo_pattern_t 
+   cairo_pattern_t
       cairo_pattern_create_linear (float64 x0, float64 y0,
                                     float64 x1, float64 y1);
-   cairo_pattern_t 
+   cairo_pattern_t
       cairo_pattern_create_radial (float64 cx0, float64 cy0, float64 radius0,
                                     float64 cx1, float64 cy1, float64 radius1);
 
@@ -910,7 +910,7 @@
    voidptr cairo_pattern_get_user_data (cairo_pattern_t pattern,
                                         cairo_user_data_key_t key);
 
-   uint 
+   uint
       cairo_pattern_set_user_data (cairo_pattern_t pattern,
                                    cairo_user_data_key_t key,
                                    voidptr user_data,
@@ -918,12 +918,12 @@
 
    uint cairo_pattern_get_type (cairo_pattern_t pattern);
 
-   void 
+   void
       cairo_pattern_add_color_stop_rgb (cairo_pattern_t pattern,
-                                         float64 offset, float64 red, 
+                                         float64 offset, float64 red,
                                          float64 green, float64 blue);
 
-   void 
+   void
       cairo_pattern_add_color_stop_rgba (cairo_pattern_t pattern,
                                       float64 offset,
                                       float64 red, float64 green, float64 blue,
@@ -942,7 +942,7 @@
 
    uint cairo_pattern_get_filter (cairo_pattern_t pattern);
 
-   uint 
+   uint
       cairo_pattern_get_rgba (cairo_pattern_t pattern,
                               array[float64] red, array[float64] green,
                               array[float64] blue, array[float64] alpha);
@@ -962,7 +962,7 @@
       cairo_pattern_get_color_stop_count (cairo_pattern_t pattern,
                                           array[int] count);
 
-   uint 
+   uint
       cairo_pattern_get_linear_points (cairo_pattern_t pattern,
                                        array[float64] x0, array[float64] y0,
                                        array[float64] x1, array[float64] y1);
@@ -998,7 +998,7 @@
                                 cairo_matrix_t b);
    void
       cairo_matrix_transform_distance (cairo_matrix_t matrix,
-                                       array[float64] dx, 
+                                       array[float64] dx,
                                        array[float64] dy);
 
    void
@@ -1007,10 +1007,10 @@
 
    // Region functions
    cairo_region_t cairo_region_create ();
-   cairo_region_t 
+   cairo_region_t
       cairo_region_create_rectangle (cairo_rectangle_int_t rectangle);
 
-   cairo_region_t 
+   cairo_region_t
       cairo_region_create_rectangles (cairo_rectangle_int_t rects, int count);
 
    cairo_region_t cairo_region_copy (cairo_region_t original);
@@ -1063,7 +1063,7 @@
       cairo_region_xor_rectangle (cairo_region_t region,
                                   cairo_rectangle_int_t rectangle);
 
-   // Functions to be used while debugging 
+   // Functions to be used while debugging
    // (not intended for use in production code)
    void cairo_debug_reset_static_data ();
 
@@ -1091,7 +1091,7 @@
       cairo_pdf_get_versions (array[uint] versions,
                               array[int] num_versions);
 
-   byteptr 
+   byteptr
       cairo_pdf_version_to_string (uint version);
 
    void
@@ -1105,16 +1105,16 @@
    //~ cairo_public cairo_font_face_t
       //~ cairo_ft_font_face_create_for_ft_face (FT_Face         face,
                                              //~ int             load_flags);
-//~ 
+//~
    //~ FT_Face
       //~ cairo_ft_scaled_font_lock_face (cairo_scaled_font_t scaled_font);
-//~ 
+//~
    //~ void
       //~ cairo_ft_scaled_font_unlock_face (cairo_scaled_font_t scaled_font);
-//~ 
+//~
    //~ cairo_public cairo_font_face_t
       //~ cairo_ft_font_face_create_for_pattern (FcPattern pattern);
-//~ 
+//~
    //~ void
       //~ cairo_ft_font_options_substitute (const cairo_font_options_t options,
                                         //~ FcPattern                   pattern);

@@ -1,9 +1,9 @@
 // Copyright 2009-2010 Google Inc.
-// 
+//
 //   This Source Code Form is subject to the terms of the Mozilla Public
 //   License, v. 2.0. If a copy of the MPL was not distributed with this
 //   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-// 
+//
 
 #ifndef _model_VarRef_h_
 #define _model_VarRef_h_
@@ -24,13 +24,13 @@ class VarRef : public Expr {
         VarRef(VarDef *def);
 
         virtual TypeDefPtr getType(Context &context) const;
-        
+
         virtual ResultExprPtr emit(Context &context);
-        
-        // Overriden so we can introduce special behavior for references to 
+
+        // Overriden so we can introduce special behavior for references to
         // OverloadDef.
         virtual ExprPtr convert(Context &context, TypeDef *type);
-        
+
         // variable references are non-productive, so we override.
         virtual bool isProductive() const;
 
@@ -38,7 +38,7 @@ class VarRef : public Expr {
         virtual bool isVolatile() const;
 
         virtual void writeTo(std::ostream &out) const;
-        virtual ExprPtr makeCall(Context &context, 
+        virtual ExprPtr makeCall(Context &context,
                                  std::vector<ExprPtr> &args
                                  ) const;
 };

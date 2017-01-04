@@ -4,20 +4,20 @@ The Definitive Crack Language Reference File
 
 Copyright 2009 Google Inc.
 
-This is a rough description of where the language is _going._  Lots of these 
+This is a rough description of where the language is _going._  Lots of these
 features haven't been implemented yet.
 
 
     ---------------------
     #!/usr/bin/crack
     stdout `hello world`;
-    
+
     ---------------------
     #!/usr/bin/crack
     # Shell-style comments work
     // so do ansi-C++ style
     /* so do old-skool C style */
-    
+
     stdout.write("double-quoted strings - these are strings of _bytes_, "
                  "they just happen to be ascii characters.  Constant string "
                  "concatenation works like in C."
@@ -25,62 +25,62 @@ features haven't been implemented yet.
     stdout.write('Single-quoted strings are just like double-quoted strings '
                  'except for "which quote\'s" need to be escaped.'
                  );
-    
+
     # a verbose, java style variable initialization ("new" is implicit)
     String var1 = String();
-    
+
     # Same as var1 - default constructor is implicit
     String var2;
-    
-    # yet another way to define a variable, ":=" defines and initializes.  '' 
+
+    # yet another way to define a variable, ":=" defines and initializes.  ''
     # is equivalent to "String()" (roughly - it's actually a StaticString).
     var3 := '';
-    
+
     # var4 will be null - like in C or java.
     String var4 = null;
-    
-    # reassign it to reference var1.  All object variables are essentially 
+
+    # reassign it to reference var1.  All object variables are essentially
     # pointers.
     var4 = var1;
-    
+
     # the expression evaluates to true
     if (var1 == var2 && var2 == var3 && var3 == var4)
         stdout.write('"==" compares by value.');
-    
-    # the identity check also works (constant strings are cached, String() 
+
+    # the identity check also works (constant strings are cached, String()
     # returns an instance from the cache.  You can negate it with "a !is b".
     if (var1 is var2 && var2 is var3 && var3 is var4)
         stdout.write('"is" compares identity.');
-    
-    # the back-tick is a string formatting operator.  When used on a stream 
+
+    # the back-tick is a string formatting operator.  When used on a stream
     # (OutStream) object, this:
     stdout `this is $var2`;
-    
+
     # will do the same thing as this:
     stdout.format('this is ');
     stdout.format(var2);
-    
+
     # when used in an expression context, this produces a string.
     String formatted = `this is $var1`;
-    
-    # which is equivalent to this: (assuming that we end up with return value 
+
+    # which is equivalent to this: (assuming that we end up with return value
     # chaining)
     String formatted = StringOutStream().format('this is ').format(var1);
-    
-    # primitive types - these are like the corresponding primitive types in 
+
+    # primitive types - these are like the corresponding primitive types in
     # java and are copied by value.
     int x = 100;
     bool a = true;
     float f = 1.5;
-    
-    # Their high-level counterparts with all of the advantages and 
+
+    # Their high-level counterparts with all of the advantages and
     # disadvantages of full objects. (autoboxing is supported)
     Int y = x;
     Bool b = a;
     Float g = f + x;  # integer gets promoted to float in this expression
-    
+
     /**
-     * A function definition.  Doxygen style docstrings are supported as 
+     * A function definition.  Doxygen style docstrings are supported as
      * first-class language elements.
      * @param text some text that will be printed to standard output.
      * @return the text that was printed.
@@ -89,28 +89,28 @@ features haven't been implemented yet.
         stdout.write(text);
         return text;
     }
-    
-    # keyword arguments are supported.  We use a colon to indicate keyword 
-    # args instead of an equal sign to avoid ambiguity with the assignment 
+
+    # keyword arguments are supported.  We use a colon to indicate keyword
+    # args instead of an equal sign to avoid ambiguity with the assignment
     # operator ("text: str = 'some non default text'" would be valid)
     myFunc(text: 'some non default text');
-    
+
     ## Another type of docstring. ('///' is also supported)
     void myOtherFunc() {
         stdout `less interesting\n`;
     }
-    
+
     # functions are objects (not sure about the typedef)
 
     typedef String Callback(String val);
     void useCallback(Callback cb) {
         cb('something worth writing');
     }
-    
+
     useCallback(myFunc);
-    
+
     # so are "bound methods" - which are a nice substitute for currying
-    
+
     # Not sure about "struct", see notes below
     struct Masala {
         int count;
@@ -121,29 +121,29 @@ features haven't been implemented yet.
     }
 
     useCallback(Masala(100).run);
-    
+
     ---------------------
     #!/usr/bin/crack
     import storage;
-    
-    // "struct" is a class with an implicit constructor with optional 
-    // arguments for each instance variable.  The 'struct' keyword may end up 
-    // being omitted in favor of the more general annotations mechanism 
+
+    // "struct" is a class with an implicit constructor with optional
+    // arguments for each instance variable.  The 'struct' keyword may end up
+    // being omitted in favor of the more general annotations mechanism
     // (e.g. "@attr_constructor class Note : storage.StorableObject { ..."
     struct Note : storage.StorableObject {
         String title;
         String desc;
     };
-    
-    // Create an instance of "Note" with title and desc arguments and invoke 
+
+    // Create an instance of "Note" with title and desc arguments and invoke
     // the store() method to store it.
     Note('todo: build crack',
          "Here's an example note that we're putting into our database."
          "I haven't figured out how best to do multi-line strings as of yet."
          ).store();
-    
+
     // Define a "note2" variable, initialize with keyword arguments.
-    // note that we use "arg:" instead of "arg =" for keyword args so as not 
+    // note that we use "arg:" instead of "arg =" for keyword args so as not
     // to conflict with assignment as an expression.
     Note note2 = { title: 'todo: Add special note classes for todos',
                    desc: 'so we can diferentiate them programmatically.'
@@ -154,48 +154,48 @@ features haven't been implemented yet.
         bool done = false;
     };
 
-    // Create a new todo, expand note2 into the argument list and augment with 
+    // Create a new todo, expand note2 into the argument list and augment with
     // "done."  Define and initialize with the ":=" operator.
     note3 := ToDo(*note2, done = true);
     note2.delete();
     note3.store();
 
 Basic Dogma:
-    
+
     1) Use the existing wiring.
     2) Common patterns should be syntactically simple and terse.
-    3) Everything should be fast.  Development cycles should be fast, the 
+    3) Everything should be fast.  Development cycles should be fast, the
         runtime code should be fast.
 
 Resulting rules:
     1) Use C/C++/Java syntax except where it's broken.
-    2) compiles should be single-pass.  Code generation should be at the time 
+    2) compiles should be single-pass.  Code generation should be at the time
         of compile, with code generation steps occuring after every statement.
     3) Documentation is a first-class citizen.
     4) Rich augmentation of language structures through annotations and macros.
 
 Other philosophical stances:
-    4) We do not try to restrict the coder to a set of acceptible patterns: the 
-       coder is assumed to be responsible and we consider the role of a 
-       language to be to facilitate the desires of the coder, not to restrict 
-       them.  That said, we chose to promote certain patterns 
-       (e.g. reference counting") and we will not invest in providing special 
-       support for features that we regard as anti-patterns.  For example, we 
-       regard cyclic dependencies as ultimately a bad thing, so we will not 
+    4) We do not try to restrict the coder to a set of acceptible patterns: the
+       coder is assumed to be responsible and we consider the role of a
+       language to be to facilitate the desires of the coder, not to restrict
+       them.  That said, we chose to promote certain patterns
+       (e.g. reference counting") and we will not invest in providing special
+       support for features that we regard as anti-patterns.  For example, we
+       regard cyclic dependencies as ultimately a bad thing, so we will not
        increase the complexity of the compiler in order to facilitate them.
 
 Curly brackets are magical - they're semantics are dependent on their context.
 So in initialization context:
-    
+
     class Foo {
-        int a; 
-        int b; 
+        int a;
+        int b;
         Foo(int a, int b) : a(a), b(b) {}
     } // the semicolon is unncessary here.
     Foo f = { a: 100, b: 200}; // equivalent to f := Foo(a: 100, b: 200);
 
 In other expression contexts, they are lambdas:
-    
+
     tree.traverse({ _.apply() });
 
 After keywords, they have meaning defined by the keyword:
@@ -206,15 +206,15 @@ struct { x = 100, y = 10 } // anonymous structure (like a named tuple)
 
 Lambdas:
 
-    Lambdas should be expressible with minimal syntax,  but flexible enough to 
+    Lambdas should be expressible with minimal syntax,  but flexible enough to
     specialize.  so we can do:
-    
+
         list.collect(lambda (Int sum, int item) { sum += item },
                      0  // initial value for first arg
                      );
-    
+
     or:
-    
+
         class List[T : Object] {
             ...
             List[T] filter(bool filterFunc(T item)) {
@@ -226,160 +226,160 @@ Lambdas:
             }
             ...
         }
-            
-    
+
+
         List[Foo] list;
-        list.filter({ item.a > 100 }); // implicit lambda, implicit use of 
+        list.filter({ item.a > 100 }); // implicit lambda, implicit use of
                                        // "item" parameter, implicit return.
-        list.filter(lambda(Foo x) { return x.a > 100; });  // equivalent 
+        list.filter(lambda(Foo x) { return x.a > 100; });  // equivalent
                                                            // longer form
 
     Alternately, for single argument functions:
-        
+
         list.filter({ _.a > 100 }); // can use _ or item, not both.
 
 Formatting:
-    
-    The back-tick character works like a string with built-in formatting.  
+
+    The back-tick character works like a string with built-in formatting.
     When used in an expression context, it evaluates to a string:
-    
+
         x := `my name is $name`;
-        
-    When used immediately after an OutStream, it formats its contents to the 
+
+    When used immediately after an OutStream, it formats its contents to the
     stream:
-        
+
         stdout `my name is $name`;
-    
+
     The above is equivalent to the following operations:
 
         stdout.format('my name is ');
         stdout.format(name);
-    
-    OutStream.format() is defined for all of the primitive types.  For Object, 
+
+    OutStream.format() is defined for all of the primitive types.  For Object,
     it is implemented as:
-        
+
         void format(Object obj) { obj.writeTo(this); }
-    
-    So you can override the writeTo() method for objects, and you can override 
-    and overload the format() method for OutStream derivatives, giving you a 
+
+    So you can override the writeTo() method for objects, and you can override
+    and overload the format() method for OutStream derivatives, giving you a
     very flexible way to do special formatting.
-        
+
 
 Access control:
-    
-    Access control is specified via naming conventions.  Symbols beginning 
-    with a double underscore ('__') are private to the context where they are 
-    defined.  Symbols beginning with a single underscore ('_') are "protected" 
-    in a sense similar to java's "package protected" - they can be accessed 
+
+    Access control is specified via naming conventions.  Symbols beginning
+    with a double underscore ('__') are private to the context where they are
+    defined.  Symbols beginning with a single underscore ('_') are "protected"
+    in a sense similar to java's "package protected" - they can be accessed
     from derived classes and from within the same module.
-    
-    How does all of this work for nested modules and module scoped stuff?  
+
+    How does all of this work for nested modules and module scoped stuff?
 
 Modules:
-    
-    By default, every source file is a "module".  Every directory full of 
-    source files is a "package" which is really just a module.  Packages can 
-    have other things in them besides nested modules if there is also a source 
-    file of the same name: e.g. if "foo.crk" is a file and "foo/" is a 
+
+    By default, every source file is a "module".  Every directory full of
+    source files is a "package" which is really just a module.  Packages can
+    have other things in them besides nested modules if there is also a source
+    file of the same name: e.g. if "foo.crk" is a file and "foo/" is a
     directory.
-    
-    A source file module can include nested modules by use of the "module" 
+
+    A source file module can include nested modules by use of the "module"
     keyword:
-    
+
         module nested {
-        
+
             void _privateFunction() { ... }
-                
+
             void foo() { ... }
-        
+
         } // the "nested" module
-        
+
         nested.foo();
 
-    Nested modules have the useful property of being compiled and executed 
-    while the source code module is still being compiled.  This lets you 
-    define annotations in a nested module that can be used to annotate code in 
+    Nested modules have the useful property of being compiled and executed
+    while the source code module is still being compiled.  This lets you
+    define annotations in a nested module that can be used to annotate code in
     the enclosing module.
 
-    Just like any other symbols, nested modules can be accessed internally 
-    subject to the access control rules - so nested modules whose names begin 
+    Just like any other symbols, nested modules can be accessed internally
+    subject to the access control rules - so nested modules whose names begin
     with an underscore are private.
-    
-    It is possible to define anonymous modules.  Like other nested modules, 
-    these are compiled and executed prior to the completion of the compile of 
-    the outer module, but all symbols implicitly imported into the outer 
+
+    It is possible to define anonymous modules.  Like other nested modules,
+    these are compiled and executed prior to the completion of the compile of
+    the outer module, but all symbols implicitly imported into the outer
     namespace:
-    
+
         module {
             void annotation(Function func) { ... }
         }
-        
-        // we can use the annotation defined in the anonymous module with no 
+
+        // we can use the annotation defined in the anonymous module with no
         // qualification.
         @annotation void annotatedFunction() { ... }
-    
-    Note that anonymous modules are not like anonymous namespaces in C++ - 
-    symbols in anonymous modules are externally accessible as if they were 
+
+    Note that anonymous modules are not like anonymous namespaces in C++ -
+    symbols in anonymous modules are externally accessible as if they were
     part of the outer module.
 
 Function Resolution Order:
 
     The rules for function resolution and argument matching are as follows:
-    
-    1) Check the current context for a function matching the arguments.  
+
+    1) Check the current context for a function matching the arguments.
         Functions are checked in the order in which they are defined.
-    2) If none is found, check the parent contexts from left to right 
+    2) If none is found, check the parent contexts from left to right
         depth-first recursively.
     3) If no match is found, repeat from step 1 attempting to convert arguments
-    
-    This doesn't apply to constructors - constructors resolution is not 
-    delegated.  Constructor inheritence works by generating constructors given 
+
+    This doesn't apply to constructors - constructors resolution is not
+    delegated.  Constructor inheritence works by generating constructors given
     the set of constructors and instance variables of the base classes.
-    
-    Before step 3, we can still do conversions of "adaptive" expressions 
-    (currently only constants).  If all of the arguments of a function are 
-    adaptive, the first will not go through conversion.  This is a work-around 
-    for some extremely unintuitive behavior introduced by the normal 
-    resolution order and the fact that constant integer types are very 
+
+    Before step 3, we can still do conversions of "adaptive" expressions
+    (currently only constants).  If all of the arguments of a function are
+    adaptive, the first will not go through conversion.  This is a work-around
+    for some extremely unintuitive behavior introduced by the normal
+    resolution order and the fact that constant integer types are very
     accomodating (1 - 2 == 255 without it).
 
 Generics:
-    
-    Crack deviates from the C++ and Java generic syntax so as not to clash 
-    with the use of the <> operators.  It uses the square brackets instead of 
+
+    Crack deviates from the C++ and Java generic syntax so as not to clash
+    with the use of the <> operators.  It uses the square brackets instead of
     the angle brackets:
-    
+
         Array[Foo] getAllFoos() { ... }
-    
+
     For typecasts, we can use the '*' operator:
-    
+
         foos := Array[Foo] * getObjectArray();
-    
+
     Although something like "cast" might be a better idea:
         foos := Array[Foo].cast(getObjectArray());
 
 Cleanups:
-    When we leave a context, we need to run "oper release" on all variables 
+    When we leave a context, we need to run "oper release" on all variables
     within that context that define this method:
-    
+
         while (cond) {
             Complex obj;
             ...
-            
+
             // obj.oper release() needs to happen here
         }
-    
+
     We can't just always emit this code at the end because of terminal statements
-    
+
     void func() {
         Complex obj1;
         while (cond) {
             Complex obj2;
-            
+
             if (cond2)
                 // cleanup obj2, then obj1
                 return;
-            
+
             // obj2.oper deref()
         }
         // obj1.oper deref()
@@ -387,177 +387,177 @@ Cleanups:
 
 Primitive Arrays:
 
-    Primitive arrays use the Generic syntax but emit very efficient, C-like 
-    array and pointer semantics.  There is no bounds checking, no refernce 
-    counting and no cleanup associated with primitive arrays.  They are used 
+    Primitive arrays use the Generic syntax but emit very efficient, C-like
+    array and pointer semantics.  There is no bounds checking, no refernce
+    counting and no cleanup associated with primitive arrays.  They are used
     like this:
-    
+
         // allocate a 10 element array
         arr := array[int](10);
-        
+
         arr[0] = 100;
         cout `$(arr[0])\n`;
 
         // free the array using a normal "free" function.
         free(arr);
-    
-    Since there is no reference count management, for derived types you need 
+
+    Since there is no reference count management, for derived types you need
     to do your own bind and release:
-    
+
         arr := array[Object](10);
-        
+
         arr[0].oper release();  # release the existing value
-        
+
         String s = 'stirng value';
         arr[0] = s;
         arr[0].oper bind();     # bind the new value
-        
+
         # do cleanups
         for (i := 0; i < 10; ++i)
             arr[i].oper release();
         free(arr);
 
 Design principals:
-    In cases where we can provide useful information from the Parser or keep 
-    track of it in the Builder, it's better to provide it in the Parser.  
+    In cases where we can provide useful information from the Parser or keep
+    track of it in the Builder, it's better to provide it in the Parser.
     Example is the "terminal" argument of emitElse/emitEndIf.
 
-    In retrospect, the expression types tend to be terminal (we don't derive 
-    from them) so it would have been better to let the Builder create derived 
-    classes that implement emit().  Definitions (VarDef, FuncDef...), OTOH, 
-    are derived from in ways orthogonal to the Builder's implementation 
+    In retrospect, the expression types tend to be terminal (we don't derive
+    from them) so it would have been better to let the Builder create derived
+    classes that implement emit().  Definitions (VarDef, FuncDef...), OTOH,
+    are derived from in ways orthogonal to the Builder's implementation
     details, so it makes sense to use a Bridge paradigm.
 
 Reference counting rules:
-    In general, expressions returning an Object provide a new reference, 
+    In general, expressions returning an Object provide a new reference,
     expressions using Objects borrow the references of the caller.
-    
-    However, for certain kinds of expressions (field references, for example) 
-    it doesn't make sense to increment the reference count and then decrement 
-    in the cleanup.  So we introduce the notion of "productive" expressions: 
-    an expression is productive if it returns a new reference.  It is 
-    non-productive if it borrows an existing reference (and as such, requires 
+
+    However, for certain kinds of expressions (field references, for example)
+    it doesn't make sense to increment the reference count and then decrement
+    in the cleanup.  So we introduce the notion of "productive" expressions:
+    an expression is productive if it returns a new reference.  It is
+    non-productive if it borrows an existing reference (and as such, requires
     no cleanup).
-    
-    This is obviously the case for all sorts of variable references.  It 
-    should also be something that we can apply via an annotation to function 
+
+    This is obviously the case for all sorts of variable references.  It
+    should also be something that we can apply via an annotation to function
     definitions, indicating that the function does not return a new reference.
-    If this is done, the compiler must verify that the function only returns 
-    non-productive expressions.  If the function is a method, this must also 
+    If this is done, the compiler must verify that the function only returns
+    non-productive expressions.  If the function is a method, this must also
     be verified for all derived functions.
-    
-    Cleanup frames are a way of tracking which cleanups need to be run when 
-    we exit a particular context.  Objects that have a "oper release()" 
+
+    Cleanup frames are a way of tracking which cleanups need to be run when
+    we exit a particular context.  Objects that have a "oper release()"
     method may have that method called at the end of the cleanup frame.
-    Every time the compiler emits an expression it produces a result.  We 
-    have to either call handleTransient() or handleAssignment() on that result 
+    Every time the compiler emits an expression it produces a result.  We
+    have to either call handleTransient() or handleAssignment() on that result
     depending on what we're doing with it.
-    
-    handleTransient() means that the object is temporary - it lives for the 
-    life of the expression it is contained in.  If the result is 
-    non-productive, handleTransient() doesn't have to do anything.  But if 
-    the result is productive, handleTransient() adds it to the current 
-    cleanup frame and "oper release()" will get called on it when we're done 
+
+    handleTransient() means that the object is temporary - it lives for the
+    life of the expression it is contained in.  If the result is
+    non-productive, handleTransient() doesn't have to do anything.  But if
+    the result is productive, handleTransient() adds it to the current
+    cleanup frame and "oper release()" will get called on it when we're done
     with the statement.
 
-    handleAssignment() has the complimentary semantics: if the expression is 
-    productive, ignore it (the "produced" value will be consumed by an 
+    handleAssignment() has the complimentary semantics: if the expression is
+    productive, ignore it (the "produced" value will be consumed by an
     assignment).  If it is non-productive, call "oper bind()" on it.
 
 
 Constructors:
     -   A class will inherit the constructors of its first base class if:
         -   it has no constructors of its own
-        -   it either has no instance variables or all instance variables have 
+        -   it either has no instance variables or all instance variables have
             default constructors.
         -   all other base classes have a default constructor.
 
 Adaptive Expressions:
 
-    Constant integers are special in that they adapt to the type required by 
-    the context.  So for example, in "byte b = 100;" the constant 100 is of 
-    type byte, and we want to verify that the value of the constant is small 
+    Constant integers are special in that they adapt to the type required by
+    the context.  So for example, in "byte b = 100;" the constant 100 is of
+    type byte, and we want to verify that the value of the constant is small
     enough to fit in a byte.
-    
-    But this is problematic given the rules about function resolution.  For 
-    example, because we can do implicit conversions from "bigger" integer 
-    types to smaller ones, we want to define our operators so that the 
-    smallest ones are resolved first: "byte + byte" should match before 
+
+    But this is problematic given the rules about function resolution.  For
+    example, because we can do implicit conversions from "bigger" integer
+    types to smaller ones, we want to define our operators so that the
+    smallest ones are resolved first: "byte + byte" should match before
     "int32 + int32".  But say, for example, that we add 1 to a byte variable b:
-    
+
         b + 1
-    
-    This won't match "byte + byte" because 1 is stored as an int32, so the 
+
+    This won't match "byte + byte" because 1 is stored as an int32, so the
     result will be int32, even though you would expect it to be a byte.
-    We could match "byte + byte" on the second (converting) pass, but we won't 
-    get there because without conversion the expression will match "int32 + 
+    We could match "byte + byte" on the second (converting) pass, but we won't
+    get there because without conversion the expression will match "int32 +
     int32".
-    
-    We remedy this by making the constant "adaptive."  Instead of limiting 
-    conversions to the second, converting resolution pass, the compiler 
-    converts adaptive expressions during the first pass.  So since 1 can 
+
+    We remedy this by making the constant "adaptive."  Instead of limiting
+    conversions to the second, converting resolution pass, the compiler
+    converts adaptive expressions during the first pass.  So since 1 can
     safely convert to a byte, the expression will match "byte + byte".
-    
-    Unfortunately, this introduces another problem when dealing with 
-    expressions consisting entirely of constants.  Consider the case of "1 - 
-    2".  1 and 2 can both convert to a byte value, so the expression ends up 
+
+    Unfortunately, this introduces another problem when dealing with
+    expressions consisting entirely of constants.  Consider the case of "1 -
+    2".  1 and 2 can both convert to a byte value, so the expression ends up
     matching "byte + byte", producing a byte value of 255!
-    
-    There is a hack in place to work around this: if all of the arguments of a 
-    function are adaptive, we inhibit conversion of the first argument in the 
-    first resolution pass - so the 1 in "1 - 2" will be interpreted as an 
+
+    There is a hack in place to work around this: if all of the arguments of a
+    function are adaptive, we inhibit conversion of the first argument in the
+    first resolution pass - so the 1 in "1 - 2" will be interpreted as an
     int32 and force the selection of "int32 + int32".
-    
-    This is a rather lame solution to the problem.  Another possibility would 
-    be to make constants default to the smallest accomodating type and 
-    introduce constant folding into the function model - so the compiler would 
-    recognize 1 and 2 as byte, but then fold "1 - 2" to a new constant 
+
+    This is a rather lame solution to the problem.  Another possibility would
+    be to make constants default to the smallest accomodating type and
+    introduce constant folding into the function model - so the compiler would
+    recognize 1 and 2 as byte, but then fold "1 - 2" to a new constant
     (presumable an int16 with a value of -1).
 
 Ugliness:
 
-    -   There should be a Def base class instead of deriving everything from 
-        VarDef.  Def should have a name and a "parent" Namespace but no type. 
-        Then we can get rid of VarDefImpl and just have the builder 
+    -   There should be a Def base class instead of deriving everything from
+        VarDef.  Def should have a name and a "parent" Namespace but no type.
+        Then we can get rid of VarDefImpl and just have the builder
         specialize VarDef. (type needs to move into Def because of meta-types)
 
     -   Context is bad:
-        -   there's a dichotomy between "compile context" and "the symbol 
+        -   there's a dichotomy between "compile context" and "the symbol
             table" Make these "Context" and "Namespace"
         -   the symbol table wants to be part of ModuleDef/ClassDef/FuncDef so
             there's probably a NamespaceDef base class
-        -   Namespace should make use of polymorphism to deal better with 
+        -   Namespace should make use of polymorphism to deal better with
             funny resolution stuff.
-        -   we should make the Parser::error() function part of Context so we 
+        -   we should make the Parser::error() function part of Context so we
             can use it from all levels.
 
     -   AncestorPaths should be reference counted objects cached by type defs.
 
-    -   The way I'm doing explicit class specification causes some serious 
-        problems.  Methods are defined in both the class context and the 
-        meta-class context.  This introduces ambiguity when looking up methods 
-        on a class object.  The ambiguity becomes extremely problematic when 
-        doing lookups on builtins like "oper bind" and "oper release", where 
+    -   The way I'm doing explicit class specification causes some serious
+        problems.  Methods are defined in both the class context and the
+        meta-class context.  This introduces ambiguity when looking up methods
+        on a class object.  The ambiguity becomes extremely problematic when
+        doing lookups on builtins like "oper bind" and "oper release", where
         we now have to verify that the function is not an alias after lookup.
-        It's difficult to generalize the "no-alias" lookups because of 
-        overloads - overloads can probably end up aggregating both owned 
-        functions and aliased functions, so what do you do if a function has 
+        It's difficult to generalize the "no-alias" lookups because of
+        overloads - overloads can probably end up aggregating both owned
+        functions and aliased functions, so what do you do if a function has
         both owned and aliased varieties?
-        
+
         Possible solutions:
-        
+
         -   dump the Class.method() syntax, reserve it for methods of the
             meta-class.  Revert to C++'s Class::method() syntax instead.
 
-    -   Allowing the java-like syntax for base method specification (e.g. 
-        "BaseClass.method()") was a bad idea given that this can also refer to 
-        a method applied to the class object.  It creates an ambiguity in the 
-        language and complicates the compiler, requiring the "no alias" 
+    -   Allowing the java-like syntax for base method specification (e.g.
+        "BaseClass.method()") was a bad idea given that this can also refer to
+        a method applied to the class object.  It creates an ambiguity in the
+        language and complicates the compiler, requiring the "no alias"
         lookups to prevent class objects from picking up instance methods.
-        My current feeling is that we should revert to "BaseClass::method()" 
-        for this sort of thing, especially since it works with a non-this 
+        My current feeling is that we should revert to "BaseClass::method()"
+        for this sort of thing, especially since it works with a non-this
         instance: "other.BaseClass::method()".
-    
+
     -   Parser could use a re-write.  We need to come up with a normalized
         grammar that deals with the class-as-class/class-as-object ambiguity.
 
@@ -569,23 +569,23 @@ Ugliness:
         reason.
 
 Parsing Oddities:
-    
+
     in a class, you can have:
         variable defs
         func defs & class defs
-    
+
     in a code block:
         variable defs
         func defs & class defs
         statements
-    
+
     in a condition:
         variable defs
         expressions
-    
+
     So clause ::= var_def | expression
         but this doesn't help much because
-        
+
         class:
             if tok is class:
                 parseClassDef()
@@ -598,31 +598,31 @@ Desired Grammer:
     This is going to be the 1.0 grammar description of the language.
 
     XXX Finish this. XXX
-    
+
     module ::= block ;
-    
+
     block ::= statement_or_def* ;
-    
+
     statement_or_def ::= statement | definition ;
-    
-    statement ::= expression ';' |  # block can be terminated by something 
+
+    statement ::= expression ';' |  # block can be terminated by something
                                     #    other than a semicolon?
                   if_stmt |
                   'while' '(' expr ')' clause |
                   'for' '(' for_expr ')' clause |
                   try_stmt
-    
+
     if_stmt ::= if_root | if_root else ;
-    
+
     try_stmt ::= 'try' '{' block '}' catch '(' typespec identifier ')' '{'
                     block '}'
-    
+
     if_root ::= 'if' '(' expr ')' clause ;
-    
+
     else ::= 'else' clause ;
-    
+
     clause ::= statement ';' | block ;
-    
+
     condition = expr | var_def
     typespec_list = typespec |
                     typespec_list ',' typespec ;
@@ -641,35 +641,35 @@ Desired Grammer:
 
 Annotations:
 
-    Annotations should allow you to do manipulations on language objects 
-    during compile.  They are introduced by an "at" sign 
-    
+    Annotations should allow you to do manipulations on language objects
+    during compile.  They are introduced by an "at" sign
+
     Examples:
-    
-        
+
+
 Forward Declarations:
-    Forward declarations of functions are currently legal with the following 
-    caveats: forward declarations must be in the same block context as the 
-    definition; forward declarations must be resolved by the close of their 
-    block context; in the interests of allowing keyword arguments, forward 
+    Forward declarations of functions are currently legal with the following
+    caveats: forward declarations must be in the same block context as the
+    definition; forward declarations must be resolved by the close of their
+    block context; in the interests of allowing keyword arguments, forward
     declarations must have the same argument names as their definitions.
-    
-    It's possible that rule 2 may be relaxed somewhat in the long term.  It's 
-    often useful to have a class method definition defined after the class 
-    definition ends (like when it makes use of another class that depends on 
+
+    It's possible that rule 2 may be relaxed somewhat in the long term.  It's
+    often useful to have a class method definition defined after the class
+    definition ends (like when it makes use of another class that depends on
     the initial class).
 
 Ugly Stuff:
-    
-    I can't how the ModuleDef namespace can ever get populated with the 
+
+    I can't how the ModuleDef namespace can ever get populated with the
     contents of a module, but I can't see how imports could work without it.
-    It seems like when parsing a module, the module toplevel context should 
+    It seems like when parsing a module, the module toplevel context should
     reference the ModuleDef as its namespace
 
 Parser Refactor:
-    
+
     Function processing should all be in the general expression location - not
-    in parsePostIdent().  For this to happen, method lookups without args 
+    in parsePostIdent().  For this to happen, method lookups without args
     need to return a special kind of field reference that accepts "oper call"
     and translates it to the underlying method invocation.
 

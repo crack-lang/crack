@@ -1,9 +1,9 @@
 // Copyright 2011-2012 Google Inc.
-// 
+//
 //   This Source Code Form is subject to the terms of the Mozilla Public
 //   License, v. 2.0. If a copy of the MPL was not distributed with this
 //   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-// 
+//
 @import crack.extgen generateExtension;
 
 # build with:
@@ -61,29 +61,29 @@
         snd_seq_ev_note_t *snd_seq_event_getNote(snd_seq_event_t *event) {
             return &event->data.note;
         }
-        
+
         snd_seq_ev_ctrl_t *snd_seq_event_getControl(snd_seq_event_t *event) {
             return &event->data.control;
         }
-        
+
         snd_seq_ev_ext_t *snd_seq_event_getExt(snd_seq_event_t *event) {
             return &event->data.ext;
         }
-        
+
         snd_seq_port_subscribe_t *crk_snd_seq_port_subscribe_malloc() {
             snd_seq_port_subscribe_t *result;
             if (!snd_seq_port_subscribe_malloc(&result))
                 return result;
             return NULL;
         }
-        
+
         snd_seq_port_info_t *crk_snd_seq_port_info_malloc() {
             snd_seq_port_info_t *result;
             if (!snd_seq_port_info_malloc(&result))
                 return result;
             return NULL;
         }
-        
+
         snd_seq_client_info_t *crk_snd_seq_client_info_malloc() {
             snd_seq_client_info_t *result;
             if (!snd_seq_client_info_malloc(&result))
@@ -94,195 +94,195 @@
 
     const int
         # sequence open mode
-        SND_SEQ_OPEN_INPUT, 
-        SND_SEQ_OPEN_OUTPUT, 
+        SND_SEQ_OPEN_INPUT,
+        SND_SEQ_OPEN_OUTPUT,
         SND_SEQ_OPEN_DUPLEX,
-        
+
         # sequencer port capabilities
         SND_SEQ_PORT_CAP_WRITE,
         SND_SEQ_PORT_CAP_SUBS_WRITE,
         SND_SEQ_PORT_CAP_READ,
         SND_SEQ_PORT_CAP_SUBS_READ,
-        
+
         # port types
         SND_SEQ_PORT_TYPE_MIDI_GENERIC,
-        
+
         # event types
-        SND_SEQ_EVENT_SYSTEM, 
-        SND_SEQ_EVENT_RESULT, 
-        SND_SEQ_EVENT_NOTE, 
-        SND_SEQ_EVENT_NOTEON, 
+        SND_SEQ_EVENT_SYSTEM,
+        SND_SEQ_EVENT_RESULT,
+        SND_SEQ_EVENT_NOTE,
+        SND_SEQ_EVENT_NOTEON,
         SND_SEQ_EVENT_NOTEOFF,
         SND_SEQ_EVENT_KEYPRESS,
-        SND_SEQ_EVENT_CONTROLLER, 
-        SND_SEQ_EVENT_PGMCHANGE, 
-        SND_SEQ_EVENT_CHANPRESS, 
-        SND_SEQ_EVENT_PITCHBEND, 
-        SND_SEQ_EVENT_CONTROL14, 
-        SND_SEQ_EVENT_NONREGPARAM, 
-        SND_SEQ_EVENT_REGPARAM, 
-        SND_SEQ_EVENT_SONGPOS, 
-        SND_SEQ_EVENT_SONGSEL, 
-        SND_SEQ_EVENT_QFRAME, 
-        SND_SEQ_EVENT_TIMESIGN, 
-        SND_SEQ_EVENT_KEYSIGN, 
-        SND_SEQ_EVENT_START, 
-        SND_SEQ_EVENT_CONTINUE, 
-        SND_SEQ_EVENT_STOP, 
-        SND_SEQ_EVENT_SETPOS_TICK, 
-        SND_SEQ_EVENT_SETPOS_TIME, 
-        SND_SEQ_EVENT_TEMPO, 
-        SND_SEQ_EVENT_CLOCK, 
-        SND_SEQ_EVENT_TICK, 
-        SND_SEQ_EVENT_QUEUE_SKEW, 
-        SND_SEQ_EVENT_SYNC_POS, 
-        SND_SEQ_EVENT_TUNE_REQUEST, 
-        SND_SEQ_EVENT_RESET, 
-        SND_SEQ_EVENT_SENSING, 
-        SND_SEQ_EVENT_ECHO, 
-        SND_SEQ_EVENT_OSS, 
-        SND_SEQ_EVENT_CLIENT_START, 
-        SND_SEQ_EVENT_CLIENT_EXIT, 
-        SND_SEQ_EVENT_CLIENT_CHANGE, 
-        SND_SEQ_EVENT_PORT_START, 
-        SND_SEQ_EVENT_PORT_EXIT, 
-        SND_SEQ_EVENT_PORT_CHANGE, 
-        SND_SEQ_EVENT_PORT_SUBSCRIBED, 
-        SND_SEQ_EVENT_PORT_UNSUBSCRIBED, 
-        SND_SEQ_EVENT_USR0, 
-        SND_SEQ_EVENT_USR1, 
-        SND_SEQ_EVENT_USR2, 
-        SND_SEQ_EVENT_USR3, 
-        SND_SEQ_EVENT_USR4, 
-        SND_SEQ_EVENT_USR5, 
-        SND_SEQ_EVENT_USR6, 
-        SND_SEQ_EVENT_USR7, 
-        SND_SEQ_EVENT_USR8, 
-        SND_SEQ_EVENT_USR9, 
-        SND_SEQ_EVENT_SYSEX, 
-        SND_SEQ_EVENT_BOUNCE, 
-        SND_SEQ_EVENT_USR_VAR0, 
-        SND_SEQ_EVENT_USR_VAR1, 
-        SND_SEQ_EVENT_USR_VAR2, 
-        SND_SEQ_EVENT_USR_VAR3, 
-        SND_SEQ_EVENT_USR_VAR4, 
+        SND_SEQ_EVENT_CONTROLLER,
+        SND_SEQ_EVENT_PGMCHANGE,
+        SND_SEQ_EVENT_CHANPRESS,
+        SND_SEQ_EVENT_PITCHBEND,
+        SND_SEQ_EVENT_CONTROL14,
+        SND_SEQ_EVENT_NONREGPARAM,
+        SND_SEQ_EVENT_REGPARAM,
+        SND_SEQ_EVENT_SONGPOS,
+        SND_SEQ_EVENT_SONGSEL,
+        SND_SEQ_EVENT_QFRAME,
+        SND_SEQ_EVENT_TIMESIGN,
+        SND_SEQ_EVENT_KEYSIGN,
+        SND_SEQ_EVENT_START,
+        SND_SEQ_EVENT_CONTINUE,
+        SND_SEQ_EVENT_STOP,
+        SND_SEQ_EVENT_SETPOS_TICK,
+        SND_SEQ_EVENT_SETPOS_TIME,
+        SND_SEQ_EVENT_TEMPO,
+        SND_SEQ_EVENT_CLOCK,
+        SND_SEQ_EVENT_TICK,
+        SND_SEQ_EVENT_QUEUE_SKEW,
+        SND_SEQ_EVENT_SYNC_POS,
+        SND_SEQ_EVENT_TUNE_REQUEST,
+        SND_SEQ_EVENT_RESET,
+        SND_SEQ_EVENT_SENSING,
+        SND_SEQ_EVENT_ECHO,
+        SND_SEQ_EVENT_OSS,
+        SND_SEQ_EVENT_CLIENT_START,
+        SND_SEQ_EVENT_CLIENT_EXIT,
+        SND_SEQ_EVENT_CLIENT_CHANGE,
+        SND_SEQ_EVENT_PORT_START,
+        SND_SEQ_EVENT_PORT_EXIT,
+        SND_SEQ_EVENT_PORT_CHANGE,
+        SND_SEQ_EVENT_PORT_SUBSCRIBED,
+        SND_SEQ_EVENT_PORT_UNSUBSCRIBED,
+        SND_SEQ_EVENT_USR0,
+        SND_SEQ_EVENT_USR1,
+        SND_SEQ_EVENT_USR2,
+        SND_SEQ_EVENT_USR3,
+        SND_SEQ_EVENT_USR4,
+        SND_SEQ_EVENT_USR5,
+        SND_SEQ_EVENT_USR6,
+        SND_SEQ_EVENT_USR7,
+        SND_SEQ_EVENT_USR8,
+        SND_SEQ_EVENT_USR9,
+        SND_SEQ_EVENT_SYSEX,
+        SND_SEQ_EVENT_BOUNCE,
+        SND_SEQ_EVENT_USR_VAR0,
+        SND_SEQ_EVENT_USR_VAR1,
+        SND_SEQ_EVENT_USR_VAR2,
+        SND_SEQ_EVENT_USR_VAR3,
+        SND_SEQ_EVENT_USR_VAR4,
         SND_SEQ_EVENT_NONE;
-    
+
     @inject 'typedef int Undef;\n'
-    
+
     class snd_seq_ev_note_t {
         byte channel, note, velocity, off_velocity;
         uint duration;
     }
-    
+
     class snd_seq_ev_ctrl_t {
         byte channel;
         uint param;
         int value;
     }
-    
+
     class snd_seq_ev_ext_t {
         uint len;
         byteptr ptr;
     }
-    
+
     class snd_seq_addr_t {
         byte client;
         byte port;
     }
-    
+
     class snd_seq_event_t {
         @cname snd_seq_event_alloc
         oper new();
 
         @cname snd_seq_event_setSource
         void setSource(int port);
-        
+
         @cname snd_seq_event_setSubs
         void setSubs();
 
         @cname snd_seq_event_setDirect
         void setDirect();
-        
+
         @cname snd_seq_event_setNoteOn
         void setNoteOn(int channel, int note, int velocity);
 
         @cname snd_seq_event_setNoteOff
         void setNoteOff(int channel, int note, int velocity);
-        
+
         @cname snd_seq_event_scheduleTick
         void scheduleTick(int queue, int relative, int time);
-        
+
         @cname snd_seq_event_setController
         void setController(int channel, int cc, int val);
-        
+
         @cname snd_seq_event_getNote
         snd_seq_ev_note_t getNote();
-        
+
         @cname snd_seq_event_getControl
         snd_seq_ev_ctrl_t getControl();
-        
+
         @cname snd_seq_event_getExt
         snd_seq_ev_ext_t getExt();
-        
+
         byte type;
         byte flags, tag, queue;
-    }                 
-    
+    }
+
     @cname Undef
     class snd_seq_port_subscribe_t {
         @cname crk_snd_seq_port_subscribe_malloc
         oper new();
-        
+
         @cname snd_seq_port_subscribe_free
         void free();
-        
+
         @cname snd_seq_port_subscribe_set_sender
         void set_sender(snd_seq_addr_t addr);
-        
+
         @cname snd_seq_port_subscribe_set_dest
         void set_dest(snd_seq_addr_t addr);
-        
+
         @cname snd_seq_port_subscribe_set_queue
         void set_queue(int queue);
-        
+
         @cname snd_seq_port_subscribe_set_exclusive
         void set_exclusive(int val);
-        
+
         @cname snd_seq_port_subscribe_set_time_update
         void set_time_update(int val);
-        
+
         @cname snd_seq_port_subscribe_set_time_real
         void set_time_real(int val);
     }
 
     @cname crk_snd_seq_port_subscribe_malloc
     snd_seq_port_subscribe_t snd_seq_port_subscribe_malloc();
-    
+
     @cname Undef
     class snd_seq_port_info_t {
         @cname crk_snd_seq_port_info_malloc
         oper new();
-        
+
         @cname snd_seq_port_info_free
         void free();
-        
+
         @cname snd_seq_port_info_set_client
         int set_client(int client);
-        
+
         @cname snd_seq_port_info_set_port
         int set_port(int port);
-        
+
         @cname snd_seq_port_info_get_port
         int get_port();
-        
+
         @cname snd_seq_port_info_get_name
         byteptr get_name();
-        
+
         @cname snd_seq_port_info_get_addr
         snd_seq_addr_t get_addr();
     }
-    
+
     @cname crk_snd_seq_port_info_malloc
     snd_seq_port_info_t snd_seq_port_info_malloc();
 
@@ -290,7 +290,7 @@
     class snd_seq_client_info_t {
         @cname crk_snd_seq_client_info_malloc
         oper new();
-    
+
         @cname snd_seq_client_info_free
         int free();
 
@@ -299,7 +299,7 @@
 
         @cname snd_seq_client_info_get_client
         int get_client();
-        
+
         @cname snd_seq_client_info_get_name
         byteptr get_name();
     }
@@ -307,15 +307,15 @@
     @cname crk_snd_seq_client_info_malloc
     snd_seq_client_info_t snd_seq_client_info_malloc();
 
-    @cname Undef        
+    @cname Undef
     class snd_seq_t {
-    
+
         @cname snd_seq_set_client_name
         int set_client_name(byteptr name);
-    
+
         @cname snd_seq_create_simple_port
         int create_simple_port(byteptr name, int caps, int type);
-    
+
         @cname snd_seq_connect_to
         int connect_to(int myport, int dest_client, int dest_port);
 
@@ -327,34 +327,34 @@
 
         @cname snd_seq_event_output
         int event_output(snd_seq_event_t event);
-        
+
         @cname snd_seq_drain_output
         int drain_output();
-        
+
         @cname snd_seq_event_input
         int event_input(array[snd_seq_event_t] event);
-        
+
         @cname snd_seq_event_input_pending
         int event_input_pending(int fetch_sequencer);
-    
+
         @cname snd_seq_alloc_named_queue
         int alloc_named_queue(byteptr name);
-    
+
         ## Sets the tempo of all queues created for the client.
         @cname SndSeqQueue_setTempo
         int setTempo(int queueId, int tempo, int ppq);
-        
+
         @cname SndSeqQueue_start
         void start(int queueId, snd_seq_event_t event);
-        
+
         @cname SndSeqQueue_stop
         void stop(int queueId, snd_seq_event_t event);
-        
+
         @cname snd_seq_subscribe_port
         int subscribe_port(snd_seq_port_subscribe_t sub);
     }
 
-    int snd_seq_open(array[snd_seq_t] seqp, byteptr name, int streams, 
+    int snd_seq_open(array[snd_seq_t] seqp, byteptr name, int streams,
                     int mode
                     );
 }

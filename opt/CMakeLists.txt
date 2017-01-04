@@ -224,7 +224,7 @@ if (PNG_FOUND)
                           LINK_FLAGS ${LLVM_LDFLAGS}
                          )
     target_link_libraries( png
-                           libcrack ${PNG_LIBRARY} 
+                           libcrack ${PNG_LIBRARY}
                          )
     install(TARGETS png DESTINATION "lib/crack-${CRACK_VERSION}/crack/ext")
 
@@ -242,7 +242,7 @@ if (NETCDF_FOUND)
                           LINK_FLAGS ${LLVM_LDFLAGS}
                          )
     target_link_libraries( netcdf
-                           libcrack ${NETCDF_LIBRARY} 
+                           libcrack ${NETCDF_LIBRARY}
                          )
     install(TARGETS netcdf DESTINATION "lib/crack-${CRACK_VERSION}/crack/ext")
 

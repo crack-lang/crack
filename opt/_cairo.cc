@@ -67,7 +67,7 @@ cairo_rectangle_t *cairo_rectangle_new() { return new cairo_rectangle_t; }
 cairo_rectangle_list_t *cairo_rectangle_list_new() { return new cairo_rectangle_list_t; }
 cairo_text_extents_t *cairo_text_extents_new() { return new cairo_text_extents_t; }
 cairo_font_extents_t *cairo_font_extents_new() { return new cairo_font_extents_t; }
-cairo_surface_t *cairo_surface_new(cairo_surface_t *existing_surface) { 
+cairo_surface_t *cairo_surface_new(cairo_surface_t *existing_surface) {
       return existing_surface;
    }
 
