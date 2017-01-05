@@ -38,12 +38,12 @@
     // Returns the end of the buffer
     unsigned int crk_xdr_getpos(XDR *xdrs){
         return xdr_getpos(xdrs);
-    } 
+    }
 
     // Sets the position to be read from next in the buffer/stream
     void crk_xdr_setpos(XDR *xdrs, unsigned int pos){
         xdr_setpos(xdrs, pos);
-    } 
+    }
 
 
 #define scalar_op(tpe, func_tpe, crk_tpe) \
@@ -123,7 +123,7 @@
     array_op(double, double, float64)
     array_op(bool_t, bool, bool)
 
-    
+
 
 #include "ext/Module.h"
 #include "ext/Type.h"

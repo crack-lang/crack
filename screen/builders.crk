@@ -2,18 +2,18 @@
 // Copyright 2011-2012 Google Inc.
 // Copyright 2011-2012 Shannon Weyrick <weyrick@mozek.us>
 // Copyright 2011-2012 Conrad Steenberg <conrad.steenberg@gmail.com>
-// 
+//
 //   This Source Code Form is subject to the terms of the Mozilla Public
 //   License, v. 2.0. If a copy of the MPL was not distributed with this
 //   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-// 
+//
 
 import crack.ascii wsplit;
 import crack.io Writer, StringWriter, StringFormatter, FStr, cerr;
 import crack.exp.dir Directory;
 import crack.exp.file File, FileInfo;
 import crack.net Poller;
-import crack.process Process, ProcessHandlerImpl, CRK_PIPE_STDIN, 
+import crack.process Process, ProcessHandlerImpl, CRK_PIPE_STDIN,
     CRK_PIPE_STDOUT, CRK_PIPE_STDERR;
 import crack.cont.treemap TreeMap;
 import crack.cont.array Array;
@@ -30,8 +30,8 @@ class Result {
     String expected = {}, actual = {};
 
     oper init(bool t): pass = t { }
-    oper init(String e, String a): pass = false, expected = e, actual = a { 
-        
+    oper init(String e, String a): pass = false, expected = e, actual = a {
+
     }
 }
 
@@ -53,30 +53,30 @@ class CrackBuilderDef {
 class TestHandler : ProcessHandlerImpl {
     AppendBuffer out = {1024}, err = {1024};
     bool terminated;
-    
+
     void onOutData(Buffer data) {
         out.extend(data);
     }
-    
+
     void onErrData(Buffer data) {
         err.extend(data);
     }
-    
+
     void onTerminate(int rc) {
         terminated = true;
     }
-    
+
     String getStdOut() {
         result := String(out, true);
         out = AppendBuffer(1024);
         return result;
     }
-    
+
     String getStdErr() {
         result := String(err, true);
         err = AppendBuffer(1024);
         return result;
-    }    
+    }
 }
 
 // execute crack process for specific builder for specific test
@@ -176,8 +176,8 @@ class BuilderTestHarness {
         _status = T_BINARY;
         processHandler.terminated = false;
         gotStdIn := _data.sections.hasKey("STDIN");
-        _proc = Process(wsplit(cmd), 
-                        CRK_PIPE_STDOUT | CRK_PIPE_STDERR | 
+        _proc = Process(wsplit(cmd),
+                        CRK_PIPE_STDOUT | CRK_PIPE_STDERR |
                          (gotStdIn ? CRK_PIPE_STDIN : 0)
                         );
         _proc.addTo(poller, processHandler);
@@ -254,8 +254,8 @@ class BuilderTestHarness {
 
         _status = T_CRACK;
         gotStdIn := !_bDef.separateBinary() && _data.sections.hasKey("STDIN");
-        _proc = Process(wsplit(cmd), 
-                        CRK_PIPE_STDOUT | CRK_PIPE_STDERR | 
+        _proc = Process(wsplit(cmd),
+                        CRK_PIPE_STDOUT | CRK_PIPE_STDERR |
                          (gotStdIn ? CRK_PIPE_STDIN : 0)
                         );
         _proc.addTo(poller, processHandler);
@@ -271,10 +271,10 @@ class BuilderTestHarness {
         compileErr := processHandler.getStdErr();
         _proc.close();
 
-        vOutput.write(FStr() I`code: [$(_proc.getReturnCode())], 
+        vOutput.write(FStr() I`code: [$(_proc.getReturnCode())],
                                out: [$compileOut], err [$compileErr]\n`);
 
-        // XXX right now, out stdout and stderr are merged. this will change 
+        // XXX right now, out stdout and stderr are merged. this will change
         // when we have an explicit stderr section
         if (compileErr.size > 0)
             compileOut = compileOut + compileErr;

@@ -3,11 +3,11 @@
 // Copyright 2010-2011 Shannon Weyrick <weyrick@mozek.us>
 // Copyright 2011 Arno Rehn <arno@arnorehn.de>
 // Copyright 2011-2012 Conrad Steenberg <conrad.steenberg@gmail.com>
-// 
+//
 //   This Source Code Form is subject to the terms of the Mozilla Public
 //   License, v. 2.0. If a copy of the MPL was not distributed with this
 //   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-// 
+//
 
 import crack.ascii radix;
 import crack.lang Formatter;
@@ -42,12 +42,12 @@ VarMap getMacros() {
         _macros['OUTDIR'] = config.outDir.getFullName() + '/';
         _macros['SCRIPTNAME'] = 'script name not defined!';
         _macros['CRACKBIN'] = config.crackBin;
-        
+
         # these get filled in from the dir config
         _macros['OPTS'] = '';
         _macros['ARGS'] = ''
     }
-    
+
     return _macros;
 }
 
@@ -98,24 +98,24 @@ class Test {
     }
 
     void writeScript() {
-        
+
         _data.scriptName = scriptName;
         out := File(_data.scriptName,"w");
 
         text := _data.sections["FILE"];
 
         out.write(text);
-        
+
     }
 
     void run(Poller poller) {
-        
+
         if (_isSkipped) {
             cout `[$(_data.fInfo)]: SKIPPED: $_isSkipped\n`;
             _status = T_FINISHED;
             return;
         }
-        
+
         writeScript();
 
         _status = T_RUNNING;
@@ -207,7 +207,7 @@ class Test {
         getMacros()['UNIQ'] = radix(scriptName.makeHashVal(), 16);
         _data.sections = dc.merge(Template.load(testFile));
         _data.sections.expandAll(getMacros());
-        
+
         # make sure we've got everything we need
         checkTemplate();
 
@@ -239,12 +239,12 @@ class TestSuite {
     PriorityQueue[Test] _testList = {};
     CmdOptions _options = {};
     Poller __poller = {};
-    
+
     void usage() {
         _options.printUsage(FStr() `Usage: $(argv[0]) -c <crack binary> [options]\n`);
         exit(1);
     }
-    
+
     Template getDirConfig(Path dir) {
 
         // directory based config
@@ -264,7 +264,7 @@ class TestSuite {
     }
 
     void scanForTests(Path dir) {
-    
+
         cout `importing tests from $dir ... `;
         dc := getDirConfig(dir);
 
@@ -278,7 +278,7 @@ class TestSuite {
         }
 
         cout `found $cnt\n`;
-        
+
         // recurse through children
         for (child :in dir.children()) {
             if (child.isDir())
@@ -357,7 +357,7 @@ class TestSuite {
     }
 
     oper init() {
-        
+
         StringArray bDefStrings = {};
         for (i :in builderDefList) {
             bDefStrings.append(i.key);
@@ -378,7 +378,7 @@ class TestSuite {
         _options.add("diff", "", "Show a diff of expected vs actual output if a test fails","f", CMD_BOOL);
         _options.add("stop-on-fail", "", "Stop on first test failure and display diff","f", CMD_BOOL);
         _options.parse(argv);
-                
+
         if (_options.getBool("help"))
             usage();
 
@@ -388,7 +388,7 @@ class TestSuite {
             cerr `you must explicitly specify the crack binary via the -c option\n\n`;
             usage();
         }
-        
+
         config.rootDir = makePath(_options.getString("testdir"));
         config.outDir = makePath(_options.getString("outdir"));
         config.sourceDir = makePath(_options.getString("sourcedir"));
@@ -439,9 +439,9 @@ class TestSuite {
 
         // in the future, do a version check to make sure we have a good crack binary
         //checkBinary();
-        
+
     }
-    
+
     void showStats() {
 
         cout `total runtime: $(testSuiteStats.getTotalTime()) secs\n`;
@@ -461,7 +461,7 @@ class TestSuite {
     }
 
     void run() {
-        
+
         if (config.rootDir)
             scanForTests(config.rootDir);
 
@@ -476,7 +476,7 @@ class TestSuite {
 
         if (!_singleTest)
             showStats();
-        
+
     }
 
 }
@@ -485,5 +485,5 @@ suite := TestSuite();
 suite.run();
 
 if (testSuiteStats.failList)
-    exit(2);  # an exit code of 2 indicates that we failed due to a test 
+    exit(2);  # an exit code of 2 indicates that we failed due to a test
               # failure

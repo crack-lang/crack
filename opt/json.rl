@@ -1,6 +1,6 @@
 //
 // A JSON parser based on the Ragel state machine from http://flori.github.com/json/
-// This is a derivative work as defined by the license at 
+// This is a derivative work as defined by the license at
 // http://www.ruby-lang.org/en/LICENSE.txt
 // The MPL 2.0 license of Crack fulfills the requirements of 2.a and 3.a of
 // that license
@@ -11,18 +11,18 @@
 
 // Copyright 2012 Google Inc.
 // Copyright 2012 Conrad Steenberg <conrad.steenberg@gmail.com>
-// 
+//
 //   This Source Code Form is subject to the terms of the Mozilla Public
 //   License, v. 2.0. If a copy of the MPL was not distributed with this
 //   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-// 
+//
 // 12/10/2011
 
 // For more info on JSON, see http://json.org/
 
 import crack.cont.array Array;
 import crack.lang AppendBuffer, Buffer, CString, ManagedBuffer;
-import crack.enc.json.lib JsonObject, JsonArray, JsonInt, JsonFloat, JsonBool, 
+import crack.enc.json.lib JsonObject, JsonArray, JsonInt, JsonFloat, JsonBool,
     JsonString, UnexpectedToken, ParseException;
 import crack.math atoi, INFINITY, NAN, strtof, fpclassify, FP_INFINITE, FP_NAN,
     FP_NORMAL, FP_ZERO, sign;
@@ -328,11 +328,11 @@ class JsonParser {
         include JSON_common;
 
         write data;
-        
+
         action startString {
             memo++;
         }
-        
+
         action regularString {
             append_buf.extend(data + uintz(memo), p - memo);
             memo = p;
@@ -501,7 +501,7 @@ class JsonParser {
             fhold;
             fbreak;
         }
-        
+
         pair      = ignore* begin_name >parse_name ignore* name_separator
                     ignore* begin_value >parse_value;
         next_pair = ignore* value_separator pair;

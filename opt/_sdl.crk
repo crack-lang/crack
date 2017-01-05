@@ -1,10 +1,10 @@
 // Copyright 2010-2012 Google Inc.
 // Copyright 2011 Conrad Steenberg <conrad.steenberg@gmail.com>
-// 
+//
 //   This Source Code Form is subject to the terms of the Mozilla Public
 //   License, v. 2.0. If a copy of the MPL was not distributed with this
 //   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-// 
+//
 # Crack SDL bindings.
 
 @import crack.extgen generateExtension;
@@ -81,7 +81,7 @@ struct Undef {};
 ';
     @crack_internal
 
-    
+
     const uint32 SDL_INIT_TIMER,
                  SDL_INIT_AUDIO,
                  SDL_INIT_VIDEO,
@@ -90,11 +90,11 @@ struct Undef {};
                  SDL_INIT_EVERYTHING,
                  SDL_INIT_NOPARACHUTE,
                  SDL_INIT_EVENTTHREAD;
-    
+
     int SDL_Init(uint32 flags);
-    
+
     int SDL_Quit();
-    
+
     class SDL_Surface;
 
     const uint32 SDL_SWSURFACE,
@@ -108,8 +108,8 @@ struct Undef {};
                  SDL_OPENGLBLIT,
                  SDL_RESIZABLE,
                  SDL_NOFRAME;
-    
-    SDL_Surface SDL_SetVideoMode(int width, int height, int bpp, 
+
+    SDL_Surface SDL_SetVideoMode(int width, int height, int bpp,
                                  uint32 flags
                                  );
 
@@ -117,7 +117,7 @@ struct Undef {};
     class SDL_Rect {
         int16 x, y;
         uint16 w, h;
-        
+
         @cname crk_SDL_Rect_init
         oper init(int16 x, int16 y, uint16 w, uint16 h);
     }
@@ -127,7 +127,7 @@ struct Undef {};
     int SDL_Flip(SDL_Surface screen);
     int SDL_FillRect(SDL_Surface surface, SDL_Rect rect, uint32 color);
 
-    
+
     class SDL_KeyboardEvent;
     SDL_KeyboardEvent SDL_Event_GetKey(SDL_Event evt);
     class SDL_keysym;
@@ -147,22 +147,22 @@ struct Undef {};
     SDL_ResizeEvent SDL_Event_GetResize(SDL_Event evt);
     int16 SDL_ResizeEvent_GetW(SDL_ResizeEvent evt);
     int16 SDL_ResizeEvent_GetH(SDL_ResizeEvent evt);
-    
+
     class SDL_JoyAxisEvent {
         byte type, which, axis;
         int16 value;
     }
-    
+
     SDL_JoyAxisEvent SDL_Event_GetJoyAxisEvent(SDL_Event evt);
     byte SDL_JoyAxisEvent_GetType(SDL_JoyAxisEvent evt);
     byte SDL_JoyAxisEvent_GetWhich(SDL_JoyAxisEvent evt);
     byte SDL_JoyAxisEvent_GetAxis(SDL_JoyAxisEvent evt);
     int16 SDL_JoyAxisEvent_GetValue(SDL_JoyAxisEvent evt);
-    
+
     class SDL_JoyButtonEvent {
         byte type, which, button, state;
     }
-    
+
     SDL_JoyButtonEvent SDL_Event_GetJoyButtonEvent(SDL_Event evt);
     byte SDL_JoyButtonEvent_GetType(SDL_JoyButtonEvent evt);
     byte SDL_JoyButtonEvent_GetWhich(SDL_JoyButtonEvent evt);
@@ -177,40 +177,40 @@ struct Undef {};
         byte type, which, button, state;
         uint16 x, y;
     }
-    
+
     SDL_MouseButtonEvent SDL_Event_GetMouseButtonEvent(SDL_Event evt);
-    
+
     void SDL_WarpMouse(uint x, uint y);
 
-    const uint32 SDL_NOEVENT, 
+    const uint32 SDL_NOEVENT,
                  SDL_KEYDOWN,
-                 SDL_KEYUP, 
+                 SDL_KEYUP,
                  SDL_MOUSEMOTION,
                  SDL_MOUSEBUTTONDOWN,
-                 SDL_MOUSEBUTTONUP, 
-                 SDL_JOYAXISMOTION, 
-                 SDL_JOYBALLMOTION, 
-                 SDL_JOYHATMOTION, 
-                 SDL_JOYBUTTONDOWN, 
-                 SDL_JOYBUTTONUP, 
-                 SDL_QUIT, 
-                 SDL_SYSWMEVENT, 
-                 SDL_EVENT_RESERVED2, 
-                 SDL_EVENT_RESERVED3, 
+                 SDL_MOUSEBUTTONUP,
+                 SDL_JOYAXISMOTION,
+                 SDL_JOYBALLMOTION,
+                 SDL_JOYHATMOTION,
+                 SDL_JOYBUTTONDOWN,
+                 SDL_JOYBUTTONUP,
+                 SDL_QUIT,
+                 SDL_SYSWMEVENT,
+                 SDL_EVENT_RESERVED2,
+                 SDL_EVENT_RESERVED3,
                  SDL_USEREVENT,
                  SDL_VIDEORESIZE,
                  SDL_NUMEVENTS;
-    
+
     const uint32 SDL_PRESSED, SDL_RELEASED;
-    
+
     int SDL_PollEvent(SDL_Event event);
-    
+
     const uint32 SDL_GL_RED_SIZE,
                  SDL_GL_GREEN_SIZE,
                  SDL_GL_BLUE_SIZE,
                  SDL_GL_DEPTH_SIZE,
                  SDL_GL_DOUBLEBUFFER;
-    
+
     int SDL_GL_SetAttribute(uint32 attr, int value);
     int SDL_GL_GetAttribute(uint32 attr, array[int] value);
     void SDL_GL_SwapBuffers();

@@ -131,48 +131,48 @@ void crack_runtime_time_cinit(crack::ext::Module *mod) {
 
 
     f = type_InternalDate->addMethod(
-        type_int64, 
+        type_int64,
         "getSeconds",
         (void *)crk_getSeconds
     );
 
 
     f = type_InternalDate->addMethod(
-        type_void, 
+        type_void,
         "setLocalSeconds",
         (void *)crk_localtime
     );
-    f->addArg(type_int64, 
+    f->addArg(type_int64,
               "t"
               );
 
 
     f = type_InternalDate->addMethod(
-        type_void, 
+        type_void,
         "setLocalNow",
         (void *)crk_localtime_now
     );
 
 
     f = type_InternalDate->addMethod(
-        type_void, 
+        type_void,
         "setUTCSeconds",
         (void *)crk_gmtime
     );
-    f->addArg(type_int64, 
+    f->addArg(type_int64,
               "t"
               );
 
 
     f = type_InternalDate->addMethod(
-        type_void, 
+        type_void,
         "setUTCNow",
         (void *)crk_gmtime_now
     );
 
 
     f = type_InternalDate->addMethod(
-        type_void, 
+        type_void,
         "setEpoch",
         (void *)crk_epoch
     );

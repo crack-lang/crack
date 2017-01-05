@@ -196,7 +196,7 @@
 
     // Determine the name of the current elements key.
     byteptr bson_cursor_key(bson_cursor c);
-    
+
     // Get the value stored at the cursor, as string.
     @inject '
     byteptr bson_cursor_get_string_crk(bson_cursor *c) {
@@ -333,7 +333,7 @@
     @cname bson_cursor_get_timestamp_crk
     int64 bson_cursor_get_timestamp(bson_cursor c);
 
-    // Get the value stored at the cursor, as a 64-bit integer.     
+    // Get the value stored at the cursor, as a 64-bit integer.
     @inject 'gint64 bson_cursor_get_int64_crk(bson_cursor* c){
         gint64 dest;
         if (bson_cursor_get_int64(c, &dest)) return dest;
@@ -417,7 +417,7 @@
     @inject 'bool mongo_sync_cmd_insert_crk(mongo_sync_connection *conn,
                                             byteptr ns, bson *doc) {
        return mongo_sync_cmd_insert(conn, (const gchar *) ns, doc, NULL);
-        
+
     }\n'
 
     @cname mongo_sync_cmd_insert_crk
@@ -500,10 +500,10 @@
     bool mongo_sync_cmd_index_drop_all(mongo_sync_connection conn, byteptr ns);
 
     // Cursor API --------------------------------------------------------------
-    // Create an empty packet. 
+    // Create an empty packet.
     mongo_packet mongo_wire_packet_new();
 
-    // Free up a mongo packet. 
+    // Free up a mongo packet.
     void mongo_wire_packet_free(mongo_packet p);
 
     // Create a new MongoDB Cursor.
@@ -533,7 +533,7 @@
     // Return a connection to the synchronous connection pool.
     bool mongo_sync_pool_return(mongo_sync_pool pool,
                                  mongo_sync_pool_connection conn);
-        
+
     // Utils -------------------------------------------------------------------
 
     // Intitialize the static ObjectID components.

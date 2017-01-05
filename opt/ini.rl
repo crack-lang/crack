@@ -1,11 +1,11 @@
 // INI file parser
 // Copyright 2012 Google Inc.
 // Copyright 2012 Conrad Steenberg <conrad.steenberg@gmail.com>
-// 
+//
 //   This Source Code Form is subject to the terms of the Mozilla Public
 //   License, v. 2.0. If a copy of the MPL was not distributed with this
 //   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-// 
+//
 // 2/11/2012
 
 import crack.io FStr, cout;
@@ -25,9 +25,9 @@ class IniError {
     uint line, col;
 
     oper init(String msg, uint line, uint col) :
-        msg = msg, 
-        line = line, 
-        col = col { 
+        msg = msg,
+        line = line,
+        col = col {
     }
 
     void formatTo(Formatter fmt) {
@@ -47,7 +47,7 @@ class IniMap : OrderedHashMap[String, OrderedHashMap[String, String]] {
 
     }
 
-    
+
 }
 
 class IniParser {
@@ -88,7 +88,7 @@ class IniParser {
                 else
                     msg = "Invalid value syntax ";
                 _errors.append(IniError(msg + _sliceBuffer(inputString, okp, p),
-                                        line, 
+                                        line,
                                         p - lineOffset - 1
                                         )
                                );
@@ -204,7 +204,7 @@ class IniParser {
 
         comment = ';' (any -- eol)* eolComment;
 
-        section = '[' >startSection varName ']' >endSection ws? 
+        section = '[' >startSection varName ']' >endSection ws?
                    eol >incLineNum @hold;
 
         keyval = varNameGen (ws? >keyEnd) ('='|':') >keyEnd >valueStart (ws? @valueStart)
@@ -277,7 +277,7 @@ class IniParser {
             data_size := statInfo.st_size;
             tdata := mmap(null, statInfo.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
             data := Buffer(byteptr(tdata), data_size);
-            
+
             if (uintz(tdata) != uintz(0) - 1) {
                 parse(data);
                 munmap(tdata, data_size);

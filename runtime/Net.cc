@@ -2,11 +2,11 @@
 // Copyright 2011 Shannon Weyrick <weyrick@mozek.us>
 // Copyright 2012 Arno Rehn <arno@arnorehn.de>
 // Copyright 2012 Conrad Steenberg <conrad.steenberg@gmail.com>
-// 
+//
 //   This Source Code Form is subject to the terms of the Mozilla Public
 //   License, v. 2.0. If a copy of the MPL was not distributed with this
 //   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-// 
+//
 
 #include "Net.h"
 #include "config.h"
@@ -38,7 +38,7 @@
 using namespace std;
 
 namespace {
-    static void set_sockaddr_in(struct sockaddr_in *sa, 
+    static void set_sockaddr_in(struct sockaddr_in *sa,
                                 crack::runtime::SockAddrIn *addr
                                 ) {
         sa->sin_family = AF_INET;
@@ -80,8 +80,8 @@ namespace {
 // our exported functions
 namespace crack { namespace runtime {
 
-void SockAddrIn::init1(SockAddrIn *inst, uint8_t a, uint8_t b, uint8_t c, 
-                       uint8_t d, 
+void SockAddrIn::init1(SockAddrIn *inst, uint8_t a, uint8_t b, uint8_t c,
+                       uint8_t d,
                        unsigned int port0
                        ) {
     inst->family = AF_INET;
@@ -198,7 +198,7 @@ void PollSet_destroy(struct pollfd *pollset) {
     free(pollset);
 }
 
-void PollSet_set(struct pollfd *set, unsigned int index, int fd, int events, 
+void PollSet_set(struct pollfd *set, unsigned int index, int fd, int events,
                  int revents
                  ) {
     struct pollfd &elem = set[index];
@@ -216,11 +216,11 @@ void PollSet_get(struct pollfd *set, unsigned int index,
     outputEntry->revents = elem.fd;
 }
 
-// find the next poll entry that has an event in revents whose index is >= 
-// index.  Makes it easy to iterate over the pollset.  Returns the index of 
-// the item found, stores the entry info in outputEntry, -1 if no item was 
+// find the next poll entry that has an event in revents whose index is >=
+// index.  Makes it easy to iterate over the pollset.  Returns the index of
+// the item found, stores the entry info in outputEntry, -1 if no item was
 // found.
-int PollSet_next(struct pollfd *set, unsigned int size, unsigned int index, 
+int PollSet_next(struct pollfd *set, unsigned int size, unsigned int index,
                  PollEvt *outputEntry
                  ) {
     for (; index < size; ++index) {
@@ -232,13 +232,13 @@ int PollSet_next(struct pollfd *set, unsigned int size, unsigned int index,
             return index;
         }
     }
-    
+
     // not found.
     return -1;
 }
 
 void PollSet_delete(struct pollfd *set, unsigned int size, unsigned int index) {
-    memmove(set + index, set + index + 1, 
+    memmove(set + index, set + index + 1,
             (size - index - 1) * sizeof(struct pollfd)
             );
 }

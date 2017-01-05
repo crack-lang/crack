@@ -1,10 +1,10 @@
 // Copyright 2010-2012 Google Inc.
 // Copyright 2012 Conrad Steenberg <conrad.steenberg@gmail.com>
-// 
+//
 //   This Source Code Form is subject to the terms of the Mozilla Public
 //   License, v. 2.0. If a copy of the MPL was not distributed with this
 //   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-// 
+//
 
 #ifndef _crack_runtime_Net_h_
 #define _crack_runtime_Net_h_
@@ -57,8 +57,8 @@ struct SockAddrIn : public SockAddr {
     uint32_t addr;
     unsigned int port;
 
-    static void init1(SockAddrIn *inst, uint8_t a, uint8_t b, uint8_t c, 
-                      uint8_t d, 
+    static void init1(SockAddrIn *inst, uint8_t a, uint8_t b, uint8_t c,
+                      uint8_t d,
                       unsigned int port
                       );
 
@@ -106,13 +106,13 @@ int SigSet_has(sigset_t *sigmask, int signum);
 pollfd *PollSet_create(unsigned int size);
 void PollSet_copy(struct pollfd *dst, struct pollfd *src, unsigned int size);
 void PollSet_destroy(struct pollfd *pollset);
-void PollSet_set(struct pollfd *set, unsigned int index, int fd, int events, 
+void PollSet_set(struct pollfd *set, unsigned int index, int fd, int events,
                  int revents
                  );
 void PollSet_get(struct pollfd *set, unsigned int index,
                  PollEvt *outputEntry
                  );
-int PollSet_next(struct pollfd *set, unsigned int size, unsigned int index, 
+int PollSet_next(struct pollfd *set, unsigned int size, unsigned int index,
                  PollEvt *outputEntry
                  );
 void PollSet_delete(struct pollfd *set, unsigned int size, unsigned int index);

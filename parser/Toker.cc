@@ -1,11 +1,11 @@
 // Copyright 2003 Michael A. Muller <mmuller@enduden.com>
 // Copyright 2009-2012 Google Inc.
 // Copyright 2010-2012 Shannon Weyrick <weyrick@mozek.us>
-// 
+//
 //   This Source Code Form is subject to the terms of the Mozilla Public
 //   License, v. 2.0. If a copy of the MPL was not distributed with this
 //   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-// 
+//
 
 #include <limits.h>
 #include <sstream>
@@ -91,7 +91,7 @@ void Toker::evaluateIndentation(const string &val) {
             }
         }
     }
-    
+
     if (inPrefix && indent && indent < minIndentLevel)
         minIndentLevel = indent;
 }
@@ -123,7 +123,7 @@ void Toker::fixIndentation(string &val) {
             result.push_back(val[i]);
         }
     }
-    
+
     // if we ended in a prefix, flush it.
     if (inPrefix) {
         result.push_back('\n');
@@ -131,10 +131,10 @@ void Toker::fixIndentation(string &val) {
             indent -= minIndentLevel;
         result.append(indent, ' ');
     }
-    
+
     val = result;
 }
-    
+
 Toker::Toker(std::istream &src, const char *sourceName, int lineNumber) :
     src(src),
     state(st_none),
@@ -201,19 +201,19 @@ Token Toker::fixIdent(const string &data, const Location &loc) {
     else if (data == "do")
         return Token(Token::doKw, data, loc);
     else
-        return Token(Token::ident, data, 
+        return Token(Token::ident, data,
                      getLocation()
                      );
 }
 
 Token Toker::readToken() {
     char ch, terminator;
-    
+
     // information on the preceeding characters for compound symbols
     char symchars[4];
     int sci = 0;
     Token::Type t1, t2, t3;
-    
+
     // for parsing octal and hex character code escape sequences.
     char codeChar;
     int codeLen;
@@ -221,7 +221,7 @@ Token Toker::readToken() {
     stringstream buf;
 
     // we should only be able to enter this in one of three states.
-    assert((state == st_none || state == st_interpNone || state == st_istr) && 
+    assert((state == st_none || state == st_interpNone || state == st_istr) &&
            "readToken(): tokenizer in invalid state"
            );
 
@@ -253,12 +253,12 @@ Token Toker::readToken() {
                 }
                 // fall through to interpNone
 
-            // the "interpolation none" state is a base state that doesn't 
-            // except the augmented string tokens (e.g. i'1234', b'x'...).  
-            // These produce unexpected behavior in an interpolation 
-            // expression, e.g. `value = '$i'` would treat the "i'" as the 
-            // beginning of an integer string token.  Whenever we come into 
-            // this state, we revert the state to st_none - it's only valid 
+            // the "interpolation none" state is a base state that doesn't
+            // except the augmented string tokens (e.g. i'1234', b'x'...).
+            // These produce unexpected behavior in an interpolation
+            // expression, e.g. `value = '$i'` would treat the "i'" as the
+            // beginning of an integer string token.  Whenever we come into
+            // this state, we revert the state to st_none - it's only valid
             // after being explicitly set.
             case st_interpNone:
                 state = st_none;
@@ -286,7 +286,7 @@ Token Toker::readToken() {
                     symchars[sci++] = ch; t1 = Token::bang; t2 =Token::ne;
                     state = st_digram;
                 } else if (ch == '>') {
-                    symchars[sci++] = ch; t1 = Token::gt; t2 = Token::ge; 
+                    symchars[sci++] = ch; t1 = Token::gt; t2 = Token::ge;
                     t3 = Token::bitRSh;
                     state = st_ltgt;
                 } else if (ch == '<') {
@@ -302,7 +302,7 @@ Token Toker::readToken() {
                 } else if (ch == '}') {
                     return Token(Token::rcurly, "}", getLocation());
                 } else if (ch == '[') {
-                    return Token(Token::lbracket, "[", 
+                    return Token(Token::lbracket, "[",
                                  getLocation()
                                  );
                 } else if (ch == ']') {
@@ -310,7 +310,7 @@ Token Toker::readToken() {
                                  getLocation()
                                  );
                 } else if (ch == '$') {
-                    return Token(Token::dollar, "$", 
+                    return Token(Token::dollar, "$",
                                  getLocation()
                                  );
                 } else if (ch == '+') {
@@ -343,7 +343,7 @@ Token Toker::readToken() {
                     state = st_string;
                     t1 = Token::string;
                 } else if (ch == ':') {
-                    symchars[sci++] = ch; t1 = Token::colon; 
+                    symchars[sci++] = ch; t1 = Token::colon;
                     t2 = Token::define;
                     t3 = Token::scoping;
                     state = st_digram;
@@ -364,13 +364,13 @@ Token Toker::readToken() {
                 } else if (ch == '`') {
                     initIndent(false);
                     state = st_istr;
-                    return Token(Token::istrBegin, "`", 
+                    return Token(Token::istrBegin, "`",
                                  getLocation()
                                  );
                 } else if (ch == '?') {
                     return Token(Token::quest, "?", getLocation());
                 } else {
-                    ParseError::abort(Token(Token::dot, "", 
+                    ParseError::abort(Token(Token::dot, "",
                                             getLocation()
                                             ),
                                       "unknown token"
@@ -390,7 +390,7 @@ Token Toker::readToken() {
                                  );
                 } else {
                     ungetChar(ch);
-                    return Token(Token::bitAnd, "&", 
+                    return Token(Token::bitAnd, "&",
                                  getLocation()
                                  );
                 }
@@ -408,7 +408,7 @@ Token Toker::readToken() {
                                  );
                 } else {
                     ungetChar(ch);
-                    return Token(Token::bitOr, "|", 
+                    return Token(Token::bitOr, "|",
                                  getLocation()
                                  );
                 }
@@ -452,7 +452,7 @@ Token Toker::readToken() {
                     return Token(t1, symchars, getLocation());
                 }
                 break;
-            
+
             case st_period:
                 // check for float
                 if (isdigit(ch)) {
@@ -469,7 +469,7 @@ Token Toker::readToken() {
             // integer or byte coded as a string
             case st_strint:
                 if (ch == '"' || ch == '\'') {
-                    // store a slash to disambiguate this from a hex value 
+                    // store a slash to disambiguate this from a hex value
                     // with a leading 'b'.
                     buf << '/';
                     state = st_string;
@@ -478,7 +478,7 @@ Token Toker::readToken() {
                     break;
                 }
                 // fall through to ident processing via rawStr
-            
+
             // raw string
             case st_rawStr:
                 if (ch == '"' || ch == '\'') {
@@ -501,7 +501,7 @@ Token Toker::readToken() {
                 } else if (state == st_indentStr && ch == '`') {
                     state = st_istr;
                     initIndent(true);
-                    return Token(Token::istrBegin, "`", 
+                    return Token(Token::istrBegin, "`",
                                  getLocation()
                                  );
                 } else {
@@ -511,24 +511,24 @@ Token Toker::readToken() {
                 // fall through to ident processing
 
             case st_ident:
-   
+
                 // if we got a non-alphanumeric, non-underscore we're done
                 if (!isalnum(ch) && ch != '_' && ch > 0) {
                     ungetChar(ch);
                     state = st_none;
                     return fixIdent(buf.str(), getLocation());
                 }
-    
+
                 buf << ch;
                 break;
-   
+
             case st_slash:
                 if (ch == '/') {
                     symchars[0] = ch;
                     state = st_comment;
                 } else if (ch == '=') {
                     state = st_none;
-                    return Token(Token::assignSlash, "/=", 
+                    return Token(Token::assignSlash, "/=",
                                  getLocation()
                                  );
                 } else if (ch == '*') {
@@ -539,15 +539,15 @@ Token Toker::readToken() {
                     return Token(Token::slash, "/", getLocation());
                 }
                 break;
-            
+
             case st_comment:
                 buf << ch;
                 // newline character takes us out of the comment state
                 if (ch == '\n') {
                     state = st_none;
                     string val = buf.str();
-                    
-                    // If the comment started with "///" or "##", it is a doc 
+
+                    // If the comment started with "///" or "##", it is a doc
                     // token.
                     if (val[0] == symchars[0]) {
                         return Token(Token::doc, val.substr(1), getLocation());
@@ -556,19 +556,19 @@ Token Toker::readToken() {
                     }
                 }
                 break;
-            
+
             case st_ccomment:
                 if (ch == '*')
                     state = st_ccomment2;
                 else
                     buf << ch;
                 break;
-            
+
             case st_ccomment2:
                 if (ch == '/') {
                     state = st_none;
                     string val = buf.str();
-                    
+
                     // If the comment started with "/**", this is a doc token.
                     if (val[0] == '*') {
                         return Token(Token::doc, val.substr(1), getLocation());
@@ -584,9 +584,9 @@ Token Toker::readToken() {
                     buf << "**";
                 }
                 break;
-   
+
             case st_string:
-   
+
                 // check for the terminator
                 if (ch == terminator) {
                     state = st_none;
@@ -599,12 +599,12 @@ Token Toker::readToken() {
                 } else {
                     buf << ch;
                 }
-    
+
                 break;
-   
+
             case st_strEscapeChar:
             case st_istrEscapeChar:
-   
+
                 switch (ch) {
                     case 't':
                         buf << '\t';
@@ -646,15 +646,15 @@ Token Toker::readToken() {
                             buf << ch;
                         }
                 }
-                
-                // if we haven't moved on to one of the character code states, 
+
+                // if we haven't moved on to one of the character code states,
                 // return to the normal string processing state
                 if (state == st_strEscapeChar)
                     state = st_string;
                 else if (state == st_istrEscapeChar)
                     state = st_istr;
                 break;
-            
+
             case st_strEscapedIndentedNewline:
             case st_istrEscapedIndentedNewline:
                 if (ch == ' ') {
@@ -667,13 +667,13 @@ Token Toker::readToken() {
                         minIndentLevel = indentLevel;
                     state = (state == st_strEscapedIndentedNewline) ?
                                 st_string : st_istr;
-                                
+
                 }
                 break;
 
             case st_strOctal:
             case st_istrOctal:
-                
+
                 if (isdigit(ch) && ch < '8' && codeLen < 3) {
                     codeChar = (codeChar << 3) | (ch - '0');
                     ++codeLen;
@@ -683,10 +683,10 @@ Token Toker::readToken() {
                     state = (state == st_strOctal) ? st_string : st_istr;
                 }
                 break;
-            
+
             case st_strHex:
             case st_istrHex:
-                
+
                 if (isdigit(ch)) {
                     ch = ch - '0';
                 } else if (ch >= 'a' && ch <= 'f') {
@@ -704,7 +704,7 @@ Token Toker::readToken() {
 
                 codeChar = (codeChar << 4) | ch;
                 ++codeLen;
-                
+
                 if (codeLen == 2) {
                     buf << codeChar;
                     state = (state == st_strHex) ? st_string : st_istr;
@@ -735,7 +735,7 @@ Token Toker::readToken() {
                 // check for the terminator
                 if (ch == terminator) {
                     state = st_none;
-                    return Token(Token::string, buf.str(), 
+                    return Token(Token::string, buf.str(),
                                  getLocation()
                                  );
                 }
@@ -745,11 +745,11 @@ Token Toker::readToken() {
                     state = st_rawStrEscape;
 
                 break;
-            
+
             case st_rawStrEscape:
-                // the only thing special about escape chars in raw strings is 
-                // that they can't preceed a terminator.  This is how python 
-                // does it, I'm not sure why, but barring compelling reasons 
+                // the only thing special about escape chars in raw strings is
+                // that they can't preceed a terminator.  This is how python
+                // does it, I'm not sure why, but barring compelling reasons
                 // to do anything else...
                 buf << ch;
                 state = st_rawStrBody;
@@ -820,7 +820,7 @@ Token Toker::readToken() {
                 } else {
                     ungetChar(ch);
                     state = st_none;
-                    return Token(Token::integer, "0", 
+                    return Token(Token::integer, "0",
                                  getLocation()
                                  );
                 }
@@ -837,25 +837,25 @@ Token Toker::readToken() {
                 } else {
                     ungetChar(ch);
                     state = st_none;
-                    return Token(Token::integer, buf.str(), 
+                    return Token(Token::integer, buf.str(),
                                  getLocation()
                                  );
                 }
                 break;
 
             case st_intdot:
-                // integer followed by a period, could be a float if followed 
+                // integer followed by a period, could be a float if followed
                 // by another digit...
                 if (isdigit(ch)) {
                     buf << '.' << ch;
                     state = st_float;
                 } else {
-                    // unget both the last character and the period since 
+                    // unget both the last character and the period since
                     // neither is part of this integer.
                     ungetChar(ch);
                     ungetChar('.');
                     state = st_none;
-                    return Token(Token::integer, buf.str(), 
+                    return Token(Token::integer, buf.str(),
                                  getLocation()
                                  );
                 }
@@ -916,14 +916,14 @@ Token Toker::readToken() {
                 break;
 
             case st_istr:
-                // note that we don't reindent in any of these values, 
+                // note that we don't reindent in any of these values,
                 // reindenting of i-strings is done at the next level up.
 
                 if (ch == '`') {
                     if (buf.tellp()) {
-                        // if we've accumulated some raw data since the last 
-                        // token was returned, return it as a string now and 
-                        // putback the '`' so we can do the istrEnd the next 
+                        // if we've accumulated some raw data since the last
+                        // token was returned, return it as a string now and
+                        // putback the '`' so we can do the istrEnd the next
                         // time.
                         ungetChar(ch);
                         return Token(Token::string, buf.str(),
@@ -946,13 +946,13 @@ Token Toker::readToken() {
                     buf << ch;
                 }
                 break;
-            
+
             case st_plus:
                 state = st_none;
                 if (ch == '+') {
                     return Token(Token::incr, "++", getLocation());
                 } else if (ch == '=') {
-                    return Token(Token::assignPlus, "+=", 
+                    return Token(Token::assignPlus, "+=",
                                  getLocation()
                                  );
                 } else {
@@ -960,8 +960,8 @@ Token Toker::readToken() {
                     return Token(Token::plus, "+", getLocation());
                 }
                 break;
-            
-            // we just scanned a sequence of characters that can be used for 
+
+            // we just scanned a sequence of characters that can be used for
             // augmented assignment.
             case st_postaug:
                 state = st_none;
@@ -975,12 +975,12 @@ Token Toker::readToken() {
                     return Token(t1, symchars, getLocation());
                 }
                 break;
-            
+
             default:
                throw logic_error("tokenizer in illegal state");
         }
     }
- 
+
     // if we got here, we got to the end of the stream, make sure it was
     // expected
     if (state == st_none || state == st_comment) {
@@ -1002,9 +1002,9 @@ Token Toker::getToken() {
     if (tokens.size()) {
         Token temp = tokens.back();
         tokens.pop_back();
-        
+
         // if we're currently in the i-string state, leave it if we don't pass
-        // a string.  If we're not in it and we've got an i-string begin, get 
+        // a string.  If we're not in it and we've got an i-string begin, get
         // in it.
         if (state == st_istr && !temp.isString() && !temp.isIstrBegin())
             state = st_none;
@@ -1015,11 +1015,11 @@ Token Toker::getToken() {
         vector<Token> toks;
         toks.push_back(readToken());
 
-        // we want to read all of the i-string tokens as a batch so that we 
-        // can apply the indentation transforms to them all collectively. 
+        // we want to read all of the i-string tokens as a batch so that we
+        // can apply the indentation transforms to them all collectively.
         if (indentedString && toks.front().isIstrBegin()) {
-            
-            // we have to approximate the parser here so that we can go back 
+
+            // we have to approximate the parser here so that we can go back
             // into i-string mode after parsing an expression
             int parens = 0;
             while (!toks.back().isIstrEnd() && !toks.back().isEnd()) {
@@ -1044,14 +1044,14 @@ Token Toker::getToken() {
                 }
                 toks.push_back(readToken());
             }
-            
+
             for (int i = 0; i < toks.size(); ++i)
                 if (toks[i].isString())
                     evaluateIndentation(toks[i].data);
             for (int i = 0; i < toks.size(); ++i)
                 if (toks[i].isString())
                     fixIndentation(toks[i].data);
-            
+
             // push everything but the first token
             for (int i = toks.size() - 1; i; --i)
                 tokens.push_back(toks[i]);

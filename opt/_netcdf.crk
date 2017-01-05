@@ -260,7 +260,7 @@
     int nc_put_vara_int (int ncid, int varid, array[uint64] startp,
                          array[uint64] countp, array[int] op);
     int nc_get_vara_int (int ncid, int varid, array[uint64] startp,
-                         array[uint64] countp, array[int] op);    
+                         array[uint64] countp, array[int] op);
     // Error handling
     byteptr nc_strerror(int status);
     @inject 'int nc_get_status() {
@@ -280,7 +280,7 @@
         else
             return -1;
     }\n'
-        
+
     @cname nc_inq_ndims_crk
     int nc_inq_ndims(int ncid);
 

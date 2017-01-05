@@ -7,13 +7,13 @@
 
 // *****************************************************************************
 // * Copyright 2011 See AUTHORS file.
-// * 
+// *
 // * Licensed under the Apache License, Version 2.0 (the "License");
 // * you may not use this file except in compliance with the License.
 // * You may obtain a copy of the License at
-// * 
+// *
 // *   http://www.apache.org/licenses/LICENSE-2.0
-// * 
+// *
 // * Unless required by applicable law or agreed to in writing, software
 // * distributed under the License is distributed on an "AS IS" BASIS,
 // * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -381,7 +381,7 @@ class XmlReader {
 
     void _close(uint s) {
         _level--;
-        __root = _elements[-1].getParent() ? _elements.pop().getParent() : null; 
+        __root = _elements[-1].getParent() ? _elements.pop().getParent() : null;
         __current = _elements.count()  > 0 && _elements[-1].getType() != DOCINFO ? _elements[-1] : null;
     }
 
@@ -410,7 +410,7 @@ class XmlReader {
                     }
                     _text(data.substr(s, p - s - 2));
                 } else if (pe - p > 4 &&
-                    data[s + 1] == b'-' && 
+                    data[s + 1] == b'-' &&
                     data[s + 2] == b'-' &&
                     data[s + 3] != b'>'
                 ) {
@@ -529,7 +529,7 @@ class XmlReader {
 
     oper init () { }
 
-    Array[Element] _parse() {    // Do the first read. 
+    Array[Element] _parse() {    // Do the first read.
         if (data is null)
             InvalidResourceError(FStr() `Error parsing XML, null data pointer supplied`);
         uint s, parseLoops = 0;
@@ -574,7 +574,7 @@ class XmlReader {
 
     Array[Element] parse(Reader r) {
         data = PageBufferReader(r); // Reads one block
-        data_size = data.size; 
+        data_size = data.size;
         return _parse();
     }
 
@@ -595,7 +595,7 @@ class XmlReader {
             data_size = statInfo.st_size;
             tdata := mmap(null, statInfo.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
             data = PageBufferString(String(byteptr(tdata), data_size, false));
-            
+
             if (uintz(tdata) != uintz(0)-1){
                 Array[Element] retval = _parse();
                 munmap(tdata, data_size);

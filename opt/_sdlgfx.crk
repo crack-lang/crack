@@ -1,9 +1,9 @@
 // Copyright 2012 Google Inc.
-// 
+//
 //   This Source Code Form is subject to the terms of the Mozilla Public
 //   License, v. 2.0. If a copy of the MPL was not distributed with this
 //   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-// 
+//
 @import crack.extgen generateExtension;
 
 @generateExtension crack.ext._sdlgfx {
@@ -13,44 +13,44 @@
     @crack 'import crack.ext._sdl SDL_Surface;'
 
     @extern SDL_Surface
-    
+
     # the "Color" functions appear to accept a color of the form:
     # red green blue alpha, 1 byte each, low byte is alpha
-    
+
     int pixelColor(SDL_Surface dst, int16 x, int16 y, uint32 color);
-    int pixelRGBA(SDL_Surface dst, int16 x, int16 y, byte r, byte g, byte b, 
+    int pixelRGBA(SDL_Surface dst, int16 x, int16 y, byte r, byte g, byte b,
                   byte a);
 
     int hlineColor(SDL_Surface dst, int16 x1, int16 x2, int16 y, uint32 color);
-    int hlineRGBA(SDL_Surface dst, int16 x1, int16 x2, int16 y, byte r, byte 
+    int hlineRGBA(SDL_Surface dst, int16 x1, int16 x2, int16 y, byte r, byte
                   g, byte b, byte a);
 
     int vlineColor(SDL_Surface dst, int16 x, int16 y1, int16 y2, uint32 color);
-    int vlineRGBA(SDL_Surface dst, int16 x, int16 y1, int16 y2, byte r, byte 
+    int vlineRGBA(SDL_Surface dst, int16 x, int16 y1, int16 y2, byte r, byte
                   g, byte b, byte a);
 
-    int rectangleColor(SDL_Surface dst, int16 x1, int16 y1, int16 x2, int16 
+    int rectangleColor(SDL_Surface dst, int16 x1, int16 y1, int16 x2, int16
                        y2, uint32 color);
-    int rectangleRGBA(SDL_Surface dst, int16 x1, int16 y1, int16 x2, int16 y2, 
+    int rectangleRGBA(SDL_Surface dst, int16 x1, int16 y1, int16 x2, int16 y2,
                       byte r, byte g, byte b, byte a);
 
-    int boxColor(SDL_Surface dst, int16 x1, int16 y1, int16 x2, int16 y2, 
+    int boxColor(SDL_Surface dst, int16 x1, int16 y1, int16 x2, int16 y2,
                  uint32 color);
-    int boxRGBA(SDL_Surface dst, int16 x1, int16 y1, int16 x2, int16 y2, byte 
+    int boxRGBA(SDL_Surface dst, int16 x1, int16 y1, int16 x2, int16 y2, byte
                 r, byte g, byte b, byte a);
 
-    int lineColor(SDL_Surface dst, int16 x1, int16 y1, int16 x2, int16 y2, 
+    int lineColor(SDL_Surface dst, int16 x1, int16 y1, int16 x2, int16 y2,
                   uint32 color);
     int lineRGBA(SDL_Surface dst, int16 x1, int16 y1,
                  int16 x2, int16 y2, byte r, byte g, byte b, byte a);
 
-    int aalineColor(SDL_Surface dst, int16 x1, int16 y1, int16 x2, int16 y2, 
+    int aalineColor(SDL_Surface dst, int16 x1, int16 y1, int16 x2, int16 y2,
                     uint32 color);
     int aalineRGBA(SDL_Surface dst, int16 x1, int16 y1,
                    int16 x2, int16 y2, byte r, byte g, byte b, byte a);
 
     int circleColor(SDL_Surface dst, int16 x, int16 y, int16 r, uint32 color);
-    int circleRGBA(SDL_Surface dst, int16 x, int16 y, int16 rad, byte r, byte 
+    int circleRGBA(SDL_Surface dst, int16 x, int16 y, int16 rad, byte r, byte
                    g, byte b, byte a);
 
 
@@ -62,17 +62,17 @@
     int filledCircleRGBA(SDL_Surface dst, int16 x, int16 y,
                          int16 rad, byte r, byte g, byte b, byte a);
 
-    int ellipseColor(SDL_Surface dst, int16 x, int16 y, int16 rx, int16 ry, 
+    int ellipseColor(SDL_Surface dst, int16 x, int16 y, int16 rx, int16 ry,
                      uint32 color);
     int ellipseRGBA(SDL_Surface dst, int16 x, int16 y,
                     int16 rx, int16 ry, byte r, byte g, byte b, byte a);
 
-    int aaellipseColor(SDL_Surface dst, int16 xc, int16 yc, int16 rx, int16 ry, 
+    int aaellipseColor(SDL_Surface dst, int16 xc, int16 yc, int16 rx, int16 ry,
                        uint32 color);
     int aaellipseRGBA(SDL_Surface dst, int16 x, int16 y,
                       int16 rx, int16 ry, byte r, byte g, byte b, byte a);
 
-    int filledEllipseColor(SDL_Surface dst, int16 x, int16 y, int16 rx, int16 ry, 
+    int filledEllipseColor(SDL_Surface dst, int16 x, int16 y, int16 rx, int16 ry,
                            uint32 color);
     int filledEllipseRGBA(SDL_Surface dst, int16 x, int16 y,
                           int16 rx, int16 ry, byte r, byte g, byte b, byte a);
@@ -85,64 +85,64 @@
     int filledPieColor(SDL_Surface dst, int16 x, int16 y, int16 rad,
                                     int16 start, int16 end, uint32 color);
     int filledPieRGBA(SDL_Surface dst, int16 x, int16 y, int16 rad,
-                                   int16 start, int16 end, byte r, byte g, 
+                                   int16 start, int16 end, byte r, byte g,
                                    byte b, byte a);
 
-    int trigonColor(SDL_Surface dst, int16 x1, int16 y1, int16 x2, int16 y2, 
+    int trigonColor(SDL_Surface dst, int16 x1, int16 y1, int16 x2, int16 y2,
                     int16 x3, int16 y3, uint32 color);
-    int trigonRGBA(SDL_Surface dst, int16 x1, int16 y1, int16 x2, int16 y2, 
+    int trigonRGBA(SDL_Surface dst, int16 x1, int16 y1, int16 x2, int16 y2,
                    int16 x3, int16 y3, byte r, byte g, byte b, byte a);
 
-    int aatrigonColor(SDL_Surface dst, int16 x1, int16 y1, int16 x2, int16 
+    int aatrigonColor(SDL_Surface dst, int16 x1, int16 y1, int16 x2, int16
                       y2, int16 x3, int16 y3, uint32 color);
-    int aatrigonRGBA(SDL_Surface dst,  int16 x1, int16 y1, int16 x2, int16 
+    int aatrigonRGBA(SDL_Surface dst,  int16 x1, int16 y1, int16 x2, int16
                      y2, int16 x3, int16 y3, byte r, byte g, byte b, byte a);
 
-    int filledTrigonColor(SDL_Surface dst, int16 x1, int16 y1, int16 x2, 
+    int filledTrigonColor(SDL_Surface dst, int16 x1, int16 y1, int16 x2,
                           int16 y2, int16 x3, int16 y3, uint32 color);
-    int filledTrigonRGBA(SDL_Surface dst, int16 x1, int16 y1, int16 x2, int16 
-                         y2, int16 x3, int16 y3, byte r, byte g, byte b, 
+    int filledTrigonRGBA(SDL_Surface dst, int16 x1, int16 y1, int16 x2, int16
+                         y2, int16 x3, int16 y3, byte r, byte g, byte b,
                          byte a);
 
-    int polygonColor(SDL_Surface dst, array[int16] vx, array[int16] vy, int n, 
+    int polygonColor(SDL_Surface dst, array[int16] vx, array[int16] vy, int n,
                      uint32 color);
-    int polygonRGBA(SDL_Surface dst, array[int16] vx, array[int16] vy, int n, 
+    int polygonRGBA(SDL_Surface dst, array[int16] vx, array[int16] vy, int n,
                     byte r, byte g, byte b, byte a);
 
-    int aapolygonColor(SDL_Surface dst, array[int16] vx, array[int16] vy, int 
+    int aapolygonColor(SDL_Surface dst, array[int16] vx, array[int16] vy, int
                        n, uint32 color);
-    int aapolygonRGBA(SDL_Surface dst, array[int16] vx, array[int16] vy, 
+    int aapolygonRGBA(SDL_Surface dst, array[int16] vx, array[int16] vy,
                       int n, byte r, byte g, byte b, byte a);
 
-    int filledPolygonColor(SDL_Surface dst, array[int16] vx, array[int16] vy, 
+    int filledPolygonColor(SDL_Surface dst, array[int16] vx, array[int16] vy,
                            int n, uint32 color);
-    int filledPolygonRGBA(SDL_Surface dst, array[int16] vx, array[int16] vy, 
+    int filledPolygonRGBA(SDL_Surface dst, array[int16] vx, array[int16] vy,
                           int n, byte r, byte g, byte b, byte a);
-    int texturedPolygon(SDL_Surface dst, array[int16] vx, array[int16] vy, int 
+    int texturedPolygon(SDL_Surface dst, array[int16] vx, array[int16] vy, int
                         n, SDL_Surface texture,int texture_dx,int texture_dy);
 
-    int filledPolygonColorMT(SDL_Surface dst, array[int16] vx, array[int16] vy, 
+    int filledPolygonColorMT(SDL_Surface dst, array[int16] vx, array[int16] vy,
                              int n, uint32 color, array[array[int]] polyInts,
                              array[int] polyAllocated);
-    int filledPolygonRGBAMT(SDL_Surface dst, array[int16] vx, array[int16] vy, 
-                            int n, byte r, byte g, byte b, byte a, 
+    int filledPolygonRGBAMT(SDL_Surface dst, array[int16] vx, array[int16] vy,
+                            int n, byte r, byte g, byte b, byte a,
                             array[array[int]] polyInts, array[int] polyAllocated);
-    int texturedPolygonMT(SDL_Surface dst, array[int16] vx, array[int16] vy, 
-                          int n, SDL_Surface texture,int texture_dx,int 
-                          texture_dy, array[array[int]] polyInts, 
+    int texturedPolygonMT(SDL_Surface dst, array[int16] vx, array[int16] vy,
+                          int n, SDL_Surface texture,int texture_dx,int
+                          texture_dy, array[array[int]] polyInts,
                           array[int] polyAllocated);
 
 # Bezier curve, s = number of steps
 
-    int bezierColor(SDL_Surface dst, array[int16] vx, array[int16] vy, int n, 
+    int bezierColor(SDL_Surface dst, array[int16] vx, array[int16] vy, int n,
                     int s, uint32 color);
-    int bezierRGBA(SDL_Surface dst, array[int16] vx, array[int16] vy, int n, 
+    int bezierRGBA(SDL_Surface dst, array[int16] vx, array[int16] vy, int n,
                    int s, byte r, byte g, byte b, byte a);
 
 
 
     int characterColor(SDL_Surface dst, int16 x, int16 y,
-                       byte c, 
+                       byte c,
                        int32 color
                        );
     int characterRGBA(SDL_Surface dst, int16 x, int16 y,

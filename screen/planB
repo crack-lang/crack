@@ -2,11 +2,11 @@
 # Copyright 2011 Google Inc.
 # Copyright 2011 Shannon Weyrick <weyrick@mozek.us>
 # Copyright 2011 Arno Rehn <arno@arnorehn.de>
-# 
+#
 #   This Source Code Form is subject to the terms of the Mozilla Public
 #   License, v. 2.0. If a copy of the MPL was not distributed with this
 #   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-# 
+#
 
 MYDIR=`dirname $0`
 (cd $MYDIR; cd ..; ROOT=`pwd`)
@@ -60,18 +60,18 @@ function extract_section {
 
 function load_options {
     local path="$1"
-    
+
     # stop when we get to the top
     if [ "$path" = "/" -o "$(basename $path)" = "screen" ]; then
         return
     fi
-    
+
     opt_file="$path/options"
     if [ -e "$opt_file" ]; then
         OPTS_sec="$(extract_section "$opt_file" OPTS)"
         return
     fi
-    
+
     # check parent directory
     load_options "$(dirname $path)"
 }
@@ -79,17 +79,17 @@ function load_options {
 function run_test {
 
     local file="$1"
-    
+
     # fill the global vars from the options files
     load_options $(cd "$(dirname "$file")"; pwd)
     #echo "infile: $file"
     newname=`basename $file .crkt`
     outfile="$OUTDIR$newname.crk"
     #echo "outfile: $outfile"
-    
+
     # add the script name to the substitution vars
     VARS="$STATIC_VARS; s:%SCRIPTNAME%:$outfile:g"
-    
+
     TEST_sec=$(extract_section $file TEST)
     echo -n "$TEST_sec ..."
     FILE_sec=$(extract_section $file FILE)
@@ -98,7 +98,7 @@ function run_test {
     EXPECT_sec=`extract_section $file EXPECT`
     REXPECT_sec=`extract_section $file REXPECT`
     STDIN_sec=`extract_section $file STDIN`
-    
+
     # XXX script args
     # XXX stdin
 
@@ -126,7 +126,7 @@ function run_test {
             ok=false
             expected=$EXPECT_sec
         fi
-            
+
         if $ok; then
             echo ok
         else
@@ -157,7 +157,7 @@ errors=0
 if [ -z "$*" ]; then
     # pre bootstrap tests
     BASIC=`find $MYDIR/tests/basic -name "*.crkt" | sort`
-    
+
     for file in $BASIC
     do
         run_test $file

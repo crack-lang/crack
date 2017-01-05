@@ -4,27 +4,27 @@
 @generateExtension crack.ext._png {
     @filename "opt/_png.cc"
     @crack_internal
-    
+
     @inject '#include <png.h>\n'
     @inject 'typedef int Undef;\n';
-    
+
     class png_structp;
-    
+
     # PNG version is "1.2.42"
 
-    @cname Undef    
+    @cname Undef
     class png_struct;
-    
+
     png_struct png_create_read_struct(byteptr user_png_ver,
                                       voidptr error_ptr,
-                                      voidptr error_fn, 
+                                      voidptr error_fn,
                                       voidptr warn_fn
                                       );
-    
+
     @cname Undef
     class png_info;
     png_info png_create_info_struct(png_struct png_ptr);
-    
+
     void png_set_read_fn(png_struct png_ptr, voidptr io_ptr,
                          voidptr read_data_fn
                          );
@@ -33,8 +33,8 @@
                       voidptr params
                       );
 
-    
-    uint32 png_get_IHDR(png_struct png_ptr, png_info info_ptr, 
+
+    uint32 png_get_IHDR(png_struct png_ptr, png_info info_ptr,
                         array[uint32] width,
                         array[uint32] height,
                         array[int] bit_depth,
@@ -58,9 +58,9 @@
                                  array[png_info] info_ptr_ptr,
                                  array[png_info] end_info_ptr_ptr
                                  );
-    
+
     voidptr png_get_io_ptr(png_struct png_ptr);
 }
 
-    
+
     

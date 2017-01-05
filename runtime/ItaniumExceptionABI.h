@@ -1,10 +1,10 @@
 // Copyright 2011 Google Inc.
 // Copyright 2011 Conrad Steenberg <conrad.steenberg@gmail.com>
-// 
+//
 //   This Source Code Form is subject to the terms of the Mozilla Public
 //   License, v. 2.0. If a copy of the MPL was not distributed with this
 //   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-// 
+//
 
 #ifndef _ItaniumExceptionABI_h_
 #define _ItaniumExceptionABI_h_
@@ -16,9 +16,9 @@
 
 namespace crack { namespace runtime {
 
-// System C++ ABI unwind types from: 
+// System C++ ABI unwind types from:
 //     http://refspecs.freestandards.org/abi-eh-1.21.html
-// for now we're just going to define the entire Itanium exception API here 
+// for now we're just going to define the entire Itanium exception API here
 // (since there's no standard header file for it)
 
 enum _Unwind_Action {
@@ -50,13 +50,13 @@ struct _Unwind_Exception {
     uint64_t exception_class;
     _Unwind_Exception_Cleanup_Fn exception_cleanup;
     uint64_t private_1, private_2;
-    
-    // crack-specific reference count and user data (points to the exception 
+
+    // crack-specific reference count and user data (points to the exception
     // object).
     unsigned int ref_count;
     void *user_data;
-    
-    // the last IP address that the exception personality function got called 
+
+    // the last IP address that the exception personality function got called
     // for.
     void *last_ip;
 } __attribute__((__aligned__));
@@ -69,7 +69,7 @@ extern "C" uint64_t _Unwind_GetRegionStart(_Unwind_Context *context);
 extern "C" void _Unwind_SetGR(struct _Unwind_Context *context, int index,
                               uint64_t new_value
                               );
-extern "C" void _Unwind_SetIP(struct _Unwind_Context *context, 
+extern "C" void _Unwind_SetIP(struct _Unwind_Context *context,
                               uint64_t new_value
                               );
 extern "C" _Unwind_Reason_Code _Unwind_RaiseException(_Unwind_Exception *ex);

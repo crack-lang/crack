@@ -2,11 +2,11 @@
 // Copyright 2010-2012 Shannon Weyrick <weyrick@mozek.us>
 // Copyright 2010-2012 Conrad Steenberg <conrad.steenberg@gmail.com>
 // Copyright 2012 Arno Rehn <arno@arnorehn.de>
-// 
+//
 //   This Source Code Form is subject to the terms of the Mozilla Public
 //   License, v. 2.0. If a copy of the MPL was not distributed with this
 //   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-// 
+//
 #include <execinfo.h>
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -43,7 +43,7 @@ extern "C" void crack_runtime_md5_cinit(crack::ext::Module *mod);
 extern "C" void crack_runtime_xdr_cinit(crack::ext::Module *mod);
 
 
-// stat() appears to have some funny linkage issues in native mode so we wrap 
+// stat() appears to have some funny linkage issues in native mode so we wrap
 // it in a normal function.
 extern "C" int crack_runtime_stat(const char *path, struct stat *buf) {
     return stat(path, buf);
@@ -57,7 +57,7 @@ void crack_runtime_rinit(void) {
     return;
 }
 
-// We have to wrap all variations of these because the C library takes 
+// We have to wrap all variations of these because the C library takes
 // liberties doing name translation.
 
 extern "C" int crk_creat(const char *pathname, mode_t mode) {
@@ -115,85 +115,85 @@ extern "C" void crack_runtime_cinit(Module *mod) {
     }
     byteptrArrayType->finish();
 
-    Type *cdentType = mod->addType("DirEntry", 
+    Type *cdentType = mod->addType("DirEntry",
                                    sizeof(crack::runtime::DirEntry)
                                    );
-    cdentType->addInstVar(byteptrType, "name", 
+    cdentType->addInstVar(byteptrType, "name",
                           CRACK_OFFSET(crack::runtime::DirEntry, name)
                           );
-    cdentType->addInstVar(intType, "type", 
+    cdentType->addInstVar(intType, "type",
                           CRACK_OFFSET(crack::runtime::DirEntry, type)
                           );
     cdentType->finish();
 
     Type *cdType = mod->addType("Dir", sizeof(crack::runtime::Dir));
     // XXX should this be part of addType?
-    cdType->addMethod(boolType, "oper to .builtin.bool", 
+    cdType->addMethod(boolType, "oper to .builtin.bool",
                       (void *)crack::runtime::Dir_toBool
                       );
     cdType->finish();
-    
+
     Func *f = mod->addFunc(cdType, "opendir", (void *)crack::runtime::opendir);
     f->addArg(byteptrType, "name");
-    
-    f = mod->addFunc(cdentType, "getDirEntry", 
+
+    f = mod->addFunc(cdentType, "getDirEntry",
                      (void *)crack::runtime::getDirEntry
                      );
     f->addArg(cdType, "d");
-    
+
     f = mod->addFunc(intType, "closedir", (void *)crack::runtime::closedir);
     f->addArg(cdType, "d");
-    
+
     f = mod->addFunc(intType, "readdir", (void *)crack::runtime::readdir);
     f->addArg(cdType, "d");
-    
+
     f = mod->addFunc(intType, "fnmatch", (void *)crack::runtime::fnmatch);
     f->addArg(byteptrType, "pattern");
     f->addArg(byteptrType, "string");
-    
+
     f = mod->addFunc(byteptrType, "basename", (void *)basename, "basename");
     f->addArg(byteptrType, "path");
-    
+
     f = mod->addFunc(byteptrType, "dirname", (void *)dirname, "dirname");
     f->addArg(byteptrType, "path");
 
     f = mod->addFunc(intType, "is_file", (void *)crack::runtime::is_file);
     f->addArg(byteptrType, "path");
-    
+
     f = mod->addFunc(boolType, "fileExists",
                      (void *)crack::runtime::fileExists
                      );
     f->addArg(byteptrType, "path");
-    
+
     Type *statType = mod->addType("Stat", sizeof(struct stat));
     statType->addInstVar(intType, "st_dev", CRACK_OFFSET(struct stat, st_dev));
     statType->addInstVar(intType, "st_ino", CRACK_OFFSET(struct stat, st_ino));
     statType->addInstVar(intType, "st_mode", CRACK_OFFSET(struct stat, st_mode));
-    statType->addInstVar(intType, "st_nlink", 
+    statType->addInstVar(intType, "st_nlink",
                          CRACK_OFFSET(struct stat, st_nlink)
                          );
     statType->addInstVar(intType, "st_uid", CRACK_OFFSET(struct stat, st_uid));
     statType->addInstVar(intType, "st_gid", CRACK_OFFSET(struct stat, st_gid));
     statType->addInstVar(intType, "st_rdev", CRACK_OFFSET(struct stat, st_rdev));
     statType->addInstVar(intType, "st_size", CRACK_OFFSET(struct stat, st_size));
-    statType->addInstVar(intType, "st_blksize", 
+    statType->addInstVar(intType, "st_blksize",
                          CRACK_OFFSET(struct stat, st_blksize)
                          );
-    statType->addInstVar(intType, "st_blocks", 
+    statType->addInstVar(intType, "st_blocks",
                          CRACK_OFFSET(struct stat, st_blocks)
                          );
-    statType->addInstVar(intType, "st_atime", 
+    statType->addInstVar(intType, "st_atime",
                          CRACK_OFFSET(struct stat, st_atime)
                          );
-    statType->addInstVar(intType, "st_mtime", 
+    statType->addInstVar(intType, "st_mtime",
                          CRACK_OFFSET(struct stat, st_mtime)
                          );
-    statType->addInstVar(intType, "st_ctime", 
+    statType->addInstVar(intType, "st_ctime",
                          CRACK_OFFSET(struct stat, st_ctime)
                          );
     statType->addConstructor();
     statType->finish();
-    
+
     mod->addConstant(intType, "S_IFMT", S_IFMT);
     mod->addConstant(intType, "S_IFSOCK", S_IFSOCK);
     mod->addConstant(intType, "S_IFLNK", S_IFLNK);
@@ -219,7 +219,7 @@ extern "C" void crack_runtime_cinit(Module *mod) {
     mod->addConstant(intType, "S_IXOTH", S_IXOTH);
 
 
-    f = mod->addFunc(intType, "stat", (void *)crack_runtime_stat, 
+    f = mod->addFunc(intType, "stat", (void *)crack_runtime_stat,
                      "crack_runtime_stat"
                      );
     f->addArg(byteptrType, "path");
@@ -256,20 +256,20 @@ extern "C" void crack_runtime_cinit(Module *mod) {
     f = mod->addFunc(byteptrType, "c_strerror",
                      (void *)crack::runtime::strerror
                      );
-    
-    f = mod->addFunc(mod->getIntType(), "float_str", 
+
+    f = mod->addFunc(mod->getIntType(), "float_str",
                      (void *)crack::runtime::float_str
                      );
     f->addArg(mod->getFloat64Type(), "val");
     f->addArg(byteptrType, "buf");
     f->addArg(mod->getUintType(), "size");
 
-    f = mod->addFunc(uintType, "rand", 
+    f = mod->addFunc(uintType, "rand",
                      (void *)crack::runtime::rand
                      );
     f->addArg(mod->getUintType(), "low");
     f->addArg(mod->getUintType(), "high");
-    
+
     f = mod->addFunc(intType, "random", (void *)random);
 
     f = mod->addFunc(voidType, "srandom", (void *)srandom);
@@ -378,7 +378,7 @@ extern "C" void crack_runtime_cinit(Module *mod) {
     mod->addConstant(intType, "F_SETFL", F_SETFL);
     mod->addConstant(intType, "F_GETOWN", F_GETOWN);
     mod->addConstant(intType, "F_SETOWN", F_SETOWN);
-#ifdef __linux__ 
+#ifdef __linux__
     mod->addConstant(intType, "F_GETSIG", F_GETSIG);
     mod->addConstant(intType, "F_SETSIG", F_SETSIG);
     mod->addConstant(intType, "F_NOTIFY", F_NOTIFY);
@@ -419,12 +419,12 @@ extern "C" void crack_runtime_cinit(Module *mod) {
 
     mod->addConstant(intType, "EAGAIN", EAGAIN);
     mod->addConstant(intType, "EWOULDBLOCK", EWOULDBLOCK);
-    
+
     mod->addConstant(intType, "SHUT_RD", SHUT_RD);
     mod->addConstant(intType, "SHUT_WR", SHUT_WR);
     mod->addConstant(intType, "SHUT_RDWR", SHUT_RDWR);
 
-    f = mod->addFunc(uint32Type, "makeIPV4", 
+    f = mod->addFunc(uint32Type, "makeIPV4",
                      (void*)crack::runtime::makeIPV4);
     f->addArg(byteType, "a");
     f->addArg(byteType, "b");
@@ -434,18 +434,18 @@ extern "C" void crack_runtime_cinit(Module *mod) {
     // begin SockAddr
     Type *sockAddrType = mod->addType("SockAddr", sizeof(SockAddr));
     sockAddrType->addConstructor();
-    sockAddrType->addInstVar(intType, "family", 
+    sockAddrType->addInstVar(intType, "family",
                              CRACK_OFFSET(SockAddr, family)
                              );
     sockAddrType->finish();
     // end SockAddr
 
-    // begin SockAddrIn    
-    Type *sockAddrInType = mod->addType("SockAddrIn", 
+    // begin SockAddrIn
+    Type *sockAddrInType = mod->addType("SockAddrIn",
                                         sizeof(SockAddrIn) - sizeof(SockAddr)
                                         );
     sockAddrInType->addBase(sockAddrType);
-    sockAddrInType->addInstVar(uint32Type, "addr", 
+    sockAddrInType->addInstVar(uint32Type, "addr",
                                CRACK_OFFSET(SockAddrIn, addr)
                                );
     sockAddrInType->addInstVar(uint16Type, "port",
@@ -468,38 +468,38 @@ extern "C" void crack_runtime_cinit(Module *mod) {
     );
     f->addArg(uint32Type, "addr");
     f->addArg(uintType, "port");
-    
+
     f = sockAddrInType->addStaticMethod(
-        uint32Type, 
+        uint32Type,
         "htonl",
         (void *)&crack::runtime::SockAddrIn::crack_htonl
     );
     f->addArg(uint32Type, "val");
 
     f = sockAddrInType->addStaticMethod(
-        uint32Type, 
+        uint32Type,
         "ntohl",
         (void *)&crack::runtime::SockAddrIn::crack_ntohl
     );
     f->addArg(uint32Type, "val");
 
     f = sockAddrInType->addStaticMethod(
-        uintType, 
+        uintType,
         "htons",
         (void *)&crack::runtime::SockAddrIn::crack_htons
     );
     f->addArg(uintType, "val");
-    
+
     f = sockAddrInType->addStaticMethod(
         uintType,
         "ntohs",
         (void *)&crack::runtime::SockAddrIn::crack_ntohs
     );
     f->addArg(uintType, "val");
-    
+
     sockAddrInType->finish();
     // end SockAddrIn
-    
+
     // begin SockAddrIn
     Type *sockAddrUnType = mod->addType("SockAddrUn",
                                         sizeof(SockAddrUn) - sizeof(SockAddr)
@@ -523,19 +523,19 @@ extern "C" void crack_runtime_cinit(Module *mod) {
     f = mod->addFunc(intType, "connect", (void *)crack::runtime::connect);
     f->addArg(intType, "s");
     f->addArg(sockAddrType, "addr");
-    
+
     f = mod->addFunc(intType, "bind",
                      (void *)crack::runtime::bind
                      );
     f->addArg(intType, "s");
     f->addArg(sockAddrType, "addr");
-    
+
     f = mod->addFunc(intType, "accept",
                      (void *)crack::runtime::accept
                      );
     f->addArg(intType, "s");
     f->addArg(sockAddrType, "addr");
-    
+
     f = mod->addFunc(intType, "setsockopt",
                      (void *)crack::runtime::setsockopt_int
                      );
@@ -545,15 +545,15 @@ extern "C" void crack_runtime_cinit(Module *mod) {
     f->addArg(intType, "val");
 
     // begin PollEvt
-    Type *pollEventType = mod->addType("PollEvt", 
+    Type *pollEventType = mod->addType("PollEvt",
                                        sizeof(crack::runtime::PollEvt));
-    pollEventType->addInstVar(intType, "fd", 
+    pollEventType->addInstVar(intType, "fd",
                               CRACK_OFFSET(crack::runtime::PollEvt, fd)
                               );
-    pollEventType->addInstVar(intType, "events", 
+    pollEventType->addInstVar(intType, "events",
                               CRACK_OFFSET(crack::runtime::PollEvt, events)
                               );
-    pollEventType->addInstVar(intType, "revents", 
+    pollEventType->addInstVar(intType, "revents",
                               CRACK_OFFSET(crack::runtime::PollEvt, revents)
                               );
     pollEventType->addConstructor();
@@ -561,22 +561,22 @@ extern "C" void crack_runtime_cinit(Module *mod) {
     // end PollEvent
 
     // begin TimeVal
-    Type *timeValType = mod->addType("TimeVal", 
+    Type *timeValType = mod->addType("TimeVal",
                                      sizeof(crack::runtime::TimeVal)
                                      );
-    timeValType->addInstVar(int32Type, "secs", 
+    timeValType->addInstVar(int32Type, "secs",
                             CRACK_OFFSET(crack::runtime::TimeVal, secs)
                             );
-    timeValType->addInstVar(int32Type, "nsecs", 
+    timeValType->addInstVar(int32Type, "nsecs",
                             CRACK_OFFSET(crack::runtime::TimeVal, nsecs)
                             );
 
-    f = timeValType->addConstructor("init", 
+    f = timeValType->addConstructor("init",
                                     (void *)&crack::runtime::TimeVal::init
                                     );
     f->addArg(int32Type, "secs");
     f->addArg(int32Type, "nsecs");
-    
+
     f = timeValType->addMethod(voidType, "setToNow",
                                (void *)&crack::runtime::TimeVal::setToNow
                                );
@@ -587,17 +587,17 @@ extern "C" void crack_runtime_cinit(Module *mod) {
 
     // sleep
     f = mod->addFunc(intType, "sleep", (void *)sleep, "sleep");
-    f->addArg(uintType, "seconds"); 
+    f->addArg(uintType, "seconds");
 
     // begin Pipe
     Type *pipeType = mod->addType("PipeAddr", sizeof(crack::runtime::PipeAddr));
-    pipeType->addInstVar(int32Type, "flags", 
+    pipeType->addInstVar(int32Type, "flags",
                             CRACK_OFFSET(crack::runtime::PipeAddr, flags)
                             );
-    pipeType->addInstVar(int32Type, "readfd", 
+    pipeType->addInstVar(int32Type, "readfd",
                             CRACK_OFFSET(crack::runtime::PipeAddr, readfd)
                             );
-    pipeType->addInstVar(int32Type, "writefd", 
+    pipeType->addInstVar(int32Type, "writefd",
                             CRACK_OFFSET(crack::runtime::PipeAddr, writefd)
                             );
 
@@ -615,13 +615,13 @@ extern "C" void crack_runtime_cinit(Module *mod) {
     pipeType->finish();
 
     // end Pipe
-    
+
     // begin SigSet
     Type *sigSetType = mod->addType("SigSet", 0);
     f = sigSetType->addStaticMethod(sigSetType, "oper new",
                                     (void *)crack::runtime::SigSet_create
                                     );
-    
+
     f = sigSetType->addMethod(voidType, "destroy",
                               (void *)crack::runtime::SigSet_destroy
                               );
@@ -629,7 +629,7 @@ extern "C" void crack_runtime_cinit(Module *mod) {
     f = sigSetType->addMethod(voidType, "empty",
                               (void *)crack::runtime::SigSet_empty
                               );
-    
+
     f = sigSetType->addMethod(voidType, "fill",
                               (void *)crack::runtime::SigSet_fill
                               );
@@ -658,13 +658,13 @@ extern "C" void crack_runtime_cinit(Module *mod) {
                                      (void *)&crack::runtime::PollSet_create
                                      );
     f->addArg(uintType, "size");
-    
+
     f = pollSetType->addMethod(voidType, "copy",
                                (void *)crack::runtime::PollSet_copy
                                );
     f->addArg(pollSetType, "src");
     f->addArg(uintType, "size");
-    
+
     f = pollSetType->addMethod(voidType, "destroy",
                                (void *)crack::runtime::PollSet_destroy
                                );
@@ -694,7 +694,7 @@ extern "C" void crack_runtime_cinit(Module *mod) {
                                );
     f->addArg(uintType, "size");
     f->addArg(uintType, "index");
-    
+
     f = pollSetType->addMethod(intType, "poll",
                                (void *)crack::runtime::PollSet_poll
                                );
@@ -707,22 +707,22 @@ extern "C" void crack_runtime_cinit(Module *mod) {
 
     // addrinfo
     Type *addrinfoType = mod->addType("AddrInfo", sizeof(addrinfo));
-    f = addrinfoType->addStaticMethod(addrinfoType, "oper new", 
+    f = addrinfoType->addStaticMethod(addrinfoType, "oper new",
                                       (void *)&crack::runtime::AddrInfo_create
                                       );
     f->addArg(byteptrType, "node");
     f->addArg(byteptrType, "service");
     f->addArg(addrinfoType, "hints");
-    
+
     f = addrinfoType->addMethod(voidType, "free",
                                 (void *)freeaddrinfo
                                 );
     f->addArg(addrinfoType, "addr");
-    
+
     f = addrinfoType->addMethod(sockAddrInType, "getInAddr",
                                 (void *)crack::runtime::AddrInfo_getInAddr
                                 );
-    
+
     addrinfoType->addInstVar(intType, "ai_flags",
                              CRACK_OFFSET(addrinfo, ai_flags)
                              );
@@ -753,22 +753,22 @@ extern "C" void crack_runtime_cinit(Module *mod) {
     // misc C functions
     f = mod->addFunc(intType, "close", (void *)close, "close");
     f->addArg(intType, "fd");
-    
+
     f = mod->addFunc(intType, "socket", (void *)socket, "socket");
     f->addArg(intType, "domain");
     f->addArg(intType, "type");
     f->addArg(intType, "protocol");
-    
+
     f = mod->addFunc(intType, "listen", (void *)listen, "listen");
     f->addArg(intType, "fd");
     f->addArg(intType, "backlog");
-    
+
     f = mod->addFunc(intType, "send", (void *)send, "send");
     f->addArg(intType, "fd");
     f->addArg(byteptrType, "buf");
     f->addArg(uintType, "size");
     f->addArg(intType, "flags");
-    
+
     f = mod->addFunc(intType, "recv", (void *)recv, "recv");
     f->addArg(intType, "fd");
     f->addArg(byteptrType, "buf");
@@ -783,7 +783,7 @@ extern "C" void crack_runtime_cinit(Module *mod) {
 
     f = mod->addFunc(voidType, "free", (void *)free, "free");
     f->addArg(voidptrType, "size");
-    
+
     f = mod->addFunc(voidType, "strcpy", (void *)strcpy, "strcpy");
     f->addArg(byteptrType, "dst");
     f->addArg(byteptrType, "src");
@@ -793,7 +793,7 @@ extern "C" void crack_runtime_cinit(Module *mod) {
 
     f = mod->addFunc(byteptrType, "malloc", (void *)malloc, "malloc");
     f->addArg(uintzType, "size");
-    
+
     f = mod->addFunc(byteptrType, "memcpy", (void *)memcpy, "memcpy");
     f->addArg(byteptrType, "dst");
     f->addArg(byteptrType, "src");
@@ -808,22 +808,22 @@ extern "C" void crack_runtime_cinit(Module *mod) {
     f->addArg(byteptrType, "a");
     f->addArg(byteptrType, "b");
     f->addArg(uintzType, "size");
-    
+
     f = mod->addFunc(byteptrType, "memmove", (void *)memmove, "memmove");
     f->addArg(byteptrType, "dst");
     f->addArg(byteptrType, "src");
     f->addArg(uintzType, "size");
-    
+
     Type *cFileType = mod->addType("CFile", 0);
     cFileType->finish();
-    
+
     f = mod->addFunc(cFileType, "fopen", (void *)fopen, "fopen");
     f->addArg(byteptrType, "path");
     f->addArg(byteptrType, "mode");
-    
+
     f = mod->addFunc(intType, "fclose", (void *)fclose, "fclose");
     f->addArg(cFileType, "fp");
-    
+
     f = mod->addFunc(intType, "fileno", (void *)fileno, "fileno");
     f->addArg(cFileType, "fp");
 
@@ -866,23 +866,23 @@ extern "C" void crack_runtime_cinit(Module *mod) {
     // mmap
     f = mod->addFunc(voidptrType, "mmap", (void *)mmap, "mmap");
     f->addArg(voidptrType, "start");
-    f->addArg(uintzType, "length"); 
+    f->addArg(uintzType, "length");
     f->addArg(intType, "prot");
     f->addArg(intType, "flags");
-    f->addArg(intType, "fd");   
+    f->addArg(intType, "fd");
     f->addArg(uintzType, "offset");
 
     // munmap
     f = mod->addFunc(intType, "munmap", (void *)mmap, "munmap");
     f->addArg(voidptrType, "start");
-    f->addArg(uintzType, "length"); 
+    f->addArg(uintzType, "length");
 
     // mmap protection flags
     mod->addConstant(intType, "PROT_NONE", PROT_NONE);
     mod->addConstant(intType, "PROT_EXEC", PROT_EXEC);
     mod->addConstant(intType, "PROT_READ", PROT_READ);
     mod->addConstant(intType, "PROT_WRITE", PROT_WRITE);
-    mod->addConstant(intType, "PROT_NONE", PROT_NONE);  
+    mod->addConstant(intType, "PROT_NONE", PROT_NONE);
 
     // mmap mapping flags
     mod->addConstant(intType, "MAP_FIXED", MAP_FIXED);
@@ -891,18 +891,18 @@ extern "C" void crack_runtime_cinit(Module *mod) {
 
     // Add math functions
     crack_runtime__math_cinit(mod);
-    
+
     // Add time functions
     crack_runtime_time_cinit(mod);
-    
+
     // Add md5 functions
     crack_runtime_md5_cinit(mod);
 
     // Add xdr functions
     crack_runtime_xdr_cinit(mod);
-    
+
     // add exception functions
-    mod->addConstant(intType, "EXCEPTION_MATCH_FUNC", 
+    mod->addConstant(intType, "EXCEPTION_MATCH_FUNC",
                      crack::runtime::exceptionMatchFuncHook
                      );
     mod->addConstant(intType, "BAD_CAST_FUNC",
@@ -920,14 +920,14 @@ extern "C" void crack_runtime_cinit(Module *mod) {
     mod->addConstant(intType, "EXCEPTION_UNCAUGHT_FUNC",
                      crack::runtime::exceptionUncaughtFuncHook
                      );
-    f = mod->addFunc(voidType, "registerHook", 
+    f = mod->addFunc(voidType, "registerHook",
                      (void *)crack::runtime::registerHook
                      );
     f->addArg(intType, "hookId");
     f->addArg(voidptrType, "hook");
-    
-    // This shouldn't need to be registered, but as it stands, runtime just 
-    // gets loaded like any other module in JIT mode and this is resolved at 
+
+    // This shouldn't need to be registered, but as it stands, runtime just
+    // gets loaded like any other module in JIT mode and this is resolved at
     // runtime.
     mod->addFunc(mod->getBoolType(), "__CrackUncaughtException",
                  (void *)__CrackUncaughtException
@@ -977,19 +977,19 @@ extern "C" void crack_runtime_cinit(Module *mod) {
     mod->addConstant(intType, "SA_RESTART", SA_RESTART);
     mod->addConstant(intType, "SA_SIGINFO", SA_SIGINFO);
 
-    Type *cpipeType = mod->addType("PipeDesc", 
+    Type *cpipeType = mod->addType("PipeDesc",
                                    sizeof(crack::runtime::PipeDesc)
                                    );
-    cpipeType->addInstVar(intType, "flags", 
+    cpipeType->addInstVar(intType, "flags",
                           CRACK_OFFSET(crack::runtime::PipeDesc, flags)
                           );
-    cpipeType->addInstVar(intType, "stdin", 
+    cpipeType->addInstVar(intType, "stdin",
                           CRACK_OFFSET(crack::runtime::PipeDesc, in)
                           );
-    cpipeType->addInstVar(intType, "stdout", 
+    cpipeType->addInstVar(intType, "stdout",
                           CRACK_OFFSET(crack::runtime::PipeDesc, out)
                           );
-    cpipeType->addInstVar(intType, "stderr", 
+    cpipeType->addInstVar(intType, "stderr",
                           CRACK_OFFSET(crack::runtime::PipeDesc, err)
                           );
     cpipeType->addConstructor();
@@ -1024,9 +1024,9 @@ extern "C" void crack_runtime_cinit(Module *mod) {
     f->addArg(uintType, "len");
     f->addArg(voidptrType, "convertedLen");
 
-    // debug support - these are weird in that these functions actually reside 
+    // debug support - these are weird in that these functions actually reside
     // in libCrackLang.
-    f = mod->addFunc(voidType, "getLocation", 
+    f = mod->addFunc(voidType, "getLocation",
                      (void *)&crack::debug::getLocation
                      );
     f->addArg(voidptrType, "address");

@@ -2,11 +2,11 @@
 // Copyright 2009-2012 Google Inc.
 // Copyright 2010,2012 Shannon Weyrick <weyrick@mozek.us>
 // Copyright 2011 Conrad Steenberg <conrad.steenberg@gmail.com>
-// 
+//
 //   This Source Code Form is subject to the terms of the Mozilla Public
 //   License, v. 2.0. If a copy of the MPL was not distributed with this
 //   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-// 
+//
 
 #ifndef TOKEN_H
 #define TOKEN_H
@@ -23,35 +23,35 @@ class Token {
    public:
 
       // the token types
-      // Note: The values of these enum members are important because these 
-      // values are persisted in cache meta-data.  If you need to add new 
-      // ones, add them to the end, but before popErrCtx which is not 
-      // persisted.  You must not remove or change the order of any of the 
-      // existing ones except when the meta-data format is being changed 
+      // Note: The values of these enum members are important because these
+      // values are persisted in cache meta-data.  If you need to add new
+      // ones, add them to the end, but before popErrCtx which is not
+      // persisted.  You must not remove or change the order of any of the
+      // existing ones except when the meta-data format is being changed
       // anyway.
       // When adding a token, you should also change:
-      // -   The "isXXX" methods below (including group checks like isBinOp() 
+      // -   The "isXXX" methods below (including group checks like isBinOp()
       //     and isAugAssign(), if appropriate)
-      // -   The extension wrappers in compiler/Token.h and 
-      //     compiler/Token2.cc, and the set of definitions in 
+      // -   The extension wrappers in compiler/Token.h and
+      //     compiler/Token2.cc, and the set of definitions in
       //     compiler/init.cc.
-      // -   model::Generic::deserializeToken() and, if the token has 
+      // -   model::Generic::deserializeToken() and, if the token has
       //     significant data, model::Generic::serializeToken().
-      typedef enum { ann, bitAnd, bitLSh, bitOr, bitRSh, bitXor, aliasKw, 
-                     breakKw, caseKw, catchKw, classKw, constKw, continueKw, 
-                     dollar, enumKw, forKw, elseKw, ifKw, importKw, inKw, 
-                     isKw, lambdaKw, moduleKw, nullKw, onKw, operKw, 
-                     returnKw, switchKw, throwKw, tryKw, typeofKw, whileKw, 
-                     assign, assignAnd, assignAsterisk, assignLSh, assignOr, 
-                     assignRSh, assignXor, assignMinus, assignPercent, 
-                     assignPlus, assignSlash, asterisk, bang, colon, comma, 
-                     decr, define, dot, end, eq, ge, gt, ident, incr, 
-                     integer, lbracket, lcurly, le, lparen, lt, minus, ne, 
-                     percent, plus, quest, rbracket, rcurly, rparen, semi, 
-                     slash, string, tilde, istrBegin, istrEnd, logicAnd, 
+      typedef enum { ann, bitAnd, bitLSh, bitOr, bitRSh, bitXor, aliasKw,
+                     breakKw, caseKw, catchKw, classKw, constKw, continueKw,
+                     dollar, enumKw, forKw, elseKw, ifKw, importKw, inKw,
+                     isKw, lambdaKw, moduleKw, nullKw, onKw, operKw,
+                     returnKw, switchKw, throwKw, tryKw, typeofKw, whileKw,
+                     assign, assignAnd, assignAsterisk, assignLSh, assignOr,
+                     assignRSh, assignXor, assignMinus, assignPercent,
+                     assignPlus, assignSlash, asterisk, bang, colon, comma,
+                     decr, define, dot, end, eq, ge, gt, ident, incr,
+                     integer, lbracket, lcurly, le, lparen, lt, minus, ne,
+                     percent, plus, quest, rbracket, rcurly, rparen, semi,
+                     slash, string, tilde, istrBegin, istrEnd, logicAnd,
                      logicOr, floatLit, octalLit, hexLit, binLit, scoping,
                      doKw, doc,
-                     
+
                      // these tokens are special - they are used to
                      // communicate actions that need to be performed in the
                      // token stream.
@@ -100,7 +100,7 @@ class Token {
       bool isAnn() const { return type == ann; }
       bool isBoolAnd() const { return type == bitAnd; }
       bool isBoolOr() const { return type == bitOr; }
-      bool isCase() const { return type == caseKw; }      
+      bool isCase() const { return type == caseKw; }
       bool isCatch() const { return type == catchKw; }
       bool isConst() const { return type == constKw; }
       bool isEnum() const { return type == enumKw; }
@@ -203,7 +203,7 @@ class Token {
             case assignOr:
             case assignRSh:
             case assignXor:
-            case assignMinus: 
+            case assignMinus:
             case assignPercent:
             case assignPlus:
             case assignSlash:

@@ -1,10 +1,10 @@
 // Copyright 2011-2012 Google Inc.
 // Copyright 2011 Conrad Steenberg <conrad.steenberg@gmail.com>
-// 
+//
 //   This Source Code Form is subject to the terms of the Mozilla Public
 //   License, v. 2.0. If a copy of the MPL was not distributed with this
 //   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-// 
+//
 // runtime exception handling functions supporting the Itanium API
 
 #include "Exceptions.h"
@@ -23,7 +23,7 @@ using namespace crack::runtime;
 
 namespace crack { namespace runtime {
 
-// per-thread exception object variable and a "once" variable to allow us to 
+// per-thread exception object variable and a "once" variable to allow us to
 // initialize it.
 static pthread_key_t exceptionObjectKey;
 static pthread_once_t exceptionObjectKeyOnce = PTHREAD_ONCE_INIT;
@@ -37,7 +37,7 @@ void deleteException(_Unwind_Exception *exc) {
 
 void initExceptionObjectKey() {
     int rc = pthread_key_create(
-        &exceptionObjectKey, 
+        &exceptionObjectKey,
         reinterpret_cast<void (*)(void *)>(deleteException)
     );
     assert(rc == 0 && "Unable to create pthread key for exception object.");
@@ -84,8 +84,8 @@ extern "C" _Unwind_Reason_Code __CrackExceptionPersonality(
 
     _Unwind_Reason_Code result;
     result =  handleLsda(version, _Unwind_GetLanguageSpecificData(context),
-                         actions, 
-                         exceptionClass, 
+                         actions,
+                         exceptionClass,
                          exceptionObject,
                          context
                          );
@@ -107,7 +107,7 @@ static void __CrackExceptionCleanup(_Unwind_Reason_Code reason,
 
 /** Function called by the "throw" statement. */
 extern "C" void __CrackThrow(void *crackExceptionObject) {
-    pthread_once(&exceptionObjectKeyOnce, 
+    pthread_once(&exceptionObjectKeyOnce,
                  crack::runtime::initExceptionObjectKey
                  );
     _Unwind_Exception *uex =
@@ -115,16 +115,16 @@ extern "C" void __CrackThrow(void *crackExceptionObject) {
             pthread_getspecific(crack::runtime::exceptionObjectKey)
         );
     if (uex) {
-        // we don't need an atomic reference count for these, they are thread 
+        // we don't need an atomic reference count for these, they are thread
         // specific.
         ++uex->ref_count;
-        
-        // release the original exception object XXX need to give the crack 
+
+        // release the original exception object XXX need to give the crack
         // library the option to associate the old exception with the new one.
         if (runtimeHooks.exceptionReleaseFunc)
             runtimeHooks.exceptionReleaseFunc(uex->user_data);
     } else {
-        // XXX it's possible for this to be called when there is a non-crack 
+        // XXX it's possible for this to be called when there is a non-crack
         // exception active.  In that case, the results are undefined.
         uex = new _Unwind_Exception();
         uex->exception_class = crackClassId;
@@ -141,15 +141,15 @@ extern "C" void __CrackThrow(void *crackExceptionObject) {
     }
 }
 
-/** 
- * Function called to obtain the original crack exception object from the 
+/**
+ * Function called to obtain the original crack exception object from the
  * ABI's exception object.
  * Should only be called for a Crack exception.
  */
 extern "C" void *__CrackGetException(_Unwind_Exception *uex) {
     assert(uex->exception_class == crackClassId);
     return uex->user_data;
-} 
+}
 
 /**
  * Called at the end of a catch-clause that processes the exception.
@@ -182,14 +182,14 @@ extern "C" void __CrackExceptionFrame() {
             reinterpret_cast<_Unwind_Exception *>(
                 pthread_getspecific(crack::runtime::exceptionObjectKey)
             );
-        
+
         // if this is a crack exception, call the exception frame hook.
         if (uex)
             runtimeHooks.exceptionFrameFunc(uex->user_data, uex->last_ip);
     }
-}                               
+}
 
-/** Called from the toplevel when there is an uncaught exception. 
+/** Called from the toplevel when there is an uncaught exception.
  * Returns true if the exception was a crack exception.
  */
 extern "C" bool __CrackUncaughtException() {
@@ -202,7 +202,7 @@ extern "C" bool __CrackUncaughtException() {
             runtimeHooks.exceptionUncaughtFunc(uex->user_data);
         return true;
     }
-    
+
     return false;
 }
 
