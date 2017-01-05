@@ -3,7 +3,7 @@ g3d basics
 %%ARGS%%
 %%FILE%%
 # This just verifies that g3d compiles.
-import crack.exp.g3d loadPngReader;
+import crack.exp.g3d loadPNGMaterial;
 import crack.io cout;
 cout `ok\n`;
 %%EXPECT%%
