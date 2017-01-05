@@ -1,0 +1,40 @@
+%%TEST%%
+generic caching dependencies
+%%ARGS%%
+%%FILE%%
+import systest test;
+test.preBootstrap = true;
+
+test.mod('mod', I"
+    class G[T] {
+        void f() {
+            puts('first');
+        }
+    }
+    ");
+
+test.main(I"
+    import mod G;
+
+    class A {}
+
+    G[A] list = {};
+    list.f()
+    ");
+test.run();
+
+test.mod('mod', I"
+    class G[T] {
+        void f() {
+            puts('second');
+        }
+    }
+    ");
+test.run();
+
+%%EXPECT%%
+out: first
+terminated: success
+out: second
+terminated: success
+%%STDIN%%
