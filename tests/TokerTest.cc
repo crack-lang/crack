@@ -1,10 +1,10 @@
 // Copyright 2003 Michael A. Muller <mmuller@enduden.com>
 // Copyright 2010 Google Inc.
-// 
+//
 //   This Source Code Form is subject to the terms of the Mozilla Public
 //   License, v. 2.0. If a copy of the MPL was not distributed with this
 //   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-// 
+//
 
 #include <sstream>
 #include <cppunit/CompilerOutputter.h>
@@ -21,21 +21,21 @@ class TokerTests : public CppUnit::TestFixture {
     CPPUNIT_TEST(testBasics);
     CPPUNIT_TEST(testComments);
     CPPUNIT_TEST_SUITE_END();
-    
+
     public:
-        
+
         void setUp() {}
         void tearDown() {}
-        
+
         void constructTest() {}
-        
+
         void testBasics() {
-            
+
             Token::Type types[] = {
-                Token::ident, Token::string, Token::semi, Token::comma, 
-                Token::colon, Token::dot, Token::assign, Token::lparen, 
-                Token::rparen, Token::lcurly, Token::rcurly, //Token::oper, 
-                Token::integer, Token::plus, Token::minus, 
+                Token::ident, Token::string, Token::semi, Token::comma,
+                Token::colon, Token::dot, Token::assign, Token::lparen,
+                Token::rparen, Token::lcurly, Token::rcurly, //Token::oper,
+                Token::integer, Token::plus, Token::minus,
                 Token::asterisk, Token::slash, Token::end
             };
             const char *vals[] = {
@@ -44,14 +44,14 @@ class TokerTests : public CppUnit::TestFixture {
             };
             stringstream src("ident'test';,:.=(){}100+-*/\n");
             Toker toker(src, "input");
-            
+
             for (int i = 0; i < sizeof(types) / sizeof(Token::Type); ++i) {
                 Token tok = toker.getToken();
                 CPPUNIT_ASSERT_EQUAL(tok.getType(), types[i]);
                 CPPUNIT_ASSERT(!strcmp(tok.getData(), vals[i]));
             }
         }
-    
+
         void testComments() {
             stringstream src("ident1 // comment\nident2");
             Toker toker(src, "input");

@@ -1,10 +1,10 @@
 // Test SHA1 class
 // Copyright 2012 Conrad Steenberg <conrad.steenberg@gmail.com>
-// 
+//
 //   This Source Code Form is subject to the terms of the Mozilla Public
 //   License, v. 2.0. If a copy of the MPL was not distributed with this
 //   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-// 
+//
 // 12/26/2012
 
 import crack.ascii hex;
@@ -82,7 +82,7 @@ compare := AppendBuffer(1001);
 h := SHA1();
 h.update("hello");
 
-h2 := SHA1("hello2"); 
+h2 := SHA1("hello2");
 
 if (hex(h.digest()) != "aaf4c61ddcc5e8a2dabede0f3b482cd9aea9434d" ||
     hex(h2.digest()) != "0f1defd5135596709273b3a1a07e466ea2bf4fff") {

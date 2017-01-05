@@ -1,9 +1,9 @@
 # Copyright 2010-2011 Google Inc.
-# 
+#
 #   This Source Code Form is subject to the terms of the Mozilla Public
 #   License, v. 2.0. If a copy of the MPL was not distributed with this
 #   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-# 
+#
 
 import crack.io cout, Reader, StringWriter, StringReader;
 import crack.lang Buffer, WriteBuffer;
@@ -21,7 +21,7 @@ if (true) {
     SerialReader r = {StringReader(sw.string())};
     if (r.readUInt() != 1000)
         cout `Failed to write and read uint32\n`;
-    
+
     if (r.readString() != 'test')
         cout `Failed to write and read string\n`;
 }
@@ -32,7 +32,7 @@ if (true) {
     if (deser.readUInt().success)
         cout `FAILED, got success on empty buffer read\n`;
     if (deser.pos != 0)
-        cout I`FAILED, got pos update on empty buffer read: pos = 
+        cout I`FAILED, got pos update on empty buffer read: pos =
                $(deser.pos)\n`;
 }
 
@@ -47,7 +47,7 @@ if (true) {
         cout I`FAILED getting uint from BufferDeserializer, got \
                $(deser.lastUInt)\n`;
     if (deser.pos != 2)
-        cout I`FAILED BufferDeserializer.readUInt() buffer pos update, got 
+        cout I`FAILED BufferDeserializer.readUInt() buffer pos update, got
                $(deser.pos)\n`;
 }
 
@@ -80,12 +80,12 @@ if (true) {
 if (true) {
     StringWriter sw = {};
     SerialWriter w = {sw};
-    
+
     # do a one byte offset just so we can test float reads
     w.write(0);
     w.write(float32(1.23));
     w.write(float64(4.56));
-    
+
     BufferDeserializer deser = {sw.string()};
     if (!deser.readUInt().success || deser.lastUInt != 0)
         cout I`FAILED reading a zero uint, success = $(deser.success) \
@@ -100,20 +100,20 @@ if (true) {
     if (deser.lastFloat64 != 4.56)
         cout I`FAILED reading float64, expected 4.56 got \
                $(deser.lastFloat64)\n`;
-    
+
 }
 
-# test for two bugs: terminating single byte uint and float being read from 
+# test for two bugs: terminating single byte uint and float being read from
 # the existing buffer.
 if (true) {
     StringWriter sw = {};
     SerialWriter w = {sw};
-    
+
     w.write(1);
     w.write(float32(2));
     w.write(float64(3));
     w.write(0);
-    
+
     SerialReader deser = {StringReader(sw.string())};
     if (deser.readUInt() != 1)
         cout `FAILED reading first byte\n`;
@@ -129,11 +129,11 @@ if (true) {
 if (true) {
     StringWriter sw = {};
     SerialWriter w = {sw};
-    
+
     w.write(1);
     for (int i = 0; i < BUFSIZE; ++i)
         w.write(float32(i));
-    
+
     SerialReader deser = {StringReader(sw.string())};
     if (deser.readUInt() != 1)
         cout `FAILED (big array of floats) reading first byte\n`;
@@ -146,11 +146,11 @@ if (true) {
 if (true) {
     StringWriter sw = {};
     SerialWriter w = {sw};
-    
+
     w.write(1);
     for (int i = 0; i < BUFSIZE; ++i)
         w.write(float64(i));
-    
+
     SerialReader deser = {StringReader(sw.string())};
     if (deser.readUInt() != 1)
         cout `FAILED (big array of float64s) reading first byte\n`;

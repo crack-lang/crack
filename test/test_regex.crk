@@ -1,9 +1,9 @@
 // Copyright 2010-2011 Google Inc.
-// 
+//
 //   This Source Code Form is subject to the terms of the Mozilla Public
 //   License, v. 2.0. If a copy of the MPL was not distributed with this
 //   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-// 
+//
 
 import crack.lang die;
 import crack.io cout, Writer;
@@ -35,10 +35,10 @@ if (1) {
     actual := escape('.?+*[\\{^$(');
     if (actual != expected)
         cout `FAILED regex escaping: got $actual, expected $expected\n`;
-} 
+}
 
 if (1) {
-    
+
     void replacer(Match match, Writer out) {
         if (match.group() != 'pat')
             cout `FAILED match value during replacement.\n`;
@@ -48,13 +48,13 @@ if (1) {
     rx = Regex('pat');
     if (rx.subst('some pat for patbar', 'foo') != 'some foo for foobar')
         cout `FAILED basic string replacement\n`;
-    
+
     if (rx.subst('some pat for patbar', 'foo', 1) != 'some foo for patbar')
         cout `FAILED counted string replacement\n`;
-    
+
     if (rx.subst('patpat', 'foo') != 'foofoo')
         cout `FAILED replacement at beginning or end or abuttal\n`;
-    
+
     if (rx.subst('some pat for patbar', replacer) != 'some foo for foobar')
         cout `FAILED function replacement\n`;
 }
@@ -63,7 +63,7 @@ if (1) {
     rx = Regex(r'foo');
     if (!rx.match('foobar'))
         cout `FAILED match() on matching string\n`;
-    
+
     if (rx.match('babafoo'))
         cout `FAILED !match() not starting with matching string\n`;
 }
@@ -85,7 +85,7 @@ if (1) {
             out.write('test');
         }
     }
-    
+
     rx = Regex('pat');
     if (rx.subst('exchange pat for pat', F(), -1) != 'exchange test for test')
         cout `FAILED substitution of a functor.\n`;

@@ -1,16 +1,16 @@
 # Copyright 2011 Google Inc.
 # Copyright 2012 Conrad Steenberg <conrad.steenberg@gmail.com>
-# 
+#
 #   This Source Code Form is subject to the terms of the Mozilla Public
 #   License, v. 2.0. If a copy of the MPL was not distributed with this
 #   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-# 
+#
 # test of readers
 
 import crack.runtime random;
 import crack.lang AppendBuffer, Buffer;
 import crack.io cout, StringReader, StringWriter;
-import crack.io.readers FullReader, LineReader, PageBufferReader, 
+import crack.io.readers FullReader, LineReader, PageBufferReader,
     PageBufferString;
 
 @import crack.ann assert;
@@ -38,13 +38,13 @@ if (1) {
 
 # iterate over a bunch of lines.
 if (1) {
-    # length of this line is prime, it should at least be odd (and thus 
+    # length of this line is prime, it should at least be odd (and thus
     # relatively prime to 1024)
     sampleLine := 'all work and no play makes jack a dull boy\n';
     StringWriter temp = {};
     for (int i = 0; i < 10000; ++i)
         temp.write(sampleLine);
-    
+
     StringReader low = {temp.string()};
     full := FullReader(StringReader(temp.string()));
     count := 0;
@@ -97,23 +97,23 @@ if (1) {
 }
 
 if (true) {
-    # Construct some long lines that won't fall on buffer boundaries.  We 
-    # choose data such that a single line read will result in two buffer 
-    # fetches and the remaining normal reads will include at least one partial 
-    # fetch from LineReader's internal buffer and also a couple of pass 
+    # Construct some long lines that won't fall on buffer boundaries.  We
+    # choose data such that a single line read will result in two buffer
+    # fetches and the remaining normal reads will include at least one partial
+    # fetch from LineReader's internal buffer and also a couple of pass
     # through reads.
     longLine := String(1574, b'x') + '\n';
     data := StringReader(longLine * 3);
-    
+
     src := LineReader(data);
-    
+
     # This test assumes a buffer capacity of 1024.
     @assert(src.buffer.cap == 1024);
-    
+
     # Read the first line.
     @assert(src.readLine() == longLine);
-    
-    # Make sure that a normal read of the remaining contents yields what we 
+
+    # Make sure that a normal read of the remaining contents yields what we
     # expect.
     result := AppendBuffer(1575 * 2);
     while (buf := src.read(1575))

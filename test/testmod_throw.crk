@@ -1,9 +1,9 @@
 # Copyright 2011 Google Inc.
-# 
+#
 #   This Source Code Form is subject to the terms of the Mozilla Public
 #   License, v. 2.0. If a copy of the MPL was not distributed with this
 #   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-# 
+#
 
 import crack.runtime registerHook, EXCEPTION_UNCAUGHT_FUNC;
 import crack.lang Exception, FreeBase;
@@ -18,8 +18,8 @@ class Marker : FreeBase {
 
 Marker m;
 
-# replace the uncaught exception handler with a no-op handler so we don't have 
-# to deal with discrepancies in the way exception functions are formatted 
+# replace the uncaught exception handler with a no-op handler so we don't have
+# to deal with discrepancies in the way exception functions are formatted
 # between jit and native.
 void nopHandler(Object ex) {}
 registerHook(EXCEPTION_UNCAUGHT_FUNC, nopHandler);

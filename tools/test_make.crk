@@ -1,11 +1,11 @@
 #!/usr/local/bin/crack
 ## Script to generate unit test files.  Run with no args for usage.
 ## Copyright 2012 Google Inc.
-## 
+##
 ##   This Source Code Form is subject to the terms of the Mozilla Public
 ##   License, v. 2.0. If a copy of the MPL was not distributed with this
 ##   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-## 
+##
 
 import crack.ascii radix;
 import crack.strutil rjust;
@@ -21,7 +21,7 @@ int parseInt(String rep) {
         ++i;
         sign = -1;
     }
-    
+
     while (i < rep.size) {
         b := rep[i++];
         if (b >= b'0' && b <= b'9')
@@ -34,7 +34,7 @@ int parseInt(String rep) {
 }
 
 opts := CmdOptions![
-    Option('nobootstrap', 'n', 
+    Option('nobootstrap', 'n',
            'Set to "true" if the test should be run in non-bootstrapped '
             'mode.',
            'false',
@@ -81,7 +81,7 @@ if (!dirObj.isDir()) {
 }
 
 for (file :in dirObj.children()) {
-    if ( (m := fileRx.search(file.getName())) && 
+    if ( (m := fileRx.search(file.getName())) &&
          (curId := parseInt(m.group(1))) > maxId
         )
         maxId = curId;

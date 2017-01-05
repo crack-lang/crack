@@ -1,27 +1,27 @@
 // Test XDR encode/decode
 // Copyright 2012 Google Inc.
 // Copyright 2012 Conrad Steenberg <conrad.steenberg@gmail.com>
-// 
+//
 //   This Source Code Form is subject to the terms of the Mozilla Public
 //   License, v. 2.0. If a copy of the MPL was not distributed with this
 //   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-// 
+//
 // 6/25/2012
 
 import crack.io cout;
 import crack.lang ManagedBuffer;
 import crack.runtime XDR_ENCODE, XDR_DECODE, XDR_FREE, xdr, xdrmem_create,
                         xdr_encode_bool, xdr_decode_bool, xdr_error,
-                        xdr_encode_int, xdr_decode_int, 
+                        xdr_encode_int, xdr_decode_int,
                         xdr_encode_uint, xdr_decode_uint,
-                        xdr_encode_int32, xdr_decode_int32, 
+                        xdr_encode_int32, xdr_decode_int32,
                         xdr_encode_uint32, xdr_decode_uint32,
-                        xdr_encode_int64, xdr_decode_int64, 
+                        xdr_encode_int64, xdr_decode_int64,
                         xdr_encode_uint64, xdr_decode_uint64,
                         xdr_encode_float32, xdr_decode_float32,
                         xdr_encode_float64, xdr_decode_float64,
                         xdr_encode_bytes, xdr_decode_bytes,
-                        xdr_encode_array_int, xdr_decode_array_int, 
+                        xdr_encode_array_int, xdr_decode_array_int,
                         xdr_getpos, xdr_destroy;
 import crack.ascii hex;
 import crack.math PI, E;

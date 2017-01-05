@@ -1,10 +1,10 @@
 // Copyright 2010-2012 Google Inc.
 // Copyright 2011 Shannon Weyrick <weyrick@mozek.us>
-// 
+//
 //   This Source Code Form is subject to the terms of the Mozilla Public
 //   License, v. 2.0. If a copy of the MPL was not distributed with this
 //   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-// 
+//
 
 #include <string.h>
 #include "ext/Func.h"
@@ -21,13 +21,13 @@ class MyType {
     public:
         int a;
         const char *b;
-        
+
         MyType(int a, const char *b) : a(a), b(b) {}
 
         static MyType *oper_new() {
             return new MyType(100, "test");
         }
-        
+
         static void init(MyType *inst, int a, const char *b) {
             inst->a = a;
             inst->b = b;
@@ -63,7 +63,7 @@ struct MyVirtual {
     virtual int vfunc(int val) {
         return val;
     }
-    
+
     static int statFunc() {
         return 369;
     }
@@ -78,7 +78,7 @@ struct MyVirtual_Adapter : public MyVirtual {
     virtual int vfunc(int val);
     virtual ~MyVirtual_Adapter();
 
-    // static wrapper functions    
+    // static wrapper functions
     static int callVFunc(MyVirtual *inst, int val)  {
         return inst->MyVirtual::vfunc(val);
     }
@@ -86,11 +86,11 @@ struct MyVirtual_Adapter : public MyVirtual {
     static void init(void *inst) {
         new(inst) MyVirtual();
     }
-    
+
     static void init1(void *inst, int *delFlag) {
         new(inst) MyVirtual(delFlag);
     }
-    
+
     static void operator delete(void *mem) {}
     static void del(MyVirtual_Adapter *inst) {
         inst->MyVirtual::~MyVirtual();
@@ -122,7 +122,7 @@ MyVirtual_Adapter::~MyVirtual_Adapter() {
 extern "C" void testext_cinit(Module *mod) {
     Func *f = mod->addFunc(mod->getByteptrType(), "echo", (void *)echo);
     f->addArg(mod->getByteptrType(), "data");
-    
+
     Type *type = mod->addType("MyType", sizeof(MyType));
     type->addInstVar(mod->getIntType(), "a", CRACK_OFFSET(MyType, a));
     type->addInstVar(mod->getByteptrType(), "b", CRACK_OFFSET(MyType, b));
@@ -135,7 +135,7 @@ extern "C" void testext_cinit(Module *mod) {
     f->addArg(mod->getIntType(), "a");
     f->addArg(mod->getByteptrType(), "b");
     type->finish();
-    
+
     mod->addConstant(mod->getIntType(), "INT_CONST", 123);
     mod->addConstant(mod->getFloatType(), "FLOAT_CONST", 1.23);
 
@@ -159,20 +159,20 @@ extern "C" void testext_cinit(Module *mod) {
     f = mod->addFunc(mod->getIntType(), "callback", (void *)callback);
     f->addArg(intFuncType, "cb");
 
-    // create a type with virtual methods.  We create a hidden type to 
-    // strictly correspond to the instance area of the underlying type, then 
+    // create a type with virtual methods.  We create a hidden type to
+    // strictly correspond to the instance area of the underlying type, then
     // derive our proxy type from VTableBase and our hidden type.
-    
+
     type = mod->addType("MyVirtual", sizeof(MyVirtual_Adapter),
                         true // hasVTable - necessary for virtual types!
                         );
-    
+
     // we need some constructors to call the C++ class's constructors
     type->addConstructor("oper init", (void *)MyVirtual_Adapter::init);
     f = type->addConstructor("oper init", (void *)MyVirtual_Adapter::init1);
     f->addArg(intArrayType, "delFlag");
-    
-    // the order in which we add virtual methods must correspond to the order 
+
+    // the order in which we add virtual methods must correspond to the order
     // that they are defined in MyVirtual_VTable.
     f = type->addMethod(mod->getIntType(), "vfunc",
                         (void *)MyVirtual_Adapter::callVFunc
@@ -186,7 +186,7 @@ extern "C" void testext_cinit(Module *mod) {
                         );
     f->setVWrap(true);
 
-    // adding a static method just to test that we can call it from another 
+    // adding a static method just to test that we can call it from another
     // method defined inline.
     f = type->addStaticMethod(mod->getIntType(), "statFunc",
                               (void *)MyVirtual::statFunc
@@ -196,7 +196,7 @@ extern "C" void testext_cinit(Module *mod) {
     type->finish();
     Type *typeMyVirtual = type;
 
-    // verify that we can create a class that calls static methods of a plain 
+    // verify that we can create a class that calls static methods of a plain
     // class and a virtual class.
     type = mod->addType("Caller", 0);
     type->addConstructor();
