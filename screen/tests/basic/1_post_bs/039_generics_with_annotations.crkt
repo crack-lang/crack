@@ -5,7 +5,7 @@ generics with annotations
 %%FILE%%
 @import crack.ann define;
     import crack.io cout;
-     
+
      class A[X] {
          @define attr(name) {
              X name;
@@ -13,11 +13,11 @@ generics with annotations
          @attr(a);
          @attr(b);
      }
-     
+
      A[int] a = {};
      a.a = 100;
      a.b = 200;
-     
+
      if (a.a != 100 || a.b != 200)
         cout `FAILED generics with annotations\n`;
      cout `ok\n`;

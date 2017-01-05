@@ -1,16 +1,16 @@
 // Copyright 2011 Google Inc.
-// 
+//
 //   This Source Code Form is subject to the terms of the Mozilla Public
 //   License, v. 2.0. If a copy of the MPL was not distributed with this
 //   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-// 
+//
 # Utilities for use by tests that run in bootstrapping mode (pre-bootstrapped)
 
 ## Returns true if the two strings are equal.
-bool streq(byteptr a, byteptr b) { 
+bool streq(byteptr a, byteptr b) {
     while (a[0]) {
         if (a[0] != b[0]) return 0;
-        a += 1; 
+        a += 1;
         b += 1;
     }
     return (!b[0]);

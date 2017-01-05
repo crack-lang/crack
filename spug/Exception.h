@@ -1,28 +1,28 @@
 /*===========================================================================*\
-     
+
     Copyright 2006 Michael A. Muller <mmuller@enduden.com>
     Copyright 2010 Google Inc.
-    
+
       This Source Code Form is subject to the terms of the Mozilla Public
       License, v. 2.0. If a copy of the MPL was not distributed with this
       file, You can obtain one at http://mozilla.org/MPL/2.0/.
-    
- 
+
+
     This file is part of spug++.
- 
-    spug++ is free software: you can redistribute it and/or modify it under the 
-    terms of the GNU Lesser General Public License as published by the Free 
-    Software Foundation, either version 3 of the License, or (at your option) 
+
+    spug++ is free software: you can redistribute it and/or modify it under the
+    terms of the GNU Lesser General Public License as published by the Free
+    Software Foundation, either version 3 of the License, or (at your option)
     any later version.
- 
+
     spug++ is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
     GNU Lesser General Public License for more details.
- 
-    You should have received a copy of the GNU Lesser General Public License 
+
+    You should have received a copy of the GNU Lesser General Public License
     along with spug++.  If not, see <http://www.gnu.org/licenses/>.
- 
+
 \*===========================================================================*/
 
 #ifndef SPUG_EXCEPTION_H
@@ -51,8 +51,8 @@ class Exception : public std::exception {
 
         ~Exception() throw () {}
 
-        virtual const char *getClassName() const { 
-            return TypeInfo::get(*this)->getName(); 
+        virtual const char *getClassName() const {
+            return TypeInfo::get(*this)->getName();
         }
 
         /**

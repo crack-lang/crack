@@ -3,7 +3,7 @@ unsafe casts
 %%ARGS%%
 
 %%FILE%%
-class A {} class B : A { void run() { puts("ok"); } } A a = B(); 
+class A {} class B : A { void run() { puts("ok"); } } A a = B();
      (B.unsafeCast(a).run());
 %%EXPECT%%
 ok

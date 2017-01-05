@@ -6,7 +6,7 @@ void f() {}
 void outer() { void f() {} }
 class X { void f() {} }
 class Outer : VTableBase {
-    void f() { }    
+    void f() { }
     void g() {
         class Inner { void f() { puts('ok'); } }
         Inner().f();

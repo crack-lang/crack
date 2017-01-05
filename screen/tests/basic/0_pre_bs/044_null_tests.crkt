@@ -3,7 +3,7 @@ tests against null
 %%ARGS%%
 
 %%FILE%%
-class A {}; 
+class A {};
     if (0 == null) printint(1);
     byteptr b = null;
     if (b is null) printint(2);

@@ -3,7 +3,7 @@ no class symbol collisions on link
 %%ARGS%%
 
 %%FILE%%
-import test.testmod; class A {}; 
+import test.testmod; class A {};
 %%EXPECT%%
 testmod
 cleanup testmod

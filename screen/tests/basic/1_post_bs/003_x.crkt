@@ -3,7 +3,7 @@ recursive functions
 %%ARGS%%
 
 %%FILE%%
-int32 sum(int32 top) { 
+int32 sum(int32 top) {
         if (top > 0) return top + sum(top - 1); else return 0;
      }
      printint(sum(10));

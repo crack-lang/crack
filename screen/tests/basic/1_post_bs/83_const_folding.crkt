@@ -21,7 +21,7 @@ import crack.io cout;
 @check_bin_op(1 + 1, int, 2, byte);
 @check_bin_op(2 - 1, int, 1, byte);
 @check_bin_op(2 * 3, int, 6, byte);
-@check_bin_op(6 / 3, int, 2, byte); 
+@check_bin_op(6 / 3, int, 2, byte);
 @check_bin_op(8 % 3, int, 2, byte);
 # XXX not sure how to test unsigned division/remainders
 @check_bin_op(4 | 2, int, 6, byte);

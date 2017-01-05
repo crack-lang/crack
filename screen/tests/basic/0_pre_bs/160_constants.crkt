@@ -6,7 +6,7 @@ constants
 const int A = 100, B = 200;
 
 class C { bool oper !=(C other) { return 0; } }
-const X := C(); 
+const X := C();
 
 if (A != 100)
     puts('FAILED, A != 100');

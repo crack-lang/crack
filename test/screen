@@ -3,11 +3,11 @@
 # Copyright 2011-2012 Shannon Weyrick <weyrick@mozek.us>
 # Copyright 2011 Arno Rehn <arno@arnorehn.de>
 # Copyright 2011 Conrad Steenberg <conrad.steenberg@gmail.com>
-# 
+#
 #   This Source Code Form is subject to the terms of the Mozilla Public
 #   License, v. 2.0. If a copy of the MPL was not distributed with this
 #   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-# 
+#
 # Runs the "screen" command on selected tests or the set of all tests.
 # Options:
 #   -n run tests under llvm-native
@@ -18,7 +18,7 @@
 #   -d <test-dir> specify test directory (defaults to basic tests)
 
 root=${SOURCES_ROOT:-"$(dirname $(dirname $0))"}
-builddir=${BUILD_ROOT:-$(test -f "$root/build/crack" && 
+builddir=${BUILD_ROOT:-$(test -f "$root/build/crack" &&
            echo "$root/build" || echo "$root")}   # try to guess BUILD_ROOT if none is provided
 
 echo "Using root directory: $root"
@@ -66,7 +66,7 @@ eval set -- "$args"
 
 # process options
 while true; do
-    
+
     case "$1" in
         -n) builders='-bnative' ;;
         -f) opts="$opts --stop-on-fail" ;;
@@ -76,7 +76,7 @@ while true; do
         -d) test_dir="$2"; shift ;;
         --) shift ; break ;;
     esac
-    
+
     shift
 done
 

@@ -7,9 +7,9 @@ import crack.io cout;
      class A { int oper [](int i) { return i; }
                int oper [](int i, int j) { return i + j; }
                int oper [](int i, int j, int k) { return i + j + k; }
-               int oper []=(int i, int v) { return i * v; } 
-               int oper []=(int i, int j, int v) { return (i + j) * v; } 
-               int oper []=(int i, int j, int k, int v) { return (i + j + k) * v; } 
+               int oper []=(int i, int v) { return i * v; }
+               int oper []=(int i, int j, int v) { return (i + j) * v; }
+               int oper []=(int i, int j, int k, int v) { return (i + j + k) * v; }
              };
      A a = {};
      cout `$(a[100]) $(a[100, 200]) $(a[100, 200, 300]) `;

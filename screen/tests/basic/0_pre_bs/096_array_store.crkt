@@ -3,7 +3,7 @@ storing objects in an array
 %%ARGS%%
 
 %%FILE%%
-class Foo { oper bind() { puts("binding"); } 
+class Foo { oper bind() { puts("binding"); }
                  oper release() { puts("releasing"); } };
      f := array[Foo](10);
      Foo foo = {};

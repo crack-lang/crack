@@ -4,8 +4,8 @@ while does boolean conversion
 
 %%FILE%%
 class A {
-         int val; oper init(int val0) : val = val0 {} 
-         oper to bool() { return val; } 
+         int val; oper init(int val0) : val = val0 {}
+         oper to bool() { return val; }
      }
      a := A(3);
      while (a) {

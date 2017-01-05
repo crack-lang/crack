@@ -21,7 +21,7 @@ import crack.io FDWriter, StandardFormatter, Writer;
      atomic_int ai;
      ai += 123;
      f.format(ai);
-     
+
 %%EXPECT%%
 string-100100-1524157875019052115241578750190521<Object>123
 %%STDIN%%

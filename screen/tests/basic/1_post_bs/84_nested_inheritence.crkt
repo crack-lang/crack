@@ -6,14 +6,14 @@ tests of issues encountered in nested inheritence
 import crack.io cout;
 
 if (1) {
-    class A { 
-        oper init() {} 
+    class A {
+        oper init() {}
         class B : A {
-            int f() { return 123; } 
+            int f() { return 123; }
         }
         @static int g() { return B().f(); }
     }
-    
+
     if (A.g() != 123)
         cout `FAILED nested inheritence\n`;
 }

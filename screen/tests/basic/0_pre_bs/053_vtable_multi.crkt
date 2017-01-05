@@ -19,7 +19,7 @@ class C : A, B {
     byteptr cval;
     void a() { puts(cval); }
     void b() { puts(cval); }
-    
+
     void c() { puts(cval); }
     void c2() { puts('in c2'); c(); }
 };

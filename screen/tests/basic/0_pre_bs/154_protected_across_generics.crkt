@@ -11,7 +11,7 @@ void _h() { puts("in h"); }
          }
          B[T] get() { return B[T](); }
      }
-     
+
      A[int]().get()._g();
 %%EXPECT%%
 in f

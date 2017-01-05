@@ -13,7 +13,7 @@ class B : A[int] {
 A[int] a = B();
 if (a.f() != 100)
     puts('FAILED specialization of abstract');
-    
+
 
 
 puts('ok');

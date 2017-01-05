@@ -7,7 +7,7 @@ import test.testmod func, A, aImportVar;
      func();
      aImportVar.dump();
      (A("local inst of imported class").dump());
-     
+
 %%EXPECT%%
 testmod
 in test func

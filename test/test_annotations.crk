@@ -1,9 +1,9 @@
 # Copyright 2010-2011 Google Inc.
-# 
+#
 #   This Source Code Form is subject to the terms of the Mozilla Public
 #   License, v. 2.0. If a copy of the MPL was not distributed with this
 #   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-# 
+#
 
 import crack.io cout, StringFormatter;
 @import test.testann emitOk, incrButZero, testIsChecks, storeScope, getScope,
@@ -54,7 +54,7 @@ f1();
 f2();
 
 if (result.string() != '{in f}in g')
-    cout `failed to install or remove callbacks, got: 
+    cout `failed to install or remove callbacks, got:
 $(result.string())\n`;
 
 class C {
@@ -64,7 +64,7 @@ class C {
 
 if (!C.works())
     cout `"user_static" annotation failed`;
-    
+
 class D { @static bool works() { return true; } }
 if (!D.works()) cout `"static" annotation failed\n`;
 

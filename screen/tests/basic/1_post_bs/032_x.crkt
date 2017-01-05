@@ -3,7 +3,7 @@ binary operator overloading
 %%ARGS%%
 
 %%FILE%%
-class A {}; A a = {}; int oper +(A x, A y) { return 100; } 
+class A {}; A a = {}; int oper +(A x, A y) { return 100; }
      printint(a + a);
 %%EXPECT%%
 100
