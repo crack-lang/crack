@@ -1,10 +1,10 @@
 # Test cairo 2D drawing library binding
 # Copyright 2011-2012 Conrad Steenberg <conrad.steenberg@gmail.com>
-# 
+#
 #   This Source Code Form is subject to the terms of the Mozilla Public
 #   License, v. 2.0. If a copy of the MPL was not distributed with this
 #   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-# 
+#
 #
 # This tests the translation of the C library
 # Follow example code at http://cairographics.org/tutorial/
@@ -34,7 +34,7 @@ surface = cairo_image_surface_create (CAIRO_FORMAT_ARGB32, 120, 120);
 cr = cairo_create (surface);
 cairo_scale (cr, 120, 120);
 
-// Drawing code goes here 
+// Drawing code goes here
 radpat = cairo_pattern_create_radial (0.25, 0.25, 0.1,  0.5, 0.5, 0.5);
 cairo_pattern_add_color_stop_rgb (radpat, 0,  1.0, 0.8, 0.8);
 cairo_pattern_add_color_stop_rgb (radpat, 1,  0.9, 0.0, 0.0);

@@ -1,11 +1,11 @@
 // Copyright 2010-2011 Google Inc.
 // Copyright 2010-2011 Shannon Weyrick <weyrick@mozek.us>
 // Copyright 2010-2012 Conrad Steenberg <conrad.steenberg@gmail.com>
-// 
+//
 //   This Source Code Form is subject to the terms of the Mozilla Public
 //   License, v. 2.0. If a copy of the MPL was not distributed with this
 //   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-// 
+//
 # test of float type and operators
 # NOTE: 6/2010 - this is inadequate
 import crack.runtime printfloat;
@@ -63,7 +63,7 @@ if (!(f1 != f2))
 
 if (f1 > f2)
    puts("fail >");
-   
+
 if (!(f1 < f2))
    puts("fail <");
 
@@ -140,7 +140,7 @@ if (d1 != 1.0)
 
 
 // int16 -> float32
-int16 i16 = -5; 
+int16 i16 = -5;
 f1 = i16;
 if (f1 != -5.0)
     puts("fail int16 -> float32");
@@ -152,7 +152,7 @@ if (f1 != -5.0)
     puts("fail int16 -> float32, explicit");
 
 // uint16 -> float32
-uint16 u16 = 5; 
+uint16 u16 = 5;
 f1 = u16;
 if (f1 != 5.0)
     puts("fail uint16 -> float32");
@@ -164,7 +164,7 @@ if (f1 != 5.0)
     puts("fail uint16 -> float32, explicit");
 
 // int16 -> float64
-i16 = -5; 
+i16 = -5;
 d1 = i16;
 if (d1 != -5.0)
     puts("fail int16 -> float64");
@@ -176,7 +176,7 @@ if (d1 != -5.0)
     puts("fail int16 -> float64, explicit");
 
 // uint16 -> float64
-u16 = 5; 
+u16 = 5;
 d1 = u16;
 if (d1 != 5.0)
     puts("fail uint16 -> float64");
@@ -188,7 +188,7 @@ if (d1 != 5.0)
     puts("fail uint16 -> float64, explicit");
 
 // int32 -> float64
-int32 i = -5; 
+int32 i = -5;
 d1 = i;
 if (d1 != -5.0)
     puts("fail int32 -> float64");
@@ -200,7 +200,7 @@ if (d1 != -5.0)
     puts("fail int32 -> float64, explicit");
 
 // uint32 -> float64
-uint32 ui = 5; 
+uint32 ui = 5;
 d1 = ui;
 if (d1 != 5.0)
     puts("fail uint32 -> float64");

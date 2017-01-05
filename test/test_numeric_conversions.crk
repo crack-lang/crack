@@ -1,10 +1,10 @@
 // Copyright 2011 Google Inc.
 // Copyright 2012 Conrad Steenberg <conrad.steenberg@gmail.com>
-// 
+//
 //   This Source Code Form is subject to the terms of the Mozilla Public
 //   License, v. 2.0. If a copy of the MPL was not distributed with this
 //   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-// 
+//
 
 import crack.io cout;
 @import crack.ann define;
@@ -123,7 +123,7 @@ if (1) {
     @ca(f64, f32)
 }
 
-# check explicit conversion from every numeric type to every other numeric 
+# check explicit conversion from every numeric type to every other numeric
 # type.
 if (1) {
     # check explicit conversions
@@ -138,7 +138,7 @@ if (1) {
             }
         }
     }
-    
+
     # check explicit conversion suite
     @define ces(valType) {
         @ce(int, valType)

@@ -1,10 +1,10 @@
 // Copyright 2011 Google Inc.
 // Copyright 2011 Conrad Steenberg <conrad.steenberg@gmail.com>
-// 
+//
 //   This Source Code Form is subject to the terms of the Mozilla Public
 //   License, v. 2.0. If a copy of the MPL was not distributed with this
 //   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-// 
+//
 // Test CmdOptions
 
 import crack.ascii wsplit;
@@ -73,7 +73,7 @@ if  (sys_options.getBool("usage")){
 try{
    int o = options.getInt("o");
    cout `Fetching non-existent key did not throw exception\n`;
-} 
+}
 catch (Exception ex){}
 
 options = CmdOptions();
@@ -125,7 +125,7 @@ if (!options.getBool("bool") || !options.getBool("b"))
 if (options.getBool("help") || options.getBool("h"))
    cout `Bool retrieve 3 failed\n`;
 
-// Short options 
+// Short options
 if (options.getFloat("o") != 20.0)
    cout `Float retrieve of option 'o' failed\n`;
 

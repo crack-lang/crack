@@ -1,9 +1,9 @@
 # Copyright 2011-2012 Google Inc.
-# 
+#
 #   This Source Code Form is subject to the terms of the Mozilla Public
 #   License, v. 2.0. If a copy of the MPL was not distributed with this
 #   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-# 
+#
 # tests of string interpolation
 
 # verify that a formatter is released exactly once.
@@ -15,7 +15,7 @@ if (1) {
         oper release() { ++releaseCount; }
         oper to bool() { return 1; }
     }
-    
+
     int i;
     A() `first test $i, second test $i\n`;
     if (releaseCount != 1) {
@@ -24,7 +24,7 @@ if (1) {
     }
 }
 
-# verify that the troublesome `$i'` isn't interpreted as the beginning of an 
+# verify that the troublesome `$i'` isn't interpreted as the beginning of an
 # augmented string token
 if (1) {
     import test.preutil streq;
@@ -56,7 +56,7 @@ if (1) {
     f `$I"`;
     if (!f.check(400, '"'))
         puts('FAILED I" in istring');
-    
+
     f `$(r'\test')$(i)`;
     if (!f.check(100, '\\test'))
         puts('FAILED augmented string in parens');
@@ -69,11 +69,11 @@ if (1) {
             result <<= 4;
             result |= i;
         }
-        
+
         int leave() {
             return result;
         }
-        
+
         oper to bool() { return 1 }
     }
     if (F() `$(1)$(F() `$(2)`)$(3)` != 0x123)

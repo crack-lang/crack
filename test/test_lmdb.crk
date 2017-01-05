@@ -1,9 +1,9 @@
 // Copyright 2013 Conrad Steenberg <conrad.steenberg@gmail.com>
-// 
+//
 //   This Source Code Form is subject to the terms of the Mozilla Public
 //   License, v. 2.0. If a copy of the MPL was not distributed with this
 //   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-// 
+//
 
 // Test the _lmdb extension module
 import crack.ascii hex;
@@ -15,7 +15,7 @@ import crack.sys exit;
 import crack.runtime errno, free;
 
 
-import crack.ext._lmdb 
+import crack.ext._lmdb
     // Types
     MDB_cursor, MDB_env, MDB_stat, MDB_txn, MDB_val,
 
@@ -87,7 +87,7 @@ void exitStrError() {
 MDB_env env = mdb_env_create();
 if (env is null) exitStrError();
 if (mdb_env_set_mapsize(env, 10485760) != MDB_SUCCESS) exitStrError();
-if (mdb_env_open(env, "./testdb".buffer, 
+if (mdb_env_open(env, "./testdb".buffer,
                  MDB_FIXEDMAP | MDB_CREATE, 0664
                  ) != MDB_SUCCESS
     ) {

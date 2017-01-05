@@ -1,10 +1,10 @@
 # Copyright 2010-2011 Google Inc.
-# 
+#
 #   This Source Code Form is subject to the terms of the Mozilla Public
 #   License, v. 2.0. If a copy of the MPL was not distributed with this
 #   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-# 
-# tests that order of construction and destruction of instance variables is 
+#
+# tests that order of construction and destruction of instance variables is
 # correct in all modes.
 
 import crack.io StringFormatter, cout;
@@ -17,20 +17,20 @@ class A {
     oper init(String val) : val(val) {
         out `init $val;`;
     }
-    
+
     oper init() : val('default') {
         out `init $val;`;
     }
-    
+
     oper del() {
         out `delete $val;`;
     }
 }
 
 class B {
-    # since these are stored in a map ordered by the name, we order instance 
-    # vars in these tests reverse-alpabetically to rule out the possibility 
-    # that initializer/destructor generation could still be generated from 
+    # since these are stored in a map ordered by the name, we order instance
+    # vars in these tests reverse-alpabetically to rule out the possibility
+    # that initializer/destructor generation could still be generated from
     # the order of the map.
     A y = A('y');
     A x = A('x');
@@ -54,8 +54,8 @@ class D {
     A z = A('z');
     A y = A('WRONG');
     A x = A('WRONG');
-    
-    oper init() : x('x'), y = A('y') {}    
+
+    oper init() : x('x'), y = A('y') {}
 }
 out = StringFormatter();
 (D());

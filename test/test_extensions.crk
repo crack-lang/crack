@@ -1,10 +1,10 @@
 # Copyright 2010-2012 Google Inc.
 # Copyright 2011 Shannon Weyrick <weyrick@mozek.us>
-# 
+#
 #   This Source Code Form is subject to the terms of the Mozilla Public
 #   License, v. 2.0. If a copy of the MPL was not distributed with this
 #   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-# 
+#
 # Extension tests.
 
 import testext echo, copyArray, MyType, INT_CONST, FLOAT_CONST,
@@ -14,7 +14,7 @@ if (String(echo("hello".buffer)) != "hello")
     cout `failed on function invocation\n`;
 
 t := MyType();
-if (String(t.echo('bite me'.buffer)) != 'bite me') 
+if (String(t.echo('bite me'.buffer)) != 'bite me')
     cout `failed on method invocation\n`;
 
 if (t.a != 100)
@@ -33,7 +33,7 @@ class MyAggType : Object, MyType {
 }
 
 agg := MyAggType();
-# TODO: remove the conversion once we can implement all integer operations for 
+# TODO: remove the conversion once we can implement all integer operations for
 # atomics.
 if (agg.refCount != int(1))
     cout `bad reference count in MyAggType\n`;
@@ -41,7 +41,7 @@ if (agg.a != 0)
     cout `Instance variable "a" not initialized in MyAggType\n`;
 
 agg = MyAggType(100, null);
-# TODO: remove the conversion once we can implement all integer operations for 
+# TODO: remove the conversion once we can implement all integer operations for
 # atomics.
 if (agg.refCount != int(1))
     cout `bad reference count in MyAggType(100)\n`;
@@ -88,7 +88,7 @@ class DerivedVirtual : MyVirtual {
     int vfunc(int val) {
         return val + 1;
     }
-    
+
     oper del() {
         flags[0] = 666;
     }

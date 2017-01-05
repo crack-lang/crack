@@ -1,12 +1,12 @@
 // Copyright 2011 Conrad Steenberg <conrad.steenberg@gmail.com>
-// 
+//
 //   This Source Code Form is subject to the terms of the Mozilla Public
 //   License, v. 2.0. If a copy of the MPL was not distributed with this
 //   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-// 
+//
 import crack.runtime exit;
 import crack.ext._sdl SDL_Surface, SDL_Event, SDL_Init, SDL_INIT_VIDEO, SDL_SetVideoMode,
-       SDL_Quit, SDL_FULLSCREEN, SDL_SWSURFACE, SDL_QUIT, SDL_KEYDOWN, 
+       SDL_Quit, SDL_FULLSCREEN, SDL_SWSURFACE, SDL_QUIT, SDL_KEYDOWN,
        SDL_RESIZABLE, SDL_PollEvent, SDL_Event_GetType, SDL_EventNew, SDL_Flip;
 import crack.ext._cairosdl CAIROSDL_ASHIFT, cairosdl_create, cairosdl_surface_create,
                            cairosdl_surface_flush;
@@ -58,7 +58,7 @@ SDL_Flip(screen);
 
 // Event loop
 while(keypress == 0) {
-    while(SDL_PollEvent(event) > 0) 
+    while(SDL_PollEvent(event) > 0)
     {   eventType =  SDL_Event_GetType(event);
         if (eventType == SDL_QUIT) {
                 keypress = 1;

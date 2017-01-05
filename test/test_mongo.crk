@@ -130,4 +130,4 @@ if (!C.delete(ns, 0, '{"the_final_answer": 42}'))
 else
     cout `ok\n`;
 
-    
+

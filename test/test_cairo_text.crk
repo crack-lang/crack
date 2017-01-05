@@ -1,10 +1,10 @@
 # Test cairo 2D drawing library binding
 # Copyright 2011-2012 Conrad Steenberg <conrad.steenberg@gmail.com>
-# 
+#
 #   This Source Code Form is subject to the terms of the Mozilla Public
 #   License, v. 2.0. If a copy of the MPL was not distributed with this
 #   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-# 
+#
 #
 # This tests the translation of the C library
 # Follow example code at http://cairographics.org/tutorial/
@@ -21,7 +21,7 @@ import crack.ext._cairo    cairo_surface_t, cairo_t, cairo_image_surface_create,
                            cairo_destroy, cairo_surface_destroy,
                            cairo_text_extents_t, cairo_select_font_face,
                            CAIRO_FONT_SLANT_NORMAL, CAIRO_FONT_WEIGHT_BOLD,
-                           cairo_set_font_size, cairo_text_extents, 
+                           cairo_set_font_size, cairo_text_extents,
                            cairo_text_extents_new, cairo_show_text;
 import crack.math PI, sqrt;
 

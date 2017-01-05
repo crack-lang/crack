@@ -1,16 +1,16 @@
 # Copyright 2011 Google Inc.
-# 
+#
 #   This Source Code Form is subject to the terms of the Mozilla Public
 #   License, v. 2.0. If a copy of the MPL was not distributed with this
 #   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-# 
+#
 # test of bootstrapped exception classes
 
 import crack.lang die, free, Exception, SubString;
 import crack.io cout, StringFormatter;
 import crack.strutil StringArray;
 
-// don't derived from Exception before this test - see comment on 
+// don't derived from Exception before this test - see comment on
 // DerivedException below.
 String exText;
 try {
@@ -19,10 +19,10 @@ try {
     exText = ex.text;
 }
 
-// at one point, deriving from an imported class caused problems if the 
-// derivation happened after the first "catch".  Keep this class after the 
+// at one point, deriving from an imported class caused problems if the
+// derivation happened after the first "catch".  Keep this class after the
 // first try/catch.
-class DerivedException : Exception {} 
+class DerivedException : Exception {}
 
 if (exText != 'this is a test')
     cout `FAIL: incorrect exception value: $exText\n`;
@@ -58,13 +58,13 @@ if (1) {
 
     if (!(cleanups & 1))
         cout `FAILED exception object cleanup (missed cleanup)\n`;
-    
+
     if (!(cleanups & 2))
         cout `FAILED excepton object cleanup (catch not called)\n`;
 }
 
 if (1) {
-    # This is a little differeng from strutil.split(), adjacent delimiters 
+    # This is a little differeng from strutil.split(), adjacent delimiters
     # will result in empty strings in the returned array.
     StringArray split(String s, byte sep) {
         StringArray result = {};
@@ -79,40 +79,40 @@ if (1) {
             }
             pos = end + 1;
         }
-        
+
         return result;
     }
-        
+
     void f() {
         throw Exception('this is a test');
     }
-    
+
     void g() {
         f();
     }
-    
+
     StringFormatter out = {};
     try {
         g();
     } catch (Exception ex) {
         out `Exception occurred:\n$ex\n`;
     }
-    
-    
+
+
     tb := split(out.string(), b'\n');
     if (tb[0] != 'Exception occurred:')
         cout `FAILED stack traces: no initial string\n`;
-    
+
     # strip off the filename, get the last dotted segment of the name
     if (split(tb[1], b'.')[-1] != 'g()')
         cout `FAILED stack traces: first function not g: $(tb[1]) \n`;
-    
+
     if (split(tb[2], b'.')[-1] != 'f()')
         cout `FAILED stack traces: first function not f: $(tb[2])\n`;
-    
+
     if (tb[3] != 'Exception: this is a test')
         cout `FAILED stack traces: last line is not the exception: $(tb[3])\n`;
-        
+
 }
 
 cout `ok\n`;

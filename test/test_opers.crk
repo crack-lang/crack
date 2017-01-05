@@ -1,10 +1,10 @@
 # tests of explicit operator invocation.
 # Copyright 2010-2012 Google Inc.
-# 
+#
 #   This Source Code Form is subject to the terms of the Mozilla Public
 #   License, v. 2.0. If a copy of the MPL was not distributed with this
 #   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-# 
+#
 
 int tester;
 void check(int val, byteptr failMsg) {
@@ -13,7 +13,7 @@ void check(int val, byteptr failMsg) {
 }
 
 class Foo {
-    oper bind() { tester = 1 } 
+    oper bind() { tester = 1 }
     oper release() { tester = 2; }
     int oper [](uint index) { tester = 3; return 0; }
     void oper []=(uint index, int val) { tester = 4; }
@@ -38,7 +38,7 @@ class Foo {
     int oper |(int i) { tester = i; return 0; }
     oper to bool() { return 1; }
     int oper r+(int val) { tester = val; return 0; }
-    
+
     oper to int() { return tester; }
     int oper call(int val) { return val; }
 }
@@ -78,7 +78,7 @@ if (1) {
         if (int(101) != f) puts('FAILED conversion operator definition');
         if (f(102) != 102) puts('FAILED implicit oper call');
         if (f.oper call(103) != 103) puts('FAILED explicit oper call');
-    
+
         # we only need to check broad classes of the implicit operators - the
         # logic is all the same.
         f == f; check(9, 'FAILED implicit ==');
@@ -113,7 +113,7 @@ if (1) {
 
 # run ternary operator tests in their own namespace
 if (1) {
-    # test operator precedence (this would fail to compare 1 to 'b' if 
+    # test operator precedence (this would fail to compare 1 to 'b' if
     # precedence is wrong)
     1 == 2 ? 'a' : 'b';
 
@@ -121,17 +121,17 @@ if (1) {
     x := val ? 100 : 200;
     if (x != 200)
         puts('failed on basic ternary operator usage');
-    
+
     class Bar : Foo {}
-    
+
     f := Foo();
     b := Bar();
-    
+
     val = 1;
     g := val ? f : b;
     if (g is b) puts('failed on type generalization');
     if (!(g is f)) puts('WTF?');
-    
+
     bool isBool(voidptr j) { return 1==0; }
     bool isBool(bool j) { return 1==1; }
     i := val ? f : (1==0);
@@ -143,25 +143,25 @@ if (1) {
     int released;
     class Marker {
         oper release() { ++released; }
-        
+
         # try this once with the return type specified
         bool oper to bool() { return 1; }
     }
-    
+
     Marker() ? 1 : 2;
     if (released != 1)
         puts('failed ternary cleanup of expression');
-    
+
     released = 0;
     1 ? Marker() : t;
     if (released != 1)
         puts('failed ternary cleanup of 1 clause');
-    
+
     released = 0;
     0 ? t : Marker();
     if (released != 1)
         puts('failed ternary cleanup of false clause');
-    
+
     released = 0;
     1 ? t : Marker();
     if (released)
@@ -171,7 +171,7 @@ if (1) {
     0 ? Marker() : t;
     if (released)
         puts('failed ternary cleanup unused false clause cleaned up');
-    
+
     # formatters do crazy stuff with the ternary operator implementation
     class Formatter {
         oper release() { ++released; }
@@ -192,13 +192,13 @@ if (1) {
                 puts('formatter released prior to leave()');
             return 0;
         }
-        
+
         oper to bool() { return 1; }
     }
     Formatter() `test of $(1) other`;
     if (released != 1)
         puts('formatter not released');
-}    
+}
 
 if (1) {
     byteptr b = '123';
@@ -223,6 +223,6 @@ if (1) {
     if ((ai--)[0] != 2 || ai[0] != 1)
         puts('failed array postincrement');
 }
-    
+
 
 puts('ok');

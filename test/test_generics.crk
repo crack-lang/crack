@@ -1,9 +1,9 @@
 # Copyright 2011-2012 Google Inc.
-# 
+#
 #   This Source Code Form is subject to the terms of the Mozilla Public
 #   License, v. 2.0. If a copy of the MPL was not distributed with this
 #   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-# 
+#
 
 import test.testmod_generic G;
 
@@ -18,9 +18,9 @@ class FakeFormatter {
         result |= val;
     }
     void format(float val) { }
-    
+
     int leave() { return result; }
-    
+
     oper to bool() { return 1; }
 }
 
@@ -30,9 +30,9 @@ class A[T] {
 
     oper init(T val) : val = val {}
     @static void gotStatic() { gotStaticCalled = 1; }
-    
+
     int format() { return FakeFormatter() `\001$val\002`; }
-    
+
 }
 
 if (A[int](100).val != 100) puts('FAILED generic based on int');
@@ -50,17 +50,17 @@ B[int, float] b = {};
 if (b.f(100) != 100 || b.f(1.5) != 1.5)
     puts('FAILED two argument generic');
 
-class C { 
+class C {
     oper to int() { return 1; } // so we can match a formtter
 
-    A[C] wrap; 
+    A[C] wrap;
     oper init() : wrap(this) {}
 }
 C c = {};
 if (!(c.wrap.val is c))
     puts('FAILED nested generic parameterized by outer class');
 
-# test parsing a generic derived from another generic parameterized by a 
+# test parsing a generic derived from another generic parameterized by a
 # generic parameter
 class D[T] : A[T] { oper init(int val) : A[T](val) {} }
 
@@ -78,14 +78,14 @@ if (1) {
         class B[X] {
             @static void g() { f(); e(); gotStaticCalled = 1; }
         }
-        
+
         void h() {
             B[int].g();
         }
-        
+
         h();
     }
-    
+
     outer();
     if (!gotStaticCalled)
         puts('FAILED generics accessing symbols from enclosing contexts');
@@ -94,10 +94,10 @@ if (1) {
 if (1) {
     class B[C] : C {}
     class Foo : VTableBase {}
-    bool streq(byteptr a, byteptr b) { 
+    bool streq(byteptr a, byteptr b) {
         while (a[0]) {
             if (a[0] != b[0]) return 0;
-            a += 1; 
+            a += 1;
             b += 1;
         }
         return (!b[0]);
@@ -110,7 +110,7 @@ if (1) {
 if (1) {
     class _N {}
     G[_N] vals;
-    
+
     class N {
         class __M {}
         G[__M] __carr;

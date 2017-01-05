@@ -1,10 +1,10 @@
 // Copyright 2010-2011 Google Inc.
 // Copyright 2010-2012 Conrad Steenberg <conrad.steenberg@gmail.com>
-// 
+//
 //   This Source Code Form is subject to the terms of the Mozilla Public
 //   License, v. 2.0. If a copy of the MPL was not distributed with this
 //   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-// 
+//
 
 // test of math library
 @import crack.ann define;
@@ -19,12 +19,12 @@ import crack.math  sin, cos, tan, asin, acos, atan, sinh, cosh, tanh, asinh,
                     erf, erfc, lgamma, tgamma, ceil, floor, nearbyint, rint,
                     round, trunc, expm1, fpclassify, isfinite, isinf, isnan,
                     isnormal, sign, fmod, remainder, copysign, nextafter,
-                    fdim, pow, testexcept, clearexcept, errno, setErrno, max, min, 
+                    fdim, pow, testexcept, clearexcept, errno, setErrno, max, min,
                     HUGE_VAL, INFINITY, NAN, FP_INFINITE, FP_NAN,
                     FP_NORMAL, FP_SUBNORMAL, FP_ZERO, FP_ILOGB0, FP_ILOGBNAN,
                     ALL_EXCEPT, INVALID, DIVBYZERO, OVERFLOW,
-                    UNDERFLOW, ERANGE,  
-                    E, LOG2E, LOG10E, LN2, LN10, LNPI, PI, PI_2, PI_4, PI1, 
+                    UNDERFLOW, ERANGE,
+                    E, LOG2E, LOG10E, LN2, LN10, LNPI, PI, PI_2, PI_4, PI1,
                     PI2, SQRTPI2, SQRT2, SQRT3, SQRT1_2, SQRTPI, GAMMA;
 
 import crack.random random, srandom, setstate, initstate;

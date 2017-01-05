@@ -1,12 +1,12 @@
 // Copyright 2010-2011 Google Inc.
-// 
+//
 //   This Source Code Form is subject to the terms of the Mozilla Public
 //   License, v. 2.0. If a copy of the MPL was not distributed with this
 //   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-// 
+//
 ## test break and continue and cleanups
 
-# keep track of short sequences of activity by storing them in a multi-digit 
+# keep track of short sequences of activity by storing them in a multi-digit
 # integer.
 int results;
 void put(int i) {
@@ -15,7 +15,7 @@ void put(int i) {
 
 # keep track of when an object is released
 class X {
-    int i; 
+    int i;
     oper init(int i) : i = i {}
     oper release() {
         put(i);

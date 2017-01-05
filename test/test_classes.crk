@@ -1,9 +1,9 @@
 # Copyright 2011-2012 Google Inc.
-# 
+#
 #   This Source Code Form is subject to the terms of the Mozilla Public
 #   License, v. 2.0. If a copy of the MPL was not distributed with this
 #   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-# 
+#
 
 # simple class definition
 if (1) {
@@ -15,7 +15,7 @@ if (1) {
     class Base {}; class Foo : Base {}
 }
 
-# this was shabby to begin with, restore this and more tests when we get real 
+# this was shabby to begin with, restore this and more tests when we get real
 # multiple inheritence working.
 # class with base classes
 # class Foo : int32, byteptr {}
@@ -40,14 +40,14 @@ if (1) {
 # instance variables
 if (1) {
     class Foo {
-        int32 val; 
-        void set() {val = 100;} 
+        int32 val;
+        void set() {val = 100;}
         int32 get() {return val;}
     }
     Foo x = {}; x.set();
     if (x.get() != 100)
         puts('FAILED setting or getting instance variable in method');
-    x.val = 200; 
+    x.val = 200;
     if (x.val != 200)
         puts('FAILED setting or getting instance variable directly');
 }
@@ -57,7 +57,7 @@ if (1) {
     class Foo {
         int32 a;
         int32 g() { return a; }
-        int32 f() { a = 100; return g(); } 
+        int32 f() { a = 100; return g(); }
     }
 
     Foo foo = {};
@@ -72,7 +72,7 @@ if (1) {
         int32 g() { return this.a; }
         int32 f() { this.a = 100; return this.g(); }
      };
-     Foo foo = {}; 
+     Foo foo = {};
      if (foo.f() != 100)
         puts('FAILED explicit this setting or method getting');
 }
@@ -80,8 +80,8 @@ if (1) {
 # using a classname with its definition
 if (1) {
     class C {
-        int f() { return 100; } 
-        C self() { return this; } 
+        int f() { return 100; }
+        C self() { return this; }
     }
     C c = {};
     if (c.self().f() != 100)
@@ -90,10 +90,10 @@ if (1) {
 
 # external references of base inst vars
 if (1) {
-    class A { int32 v; }; 
+    class A { int32 v; };
     class B : A {};
-    B b = {}; 
-    b.v = 100; 
+    B b = {};
+    b.v = 100;
     if (b.v != 100)
         puts('FAILED external references to base class instance variables.');
 }
@@ -102,17 +102,17 @@ if (1) {
 if (1) {
     class A { int32 val; };
     class B : A { oper init() { val = 100; } int32 f() { return val; } };
-    B b = {}; 
+    B b = {};
     if (b.f() != 100)
         puts('FAILED internal refs to base class inst vars.');
 }
 
 # nested inheritence
 if (1) {
-    class A { 
-        oper init() {} 
-        class B : A {}  
-        int f() { return 123; } 
+    class A {
+        oper init() {}
+        class B : A {}
+        int f() { return 123; }
         @static int g() { return B().f(); }
     }
     if (A.g() != 123)
@@ -128,6 +128,6 @@ if (1) {
     if (B.f() != 123)
         puts('FAILED derived-class function qualification');
 }
-        
+
 
 puts('ok');

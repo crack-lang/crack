@@ -1,10 +1,10 @@
 # Copyright 2010-2011 Google Inc.
 # Copyright 2012 Conrad Steenberg <conrad.steenberg@gmail.com>
-# 
+#
 #   This Source Code Form is subject to the terms of the Mozilla Public
 #   License, v. 2.0. If a copy of the MPL was not distributed with this
 #   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-# 
+#
 # tests of bitwise operations.
 
 import crack.io cout;
@@ -86,12 +86,12 @@ expect(2 | 3 & 1, "2 | 3 & 1", 3);
 expect(2 | 3 ^ 6, "2 | 3 ^ 6", 7);
 expect(2 ^ 3 & 1, "2 ^ 3 & 1", 3);
 
-# verify that the result types of binary operators are what we expect them to 
+# verify that the result types of binary operators are what we expect them to
 # be
 
 @define ct(l, op, r, t, v) {
     if (1) {
-        l lv = 1; 
+        l lv = 1;
         r rv = 2;
         ln := $l;
         rn := $r;
@@ -101,7 +101,7 @@ expect(2 ^ 3 & 1, "2 ^ 3 & 1", 3);
             tn := $t;
             cout `typeof($ln $opn $rn) != $tn\n`;
         }
-        
+
         if ((lv op rv) != t(v)) {
             vn := $v;
             cout `$ln $opn $rn != $vn\n`;
@@ -117,7 +117,7 @@ expect(2 ^ 3 & 1, "2 ^ 3 & 1", 3);
         cout `typeof($ln + $rn) is not $tn\n`;
     }
 }
-    
+
 @define cit(l, r, t) {
     @ct(l, +, r, t, 3);
     @ct(l, -, r, t, -1);
@@ -167,7 +167,7 @@ void main() {
     @cit(int64, byte, int64)
     @cit(byte, uint64, uint64)
     @cit(uint64, byte, uint64)
-    
+
     @cit(int16, int16, int16)
     @cit(int16, int64, int64)
     @cit(int64, int16, int64)
@@ -177,22 +177,22 @@ void main() {
     @cit(int64, uint16, int64)
     @cit(uint16, uint64, uint64)
     @cit(uint64, uint16, uint64)
-    
+
     @cit(int32, int32, int32)
     @cit(int32, uint32, int64)
     @cit(uint32, int32, int64)
     @cit(int32, int64, int64)
     @cit(int64, int32, int64)
-    
+
     @cit(uint32, uint32, uint32)
     @cit(uint32, int64, int64)
     @cit(int64, uint32, int64)
     @cit(uint32, uint64, uint64)
     @cit(uint64, uint32, uint64)
-    
+
     @cit(int64, int64, int64)
     @cit(uint64, uint64, uint64)
-    
+
     @cft(float32, float32, float32)
     @cft(byte, float32, float32)
     @cft(float32, byte, float32)
@@ -202,9 +202,9 @@ void main() {
     @cft(uint32, float32, float64)
     @cft(float32, float64, float64)
     @cft(float64, float32, float64)
-    
+
     @cft(float64, float64, float64)
-    
+
     @cit(int, int, int)
     @cit(int, byte, int)
     @cit(byte, int, int)
@@ -216,7 +216,7 @@ void main() {
     @cit(int64, int, int)
     @cit(int, uint64, int)
     @cit(uint64, int, int)
-    
+
     @cft(float, float, float)
     @cft(float, byte, float)
     @cft(byte, float, float)
@@ -229,7 +229,7 @@ void main() {
     @cct(1, 2, int)
     @cct(1, 2.0, float)
     @cct(1.0, 2, float)
-    @cct(int32(1), 2.0, float64)  # should be int32, since these floats are 
+    @cct(int32(1), 2.0, float64)  # should be int32, since these floats are
                                   # int compatible
     @cct(1.0, int32(2), float64)
 

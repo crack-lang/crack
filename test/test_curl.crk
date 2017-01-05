@@ -1,11 +1,11 @@
 // Test libCURL binding
 // Copyright 2012 Google Inc.
 // Copyright 2013 Conrad Steenberg <conrad.steenberg@gmail.com>
-// 
+//
 //   This Source Code Form is subject to the terms of the Mozilla Public
 //   License, v. 2.0. If a copy of the MPL was not distributed with this
 //   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-// 
+//
 // 11/12/2012
 
 import crack.runtime exit,strlen;
@@ -200,7 +200,7 @@ CURLPAUSE_ALL, CURLPAUSE_CONT,
 
 
 // Types
-CURL, CURLinfo, 
+CURL, CURLinfo,
 slist,
 
 // Function names
@@ -284,9 +284,9 @@ for (l := list.head; !(l is null); l = l.next)
 // Test program from http://curl.haxx.se/libcurl/c/simple.html -----------------
 url := "http://www.iana.org/domains/reserved";
 easy_setopt_ptr(curl, CURLOPT_URL, url.buffer);
-cout I`setopt noprogress = $(easy_setopt_long(curl, CURLOPT_NOPROGRESS, 
+cout I`setopt noprogress = $(easy_setopt_long(curl, CURLOPT_NOPROGRESS,
        int64(0)))\n`;
-cout I`setopt callback = $(easy_setopt_ptr(curl, CURLOPT_PROGRESSFUNCTION, 
+cout I`setopt callback = $(easy_setopt_ptr(curl, CURLOPT_PROGRESSFUNCTION,
        progress_callback))\n`;
 res := easy_perform(curl);
 
@@ -322,12 +322,12 @@ for (int i=0; i< STRING_TEST_NAMES.count(); i++) {
         exitError(errStr `Getting $(STRING_TEST_NAMES[i]) failed:  $errMsg\n`);
     }
     if (!(info.resultPtr is null))
-        cout I`$(STRING_TEST_NAMES[i]) = $(CString(byteptr(info.resultPtr), 
+        cout I`$(STRING_TEST_NAMES[i]) = $(CString(byteptr(info.resultPtr),
                false))\n`;
 
 }
 
-cout `Longs: $("-"*72)\n`;                      
+cout `Longs: $("-"*72)\n`;
 for (int i=0; i< LONG_TEST_NAMES.count(); i++) {
     info.info=LONG_TEST_CODES[i];
     res = easy_info_get_long(curl, info);
@@ -348,7 +348,7 @@ for (int i=0; i< DOUBLE_TEST_NAMES.count(); i++) {
     }
     cout `$(DOUBLE_TEST_NAMES[i]) = $(info.resultDouble)\n`;
 }
-                      
+
 
 
 // Clean up

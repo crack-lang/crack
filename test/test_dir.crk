@@ -1,9 +1,9 @@
 # Copyright 2010-2011 Google Inc.
-# 
+#
 #   This Source Code Form is subject to the terms of the Mozilla Public
 #   License, v. 2.0. If a copy of the MPL was not distributed with this
 #   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-# 
+#
 # tests of crack.dir
 
 import crack.io cout, StringFormatter;
@@ -20,10 +20,10 @@ else
 if (true) {
     Directory d = {base + 'lib'};
     StringFormatter result = {};
-    
+
     for (f :in d.dirs())
         result `$(f.name)`;
-    
+
     s := result.string();
     if (s != base + 'lib/crack')
         cout `failed to get lib/crack, got: $s\n`;
@@ -31,22 +31,22 @@ if (true) {
 
 if (true) {
     Directory d = {base + 'lib/crack'};
-    
+
     FileInfo target;
     for (info :in d.files()) {
         if (info.name == base + 'lib/crack/lang.crk')
             target = info;
     }
-    
+
     if (!target)
         cout `failed to find $(base)lib/crack/lang.crk\n`;
-    
+
     if (target.basename(false) != 'lang.crk')
         cout `basename with extension failed\n`;
-    
+
     if (target.basename(true) != 'lang')
         cout `basename without extension failed\n`;
-    
+
     if (target.dirname() != base + 'lib/crack')
         cout `dirname failed\n`;
 }

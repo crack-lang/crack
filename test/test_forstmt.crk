@@ -1,9 +1,9 @@
 # Copyright 2010-2011 Google Inc.
-# 
+#
 #   This Source Code Form is subject to the terms of the Mozilla Public
 #   License, v. 2.0. If a copy of the MPL was not distributed with this
 #   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-# 
+#
 # tests of the "for" statement
 
 int sum;
@@ -31,13 +31,13 @@ if (sum != 100)
 
 class RangeIter {
     int i, max;
-    
+
     oper init(int start, int max) : i = start, max = max {}
 
     int elem() { return i; }
-    
+
     bool next() { ++i; return i < max; }
-    
+
     oper to bool() { return i < max; }
 }
 
@@ -45,7 +45,7 @@ class Range {
     int start, max;
     oper init(int start, int max) : start = start, max = max {}
     RangeIter iter() { return RangeIter(start, max); }
-}   
+}
 
 sum = 0;
 for (i :in Range(0, 10))

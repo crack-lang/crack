@@ -1,12 +1,12 @@
 // Copyright 2011-2012 Google Inc.
 // Copyright 2012 Shannon Weyrick <weyrick@mozek.us>
-// 
+//
 //   This Source Code Form is subject to the terms of the Mozilla Public
 //   License, v. 2.0. If a copy of the MPL was not distributed with this
 //   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-// 
+//
 
-import crack.runtime free, getLocation, registerHook, strlen, 
+import crack.runtime free, getLocation, registerHook, strlen,
     EXCEPTION_MATCH_FUNC, EXCEPTION_FRAME_FUNC;
 
 # temporary work-around for the problem of trying to use the special .class
@@ -155,12 +155,12 @@ if (1) {
         } catch (FooError ex) {
         }
     }
-    
+
     try {
         f();
     } catch (Exception ex) {
     }
-    
+
     if (!cleanedUp)
         puts('FAILED cleanup outside of try/catch');
 }
@@ -177,17 +177,17 @@ if (1) {
     } catch (Exception ex) {
         caughtException = 1;
     }
-    
+
     if (cleanupB < 1)
         puts('FAILED exceptions from cleanups: B cleanup not called.');
     else if (cleanupB > 1)
         puts('FAILED exceptions from cleanups: B cleanup called multiple '
               'times'
              );
-    
+
     if (cleanupA != 1)
         puts('FAILED exceptions from cleanups: A cleanup not called once');
-    
+
     if (!caughtException)
         puts('FAILED exceptions from cleanups: exception not raised or '
               'caught'
@@ -197,7 +197,7 @@ if (1) {
 # throwing a new exception from a catch
 if (1) {
     bool didInner, didOuter;
-    
+
     try {
         try {
             throw Exception();
@@ -208,7 +208,7 @@ if (1) {
     } catch (Exception ex) {
         didOuter = 1;
     }
-    
+
     if (!didInner)
         puts('FAILED exceptions from a catch: missed inner catch');
     if (!didOuter)
@@ -224,7 +224,7 @@ if (1) {
     void f() {
         throw FooError(1);
     }
-    
+
     try {
         A a;
         B foo;
@@ -233,55 +233,55 @@ if (1) {
         caughtException = 1;
         exceptionVal = ex.val;
     }
-    
+
     if (!cleanupB)
         puts('FAILED throwing from a cleanup: cleanup not released');
-    
+
     if (!cleanupA)
         puts('FAILED throwing from a cleanup: subsequent cleanup not called');
-    
+
     if (!caughtException)
         puts('FAILED throwing from a cleanup: exception not caught');
-    
+
     if (exceptionVal != 2)
         puts('FAILED throwing from a cleanup: exception object not converted');
 }
 
 # verify that exception frame callbacks are correctly called.
 if (1) {
-    
+
     # array of single character function names
     funcs := byteptr(100);
     cur := 0;
     funcs[0] = 0;
-    
+
     void exceptionFrame(Exception obj, voidptr addr) {
         info := array[byteptr](3);
         getLocation(addr, info);
-        
+
         # store the 3rd from last character of the function name in our array
         # (we store names as, e.g., 'f()', so this gets us the function name)
         funcs[cur++] = info[0][strlen(info[0]) - 3];
         funcs[cur] = 0;
         free(info);
     }
-    
+
     registerHook(EXCEPTION_FRAME_FUNC, exceptionFrame);
-    
+
     int cmp(byteptr a, byteptr b) {
         uint i;
         for (i = 0; a[i] && a[i] == b[i]; ++i);
         return a[i] - b[i];
     }
-    
+
     void f() {
         throw Exception();
     }
-    
+
     void g() {
         f();
     }
-    
+
     bool gotEx;
     try {
         g();
@@ -292,13 +292,13 @@ if (1) {
         }
         gotEx = 1;
     }
-    
+
     if (!gotEx)
         puts('FAILED exception frame info: did not get the exception');
-    
+
 }
 
-// verify that assignment cleanups work correctly when an exception is thrown 
+// verify that assignment cleanups work correctly when an exception is thrown
 // from the value expression.
 if (1) {
     cleanedUp = 0;
@@ -308,10 +308,10 @@ if (1) {
         c = f();
     } catch (Exception e) {
     }
-    
+
     if (cleanedUp)
         puts('FAILED deferred cleanup during assignment');
-    
+
     class A {
         Cleanup c;
     }
@@ -320,7 +320,7 @@ if (1) {
         a.c = f();
     } catch (Exception e) {
     }
-    
+
     if (cleanedUp)
         puts('FAILED deferred cleanup during fild assignment');
 }

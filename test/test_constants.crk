@@ -1,11 +1,11 @@
 // Copyright 2010-2011 Google Inc.
 // Copyright 2010 Shannon Weyrick <weyrick@mozek.us>
 // Copyright 2012 Conrad Steenberg <conrad.steenberg@gmail.com>
-// 
+//
 //   This Source Code Form is subject to the terms of the Mozilla Public
 //   License, v. 2.0. If a copy of the MPL was not distributed with this
 //   file, You can obtain one at http://mozilla.org/MPL/2.0/.
-// 
+//
 
 import crack.runtime memcmp;
 void foo(int16 val) { puts('failed, matched int16 func'); }
@@ -42,12 +42,12 @@ if (o != -5)
 o = 0777;
 if (o != 511)
     puts("failed");
-    
+
 u := uint64(-1);
 UINT64_MAX :=  (uint64(9223372036854775807) << 1) | 1;
 if (u != UINT64_MAX)
     puts('failed negative conversion to uint64');
-    
+
 b := byte(-1);
 if (b != 255)
     puts('failed negative conversion to byte');
@@ -78,7 +78,7 @@ if ( (-0xffffffffffffffff      != -18446744073709551615) ||
    )
    puts("fail");
 
-# 0xb... numbers were problematic because they activated the hack we use to 
+# 0xb... numbers were problematic because they activated the hack we use to
 # propagate byte constants.
 if (0xb != 11)
     puts('failed to parse 0xb correctly');
