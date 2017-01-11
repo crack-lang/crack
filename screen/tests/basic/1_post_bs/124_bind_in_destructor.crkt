@@ -1,0 +1,52 @@
+%%TEST%%
+binding an object in its destructor
+%%ARGS%%
+%%FILE%%
+# Verifies that binding an object in its destructor produces a useful error
+# when the reference persists beyond the scope of the destructor and works
+# normally when it does not.
+
+import crack.io cout;
+import crack.lang AssertionError;
+
+class A;
+void bindA(A val);
+
+class A {
+    oper del() {
+        cout `deleting A\n`;
+        bindA(this);
+    }
+}
+
+A a;
+void bindA(A val) { a = val }
+
+try {
+    A();
+    cout `No exception when binding an object during oper del.\n`;
+} catch (AssertionError ex) {
+    cout `Got AssertionError binding during oper del.\n`;
+}
+cout `out of scope for A\n`;
+
+class B {
+    oper del() {
+        cout `deleting B\n`;
+        B b = this;
+    }
+}
+
+if (true) {
+    B();
+}
+
+cout `out of scope for B\n`;
+
+%%EXPECT%%
+deleting A
+Got AssertionError binding during oper del.
+out of scope for A
+deleting B
+out of scope for B
+%%STDIN%%

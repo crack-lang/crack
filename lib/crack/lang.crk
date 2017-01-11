@@ -47,7 +47,7 @@ class Object : VTableBase {
 
     # delete virtual function
     oper del() {
-        if (refCount)
+        if (refCount != 1)
             _throwAssertionError("Object with non-zero ref count deleted!");
     }
 
@@ -61,6 +61,9 @@ class Object : VTableBase {
             return;
 
         if (!(refCount -= 1)) {
+            # Increment the ref count again before we delete the object so 
+            # that nothing will try to delete it during destruction.
+            refCount += 1;
             this.oper del();
             free(this);
         }
