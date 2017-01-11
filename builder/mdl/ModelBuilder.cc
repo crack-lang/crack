@@ -693,12 +693,25 @@ ModuleDefPtr ModelBuilder::registerPrimFuncs(Context &context) {
     context.addDef(newUnOpDef(intzType, "oper to .builtin.intz", true).get(),
                    atomicType
                    );
+    context.addDef(newUnOpDef(uintzType, "oper to .builtin.uintz", true).get(),
+                   atomicType
+                   );
     context.addDef(newUnOpDef(gd->intType.get(), "oper to .builtin.int",
                               true
                               ).get(),
                    atomicType
                    );
     context.addDef(newUnOpDef(gd->uintType.get(), "oper to .builtin.uint",
+                              true
+                              ).get(),
+                   atomicType
+                   );
+    context.addDef(newUnOpDef(gd->int64Type.get(), "oper to .builtin.int64",
+                              true
+                              ).get(),
+                   atomicType
+                   );
+    context.addDef(newUnOpDef(gd->uint64Type.get(), "oper to .builtin.uint64",
                               true
                               ).get(),
                    atomicType
