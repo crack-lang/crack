@@ -38,7 +38,7 @@ CMake Install Instructions
 --------------------------
 
 CMake version 2.6 or greater is required. We recommend an out-of-tree
-build. You should ensure llvm 2. is already installed (see above) before
+build. You should ensure llvm is already installed (see above) before
 running cmake.
 
 Quick Install:
