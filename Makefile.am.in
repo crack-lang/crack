@@ -391,10 +391,10 @@ install-data-local: doc/Manual.html
 	$(MKDIR_P) $(DESTDIR)$(docdir)
 	$(INSTALL) doc/Manual.html $(DESTDIR)$(docdir)
 
-install-exec-local: install-binPROGRAMS
+install-exec-local: install-binPROGRAMS install-data-local
 	ln -f $(DESTDIR)$(bindir)/crack $(DESTDIR)$(bindir)/crack-$(VERSION)
 	ln -sf $(DESTDIR)$(bindir)/crack-$(VERSION) $(DESTDIR)$(bindir)/crackc
-	./crack -B llvm-native -l $(srcdir)/lib:./lib:.libs \
+	$(DESTDIR)$(bindir)/crackc \
 	    -b out=$(DESTDIR)$(bindir)/crackdoc$(EXEEXT) \
 	    $(srcdir)/tools/crackdoc.crk
 
