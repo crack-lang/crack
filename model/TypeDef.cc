@@ -1003,6 +1003,11 @@ void instantiateGeneric(TypeDef *type, Context &context, Context &localCtx,
             static_cast<TypeDef::Flags>(model::TypeDef::explicitFlags |
                                         model::TypeDef::abstractClass
                                         );
+    else if (type->final)
+        localCtx.nextClassFlags =
+            static_cast<TypeDef::Flags>(model::TypeDef::explicitFlags |
+                                        model::TypeDef::finalClass
+                                        );
 
     Location instantiationLoc = context.getLocation();
     if (instantiationLoc)
@@ -1392,7 +1397,8 @@ void TypeDef::serializeDecl(Serializer &serializer, ModuleDef *master) {
         int flags = (pointer ? 1 : 0) |
                     (hasVTable ? 2 : 0) |
                     (abstract ? 4 : 0) |
-                    (generic ? 8 : 0);
+                    (generic ? 8 : 0) |
+                    (final ? 16 : 0);
         serializer.write(flags, "flags");
 
         {
@@ -1600,6 +1606,7 @@ namespace {
             type->pointer = (flags & 1) ? true : false;
             type->hasVTable = (flags & 2) ? true : false;
             type->abstract = (flags & 4) ? true : false;
+            type->final = (flags & 16) ? true : false;
 
             owner->addDef(type.get());
             return type;

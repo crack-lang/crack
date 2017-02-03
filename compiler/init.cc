@@ -63,75 +63,15 @@ struct CallbackManager {
 
 typedef CrackContext::AnnotationFuncWrapper<CallbackManager> CallbackBatch;
 
-void funcAnnCheck(CrackContext *ctx, const char *name) {
-    parser::Parser::State parseState =
-        static_cast<parser::Parser::State>(ctx->getParseState());
-    if (ctx->getScope() != model::Context::composite ||
-        (parseState != parser::Parser::st_base &&
-         parseState != parser::Parser::st_optElse
-         )
-        )
-        ctx->error(SPUG_FSTR(name << " annotation can not be used  here (it "
-                                     "must precede a function "
-                                     "definition in a class body)"
-                             ).c_str()
-                   );
-
-    CallbackManager *cbm =
-        new CallbackManager("Function expected after annotation");
-    cbm->add(ctx->addCallback(parser::Parser::funcDef,
-                              new CallbackBatch(
-                                  &CallbackManager::cleanUpAfterFunc,
-                                  cbm
-                               )
-                              )
-             );
-    cbm->add(ctx->addCallback(parser::Parser::classDef,
-                              new CallbackBatch(
-                                  &CallbackManager::unexpectedElement,
-                                  cbm
-                               )
-                              )
-             );
-    cbm->add(ctx->addCallback(parser::Parser::exprBegin,
-                              new CallbackBatch(
-                                  &CallbackManager::unexpectedElement,
-                                  cbm
-                               )
-                              )
-             );
-    cbm->add(ctx->addCallback(parser::Parser::controlStmt,
-                              new CallbackBatch(
-                                  &CallbackManager::unexpectedElement,
-                                  cbm
-                               )
-                              )
-             );
-}
-
-void staticAnn(CrackContext *ctx) {
-    funcAnnCheck(ctx, "static");
-    ctx->setNextFuncFlags(model::FuncDef::explicitFlags);
-}
-
-void finalAnn(CrackContext *ctx) {
-    funcAnnCheck(ctx, "final");
-    ctx->setNextFuncFlags(model::FuncDef::explicitFlags |
-                          model::FuncDef::method
-                          );
-}
-
-void abstractAnn(CrackContext *ctx) {
-
-    // @abstract is not strictly a function annotation, it may precede a class
-    // definition.
+void classFuncAnnCheck(CrackContext *ctx, const char *name) {
     parser::Parser::State parseState =
         static_cast<parser::Parser::State>(ctx->getParseState());
     if (parseState != parser::Parser::st_base &&
         parseState != parser::Parser::st_optElse
         )
-        ctx->error("abstract annotation can not be used here (it must precede "
-                    "a function or class definition)"
+        ctx->error(SPUG_FSTR(name << " annotation can not be used here (it "
+                              "must precede a function or class definition)"
+                             ).c_str()
                    );
 
     CallbackManager *cbm =
@@ -171,6 +111,65 @@ void abstractAnn(CrackContext *ctx) {
                          )
     );
 
+}
+
+void staticAnn(CrackContext *ctx) {
+    parser::Parser::State parseState =
+        static_cast<parser::Parser::State>(ctx->getParseState());
+    if (ctx->getScope() != model::Context::composite ||
+        (parseState != parser::Parser::st_base &&
+         parseState != parser::Parser::st_optElse
+         )
+        )
+        ctx->error("static annotation can not be used  here (it must precede "
+                    "a function definition in a class body)"
+                   );
+
+    CallbackManager *cbm =
+        new CallbackManager("Function expected after annotation");
+    cbm->add(ctx->addCallback(parser::Parser::funcDef,
+                              new CallbackBatch(
+                                  &CallbackManager::cleanUpAfterFunc,
+                                  cbm
+                               )
+                              )
+             );
+    cbm->add(ctx->addCallback(parser::Parser::classDef,
+                              new CallbackBatch(
+                                  &CallbackManager::unexpectedElement,
+                                  cbm
+                               )
+                              )
+             );
+    cbm->add(ctx->addCallback(parser::Parser::exprBegin,
+                              new CallbackBatch(
+                                  &CallbackManager::unexpectedElement,
+                                  cbm
+                               )
+                              )
+             );
+    cbm->add(ctx->addCallback(parser::Parser::controlStmt,
+                              new CallbackBatch(
+                                  &CallbackManager::unexpectedElement,
+                                  cbm
+                               )
+                              )
+             );
+    ctx->setNextFuncFlags(model::FuncDef::explicitFlags);
+}
+
+void finalAnn(CrackContext *ctx) {
+    classFuncAnnCheck(ctx, "final");
+    ctx->setNextFuncFlags(model::FuncDef::explicitFlags |
+                          model::FuncDef::method
+                          );
+    ctx->setNextClassFlags(model::TypeDef::explicitFlags |
+                           model::TypeDef::finalClass
+                           );
+}
+
+void abstractAnn(CrackContext *ctx) {
+    classFuncAnnCheck(ctx, "abstract");
     ctx->setNextFuncFlags(model::FuncDef::explicitFlags |
                           model::FuncDef::method |
                           model::FuncDef::virtualized |

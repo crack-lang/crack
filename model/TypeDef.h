@@ -151,9 +151,13 @@ class TypeDef : public VarDef, public Namespace {
         // if true, this is an abstract class (contains abstract methods)
         bool abstract;
 
+        // if true, this is a final class (can not be derived from)
+        bool final;
+
         enum Flags {
             noFlags = 0,
             abstractClass = 1,
+            finalClass = 2,
             explicitFlags = 256  // these flags were set by an annotation
         };
 
@@ -189,6 +193,7 @@ class TypeDef : public VarDef, public Namespace {
             forward(false),
             initializersEmitted(false),
             abstract(false),
+            final(false),
             gotExplicitOperNew(false),
             fieldCount(0) {
         }
