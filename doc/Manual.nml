@@ -2145,6 +2145,26 @@ For examples, let's return to our #Coord# class:
     }
 }}
 
+Final Classes
+'''''''''''''
+
+The @final annotation can also be applied to a class.  A final class may not
+be used as a base class for other classes:
+
+{{
+    @final class A {}
+    class B : A {}  # ERROR: deriving from a final class.
+}}
+
+Final classes have no performance benefits over non-final classes.  They are
+mainly useful for ensuring that new members can be added to the class without
+breaking compatibility.
+
+For non-final public classes, you can not introduce a public or protected
+member without breaking compatibility.  A user may have derived from the class
+and introduced another member with a conflicting name.  Using #@final# guards
+against this.
+
 The Special Base Classes
 ''''''''''''''''''''''''
 
