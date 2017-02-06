@@ -1,0 +1,9 @@
+%%TEST%%
+final generic classes
+%%ARGS%%
+%%FILE%%
+@final class G[T] {}
+class C : G[int] {}
+%%EXPECT%%
+ParseError: %SCRIPTNAME%:2:13: You may not derive from final class G
+%%STDIN%%

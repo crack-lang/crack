@@ -3248,6 +3248,8 @@ TypeDefPtr Parser::parseClassDef() {
       result->generic = new TypeDef::SpecializationCache();
       if (flags & TypeDef::abstractClass)
          result->abstract = true;
+      else if (flags & TypeDef::finalClass)
+         result->final = true;
       result->doc = consumeDocs();
       addDef(result.get());
       return result;
@@ -3270,6 +3272,14 @@ TypeDefPtr Parser::parseClassDef() {
                      SPUG_FSTR("you may not derive from forward declared "
                               "class " << baseClass->name
                               )
+                     );
+            
+            // Make sure it's not final.
+            if (baseClass->final)
+               error(identLoc,
+                     SPUG_FSTR("You may not derive from final class " <<
+                                baseClass->name
+                               )
                      );
 
             // If we inherit from VTableBase, make sure it's the first parent.
@@ -3338,9 +3348,11 @@ TypeDefPtr Parser::parseClassDef() {
 
    type->aliasBaseMetaTypes();
 
-   // check for an abstract class
+   // check for abstract and final modifiiers
    if (flags & TypeDef::abstractClass)
       type->abstract = true;
+   else if (flags & TypeDef::finalClass)
+      type->final = true;
 
    // add the "oper class" and "cast" methods
    FuncDefPtr throwingCast, defaultingCast;

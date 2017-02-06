@@ -1,0 +1,36 @@
+%%TEST%%
+final class serialization
+%%ARGS%%
+%%FILE%%
+import crack.io cerr, FStr;
+import systest test;
+test.preBootstrap = true;
+
+test.main(I"
+    @final class A {}
+    class B : A {}
+    ");
+test.run();
+test.run();
+
+test.main(I"
+    @final class G[T] {}
+    class B : G[int] {}
+    ");
+test.run();
+test.run();
+
+%%REXPECT%%
+err: ParseError: .*:3:11: You may not derive from final class A
+err:\s*
+terminated, rc = 2049
+err: ParseError: .*:3:11: You may not derive from final class A
+err:\s*
+terminated, rc = 2049
+err: ParseError: .*:3:13: You may not derive from final class G
+err:\s*
+terminated, rc = 2049
+err: ParseError: .*:3:13: You may not derive from final class G
+err:\s*
+terminated, rc = 2049
+%%STDIN%%
