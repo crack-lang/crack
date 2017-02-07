@@ -113,9 +113,12 @@ void usage(int retval) {
     cout << " --stats\n    Emit statistics about compile time operations." <<
         endl;
     cout << " --dump-func-table\n    Dump the debug function table." << endl;
+    cout << " --dump-meta\n    Dump executor meta-data and exit." << endl;
+
+    // Add docs on new options above here. (the for loop below emits keywords
+    // for the "trace" option.)
     cout << " -t <module> --trace <module>\n    Turn tracing on for the "
             "module." << endl;
-    cout << " --dump-meta\n    Dump executor meta-data and exit." << endl;
     cout << "    Modules supporting tracing:" << endl;
     map<string, string> traceModules = Tracer::getTracers();
     for (map<string, string>::iterator i = traceModules.begin();
