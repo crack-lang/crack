@@ -395,6 +395,7 @@ install-exec-local: install-binPROGRAMS install-data-local
 	ln -f $(DESTDIR)$(bindir)/crack $(DESTDIR)$(bindir)/crack-$(VERSION)
 	ln -sf $(DESTDIR)$(bindir)/crack-$(VERSION) $(DESTDIR)$(bindir)/crackc
 	$(DESTDIR)$(bindir)/crackc \
+	    -l ${DESTDIR}$(libdir)/crack-$(VERSION) \
 	    -b out=$(DESTDIR)$(bindir)/crackdoc$(EXEEXT) \
 	    $(srcdir)/tools/crackdoc.crk
 
