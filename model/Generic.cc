@@ -187,6 +187,29 @@ Token Generic::deserializeToken(Deserializer &src, string &fileName,
     return Token(tokType, tokText, loc);
 }
 
+int Generic::serializeFullToken(Serializer &out,
+                                string &fileName,
+                                int &lineNum,
+                                const Token &tok
+                                ) {
+    const Location &loc = tok.getLocation();
+    int recount = 0;
+    if (loc.getName() != fileName) {
+        fileName = loc.getName();
+        out.write(Token::fileName, "tokenType");
+        out.write(fileName, "fileName");
+        ++recount;
+    }
+    if (loc.getLineNumber() != lineNum) {
+        lineNum = loc.getLineNumber();
+        out.write(Token::lineNumber, "tokenType");
+        out.write(lineNum, "lineNum");
+        ++recount;
+    }
+    serializeToken(out, tok);
+    return recount + 1;
+}
+
 void Generic::serialize(Serializer &out) const {
     // serialize imports
     out.write(compileNSImports.size(), "#importedAnnotations");
@@ -234,21 +257,7 @@ void Generic::serialize(Serializer &out) const {
          iter != body.end();
          ++iter
          ) {
-        const Location &loc = iter->getLocation();
-        if (loc.getName() != fileName) {
-            fileName = loc.getName();
-            out.write(Token::fileName, "tokenType");
-            out.write(fileName, "fileName");
-            ++recount;
-        }
-        if (loc.getLineNumber() != lineNum) {
-            lineNum = loc.getLineNumber();
-            out.write(Token::lineNumber, "tokenType");
-            out.write(lineNum, "lineNum");
-            ++recount;
-        }
-        serializeToken(out, *iter);
-        ++recount;
+        recount += serializeFullToken(out, fileName, lineNum, *iter);
     }
     SPUG_CHECK(recount == numTokens,
                "Token count mismatch: expected = " << numTokens <<

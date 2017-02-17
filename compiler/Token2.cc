@@ -11,6 +11,7 @@
 #include "Location.h"
 
 using namespace compiler;
+using namespace std;
 
 Token::Token(const parser::Token &tok) :
     rep(new parser::Token(tok)),
@@ -24,8 +25,22 @@ Token::Token(int type, const char *text, Location *loc) : loc(loc) {
     loc->bind();
 }
 
+Token::Token(int type, const char *text, size_t size, Location *loc) :
+    loc(loc) {
+
+    rep = new parser::Token(static_cast<parser::Token::Type>(type),
+                            string(text, size),
+                            *loc->rep
+                            );
+    loc->bind();
+}
+
 Token *Token::create(int type, const char *text, Location *loc) {
     return new Token(type, text, loc);
+}
+
+Token *Token::create(int type, const char *text, size_t size, Location *loc) {
+    return new Token(type, text, size, loc);
 }
 
 Token::~Token() {

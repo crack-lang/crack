@@ -5,11 +5,14 @@
 #   file, You can obtain one at http://mozilla.org/MPL/2.0/.
 #
 
+import crack.ann deserializeNodeList;
 import crack.io StringFormatter, cout;
 import crack.compiler CrackContext, Callback, PCB_FUNC_ENTER, PCB_FUNC_LEAVE,
     STATE_BASE, STATE_OPT_ELSE, FUNCFLAG_STATIC, FUNCFLAG_FINAL, TOK_STRING,
     Token;
 import crack.cont.treemap TreeMap;
+
+@import crack.ann token_str, tokens;
 
 ## increment everything but a constant zero.
 void incrButZero(CrackContext ctx) {
@@ -143,3 +146,19 @@ void nullTok(CrackContext ctx) {
     Token tok;
 }
 
+void token_test(CrackContext ctx) {
+    (@tokens { 100 + 200 }).expand(ctx, null);
+}
+
+void null_token_test(CrackContext ctx) {
+    list := @tokens []; line := @LINE;
+    String contents;
+    if (list.getLocation().getLineNumber() != line)
+        contents = 'Bad location in null token';
+    else
+        contents = list.toString(null);
+    ctx.putBack(Token(TOK_STRING, contents.buffer, contents.size,
+                      list.getLocation()
+                      )
+                );
+}

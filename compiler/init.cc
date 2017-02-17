@@ -17,6 +17,7 @@
 #include "CrackContext.h"
 #include "Token.h"
 #include "Location.h"
+#include "TokSerializer.h"
 
 using namespace std;
 using namespace crack::ext;
@@ -251,11 +252,21 @@ void init(Module *mod) {
     locationType->finish();
 
     Type *tokenType = mod->addType("Token", sizeof(Token));
+
+    typedef Token *(*L5)(int, const char *, Location *);
+    typedef Token *(*L6)(int, const char *, size_t, Location *);
     f = tokenType->addStaticMethod(tokenType, "oper new",
-                                   (void *)&Token::create
+                                   (void *)static_cast<L5>(Token::create)
                                    );
     f->addArg(mod->getIntType(), "type");
     f->addArg(mod->getByteptrType(), "text");
+    f->addArg(locationType, "loc");
+    f = tokenType->addStaticMethod(tokenType, "oper new",
+                                   (void *)static_cast<L6>(Token::create)
+                                   );
+    f->addArg(mod->getIntType(), "type");
+    f->addArg(mod->getByteptrType(), "text");
+    f->addArg(mod->getUintzType(), "size");
     f->addArg(locationType, "loc");
     tokenType->addMethod(mod->getVoidType(), "oper bind",
                          (void *)Token::_bind
@@ -505,6 +516,42 @@ void init(Module *mod) {
                   );
 
     cc->finish();
+
+    // TokSerializer.
+    Type *ts = mod->addType("TokSerializer", sizeof(TokSerializer));
+
+    typedef TokSerializer *(*L3)(const char *, size_t);
+    typedef TokSerializer *(*L4)();
+    f = ts->addStaticMethod(ts, "oper new",
+                            (void *)static_cast<L3>(TokSerializer::create)
+                            );
+    f->addArg(mod->getByteptrType(), "serialized");
+    f->addArg(mod->getUintzType(), "size");
+
+    ts->addStaticMethod(ts, "oper new",
+                        (void *)static_cast<L4>(TokSerializer::create)
+                        );
+
+    f = ts->addMethod(mod->getVoidType(), "insert",
+                      (void *)TokSerializer::insert
+                      );
+    f->addArg(tokenType, "tok");
+
+    ts->addMethod(tokenType, "getToken", (void *)TokSerializer::getToken);
+    ts->addMethod(mod->getByteptrType(), "serialize",
+                  (void *)TokSerializer::serialize
+                  );
+
+    f = ts->addMethod(mod->getVoidType(), "setLocation",
+                      (void *)TokSerializer::setLocation
+                      );
+    f->addArg(locationType, "loc");
+
+    f = ts->addMethod(locationType, "getLocation",
+                      (void *)TokSerializer::getLocation
+                      );
+
+    ts->finish();
 
     // our annotations
     f = mod->addFunc(mod->getVoidType(), "static", (void *)staticAnn);
