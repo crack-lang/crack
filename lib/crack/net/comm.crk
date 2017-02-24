@@ -1,0 +1,182 @@
+## High-level communication module.
+##
+## This provides commonly used functionality for buffer handling, connection
+## listening and logging.
+##
+## To use this module, on the client side:
+##
+## -   Create a class derived from CommHandler that implements the process()
+##     method to process incoming messages from inBuf.
+## -   Instantiate the class, create a socket and add the class and its socket
+##     to a Poller.
+## -   Send messages to the server by serializing them to outBuf.
+##
+## On the server side:
+##
+## -   Create a class derived from CommHandler that implements the process()
+##     method (this can be the same as the server side class, if the protocol
+##     is symmetric).
+## -   Create a class derived from CommListener that implements the
+##     makeCommHandler() method to create an instance of the CommHandler
+##     implementation.
+
+import crack.io cerr, Formatter, StandardFormatter, Writer;
+import crack.lang AppendBuffer;
+import crack.logger Logger;
+import crack.net Poller, PollEvent, PollEventCallback, Socket, POLLIN, POLLOUT,
+    POLLERR, POLLHUP;
+
+@import crack.ann impl;
+
+uint defaultBlockSize = 4096;
+
+class Fmt : StandardFormatter {
+    String __prefix;
+    oper init(String prefix, Writer out) :
+        __prefix = prefix,
+        StandardFormatter(out) {
+    }
+
+    void enter() {
+        rep.write(__prefix);
+    }
+
+    void leave() {
+        rep.write('\n');
+    }
+}
+
+Fmt makeFmt(String prefix, Formatter fmt) {
+    if (uintz(fmt) < 1024)
+        return null;
+    else
+        return Fmt(prefix, fmt);
+}
+
+## A communication endpoint handler.  Can be used for both server and client
+## side connection handling.
+##
+## The abstract process() method is called whenever new data is received, it
+## should process input data in inBuf and then modify inBuf, leaving
+## unprocessed data intact.  outBuf may be written directly by code seeking to
+## write output to the socket.
+@abstract class CommHandler @impl PollEventCallback {
+
+    uint blockSize = defaultBlockSize;
+
+    Socket __sock;
+    AppendBuffer inBuf, outBuf;
+
+    Object __connId;
+    Fmt _error, _info, _debug;
+
+    ## Create a new handler with the given connection id and logger.
+    ## 'connectionId' is an object name in a form that will be written to the
+    ## log.  It is of type Object so we can use an Address object (for the
+    ## common case) or a String or anything else that supports the format()
+    ## method.
+    ## 'error', 'info', and 'debug' are log formatters for the given log
+    ## levels.  They should be null if those levels are disabled.
+    oper init(Socket sock, Object connectionId, Formatter error,
+              Formatter info,
+              Formatter debug
+              ) :
+        __sock = sock,
+        inBuf(blockSize),
+        outBuf(blockSize),
+        __connId = connectionId,
+        _error = makeFmt('Error: ', error),
+        _info = makeFmt('Info: ', info),
+        _debug = makeFmt('Debug: ', debug) {
+    }
+
+    ## process() is called whenever new data is received.
+    @abstract void process();
+
+    ## Close the connection and remove it from the poller.
+    void close(Poller poller) {
+        __sock.close();
+        poller.remove(__sock);
+    }
+
+    int oper call(Poller poller, PollEvent event) {
+        _debug `CommHandler $__connId got events = $(event.revents)`;
+        if (event.revents & POLLIN) {
+            data := __sock.read(1024);
+            if (!data) {
+                _info `Connection to $__connId closed`;
+                __sock.close();
+                poller.remove(__sock);
+                return 0;
+            }
+
+            inBuf.extend(data);
+            process();
+        } else if (event.revents & POLLOUT) {
+            rc := __sock.send(outBuf, 0);
+            _debug `Sent $rc/$(outBuf.size) bytes to $__connId`;
+            if (rc >= 0)
+                outBuf.compact(rc);
+        } else if (event.revents & POLLERR) {
+            _error `got error on $__connId`;
+            __sock.close();
+            poller.remove(__sock);
+            return 0;
+        } else if (event.revents & POLLHUP) {
+            _info `got HUP on $__connId`;
+            __sock.close();
+            poller.remove(__sock);
+            return 0;
+        }
+        return POLLIN | POLLERR | POLLHUP | (outBuf ? POLLOUT : 0);
+    }
+}
+
+## A listener that listens on a socket and creates communication handlers to
+## service new connections.
+@abstract class CommListener @impl PollEventCallback {
+
+    Socket __sock;
+    Object _serverId;
+    Fmt _error, _info, _debug;
+
+    oper init(Socket sock, Object serverId, Formatter error,
+              Formatter info,
+              Formatter debug
+              ) :
+        __sock = sock,
+        _serverId = serverId,
+        _error = makeFmt('Error: ', error),
+        _info = makeFmt('Info: ', info),
+        _debug = makeFmt('Debug: ', debug) {
+    }
+
+    ## Creates the CommHandler for a new connection.
+    @abstract CommHandler makeCommHandler(Socket.Accepted accepted);
+
+    ## Close the connection and remove it from the poller.
+    void close(Poller poller) {
+        __sock.close();
+        poller.remove(__sock);
+    }
+
+    int oper call(Poller poller, PollEvent event) {
+        _debug `CommListener $_serverId got events = $(event.revents)`;
+        if (event.revents & POLLIN) {
+            accepted := __sock.accept();
+            _info `New connection received on $_serverId from $(accepted.addr)`;
+            poller.add(accepted.sock, makeCommHandler(accepted));
+        } else if (event.revents & POLLERR) {
+            _error `got error on $_serverId`;
+            __sock.close();
+            poller.remove(__sock);
+            return 0;
+        } else if (event.revents & POLLHUP) {
+            _info `got HUP on $_serverId`;
+            __sock.close();
+            poller.remove(__sock);
+            return 0;
+        }
+        return POLLIN | POLLERR | POLLHUP;
+    }
+}

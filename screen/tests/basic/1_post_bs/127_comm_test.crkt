@@ -1,0 +1,96 @@
+%%TEST%%
+comm test
+%%ARGS%%
+%%FILE%%
+import crack.io cerr, Formatter, StandardFormatter, Writer;
+import crack.lang Buffer;
+import crack.net InetAddress, Poller, Socket, AF_INET, SOCK_STREAM;
+import crack.net.comm CommHandler, CommListener;
+
+@import crack.ann assert;
+
+# Change to cerr for verbose logging output.
+log := Formatter.unsafeCast(null); # cerr;
+
+class EchoCommHandler : CommHandler {
+    bool server;
+
+    oper init(Socket sock, Object connectionId, Formatter error,
+              Formatter info,
+              Formatter debug,
+              bool server
+              ) :
+        CommHandler(sock, connectionId, error, info, debug),
+        server = server {
+    }
+
+    void process() {
+        _info `in $(server ? 'server' : 'client') process`;
+        if (!inBuf.size)
+            return;
+
+        size := inBuf[0];
+        if (inBuf.size < size + 1)
+            return;
+
+        if (server) {
+            outBuf.extend(Buffer(inBuf.buffer, size + 1));
+            inBuf.compact(size + 1);
+        }
+    }
+}
+
+class EchoListener : CommListener {
+    oper init(Socket sock, Object connectionId, Formatter error,
+              Formatter info,
+              Formatter debug
+              ) :
+        CommListener(sock, connectionId, error, info, debug) {
+    }
+
+    CommHandler makeCommHandler(Socket.Accepted accepted) {
+        return EchoCommHandler(accepted.sock, 'server', _error, _info,
+                               _debug,
+                               true
+                               );
+    }
+}
+
+poller := Poller();
+
+server := Socket(AF_INET, SOCK_STREAM, 0);
+server.setReuseAddr(true);
+server.bind(InetAddress(127, 0, 0, 1, 49123));
+server.listen(5);
+poller.add(server, EchoListener(server, 'server', log, log, log));
+
+clientSock := Socket(AF_INET, SOCK_STREAM, 0);
+@assert(clientSock.connect(InetAddress(127, 0, 0, 1, 49123)));
+client := EchoCommHandler(clientSock, 'client', log, log, log, false);
+poller.add(clientSock, client);
+
+client.outBuf.extend('\x0Bhello world');
+int i;
+for (i = 0; i < 100; ++i) {
+    poller.waitAndProcess(null);
+    if (client.inBuf == '\013hello world')
+        break;
+}
+
+if (i == 100)
+    cerr `FAILED round trip communication test\n`;
+
+client.close(poller);
+for (i = 0; i < 100; ++i) {
+    poller.waitAndProcess(null);
+    if (poller.count() == 1)
+        break;
+}
+
+if (i == 100)
+    cerr `FAILED client close\n`;
+
+cerr `ok\n`;
+%%EXPECT%%
+ok
+%%STDIN%%
