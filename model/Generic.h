@@ -78,6 +78,20 @@ class Generic {
                                               std::string &fileName,
                                               int &lineNum
                                               );
+
+        /**
+         * Serialize token with as much location information as necessary.
+         * Returns the number of tokens serialized (we count changes in line
+         * number and file name as separate "tokens" for serialization
+         * purposes).
+         *
+         * This is public because it is used by compiler/TokSerializer.
+         */
+        static int serializeFullToken(Serializer &out,
+                                      std::string &fileName,
+                                      int &lineNum,
+                                      const parser::Token &tok
+                                      );
         /** @} */
 };
 

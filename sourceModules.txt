@@ -85,6 +85,7 @@ compiler/init.cc
 compiler/Annotation2.cc
 compiler/CrackContext.cc
 compiler/Token2.cc
+compiler/TokSerializer.cc
 compiler/Location2.cc
 Crack.cc
 util/CacheFiles.cc

@@ -22,8 +22,9 @@
 #   Equivalent to "class A : Object I, J { ... }".  Shorthand for the most
 #   common case.
 
-import crack.compiler CrackContext, Location, Token, TOK_COMMA, TOK_LCURLY,
-    TOK_LPAREN, TOK_POPERRCTX, TOK_RCURLY, TOK_RPAREN, TOK_STRING;
+import crack.compiler CrackContext, Location, Token, TokSerializer, TOK_COMMA,
+    TOK_LBRACKET, TOK_LCURLY, TOK_LPAREN, TOK_POPERRCTX, TOK_RBRACKET,
+    TOK_RCURLY, TOK_RPAREN, TOK_STRING;
 import crack.cont.array Array;
 import crack.cont.treemap TreeMap;
 import crack.io cout, FStr, Reader, StandardFormatter, StringFormatter,
@@ -102,6 +103,7 @@ class NodeIter;
     @abstract Node getFirst();
     @abstract void expand(CrackContext ctx, Array[NodeList] args);
     @abstract String toString(Array[NodeList] args);
+    @abstract Location getLocation();
 }
 
 @abstract class Node {
@@ -128,8 +130,10 @@ Node _readNode(MacroDeserializer src);
 ## token stream (after putBack() they will be in the correct order once again)
 class NodeListImpl : NodeList {
     Node first, last;
+    Location loc;
 
     oper init() {}
+    oper init(Location loc) : loc = loc {}
 
     void pushHead(Node node) {
         if (first) {
@@ -234,6 +238,15 @@ class NodeListImpl : NodeList {
         }
 
         return sf.string();
+    }
+
+    Location getLocation() {
+        if (!(loc is null))
+            return loc;
+        else if (first)
+            return first.getLocation();
+        else
+            throw AssertionError('Location undefined.');
     }
 }
 
@@ -814,21 +827,12 @@ void readIStr(CrackContext ctx, NodeList nodes) {
     }
 }
 
-## Reads a sequence of tokens between a specified left and right delimiter
-## which can be nested.  For example, if left and right are TOK_LPAREN and
-## TOK_RPAREN this function would read the following sequence:
-##    ( 1 + 2 + (3 + 4) )
-##   ^                   ^
-##
-## if storeDelimiters is true, parses and processes the beginning and ending
-## delimiter and adds them to the returned node list, otherwise the next
-## available token should be the one immediately following the opening
-## delimiter and the last token will be put back.
-NodeList readDelimited(CrackContext ctx, int left, int right,
-                       bool storeDelimiters
-                       ) {
-    NodeListImpl result = {};
-
+## Just like the other readDelimited() except that it passes in the 'result'
+## list instead of returning it, allowing you to compose on an existing list.
+void readDelimited(CrackContext ctx, int left, int right,
+                   bool storeDelimiters,
+                   NodeList result
+                   ) {
     # get the opening delimiter.
     Token tok;
     if (storeDelimiters) {
@@ -857,7 +861,23 @@ NodeList readDelimited(CrackContext ctx, int left, int right,
         if (tok.isIstrBegin())
             readIStr(ctx, result);
     }
+}
 
+## Reads a sequence of tokens between a specified left and right delimiter
+## which can be nested.  For example, if left and right are TOK_LPAREN and
+## TOK_RPAREN this function would read the following sequence:
+##    ( 1 + 2 + (3 + 4) )
+##   ^                   ^
+##
+## if storeDelimiters is true, parses and processes the beginning and ending
+## delimiter and adds them to the returned node list, otherwise the next
+## available token should be the one immediately following the opening
+## delimiter and the last token will be put back.
+NodeList readDelimited(CrackContext ctx, int left, int right,
+                       bool storeDelimiters
+                       ) {
+    NodeListImpl result = {};
+    readDelimited(ctx, left, right, storeDelimiters, result);
     return result;
 }
 
@@ -1423,6 +1443,90 @@ void implements(CrackContext ctx) {
 ## "class A : Object @implements IFace"
 void impl(CrackContext ctx) {
     _implements(ctx, true);
+}
+
+## Read a sequence of tokens delimited by the next token and it's closing
+## counterpart.  Consumes the closing delimiter and doesn't return the
+## delimiters. Delimiters can be curly brackets, square brackets or
+## parenthesis.
+NodeList readAnyDelimited(CrackContext ctx) {
+    delim := ctx.getToken();
+    ttype := delim.getType();
+    NodeListImpl result = {delim.getLocation()};
+    if (ttype == TOK_LPAREN)
+        readDelimited(ctx, TOK_LPAREN, TOK_RPAREN, false, result);
+    else if (ttype == TOK_LBRACKET)
+        readDelimited(ctx, TOK_LBRACKET, TOK_RBRACKET, false, result);
+    else if (ttype == TOK_LCURLY)
+        readDelimited(ctx, TOK_LCURLY, TOK_RCURLY, false, result);
+
+    # Read the closing delimiter.
+    ctx.getToken();
+
+    return result;
+}
+
+## Returns the node list serialized to a string token.
+Token serializeNodeList(NodeList list) {
+    ser := TokSerializer();
+    ser.setLocation(list.getLocation());
+    for (node :in list) {
+        tok := Tok.cast(node).tok;
+        ser.insert(tok);
+    }
+
+    serialized := ser.serialize();
+    size := array[uint32](serialized)[0];
+    tok := Token(TOK_STRING, serialized + 4, size, list.getLocation());
+    free(serialized);
+    return tok;
+}
+
+## Converts a delimited stream of tokens to a string that can be converted
+## back to a NodeList at runtime with deserializeNodeList().
+##
+## Example:
+##
+##   code := deserializeNodeList(@token_str {
+##       if ($1 == $2)
+##           cout `values are equal!\n`;
+##   });
+##   code.expand(ctx, params);
+##
+## The delimiters ('{' and '}' in the example) are not included in the list.
+## Curly brackets, square brackets and parenthesis may be used as delimiters.
+## The only restriction is that if a delimiter is nested, it must be balanced
+## within the list.  For example, @tokens ( class Foo { ) is legal, @tokens {
+## class foo { } is not.
+void token_str(CrackContext ctx) {
+    list := readAnyDelimited(ctx);
+    first := list.getFirst();
+    ctx.putBack(serializeNodeList(list));
+}
+
+## Given a serialized list of tokens created from the tokens() annotation,
+## return the deserialized NodeList.
+NodeList deserializeNodeList(String tokens) {
+    ser := TokSerializer(tokens.buffer, tokens.size);
+    list := NodeListImpl(ser.getLocation());
+    while (!((tok := ser.getToken()) is null))
+        list.pushHead(Tok(tok));
+    return list;
+}
+
+## @tokens is shorthand for "deserializeNodeList(@token_str { ... })"
+## For example, we could do:
+##
+##   import crack.ann deserializeNodeList;
+##
+##   void hello(CrackContext ctx) {
+##       (@tokens { cerr `hello world!\n` }).expand(ctx, null);
+##   }
+void tokens(CrackContext ctx) {
+    tokStr := serializeNodeList(readAnyDelimited(ctx));
+    ctx.inject(@FILE.buffer, @LINE, ')'.buffer);
+    ctx.putBack(tokStr);
+    ctx.inject(@FILE.buffer, @LINE, 'deserializeNodeList('.buffer);
 }
 
 ## Expands the sanitized scope name as a string.

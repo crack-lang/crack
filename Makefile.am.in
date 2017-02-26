@@ -326,7 +326,8 @@ compilerinc_HEADERS = \
     compiler/Annotation.h \
     compiler/CrackContext.h \
     compiler/Location.h \
-    compiler/Token.h
+    compiler/Token.h \
+    compiler/TokSerializer.h
 
 extincdir = $(includedir)/crack-$(VERSION)/crack/ext
 extinc_HEADERS = \

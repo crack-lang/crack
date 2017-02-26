@@ -6,8 +6,10 @@
 #
 
 import crack.io cout, StringFormatter;
+
 @import test.testann emitOk, incrButZero, testIsChecks, storeScope, getScope,
-    createAnnotations, wrap, user_static, getLocation, stringify, nullTok;
+    createAnnotations, wrap, token_test, user_static, getLocation, stringify,
+    nullTok, null_token_test;
 
 if (@incrButZero 0 != 0)
     cout `incrButZero 0 failed\n`;
@@ -70,7 +72,7 @@ if (!D.works()) cout `"static" annotation failed\n`;
 
 @getLocation blah  # this test will break if you change the line number of blah
 nameEnd := NAME.slice(-25);
-if (nameEnd != 'test/test_annotations.crk' || LINE != 71)
+if (nameEnd != 'test/test_annotations.crk' || LINE != 73)
     cout `failed location check:
         $nameEnd:$LINE != test/test_annotations.crk:71\n`;
 
@@ -80,4 +82,11 @@ if (@stringify foo != 'foo')
 # exercises null tokens (caused a seg-fault)
 @nullTok
 
+if (@token_test != 300)
+    cout `Failed token test: @token_test != 300\n`;
+
+if (@null_token_test != '')
+    cout `Failed null token test\n`;
+
+# cout `ok\n`  ;-)
 @emitOk
