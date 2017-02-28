@@ -21,10 +21,10 @@
 ##     implementation.
 
 import crack.io cerr, Formatter, StandardFormatter, Writer;
-import crack.lang AppendBuffer;
-import crack.logger Logger;
-import crack.net Poller, PollEvent, PollEventCallback, Socket, POLLIN, POLLOUT,
-    POLLERR, POLLHUP;
+import crack.lang AppendBuffer, Exception;
+import crack.net Address, Pipe, Poller, PollEvent, PollEventCallback, Socket,
+    AF_INET, POLLIN, POLLOUT, POLLERR, POLLHUP, SOCK_STREAM;
+import crack.threads Condition, Mutex, MutexLock, Thread, Queue;
 
 @import crack.ann impl;
 
@@ -51,6 +51,19 @@ Fmt makeFmt(String prefix, Formatter fmt) {
         return null;
     else
         return Fmt(prefix, fmt);
+}
+
+class Log {
+    Fmt debug, info, warn, error, fatal;
+    oper init(Formatter debug, Formatter info, Formatter warn, Formatter error,
+              Formatter fatal
+              ) :
+        debug = makeFmt('Debug: ', debug),
+        info = makeFmt('Info: ', info),
+        warn = makeFmt('Warn: ', warn),
+        error = makeFmt('Error: ', error),
+        fatal = makeFmt('Fatal: ', fatal) {
+    }
 }
 
 ## A communication endpoint handler.  Can be used for both server and client
@@ -90,6 +103,20 @@ Fmt makeFmt(String prefix, Formatter fmt) {
         _debug = makeFmt('Debug: ', debug) {
     }
 
+    ## Alternate constructor to allow us to create a handler without a socket.
+    ## XXX should probably always use this.
+    oper init(Object connectionId, Formatter error,
+              Formatter info,
+              Formatter debug
+              ) :
+        inBuf(blockSize),
+        outBuf(blockSize),
+        __connId = connectionId,
+        _error = makeFmt('Error: ', error),
+        _info = makeFmt('Info: ', info),
+        _debug = makeFmt('Debug: ', debug) {
+    }
+
     ## process() is called whenever new data is received.
     @abstract void process();
 
@@ -100,6 +127,13 @@ Fmt makeFmt(String prefix, Formatter fmt) {
     }
 
     int oper call(Poller poller, PollEvent event) {
+        if (__sock is null)
+            # XXX there may be a race condition here and below, if we try to
+            # remove the socket before this gets called there's going to be
+            # trouble.  I'm not sure it can manifest, though, because since
+            # the handling is done in the poll loop we will have pretty much
+            # done this by the time we get the "stop" message.
+            __sock = Socket.cast(event.pollable);
         _debug `CommHandler $__connId got events = $(event.revents)`;
         if (event.revents & POLLIN) {
             data := __sock.read(1024);
@@ -130,6 +164,12 @@ Fmt makeFmt(String prefix, Formatter fmt) {
         }
         return POLLIN | POLLERR | POLLHUP | (outBuf ? POLLOUT : 0);
     }
+
+    ## Remove the handler's socket from the poller.
+    void removeFrom(Poller poller) {
+        __sock.close();
+        poller.remove(__sock);
+    }
 }
 
 ## A listener that listens on a socket and creates communication handlers to
@@ -151,6 +191,18 @@ Fmt makeFmt(String prefix, Formatter fmt) {
         _debug = makeFmt('Debug: ', debug) {
     }
 
+    ## Alternate constructor to allow us to create a server without a socket.
+    ## XXX maybe always do this?
+    oper init(Object serverId, Formatter error,
+              Formatter info,
+              Formatter debug
+              ) :
+        _serverId = serverId,
+        _error = makeFmt('Error: ', error),
+        _info = makeFmt('Info: ', info),
+        _debug = makeFmt('Debug: ', debug) {
+    }
+
     ## Creates the CommHandler for a new connection.
     @abstract CommHandler makeCommHandler(Socket.Accepted accepted);
 
@@ -161,6 +213,8 @@ Fmt makeFmt(String prefix, Formatter fmt) {
     }
 
     int oper call(Poller poller, PollEvent event) {
+        if (__sock is null)
+            __sock = Socket.cast(event.pollable);
         _debug `CommListener $_serverId got events = $(event.revents)`;
         if (event.revents & POLLIN) {
             accepted := __sock.accept();
@@ -178,5 +232,267 @@ Fmt makeFmt(String prefix, Formatter fmt) {
             return 0;
         }
         return POLLIN | POLLERR | POLLHUP;
+    }
+}
+
+## Base class for all messages sent to the poller thread.
+@abstract class _Message {
+    @abstract void run(Poller poller, Log log);
+}
+
+## A message with a response that you can wait on.
+##
+## Derived classes should lock the mutex prior to modifying any internal state
+## to be shared between threads.
+@abstract class _WaitableMessage : _Message {
+    Mutex _mutex = {};
+    Condition __cond;
+
+    oper init() : __cond(_mutex) {}
+
+    ## Trigger the condition.
+    @final void trigger() {
+        __cond.signal();
+    }
+
+    @final void wait() {
+        MutexLock lock = {_mutex};
+        __cond.wait();
+    }
+}
+
+const int
+    SUCCESS = 0,
+    ERR_BIND_FAILURE = 1,
+    ERR_LISTEN_FAILURE = 2,
+    ERR_REUSE_FAILURE = 3,
+
+    ## Internal error, you should only get this when something in the system
+    ## has gone wrong.
+    ERR_INTERNAL = 4,
+
+    ERR_CONNECT_FAILURE = 5;
+
+const array[String] ERROR_TEXT = [
+    'Success',
+    'Bind failure',
+    'Listen failure',
+    'Failure setting reusable address',
+    'Connect failure',
+];
+
+## Message to create a new server socket.
+class _NewServer : _WaitableMessage {
+
+    Address __addr;
+    PollEventCallback __handler;
+    bool __reuseAddr;
+
+    int errCode;
+
+    oper init(Address addr, PollEventCallback handler,
+              bool reuseAddr
+              ) :
+        __addr = addr,
+        __handler = handler,
+        __reuseAddr = reuseAddr {
+    }
+
+    @final int __run(Poller poller, Log log) {
+        try {
+            sock := Socket(AF_INET, SOCK_STREAM, 0);
+            if (__reuseAddr && !sock.setReuseAddr(__reuseAddr))
+                return ERR_REUSE_FAILURE;
+            if (!sock.bind(__addr))
+                return ERR_BIND_FAILURE;
+            if (!sock.listen(5))
+                return ERR_LISTEN_FAILURE;
+            poller.add(sock, __handler);
+            return SUCCESS;
+        } catch (Exception ex) {
+            log.error `Exception in message handling: $ex`;
+            return ERR_INTERNAL;
+        }
+    }
+
+    void run(Poller poller, Log log) {
+        MutexLock lock = {_mutex};
+        errCode = __run(poller, log);
+        trigger();
+    }
+}
+
+## Message to create a new client connection.
+class _NewClient : _WaitableMessage {
+
+    Address __addr;
+    PollEventCallback __handler;
+
+    int errCode;
+
+    oper init(Address addr, PollEventCallback handler) :
+        __addr = addr,
+        __handler = handler {
+    }
+
+    @final int __run(Poller poller, Log log) {
+        try {
+            sock := Socket(AF_INET, SOCK_STREAM, 0);
+            if (!sock.connect(__addr))
+                return ERR_CONNECT_FAILURE;
+            poller.add(sock, __handler);
+            return SUCCESS;
+        } catch (Exception ex) {
+            log.error `Exception creating a client: $ex`;
+            return ERR_INTERNAL;
+        }
+    }
+
+    void run(Poller poller, Log log) {
+        MutexLock lock = {_mutex};
+        errCode = __run(poller, log);
+        trigger();
+    }
+}
+
+class _StopClient : _WaitableMessage {
+    CommHandler __handler;
+
+    oper init(CommHandler handler) : __handler = handler {}
+
+    void run(Poller poller, Log log) {
+        __handler.removeFrom(poller);
+        trigger();
+    }
+}
+
+class _SendData : _Message {
+    CommHandler __handler;
+    String __data;
+
+    oper init(CommHandler handler, String data) :
+        __handler = handler,
+        __data = data {
+    }
+
+    void run(Poller poller, Log log) {
+        log.debug `Sending $(__data.size) bytes to $__handler`;
+        __handler.outBuf.extend(__data);
+    }
+}
+
+class _CommPipeHandler @impl PollEventCallback {
+
+    class __Message {
+        CommHandler target;
+        String data;
+        oper init(CommHandler target, String data) :
+            target = target,
+            data = data {
+        }
+    }
+
+    Pipe __pipe;
+    Log __log;
+    Queue[_Message] __queue = {};
+
+    bool done;
+
+    oper init(Pipe pipe, Log log) : __pipe = pipe, __log = log {}
+
+    int oper call(Poller poller, PollEvent event) {
+        if (event.revents & POLLIN) {
+            __pipe.read(1024);
+            message := __queue.get();
+            if (message is null)
+                done = true;
+            else
+                message.run(poller, __log);
+        } else if (event.revents & POLLERR) {
+            __log.error `got error on control pipe handler`;
+            __pipe.close();
+            poller.remove(__pipe);
+            return 0;
+        } else if (event.revents & POLLHUP) {
+            __log.info `got HUP on control pipe handler`;
+            __pipe.close();
+            poller.remove(__pipe);
+            return 0;
+        }
+        return POLLIN | POLLERR | POLLHUP;
+    }
+
+    void send(_Message message) {
+        __queue.add(message);
+        __pipe.write('x');
+    }
+}
+
+class _PollerThread : Thread {
+
+    # Our control pipe. Safely send messages from other threads.
+    _CommPipeHandler control;
+    Poller __poller = {};
+
+    oper init(Log log) {
+        pipe := Pipe();
+        control = _CommPipeHandler(pipe, log);
+        __poller.add(pipe, control);
+    }
+
+    void run() {
+        while (!control.done) {
+            __poller.waitAndProcess(null);
+        }
+    }
+}
+
+class CommProxy {
+
+    _CommPipeHandler __control;
+    CommHandler __handler;
+
+    oper init(_CommPipeHandler control, CommHandler handler) :
+        __control = control,
+        __handler = handler {
+    }
+
+    ## Sends 'data' asynchronously to the other communication endpoint.
+    void send(String data) {
+        __control.send(_SendData(__handler, data));
+    }
+
+    void close() {
+        __control.send(_StopClient(__handler));
+    }
+}
+
+class Comm {
+    _PollerThread __thread;
+    Log __log;
+
+    oper init(Log log) : __log = log {}
+
+    void start() {
+        __thread = _PollerThread(__log);
+        __thread.start();
+    }
+
+    void stop() {
+        __thread.control.send(null);
+        __thread.join();
+    }
+
+    CommProxy getProxy(Address server, CommHandler handler) {
+        message := _NewClient(server, handler);
+        __thread.control.send(message);
+        message.wait();
+        return CommProxy(__thread.control, handler);
+    }
+
+    void startServer(Address addr, CommListener listener, bool resuseAddr) {
+        message := _NewServer(addr, listener, true);
+        __thread.control.send(message);
+        message.wait();
     }
 }
