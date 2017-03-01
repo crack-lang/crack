@@ -146,3 +146,55 @@ class Queue[Elem] {
         __cond.signal();
     }
 }
+
+## Event is a Condition with "latching."  Once the event is signalled,
+## waiting on it immediately returns until it is reset.  A Condition, by
+## contrast, will wait until it is signalled during the wait, even if it was
+## signalled prior to the wait.
+@final class Event {
+    Condition __cond = {};
+    bool _triggered;
+
+    oper init() {}
+    oper init(Mutex mutex) : __cond(mutex) {}
+    oper init(Condition cond) : __cond = cond {}
+
+    ## Signals the condition, the caller must hold the mutex.
+    void signal() {
+        _triggered = true;
+        __cond.signal();
+    }
+
+    ## Locks the mutex and signals the condition.  The caller must _not_ hold
+    ## the mutex.
+    void lockAndSignal() {
+        MutexLock lock = {__cond.mutex};
+        signal();
+    }
+
+    ## Waits until the the event is triggered.  The caller must hold the mutex.
+    @final void wait() {
+        if (_triggered)
+            return;
+        __cond.wait();
+    }
+
+    ## Resets the event.  Subsequent calls to wait() will block until the
+    ## event is signalled again.
+    ## The caller must _not_ hold the mutex.
+    void reset() {
+        MutexLock lock = {__cond.mutex};
+        _triggered = false;
+    }
+
+    ## Returns true if the event has been signalled.  The caller must _not_
+    ## hold the mutex.
+    bool signalled() {
+        MutexLock lock = {__cond.mutex};
+        return _triggered;
+    }
+
+    ## Returns the underlying mutex.
+    Mutex getMutex() { return __cond.mutex }
+}
+
