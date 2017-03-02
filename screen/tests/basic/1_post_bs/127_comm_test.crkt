@@ -5,7 +5,8 @@ comm test
 import crack.io cerr, Formatter, FStr, StandardFormatter, Writer;
 import crack.lang Buffer;
 import crack.net InetAddress, Poller, Socket, AF_INET, SOCK_STREAM;
-import crack.net.comm Comm, CommHandler, CommListener, Log;
+import crack.net.comm Comm, CommHandler, CommListener, Log, SyncHandler,
+    Waiter, WaiterFor;
 
 @import crack.ann assert;
 
@@ -14,41 +15,22 @@ log := Formatter.unsafeCast(null);
 #log := cerr;
 
 import crack.threads Condition, Mutex, MutexLock;
-class Waiter {
-    String __response;
-    Mutex __mutex = {};
-    Condition __cond;
 
-    oper init() : __cond(__mutex) {}
-
-    void sendResponse(String response) {
-        MutexLock lock = {__mutex};
-        __response = response;
-        __cond.signal();
-    }
-
-    String getResponse() {
-        MutexLock lock = {__mutex};
-        __cond.wait();
-        return __response;
-    }
-}
-
-class EchoCommHandler : CommHandler {
+class EchoCommHandler : SyncHandler {
     bool server;
-    Waiter waiter;
+    WaiterFor[String, int] waiter;
 
     oper init(Socket sock, Object connectionId, Formatter error,
               Formatter info,
               Formatter debug,
               bool server
               ) :
-        CommHandler(sock, connectionId, error, info, debug),
+        SyncHandler(sock, connectionId, error, info, debug),
         server = server {
     }
 
     oper init(Object connectionId, Formatter log) :
-        CommHandler(connectionId, log, log, log) {
+        SyncHandler(connectionId, log, log, log) {
     }
 
     void process() {
@@ -66,11 +48,15 @@ class EchoCommHandler : CommHandler {
             inBuf.compact(size + 1);
         } else if (waiter) {
             _info `sending response back to waiter\n`;
-            waiter.sendResponse(String(inBuf.buffer, size + 1, false));
+            waiter.setResult(String(inBuf.buffer, size + 1, false));
             inBuf.compact(size + 1);
         } else {
             _info `client has no waiter!!!\n`;
         }
+    }
+
+    void addWaiter(Waiter waiter) {
+        this.waiter = WaiterFor[String, int].cast(waiter);
     }
 }
 
@@ -138,11 +124,11 @@ poller = null;
 comm := Comm(Log(log, log, log, log, log));
 comm.start();
 comm.startServer(ADDR, EchoListener('server2', log), true);
-proxy := comm.getProxy(ADDR, client = EchoCommHandler('client2', log));
-client.waiter = Waiter();
+proxy := comm.getSyncProxy(ADDR, client = EchoCommHandler('client2', log));
+waiter := WaiterFor[String, int](0);
 const TEST_MESSAGE := '\x0Ctest message';
-proxy.send(TEST_MESSAGE);
-@assert(client.waiter.getResponse() == TEST_MESSAGE);
+proxy.sendSync(TEST_MESSAGE, waiter);
+@assert(waiter.getResult() == TEST_MESSAGE);
 
 proxy.close();
 comm.stop();

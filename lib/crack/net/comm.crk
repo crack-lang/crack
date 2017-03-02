@@ -19,12 +19,16 @@
 ## -   Create a class derived from CommListener that implements the
 ##     makeCommHandler() method to create an instance of the CommHandler
 ##     implementation.
+##
+## You can also use the Comm class to manage the poller in a background
+## thread.  Comm supports methods to allow you to safely interact with the
+## background poller and its handlers over a pipe.
 
 import crack.io cerr, Formatter, StandardFormatter, Writer;
 import crack.lang AppendBuffer, Exception;
 import crack.net Address, Pipe, Poller, PollEvent, PollEventCallback, Socket,
     AF_INET, POLLIN, POLLOUT, POLLERR, POLLHUP, SOCK_STREAM;
-import crack.threads Condition, Mutex, MutexLock, Thread, Queue;
+import crack.threads Condition, Event, Mutex, MutexLock, Thread, Queue;
 
 @import crack.ann impl;
 
@@ -172,6 +176,33 @@ class Log {
     }
 }
 
+class Waiter;
+
+## A synchronous communication handler.  You can "sendSync()" to one of these
+## and wait for a result.
+@abstract class SyncHandler : CommHandler {
+    oper init(Socket sock, Object connectionId, Formatter error,
+              Formatter info,
+              Formatter debug
+              ) :
+        CommHandler(sock, connectionId, error, info, debug) {
+    }
+
+    ## Alternate constructor to allow us to create a handler without a socket.
+    ## XXX should probably always use this.
+    oper init(Object connectionId, Formatter error,
+              Formatter info,
+              Formatter debug
+              ) :
+        CommHandler(connectionId, error, info, debug) {
+    }
+
+    ## Adds a new Waiter to the handler.  The waiter should be triggered when
+    ## a response to its message arrives.
+    @abstract void addWaiter(Waiter waiter);
+}
+
+
 ## A listener that listens on a socket and creates communication handlers to
 ## service new connections.
 @abstract class CommListener @impl PollEventCallback {
@@ -245,19 +276,16 @@ class Log {
 ## Derived classes should lock the mutex prior to modifying any internal state
 ## to be shared between threads.
 @abstract class _WaitableMessage : _Message {
-    Mutex _mutex = {};
-    Condition __cond;
-
-    oper init() : __cond(_mutex) {}
+    Event _event = {};
 
     ## Trigger the condition.
     @final void trigger() {
-        __cond.signal();
+        _event.signal();
     }
 
     @final void wait() {
-        MutexLock lock = {_mutex};
-        __cond.wait();
+        MutexLock lock = {_event.getMutex()};
+        _event.wait();
     }
 }
 
@@ -316,7 +344,7 @@ class _NewServer : _WaitableMessage {
     }
 
     void run(Poller poller, Log log) {
-        MutexLock lock = {_mutex};
+        MutexLock lock = {_event.getMutex()};
         errCode = __run(poller, log);
         trigger();
     }
@@ -349,7 +377,7 @@ class _NewClient : _WaitableMessage {
     }
 
     void run(Poller poller, Log log) {
-        MutexLock lock = {_mutex};
+        MutexLock lock = {_event.getMutex()};
         errCode = __run(poller, log);
         trigger();
     }
@@ -378,6 +406,71 @@ class _SendData : _Message {
     void run(Poller poller, Log log) {
         log.debug `Sending $(__data.size) bytes to $__handler`;
         __handler.outBuf.extend(__data);
+    }
+}
+
+## A communication mechanism for waiting on a result from a message/response
+## communication in the poller thread.
+class Waiter {
+    Event _event = {};
+
+    ## Signal the condition.
+    @final void _signal() { _event.signal() }
+
+    ## Wait on the condition.  Caller should be holding the mutex.
+    @final void _wait() { _event.wait() }
+}
+
+class _SendSync : _Message {
+    SyncHandler __handler;
+    String __data;
+    Waiter __waiter;
+
+    oper init(SyncHandler handler, String data, Waiter waiter) :
+        __handler = handler,
+        __data = data,
+        __waiter = waiter {
+    }
+
+    void run(Poller poller, Log log) {
+        __handler.addWaiter(__waiter);
+        __handler.outBuf.extend(__data);
+    }
+}
+
+## Specialization of a Waiter that contains a result value and additional info
+## for the handler (typically used to store a key).
+class WaiterFor[Result, Info] : Waiter {
+    Result __result;
+    Exception __exception;
+    Info info;
+
+    oper init(Info info) : info = info {}
+
+    ## Set the result and trigger the waiter, allowing the waiting thread to
+    ## retrieve the response.
+    void setResult(Result result) {
+        MutexLock lock = {_event.getMutex()};
+        __result = result;
+        _signal();
+    }
+
+    ## Set an exception and trigger the waiter, causing the waiting thread to
+    ## throw an exception.
+    void setError(Exception ex) {
+        MutexLock lock = {_event.getMutex()};
+        __exception = ex;
+        _signal();
+    }
+
+    ## Wait for a result or an error.  If an error is obtained, it will be
+    ## thrown.
+    Result getResult() {
+        MutexLock lock = {_event.getMutex()};
+        _event.wait();
+        if (__exception)
+            throw __exception;
+        return __result;
     }
 }
 
@@ -447,6 +540,9 @@ class _PollerThread : Thread {
     }
 }
 
+## Serves as a proxy for a remote connection managed from a background thread
+## created by Comm.
+## Allows you to send data to the remote peer safely from a non-poller thread.
 class CommProxy {
 
     _CommPipeHandler __control;
@@ -462,11 +558,41 @@ class CommProxy {
         __control.send(_SendData(__handler, data));
     }
 
+    ## Close the connection.
     void close() {
         __control.send(_StopClient(__handler));
     }
 }
 
+class SyncCommProxy {
+
+    _CommPipeHandler __control;
+    SyncHandler __handler;
+
+    oper init(_CommPipeHandler control, SyncHandler handler) :
+        __control = control,
+        __handler = handler {
+    }
+
+    ## Sends 'data' asynchronously to the other communication endpoint.
+    void send(String data) {
+        __control.send(_SendData(__handler, data));
+    }
+
+    ## Close the connection.
+    void close() {
+        __control.send(_StopClient(__handler));
+    }
+
+    ## Send a synchronous message.  Wait for the result with
+    ## 'waiter.getResponse()'.
+    void sendSync(String data, Waiter waiter) {
+        __control.send(_SendSync(__handler, data, waiter));
+    }
+}
+
+## Manages a poller in a background thread, providing a set of methods to
+## control it and interact with its connections.
 class Comm {
     _PollerThread __thread;
     Log __log;
@@ -481,8 +607,14 @@ class Comm {
     void stop() {
         __thread.control.send(null);
         __thread.join();
+        __thread = null;
     }
 
+    ## Create a connection to a remote server in the poller thread and return
+    ## a proxy for the connection.
+    ## Do not interact with 'handler' directly after calling this unless it
+    ## is mutex protected: the contents of the handler will be subject to
+    ## manipulation from the poller thread.
     CommProxy getProxy(Address server, CommHandler handler) {
         message := _NewClient(server, handler);
         __thread.control.send(message);
@@ -490,9 +622,29 @@ class Comm {
         return CommProxy(__thread.control, handler);
     }
 
+    ## Same as getProxy(), only returns a synchronous proxy.
+    SyncCommProxy getSyncProxy(Address server, SyncHandler handler) {
+        message := _NewClient(server, handler);
+        __thread.control.send(message);
+        message.wait();
+        return SyncCommProxy(__thread.control, handler);
+    }
+
+    ## Start a new server in the poller thread, listening on the given
+    ## address.  'listener' is the handler that will be invoked on new
+    ## connections.  reuseAddr should be true if you want to set the
+    ## "REUSEADDR" option on the socket.
+    ## Do not interact with 'listener' directly after calling this unless it
+    ## is mutex protected, as it will be subject to manipulation from the
+    ## poller thread.
     void startServer(Address addr, CommListener listener, bool resuseAddr) {
         message := _NewServer(addr, listener, true);
         __thread.control.send(message);
         message.wait();
+    }
+
+    oper del() {
+        if (__thread)
+            stop();
     }
 }
