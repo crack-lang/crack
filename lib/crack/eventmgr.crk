@@ -1,0 +1,82 @@
+## Contains the EventManager class, which lets you manage scheduled events and
+## pollable events.
+
+import crack.cont.array Array;
+import crack.functor Functor0, Function0;
+import crack.cont.treemap TreeMap;
+import crack.net Poller;
+import crack.time Time;
+
+alias EventCallback = Functor0[void];
+alias EventCallbackFunc = Function0[void];
+@export_symbols EventCallback, EventCallbackFunc;
+
+## An EventManager manages a Poller and a schedule of events to be executed
+## at a specific point in time.
+class EventManager {
+
+    ## The associated poller.
+    Poller poller = {};
+
+    # Ths sequence of upcoming events.
+    TreeMap[Time, Array[Functor0[void]]] __schedule = {};
+
+    bool __done;
+
+    oper init() {}
+    oper init(Poller poller) : poller = poller {}
+
+    ## Schedule an event to be executed at the given time.  If the time is in
+    ## the past, it will be executed on the next iteration.
+    void scheduleEvent(Time time, EventCallback callback) {
+        if (events := __schedule.get(time))
+            events.append(callback);
+        else
+            __schedule[time] = Array[EventCallback]![callback];
+    }
+
+    ## Stop the event manager run() function.  This must be called from either
+    ## an event callback or a poller event callback in the same thread as the
+    ## event manager.
+    void terminate() { __done = true }
+
+    ## Process all events in the scheduler and in the poller until either the
+    ## poller is empty or scheduler is terminated.
+    void run() {
+
+        now := Time.now();
+
+        # Get the first event time.
+        Time nextTime;
+        if (__schedule)
+            nextTime = __schedule.iter().elem().key;
+
+        while (!__done) {
+            import crack.io cerr;
+            poller.waitAndProcess(nextTime ? nextTime - now : null);
+            now.setToNow(null);
+
+            # Get the next scheduled event.
+            while (__schedule) {
+                nextEvent := __schedule.iter().elem();
+                nextTime = nextEvent.key;
+
+                # Run the events if we're at or past its scheduled time.
+                if (nextTime <= now) {
+                    for (callback :in nextEvent.val)
+                        callback();
+                    __schedule.delete(nextTime);
+
+                    # Set the next time to the next event if there is one.
+                    if (__schedule)
+                        nextTime = __schedule.iter().elem().key;
+                    else
+                        nextTime = null;
+                } else {
+                    break;
+                }
+            }
+        }
+    }
+}
+
