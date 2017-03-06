@@ -12,7 +12,9 @@ import crack.lang ManagedBuffer;
 import crack.runtime ctime, strftime, asctime, epoch, strlen, strptime,
     InternalDate;
 import crack.sys argv, env;
-import crack.time Date, Time, TimeDelta;
+import crack.time add, Date, Time, TimeDelta;
+
+@import crack.ann assert;
 
 sys_options :=  CmdOptions("--verbose=b/false");
 sys_options.parse(argv);
@@ -152,5 +154,12 @@ if (verbose)
 if (secs != 1370858401)
     cout `Date.parseTime failed, got $secs seconds instead of 1370858401\n`;
 
+# "add" tests.
+if (true) {
+    @assert(add(Time(1, 1), TimeDelta(2, 2)) == Time(3, 3));
+    @assert(add(Time(2, 2), TimeDelta(-1, -1)) == Time(1, 1));
+    @assert(add(Time(1, 500000000), TimeDelta(1, 500000001)) == Time(3, 1));
+    @assert(add(Time(1, 1), TimeDelta(-1, -2)) == Time(0, -1));
+}
 
 cout `ok\n`;
