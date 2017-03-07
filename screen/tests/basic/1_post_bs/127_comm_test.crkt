@@ -2,11 +2,14 @@
 comm test
 %%ARGS%%
 %%FILE%%
+import crack.eventmgr EventCallbackFunc;
 import crack.io cerr, Formatter, FStr, StandardFormatter, Writer;
 import crack.lang Buffer;
 import crack.net InetAddress, Poller, Socket, AF_INET, SOCK_STREAM;
 import crack.net.comm Comm, CommHandler, CommListener, Log, SyncHandler,
     Waiter, WaiterFor;
+import crack.threads Event;
+import crack.time add, Time, TimeDelta;
 
 @import crack.ann assert;
 
@@ -130,10 +133,30 @@ const TEST_MESSAGE := '\x0Ctest message';
 proxy.sendSync(TEST_MESSAGE, waiter);
 @assert(waiter.getResult() == TEST_MESSAGE);
 
+if (true) {
+    # Schedule an event, make sure that we get it within 3/10ths of a second
+    # (hopefully this won't be too flakey).
+    Event myEventWaiter = {};
+    void myEvent() {
+        myEventWaiter.signal();
+    }
+    schedTime := Time.now();
+    comm.scheduleEvent(add(schedTime, TimeDelta(0, 100000000)),
+                       EventCallbackFunc(myEvent)
+                       );
+    myEventWaiter.wait();
+    endTime := Time.now();
+    diff := endTime - schedTime;
+    @assert(diff.secs == 0 && diff.nsecs >= 100000000);
+    # This check is likely to be flakey.
+    @assert(diff.nsecs < 300000000);
+}
+
 proxy.close();
 comm.stop();
 
 cerr `ok\n`;
+
 %%EXPECT%%
 ok
 %%STDIN%%

@@ -24,11 +24,13 @@
 ## thread.  Comm supports methods to allow you to safely interact with the
 ## background poller and its handlers over a pipe.
 
+import crack.eventmgr EventCallback, EventManager, EventManagerBackRef;
 import crack.io cerr, Formatter, StandardFormatter, Writer;
 import crack.lang AppendBuffer, Exception;
 import crack.net Address, Pipe, Poller, PollEvent, PollEventCallback, Socket,
     AF_INET, POLLIN, POLLOUT, POLLERR, POLLHUP, SOCK_STREAM;
 import crack.threads Condition, Event, Mutex, MutexLock, Thread, Queue;
+import crack.time Time;
 
 @import crack.ann impl;
 
@@ -268,7 +270,7 @@ class Waiter;
 
 ## Base class for all messages sent to the poller thread.
 @abstract class _Message {
-    @abstract void run(Poller poller, Log log);
+    @abstract void run(EventManager eventMan, Log log);
 }
 
 ## A message with a response that you can wait on.
@@ -343,9 +345,9 @@ class _NewServer : _WaitableMessage {
         }
     }
 
-    void run(Poller poller, Log log) {
+    void run(EventManager eventMan, Log log) {
         MutexLock lock = {_event.getMutex()};
-        errCode = __run(poller, log);
+        errCode = __run(eventMan.poller, log);
         trigger();
     }
 }
@@ -376,9 +378,9 @@ class _NewClient : _WaitableMessage {
         }
     }
 
-    void run(Poller poller, Log log) {
+    void run(EventManager eventMan, Log log) {
         MutexLock lock = {_event.getMutex()};
-        errCode = __run(poller, log);
+        errCode = __run(eventMan.poller, log);
         trigger();
     }
 }
@@ -388,8 +390,8 @@ class _StopClient : _WaitableMessage {
 
     oper init(CommHandler handler) : __handler = handler {}
 
-    void run(Poller poller, Log log) {
-        __handler.removeFrom(poller);
+    void run(EventManager eventMan, Log log) {
+        __handler.removeFrom(eventMan.poller);
         trigger();
     }
 }
@@ -403,7 +405,7 @@ class _SendData : _Message {
         __data = data {
     }
 
-    void run(Poller poller, Log log) {
+    void run(EventManager eventMan, Log log) {
         log.debug `Sending $(__data.size) bytes to $__handler`;
         __handler.outBuf.extend(__data);
     }
@@ -432,9 +434,23 @@ class _SendSync : _Message {
         __waiter = waiter {
     }
 
-    void run(Poller poller, Log log) {
+    void run(EventManager eventMan, Log log) {
         __handler.addWaiter(__waiter);
         __handler.outBuf.extend(__data);
+    }
+}
+
+class _ScheduleEvent : _Message {
+    Time __time;
+    EventCallback __event;
+
+    oper init(Time time, EventCallback event) :
+        __time = time,
+        __event = event {
+    }
+
+    void run(EventManager eventMan, Log log) {
+        eventMan.scheduleEvent(__time, __event);
     }
 }
 
@@ -489,18 +505,25 @@ class _CommPipeHandler @impl PollEventCallback {
     Log __log;
     Queue[_Message] __queue = {};
 
+    # The event manager that owns the pipe.
+    EventManagerBackRef __eventMan;
+
     bool done;
 
-    oper init(Pipe pipe, Log log) : __pipe = pipe, __log = log {}
+    oper init(Pipe pipe, Log log, EventManagerBackRef eventMan) :
+        __pipe = pipe,
+        __log = log,
+        __eventMan = eventMan {
+    }
 
     int oper call(Poller poller, PollEvent event) {
         if (event.revents & POLLIN) {
             __pipe.read(1024);
             message := __queue.get();
             if (message is null)
-                done = true;
+                __eventMan.oper from EventManager().terminate();
             else
-                message.run(poller, __log);
+                message.run(__eventMan.oper from EventManager(), __log);
         } else if (event.revents & POLLERR) {
             __log.error `got error on control pipe handler`;
             __pipe.close();
@@ -525,18 +548,16 @@ class _PollerThread : Thread {
 
     # Our control pipe. Safely send messages from other threads.
     _CommPipeHandler control;
-    Poller __poller = {};
+    EventManager __sched = {};
 
     oper init(Log log) {
         pipe := Pipe();
-        control = _CommPipeHandler(pipe, log);
-        __poller.add(pipe, control);
+        control = _CommPipeHandler(pipe, log, __sched);
+        __sched.poller.add(pipe, control);
     }
 
     void run() {
-        while (!control.done) {
-            __poller.waitAndProcess(null);
-        }
+        __sched.run();
     }
 }
 
@@ -641,6 +662,13 @@ class Comm {
         message := _NewServer(addr, listener, true);
         __thread.control.send(message);
         message.wait();
+    }
+
+    ## Schedule an event to be executed at the given time (or immediately, if
+    ## the time is in the past).  The vevent will always be run from the
+    ## event manager thread.
+    void scheduleEvent(Time time, EventCallback event) {
+        __thread.control.send(_ScheduleEvent(time, event));
     }
 
     oper del() {

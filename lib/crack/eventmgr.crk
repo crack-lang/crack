@@ -11,9 +11,17 @@ alias EventCallback = Functor0[void];
 alias EventCallbackFunc = Function0[void];
 @export_symbols EventCallback, EventCallbackFunc;
 
+class EventManager;
+
+## Class to break the reference cycle for EventManager.  Use this to reference
+## an EventManager from a callback.
+@abstract class EventManagerBackRef : VTableBase {
+    @abstract EventManager oper from EventManager();
+}
+
 ## An EventManager manages a Poller and a schedule of events to be executed
 ## at a specific point in time.
-class EventManager {
+class EventManager : EventManagerBackRef {
 
     ## The associated poller.
     Poller poller = {};
@@ -25,6 +33,8 @@ class EventManager {
 
     oper init() {}
     oper init(Poller poller) : poller = poller {}
+
+    EventManager oper from EventManager() { return this; }
 
     ## Schedule an event to be executed at the given time.  If the time is in
     ## the past, it will be executed on the next iteration.
