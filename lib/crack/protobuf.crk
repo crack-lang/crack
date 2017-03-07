@@ -112,6 +112,11 @@ class Field {
         dst.write(value);
     }
 
+    @static void write(SerialWriter dst, uint id, bool value) {
+        dst.write(id << 3);
+        dst.write(value ? 1 : 0);
+    }
+
     @static void write(SerialWriter dst, uint id, Message message) {
         write(dst, id, _serializeToString(message));
     }
@@ -128,6 +133,10 @@ class ProtoWriter {
     }
 
     @final void write(uint id, uint value) {
+        Field.write(__dst, id, value);
+    }
+
+    @final void write(uint id, bool value) {
         Field.write(__dst, id, value);
     }
 

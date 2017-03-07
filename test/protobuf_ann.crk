@@ -33,6 +33,7 @@ import crack.strutil StringArray;
         optional uint32 uint32Field = 2;
         optional uint64 uint64Field = 3;
         optional int64 int64Field = 4;
+        optional bool boolField = 5;
     }
 }
 
@@ -105,6 +106,7 @@ if (true) {
     fooTest.old.uint32Field = 100;
     fooTest.old.uint64Field = 200;
     fooTest.old.int64Field = 300;
+    fooTest.old.boolField = true;
     fooTest.test();
 }
 
