@@ -500,7 +500,7 @@ extern "C" void crack_runtime_cinit(Module *mod) {
     sockAddrInType->finish();
     // end SockAddrIn
 
-    // begin SockAddrIn
+    // begin SockAddrUn
     Type *sockAddrUnType = mod->addType("SockAddrUn",
                                         sizeof(SockAddrUn) - sizeof(SockAddr)
                                         );
@@ -519,6 +519,12 @@ extern "C" void crack_runtime_cinit(Module *mod) {
 
     sockAddrUnType->finish();
     // end SockAddrUn
+
+    f = mod->addFunc(intType, "getSockName",
+                     (void *)crack::runtime::getSockName
+                     );
+    f->addArg(intType, "sockfd");
+    f->addArg(sockAddrType, "addr");
 
     f = mod->addFunc(intType, "connect", (void *)crack::runtime::connect);
     f->addArg(intType, "s");

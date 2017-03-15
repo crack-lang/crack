@@ -5,7 +5,8 @@ comm test
 import crack.eventmgr EventCallbackFunc;
 import crack.io cerr, Formatter, FStr, StandardFormatter, Writer;
 import crack.lang Buffer;
-import crack.net InetAddress, Poller, Socket, AF_INET, SOCK_STREAM;
+import crack.net getSocketAddress, InetAddress, Poller, Socket, AF_INET,
+    SOCK_STREAM;
 import crack.net.comm Comm, CommHandler, CommListener, Log, SyncHandler,
     Waiter, WaiterFor;
 import crack.threads Event;
@@ -86,16 +87,18 @@ class EchoListener : CommListener {
 
 poller := Poller();
 
-const ADDR := InetAddress(127, 0, 0, 1, 49123);
+# Set port number to zero, allow the system to assign it.
+const ADDR := InetAddress(127, 0, 0, 1, 0);
 
 server := Socket(AF_INET, SOCK_STREAM, 0);
 server.setReuseAddr(true);
 server.bind(ADDR);
 server.listen(5);
+getSocketAddress(server, ADDR);  # Fill in the port number.
 poller.add(server, EchoListener(server, 'server', log, log, log));
 
 clientSock := Socket(AF_INET, SOCK_STREAM, 0);
-@assert(clientSock.connect(InetAddress(127, 0, 0, 1, 49123)));
+@assert(clientSock.connect(ADDR));
 client := EchoCommHandler(clientSock, 'client', log, log, log, false);
 poller.add(clientSock, client);
 
