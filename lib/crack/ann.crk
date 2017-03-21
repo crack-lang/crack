@@ -1529,6 +1529,116 @@ void tokens(CrackContext ctx) {
     ctx.inject(@FILE.buffer, @LINE, 'deserializeNodeList('.buffer);
 }
 
+## An argument definition, for use with x-macs.
+class _ArgDef {
+    ## The argument variable name.
+    String name;
+
+    ## The index of the argument in the macro's arg list.
+    int index;
+
+    ## The node list to be expanded into the argument of the macro's arg list.
+    NodeList nodes;
+
+    oper init(String name, int index, NodeList nodes) :
+        name = name,
+        index = index,
+        nodes = nodes {
+    }
+
+    @final void expand(CrackContext ctx, Array[NodeList] args) {
+        nodes.expand(ctx, args);
+    }
+}
+
+class _ParseError : Exception {
+    Token tok;
+    oper init(Token tok, String text) : Exception(text), tok = tok {}
+}
+
+class XMacro {
+    NodeList __nodes;
+    TreeMap[String, _ArgDef] __defs;
+    Array[NodeList] __args;
+
+    oper init(NodeList nodes, TreeMap[String, _ArgDef] defs) :
+        __nodes = nodes,
+        __defs = defs,
+        __args = Array[NodeList](defs.count(), null) {
+    }
+
+    ## Set the macro variable to the value.  Throws KeyError if varName is not
+    ## defined.
+    void set(String varName, NodeList value) {
+        __args[__defs[varName].index] = value;
+    }
+
+    ## A No-args version of expand, uses the argument array that we've already
+    ## defined.
+    void expand(CrackContext ctx) {
+        # Make sure all arguments are defined.
+        for (def :in __defs) {
+            if (!__args[def.val.index])
+                throw Exception(
+                    FStr() I`XMacro argument $(def.val.name) has not been \
+                             defined`
+                );
+        }
+
+        __nodes.expand(ctx, __args);
+    }
+}
+
+XMacro deserializeXMac(String tokens) {
+    ser := TokSerializer(tokens.buffer, tokens.size);
+    list := NodeListImpl(ser.getLocation());
+    TreeMap[String, _ArgDef] vars = {};
+    bool gotDollar;
+    int lastArgIndex;
+    while (!((tok := ser.getToken()) is null)) {
+        if (gotDollar) {
+            if (tok.isIdent()) {
+
+                # Get the argument def for the variable or create a new one.
+                id := String(tok.getText());
+                argDef := vars.get(id);
+                if (!argDef) {
+                    vars[id] = argDef = _ArgDef(id,
+                                                lastArgIndex++,
+                                                NodeListImpl![Tok(tok)]
+                                                );
+                }
+
+                list.pushHead(Arg(tok.getLocation(), argDef.index));
+            } else {
+                throw _ParseError(tok, "Identifier expected after '$'");
+            }
+            gotDollar = false;
+        } else if (tok.isDollar()) {
+            gotDollar = true;
+        } else {
+            list.pushHead(Tok(tok));
+        }
+    }
+
+    return XMacro(list, vars);
+}
+
+void xmac(CrackContext ctx) {
+    tokStr := serializeNodeList(readAnyDelimited(ctx));
+    try {
+        TreeMap[String, _ArgDef] args = {};
+
+        # We deserialize the XMac once here to obtain the arg list.  Then we
+        # generate code to deserialize and expand it in the client code.
+        ctx.inject(@FILE.buffer, @LINE, ')'.buffer);
+        ctx.putBack(tokStr);
+        ctx.inject(@FILE.buffer, @LINE, 'deserializeXMac('.buffer);
+    } catch (_ParseError ex) {
+        ctx.error(ex.tok, CString(ex.text).buffer);
+    }
+}
+
 ## Expands the sanitized scope name as a string.
 ## This converts the "main script" scope name to simply ".main".
 void SCOPE_NAME(CrackContext ctx) {

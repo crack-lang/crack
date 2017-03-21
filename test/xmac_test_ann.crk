@@ -1,0 +1,16 @@
+
+import crack.ann deserializeXMac, NodeListImpl, Tok;
+import crack.compiler CrackContext;
+
+@import crack.ann xmac;
+
+void simple(CrackContext ctx) {
+    @xmac { 'hello' }.expand(ctx);
+}
+
+void hello_to(CrackContext ctx) {
+    name := NodeListImpl![Tok(ctx.getToken())];
+    mac := @xmac { ('hello ' $tok) };
+    mac.set('tok', name);
+    mac.expand(ctx);
+}

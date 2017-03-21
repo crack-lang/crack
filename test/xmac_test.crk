@@ -1,0 +1,13 @@
+
+import crack.io cout;
+@import crack.ann assert;
+@import test.xmac_test_ann hello_to, simple;
+
+@assert(@simple == 'hello');
+@assert(@hello_to 'world' == 'hello world');
+
+# Todo:
+#    need substitute without expand so we can create another node list.
+#    @xmac* - assign free variables from context.
+
+cout `ok\n`;
