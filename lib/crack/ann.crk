@@ -27,7 +27,7 @@ import crack.compiler CrackContext, Location, Token, TokSerializer, TOK_COMMA,
     TOK_RCURLY, TOK_RPAREN, TOK_STRING;
 import crack.cont.array Array;
 import crack.cont.treemap TreeMap;
-import crack.io cout, FStr, Reader, StandardFormatter, StringFormatter,
+import crack.io cerr, FStr, Reader, StandardFormatter, StringFormatter,
     StringWriter, Writer;
 import crack.lang die, AssertionError, CString, Exception, Formatter,
     IndexError, InvalidArgumentError;
@@ -1068,13 +1068,20 @@ void struct(CrackContext ctx) {
     while (true) {
 
         tok = ctx.getToken();
+
+        # Stuff doc-comments into the result.
+        if (tok.isDoc()) {
+            result.pushHead(Tok(tok));
+            tok = ctx.getToken();
+        }
+
         if (tok.isRCurly()) {
             break;
         }
 
         # put it back and parse a field
         ctx.putBack(tok);
-        Field.parse(ctx, fields, result)
+        Field.parse(ctx, fields, result);
     }
 
     # create the constructor.
