@@ -22,9 +22,11 @@
 #   Equivalent to "class A : Object I, J { ... }".  Shorthand for the most
 #   common case.
 
-import crack.compiler CrackContext, Location, Token, TokSerializer, TOK_COMMA,
-    TOK_LBRACKET, TOK_LCURLY, TOK_LPAREN, TOK_POPERRCTX, TOK_RBRACKET,
-    TOK_RCURLY, TOK_RPAREN, TOK_STRING;
+import crack.compiler CrackContext, Location, Token, TokSerializer,
+    TOK_BREAKKW, TOK_CLASSKW, TOK_COMMA, TOK_CONTINUEKW, TOK_ELSEKW, TOK_FORKW,
+    TOK_IFKW, TOK_IMPORTKW, TOK_INKW, TOK_ISKW, TOK_LBRACKET, TOK_LCURLY,
+    TOK_LPAREN, TOK_NULLKW, TOK_ONKW, TOK_OPERKW, TOK_POPERRCTX, TOK_RBRACKET,
+    TOK_RCURLY, TOK_RETURNKW, TOK_RPAREN, TOK_STRING, TOK_WHILEKW;
 import crack.cont.array Array;
 import crack.cont.treemap TreeMap;
 import crack.io cerr, FStr, Reader, StandardFormatter, StringFormatter,
@@ -262,10 +264,40 @@ class Tok : Node {
     }
 
     String toString(Array[NodeList] args) {
-        if (tok.isString())
+        type := tok.getType();
+        if (tok.isString()) {
             return String(tok.getText()).getRepr();
-        else
+        } else if (type == TOK_BREAKKW) {
+            return 'break';
+        } else if (type == TOK_CLASSKW) {
+            return 'class';
+        } else if (type == TOK_CONTINUEKW) {
+            return 'continue';
+        } else if (type == TOK_FORKW) {
+            return 'for';
+        } else if (type == TOK_ELSEKW) {
+            return 'else';
+        } else if (type == TOK_IFKW) {
+            return 'if';
+        } else if (type == TOK_IMPORTKW) {
+            return 'import';
+        } else if (type == TOK_INKW) {
+            return 'in';
+        } else if (type == TOK_ISKW) {
+            return 'is';
+        } else if (type == TOK_NULLKW) {
+            return 'null';
+        } else if (type == TOK_ONKW) {
+            return 'on';
+        } else if (type == TOK_OPERKW) {
+            return 'oper';
+        } else if (type == TOK_RETURNKW) {
+            return 'return';
+        } else if (type == TOK_WHILEKW) {
+            return 'while';
+        } else {
             return String(tok.getText());
+        }
     }
 
     Location getLocation() {
@@ -427,6 +459,7 @@ class Concat : Node {
     }
 }
 
+## A Node that converts its arguments to a string.
 class Stringify : Node {
     Node node;
 
@@ -1576,8 +1609,10 @@ class XMacro {
 
     ## Set the macro variable to the value.  Throws KeyError if varName is not
     ## defined.
-    void set(String varName, NodeList value) {
+    ## Returns 'this' to allow method chaining.
+    XMacro set(String varName, NodeList value) {
         __args[__defs[varName].index] = value;
+        return this;
     }
 
     ## A No-args version of expand, uses the argument array that we've already
@@ -1631,10 +1666,71 @@ XMacro deserializeXMac(String tokens) {
     return XMacro(list, vars);
 }
 
+## Get the variable names given a _reversed_ list of tokens.
+TreeMap[String, uint] _getVarNames(NodeList nodes) {
+    bool gotDollar;
+    TreeMap[String, uint] result = {};
+
+    # Since the list is backwards, when we get a dollar sign, we need to check
+    # and record the last token.
+    Token lastTok;
+    for (node :in nodes) {
+        tok := (t := Tok.cast(node, null)) ? t.tok : null;
+        if (!(tok is null) && tok.isDollar()) {
+            if (!(lastTok is null) && lastTok.isIdent())
+                result[String(lastTok.getText())] = 1;
+            else
+                throw _ParseError(lastTok, "Identifier expected after '$'");
+        }
+        lastTok = tok;
+    }
+    return result;
+}
+
+## "xmacs" are a cross between @tokens sequences and macros.  They're mainly
+## useful for doing code generation from annotations.  Like @tokens, @xmac
+## creates a string literal encoding of the delimited list of tokens that
+## follow it.  However, it unpacks them using deserializeXMac(), which
+## understands simple variable expansions of the form "$identifier".
+##
+## You can set these variables to NodeList values using the set() method:
+##
+##     m := @xmac { cerr.format($val) };
+##     m.set('val', makeNodeList(tok));  # Where 'tok' is a crack.compiler.Token
+##
+## You can also use the @xmac* variation of the macro to interpolate local
+## variables of the same name:
+##
+##     val := nodeList(tok);
+##     m := @xmac* { cerr.format($val) };
+##
+## The xmac can then be expanded into a context as follows:
+##
+##     m.expand(ctx);
 void xmac(CrackContext ctx) {
-    tokStr := serializeNodeList(readAnyDelimited(ctx));
+    # See if the next token is '*', indicating that we should interpolate
+    # variables.
+    bool interpolate;
+    tok := ctx.getToken();
+    if (tok.isAsterisk())
+        interpolate = true;
+    else
+        ctx.putBack(tok);
+
+    nodeList := readAnyDelimited(ctx);
+    TreeMap[String, uint] varNames =
+        interpolate ? _getVarNames(nodeList) : null;
+
+    tokStr := serializeNodeList(nodeList);
     try {
         TreeMap[String, _ArgDef] args = {};
+
+        if (interpolate) {
+            for (var :in varNames)
+                ctx.inject(@FILE.buffer, @LINE,
+                           FStr() `.set('$(var.key)', $(var.key))\0`.buffer
+                           );
+        }
 
         # We deserialize the XMac once here to obtain the arg list.  Then we
         # generate code to deserialize and expand it in the client code.
@@ -1644,6 +1740,11 @@ void xmac(CrackContext ctx) {
     } catch (_ParseError ex) {
         ctx.error(ex.tok, CString(ex.text).buffer);
     }
+}
+
+## Returns a node list wrapping a single token.
+NodeList makeNodeList(Token tok) {
+    return NodeListImpl![Tok(tok)];
 }
 
 ## Expands the sanitized scope name as a string.

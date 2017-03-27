@@ -1,10 +1,12 @@
 
 import crack.io cout;
 @import crack.ann assert;
-@import test.xmac_test_ann hello_to, simple;
+@import test.xmac_test_ann expand2, hello_to, simple;
 
 @assert(@simple == 'hello');
 @assert(@hello_to 'world' == 'hello world');
+@assert(@expand2 true 100 == 100);
+@assert(@expand2 false 100 == 0);
 
 # Todo:
 #    need substitute without expand so we can create another node list.
