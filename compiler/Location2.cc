@@ -36,6 +36,14 @@ int Location::_getLineNumber(Location *inst) {
     return inst->rep->getLineNumber();
 }
 
+int Location::_getStartCol(Location *inst) {
+    return inst->rep->getStartCol();
+}
+
+int Location::_getEndCol(Location *inst) {
+    return inst->rep->getEndCol();
+}
+
 void Location::_bind(Location *inst) { inst->bind(); }
 void Location::_release(Location *inst) { inst->release(); }
 

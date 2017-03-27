@@ -243,6 +243,12 @@ void init(Module *mod) {
     locationType->addMethod(mod->getIntType(), "getLineNumber",
                             (void *)Location::_getLineNumber
                             );
+    locationType->addMethod(mod->getIntType(), "getStartCol",
+                            (void *)Location::_getStartCol
+                            );
+    locationType->addMethod(mod->getIntType(), "getEndCol",
+                            (void *)Location::_getLineNumber
+                            );
     locationType->addMethod(mod->getVoidType(), "oper bind",
                             (void *)Location::_bind
                             );
