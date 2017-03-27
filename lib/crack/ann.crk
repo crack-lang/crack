@@ -1596,7 +1596,7 @@ class _ParseError : Exception {
     oper init(Token tok, String text) : Exception(text), tok = tok {}
 }
 
-class XMacro {
+@final class XMacro {
     NodeList __nodes;
     TreeMap[String, _ArgDef] __defs;
     Array[NodeList] __args;
@@ -1615,9 +1615,7 @@ class XMacro {
         return this;
     }
 
-    ## A No-args version of expand, uses the argument array that we've already
-    ## defined.
-    void expand(CrackContext ctx) {
+    void __checkArgsDefined() {
         # Make sure all arguments are defined.
         for (def :in __defs) {
             if (!__args[def.val.index])
@@ -1626,9 +1624,32 @@ class XMacro {
                              defined`
                 );
         }
+    }
 
+    ## A No-args version of expand, uses the argument array that we've already
+    ## defined.
+    void expand(CrackContext ctx) {
+        __checkArgsDefined();
         __nodes.expand(ctx, __args);
     }
+
+    NodeList expand() {
+        NodeListImpl result = {};
+        __checkArgsDefined();
+        for (node :in __nodes) {
+            if (arg := Arg.cast(node, null)) {
+                # An arg value must be comprised entirely of Tok nodes, add
+                # then to the result.
+                for (child :in __args[arg.argIndex])
+                    result.append(Tok(Tok.cast(child).tok));
+            } else {
+                result.append(Tok(Tok.cast(node).tok));
+            }
+        }
+
+        return result;
+    }
+
 }
 
 XMacro deserializeXMac(String tokens) {

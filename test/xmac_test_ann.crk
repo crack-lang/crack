@@ -20,3 +20,11 @@ void expand2(CrackContext ctx) {
     b := makeNodeList(ctx.getToken());
     @xmac* { $a ? $b : 0 }.expand(ctx);
 }
+
+void expand3(CrackContext ctx) {
+    a := makeNodeList(ctx.getToken());
+    b := makeNodeList(ctx.getToken());
+
+    c := @xmac* { $a $b }.expand();
+    @xmac* { $c + ' world' }.expand(ctx);
+}
