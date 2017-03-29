@@ -1840,12 +1840,18 @@ void LLVMBuilder::emitEndClass(Context &context) {
 
     // first the base classes
     BTypeDef *type = BTypeDefPtr::arcast(context.ns);
-    for (TypeDef::TypeVec::iterator baseIter = type->parents.begin();
-         baseIter != type->parents.end();
-         ++baseIter
-         ) {
-        BTypeDef *typeDef = BTypeDefPtr::arcast(*baseIter);
-        members.push_back(cast<PointerType>(typeDef->rep)->getElementType());
+    if (type->appendage) {
+        // For an appendage, we just do the first one.
+        BTypeDef *baseType = BTypeDefPtr::arcast(type->parents[0]);
+        members.push_back(cast<PointerType>(baseType->rep)->getElementType());
+    } else {
+        for (TypeDef::TypeVec::iterator baseIter = type->parents.begin();
+            baseIter != type->parents.end();
+            ++baseIter
+            ) {
+            BTypeDef *typeDef = BTypeDefPtr::arcast(*baseIter);
+            members.push_back(cast<PointerType>(typeDef->rep)->getElementType());
+        }
     }
 
     for (TypeDef::VarDefMap::iterator iter = type->beginDefs();

@@ -154,6 +154,12 @@ class TypeDef : public VarDef, public Namespace {
         // if true, this is a final class (can not be derived from)
         bool final;
 
+        // True if the class is an appendage.  This implies that the base
+        // classes are either:
+        // -   exactly one non-appendage anchor class
+        // -   one or more appendage base classes.
+        bool appendage;
+
         enum Flags {
             noFlags = 0,
             abstractClass = 1,
@@ -194,6 +200,7 @@ class TypeDef : public VarDef, public Namespace {
             initializersEmitted(false),
             abstract(false),
             final(false),
+            appendage(false),
             gotExplicitOperNew(false),
             fieldCount(0) {
         }
@@ -279,6 +286,9 @@ class TypeDef : public VarDef, public Namespace {
          * constructor or a constructor exactly matching args.
          */
         FuncDefPtr createOperInit(Context &classContext, const ArgVec &args);
+
+        /** Create a no-op oper new method (for appendages). */
+        void createNopOperNew(Context &classContext);
 
         /**
          * Create the default initializer.

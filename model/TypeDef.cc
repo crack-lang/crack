@@ -394,6 +394,39 @@ FuncDefPtr TypeDef::createOperInit(Context &classContext,
     return newFunc;
 }
 
+void TypeDef::createNopOperNew(Context &classContext) {
+    ArgVec args(1);
+    ContextPtr funcCtx = classContext.createSubContext(Context::local);
+    funcCtx->toplevel = true;
+    args[0] = classContext.builder.createArgDef(parents[0].get(), "this");
+    funcCtx->addDef(args[0].get());
+    funcCtx->returnType = this;
+
+    // TODO: find the anchor class.
+    FuncDefPtr func = classContext.builder.emitBeginFunc(*funcCtx,
+                                                         FuncDef::noFlags,
+                                                         "oper new",
+                                                         this,
+                                                         args,
+                                                         0
+                                                         );
+
+    VarRefPtr thisRef = classContext.builder.createVarRef(args[0].get());
+
+    FuncCall::ExprVec unsafeCastArgs(1);
+    unsafeCastArgs[0] = thisRef;
+    FuncDefPtr unsafeCastFunc =
+        funcCtx->lookUp("unsafeCast", unsafeCastArgs, type.get());
+    assert(unsafeCastFunc && "unsafeCast missing");
+    FuncCallPtr unsafeCastCall =
+        funcCtx->builder.createFuncCall(unsafeCastFunc.get());
+    unsafeCastCall->args = unsafeCastArgs;
+
+    classContext.builder.emitReturn(*funcCtx, unsafeCastCall.get());
+    classContext.builder.emitEndFunc(*funcCtx, func.get());
+    classContext.addDef(func.get());
+}
+
 FuncDefPtr TypeDef::createDefaultInit(Context &classContext) {
     ArgVec args(0);
     return createOperInit(classContext, args);
@@ -782,19 +815,25 @@ void TypeDef::rectify(Context &classContext) {
         }
     }
 
+    if (appendage) {
+        // Appendages get an "oper new" method that just returns its argument.
+        createNopOperNew(classContext);
+
     // if there are no init functions specific to this class, create a
     // default constructor and possibly wrap it in a new function.
-    if (!lookUp("oper init", false)) {
-        FuncDefPtr initFunc = createDefaultInit(classContext);
-        if (!abstract)
-            createNewFunc(classContext, initFunc.get());
-    }
+    } else {
+        if (!lookUp("oper init", false)) {
+            FuncDefPtr initFunc = createDefaultInit(classContext);
+            if (!abstract)
+                createNewFunc(classContext, initFunc.get());
+        }
 
-    // if the class doesn't already define a delete operator specific to the
-    // class, generate one.
-    FuncDefPtr operDel = classContext.lookUpNoArgs("oper del");
-    if (!operDel || operDel->getOwner() != this)
-        createDefaultDestructor(classContext);
+        // if the class doesn't already define a delete operator specific to the
+        // class, generate one.
+        FuncDefPtr operDel = classContext.lookUpNoArgs("oper del");
+        if (!operDel || operDel->getOwner() != this)
+            createDefaultDestructor(classContext);
+    }
 }
 
 bool TypeDef::isParent(TypeDef *type) {
@@ -1398,7 +1437,8 @@ void TypeDef::serializeDecl(Serializer &serializer, ModuleDef *master) {
                     (hasVTable ? 2 : 0) |
                     (abstract ? 4 : 0) |
                     (generic ? 8 : 0) |
-                    (final ? 16 : 0);
+                    (final ? 16 : 0) |
+                    (appendage ? 32 : 0);
         serializer.write(flags, "flags");
 
         {
@@ -1607,6 +1647,7 @@ namespace {
             type->hasVTable = (flags & 2) ? true : false;
             type->abstract = (flags & 4) ? true : false;
             type->final = (flags & 16) ? true : false;
+            type->appendage = (flags & 32) ? true : false;
 
             owner->addDef(type.get());
             return type;
