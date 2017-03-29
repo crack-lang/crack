@@ -1,0 +1,28 @@
+%%TEST%%
+appendages
+%%ARGS%%
+%%FILE%%
+class A {
+    int i;
+    oper init(int i) : i = i {}
+    void put() {
+        puts('A:');
+        printint(i);
+        puts('');
+    }
+}
+
+class B = A {
+    void foo() {
+        put();
+    }
+}
+
+# This constructor should be a no-op.
+b := B(A(100));
+b.foo();
+
+%%EXPECT%%
+A:
+100
+%%STDIN%%

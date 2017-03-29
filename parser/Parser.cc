@@ -2221,6 +2221,13 @@ bool Parser::parseDef(TypeDef *type) {
 
             // make sure we're not hiding anything else
             checkForExistingDef(tok, tok.getData());
+            
+            // Make sure that this isn't an appendage.
+            if (TypeDefPtr typeDef = 
+                 TypeDefPtr::rcast(context->getDefContext()->ns)
+                )
+               if (typeDef->appendage)
+                  error(tok, "Appendages can not contain instance variables.");
 
             // we should now _always_ have a default constructor (unless the
             // type is void).
