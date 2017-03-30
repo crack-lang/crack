@@ -1,0 +1,11 @@
+%%TEST%%
+error on "oper init" declared in an appendage
+%%ARGS%%
+%%FILE%%
+class A {}
+class B = A {
+    oper init() {}
+}
+%%EXPECT%%
+ParseError: %SCRIPTNAME%:3:10: Constructors and destructors are not allowed in an appendage.
+%%STDIN%%

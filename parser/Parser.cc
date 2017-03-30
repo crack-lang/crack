@@ -2929,7 +2929,8 @@ void Parser::parsePostOper(TypeDef *returnType) {
       const string &ident = tok.getData();
       context->setLocation(tok.getLocation());
       bool isInit = ident == "init";
-      if (isInit || ident == "release" || ident == "bind" || ident == "del") {
+      bool isDel = ident == "del";
+      if (isInit || isDel || ident == "release" || ident == "bind") {
 
          // these can only be defined in an instance context
          if (context->scope != Context::composite)
@@ -2952,6 +2953,14 @@ void Parser::parsePostOper(TypeDef *returnType) {
          expectToken(Token::lparen, "expected argument list");
 
          TypeDefPtr enclosingType = context->parent->ns;
+
+         // Disallow certain operators in appendages.
+         if (enclosingType->appendage && (isInit || isDel))
+            error(tok,
+                  "Constructors and destructors are not allowed in an "
+                   "appendage."
+                  );
+
          if (ident == "bind" && enclosingType->noBindInferred)
             error(tok,
                   SPUG_FSTR("oper bind() must be defined before all uses that "
@@ -2978,7 +2987,7 @@ void Parser::parsePostOper(TypeDef *returnType) {
          FuncFlags flags;
          if (isInit)
             flags = hasMemberInits;
-         else if (ident == "del")
+         else if (isDel)
             flags = hasMemberDels;
          else
             flags = normal;
