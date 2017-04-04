@@ -6,7 +6,6 @@ class A {
     int i;
     oper init(int i) : i = i {}
     void put() {
-        puts('A:');
         printint(i);
         puts('');
     }
@@ -14,6 +13,7 @@ class A {
 
 class B = A {
     void foo() {
+        puts('B.foo()');
         put();
     }
 }
@@ -22,7 +22,23 @@ class B = A {
 b := B(A(100));
 b.foo();
 
+class C = A {
+    void bar() {
+        puts('C.bar()'); put();
+    }
+}
+
+class D = B, C {}
+
+d := D.unsafeCast(A(200));
+d.foo();
+d.bar();
+
 %%EXPECT%%
-A:
+B.foo()
 100
+B.foo()
+200
+C.bar()
+200
 %%STDIN%%

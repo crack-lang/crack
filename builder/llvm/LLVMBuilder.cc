@@ -518,9 +518,24 @@ void LLVMBuilder::narrow(TypeDef *curType, TypeDef *ancestor) {
         return;
 
     assert(curType->isDerivedFrom(ancestor));
+    BTypeDef *bancestor = BTypeDefPtr::acast(ancestor);
+
+    // For appendage types, we can just do an unsafeCast to either the
+    // ancestor or to the anchor type (whichever is closer).
+    if (curType->appendage) {
+        BTypeDef *anchor =
+            BTypeDefPtr::acast(const_cast<TypeDef *>(curType->getAnchorType()));
+
+        BTypeDef *intermediate =
+            anchor->isDerivedFrom(ancestor) ? anchor : bancestor;
+
+        lastValue = builder.CreateBitCast(lastValue, intermediate->rep);
+        if (intermediate == ancestor)
+            return;
+        curType = const_cast<BTypeDef *>(intermediate);
+    }
 
     BTypeDef *bcurType = BTypeDefPtr::acast(curType);
-    BTypeDef *bancestor = BTypeDefPtr::acast(ancestor);
     if (curType->complete) {
         lastValue = IncompleteNarrower::emitGEP(builder, bcurType, bancestor,
                                                 lastValue

@@ -768,6 +768,16 @@ bool TypeDef::gotAbstractFuncs(vector<FuncDefPtr> *abstractFuncs,
     return gotAbstract;
 }
 
+const TypeDef *TypeDef::getAnchorType() const {
+    const TypeDef *cur = this;
+    while (cur) {
+        if (!cur->appendage)
+            return cur;
+        cur = cur->parents[0].get();
+    }
+    SPUG_CHECK(true, "Anchor type not found!");
+}
+
 void TypeDef::aliasBaseMetaTypes() {
     for (TypeVec::iterator base = parents.begin();
          base != parents.end();

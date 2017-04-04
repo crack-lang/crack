@@ -3277,6 +3277,7 @@ TypeDefPtr Parser::parseClassDef() {
    vector<TypeDefPtr> bases;
    vector<TypeDefPtr> ancestors;  // keeps track of all ancestors
    bool isAppendage = false;
+   const TypeDef *anchorType = 0;
    if (tok.isColon() || tok.isAssign()) {
       if (tok.isAssign())
          isAppendage = true;
@@ -3312,9 +3313,34 @@ TypeDefPtr Parser::parseClassDef() {
                      "first class specified in the base class list."
                      );
 
-            // make sure it's safe to add this as a base class given the
-            // existing set, and add it to the list.
-            baseClass->addToAncestors(*context, ancestors);
+            if (isAppendage) {
+               // Make sure that all appendage ancestors have the same anchor
+               // type.
+               if (!anchorType)
+                  anchorType = baseClass->getAnchorType();
+               else if (baseClass->getAnchorType() != anchorType)
+                  error(identLoc,
+                        SPUG_FSTR(
+                            "Base class " << baseClass->getDisplayName() <<
+                             " has a different anchor type (" <<
+                             anchorType->getAnchorType()->getDisplayName() <<
+                             ") than the established anchor type (" <<
+                             anchorType->getDisplayName() << ')'
+                        ));
+            } else {
+               // Make sure that the base class is not an appendage.
+               if (baseClass->appendage)
+                  error(identLoc,
+                        SPUG_FSTR("You may not derive a non-appendage class "
+                                   "from appendage class " <<
+                                   baseClass->getDisplayName()
+                                  )
+                        );
+
+               // Make sure it's safe to add this as a base class given the
+               // existing set, and add it to the list.
+               baseClass->addToAncestors(*context, ancestors);
+            }
             bases.push_back(baseClass);
          }
 
@@ -3324,38 +3350,6 @@ TypeDefPtr Parser::parseClassDef() {
             break;
          else if (!tok.isComma())
             unexpected(tok, "expected comma or opening brace");
-      }
-
-      // If this class is explicitly an appendage, make sure that there is
-      // exactly one non-appendage base class.
-      if (isAppendage && (bases.size() != 1 || bases[0]->appendage)) {
-         error(identLoc,
-               "An appendage definition should have exactly one "
-                "non-appendage base class."
-               );
-      } else if (!isAppendage) {
-         // Ensure that either all bases are appendages or no bases are
-         // appendages.
-         for (int i = 0; i < bases.size(); ++i) {
-            if (bases[i]->appendage) {
-               if (!isAppendage && i != 0)
-                  error(identLoc,
-                        SPUG_FSTR(
-                           "You may not mix appendage and non-appendage base "
-                            "classes (" << bases[i]->getDisplayName() <<
-                            " is an appendage, preceding bases are not)"
-                        ));
-               isAppendage = true;
-            } else if (isAppendage) {
-               // Other bases were appendages, this one is not.
-               error(identLoc,
-                     SPUG_FSTR(
-                        "You may not mix appendage and non-appendage "
-                         "base classes (" << bases[i]->getDisplayName() <<
-                         "is not an appendage, preceding bases are)"
-                     ));
-            }
-         }
       }
    } else if (tok.isSemi()) {
       // forward declaration.

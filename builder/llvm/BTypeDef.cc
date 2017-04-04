@@ -232,6 +232,10 @@ void BTypeDef::createEmptyOffsetsInitializer(Context &context) {
 }
 
 Constant *BTypeDef::getParentOffset(const LLVMBuilder &builder, int parentIndex) const {
+    // For appendages, all base classes are of offset 0.
+    if (appendage)
+        return Constant::getNullValue(builder.intzLLVM);
+
     // get the pointer to the inner "Class" object of "Class[BaseName]"
     BTypeDefPtr base = BTypeDefPtr::arcast(parents[parentIndex]);
 

@@ -350,6 +350,16 @@ class TypeDef : public VarDef, public Namespace {
                               );
 
         /**
+         * Returns the "anchor type" of an appendage (or the type itself, for
+         * a non-appendage).  The anchor type is the non-appendage ancestor
+         * class that the appendage and all intermediate ancestor appendages
+         * are derived from.
+         *
+         * Returns a borrowed reference to the ancestor type.
+         */
+        const TypeDef *getAnchorType() const;
+
+        /**
          * Alias definitions in all of the base meta-types in our meta-type.
          * This should be done immediately after setting the base classes.
          */
