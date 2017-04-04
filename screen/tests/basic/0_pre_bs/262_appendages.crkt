@@ -30,9 +30,19 @@ class C = A {
 
 class D = B, C {}
 
-d := D.unsafeCast(A(200));
+d := D(A(200));
 d.foo();
 d.bar();
+
+# Verify that derived appendage constructors work as we expect.
+if (D(C(A(200))).i != 200)
+    puts('FAILED creating appendage from a non-anchor intermediate');
+
+class G[T] = T {
+    void putter() { put() }
+}
+
+G[A](A(300)).putter();
 
 %%EXPECT%%
 B.foo()
@@ -41,4 +51,5 @@ B.foo()
 200
 C.bar()
 200
+300
 %%STDIN%%

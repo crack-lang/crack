@@ -524,7 +524,7 @@ void LLVMBuilder::narrow(TypeDef *curType, TypeDef *ancestor) {
     // ancestor or to the anchor type (whichever is closer).
     if (curType->appendage) {
         BTypeDef *anchor =
-            BTypeDefPtr::acast(const_cast<TypeDef *>(curType->getAnchorType()));
+            BTypeDefPtr::acast(curType->getAnchorType());
 
         BTypeDef *intermediate =
             anchor->isDerivedFrom(ancestor) ? anchor : bancestor;

@@ -398,11 +398,10 @@ void TypeDef::createNopOperNew(Context &classContext) {
     ArgVec args(1);
     ContextPtr funcCtx = classContext.createSubContext(Context::local);
     funcCtx->toplevel = true;
-    args[0] = classContext.builder.createArgDef(parents[0].get(), "this");
+    args[0] = classContext.builder.createArgDef(getAnchorType(), "this");
     funcCtx->addDef(args[0].get());
     funcCtx->returnType = this;
 
-    // TODO: find the anchor class.
     FuncDefPtr func = classContext.builder.emitBeginFunc(*funcCtx,
                                                          FuncDef::noFlags,
                                                          "oper new",
@@ -768,8 +767,8 @@ bool TypeDef::gotAbstractFuncs(vector<FuncDefPtr> *abstractFuncs,
     return gotAbstract;
 }
 
-const TypeDef *TypeDef::getAnchorType() const {
-    const TypeDef *cur = this;
+TypeDef *TypeDef::getAnchorType() {
+    TypeDef *cur = this;
     while (cur) {
         if (!cur->appendage)
             return cur;

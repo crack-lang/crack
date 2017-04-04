@@ -357,7 +357,10 @@ class TypeDef : public VarDef, public Namespace {
          *
          * Returns a borrowed reference to the ancestor type.
          */
-        const TypeDef *getAnchorType() const;
+        TypeDef *getAnchorType();
+        const TypeDef *getAnchorType() const {
+            return const_cast<TypeDef *>(this)->getAnchorType();
+        }
 
         /**
          * Alias definitions in all of the base meta-types in our meta-type.
