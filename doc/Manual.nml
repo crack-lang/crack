@@ -2807,6 +2807,111 @@ a class #PrimitivePair# from #Pair# as follows:
     }
 }}
 
+Appendages
+----------
+
+Appendages allow you to add functionality to a class hierarchy without
+using inheritance.  As an example of why you would want to do this, let's go
+back to a stripped-down form of our #Coord# example:
+
+{{
+    class Coord {
+        int x, y;
+        oper init(int x, int y) : x = x, y = y {}
+    }
+
+    class NamedCoord : Coord {
+        String name;
+        oper init(int x, int y, String name) : Coord(x, y), name = name {}
+    }
+}}
+
+Let's say that you want to add a few methods to #Coord# but #Coord# and
+#NamedCoord# are part of an external module.  Without appendages, you wouldn't
+be able to add them as methods.  You could extend #Coord#, but then you would
+lose the ability to use those methods on #NamedCoord#.
+
+To deal with this, you'd have to instead create functions:
+
+{{
+    float distanceFromOrigin(Coord c) {
+        return sqrt(float(c.x) + float(c.y));
+    }
+
+    int area(Coord c) {
+        return c.x * c.y;
+    }
+}}
+
+This works, but it's suboptimal:
+
+-   You lose the /receiver/ *.* /method/ *()* syntax and the implicit use of
+    instance variables (you can't just use #x# and #y#, you have to use #c.x#
+    and #c.y#).
+-   You have to import the methods individually into any other module that
+    uses them.
+
+Appendages let you bundle functionality that is associated with a class
+external to the class and its hierarchy.  An appendage based solution would
+look like this:
+
+{{
+    class SpatialCoord = Coord {
+        float distanceFromOrigin() {
+            return sqrt(float(x) + float(y));
+        }
+
+        int area() {
+            return x * y;
+        }
+    }
+}}
+
+Note the use of the equal sign ("=") in the class definition where a colon
+would normally be.  This identifies #SpatialCoord# as an appendage.  In this
+relationship #Coord# is the /anchor class/.  It is the base class of the
+hierarchy that the appendage's methods manipulate.
+
+To use #SpatialCoord#, you just convert any kind of #Coord# object:
+
+{{
+    a := SpatialCoord(Coord(10, 20));
+    b := SpatialCoord(NamedCoord(10, 20, 'my location'));
+
+    cerr `area is $(b.area())\n`;
+}}
+
+For an appendage, calling the class (#SpatialCoord(...)#) doesn't create a new
+instance of SpatialCoord.  Rather, it converts the argument (which must be an
+instance of #Coord# or a derived class) to a SpatialCoord.  Doing this is
+equivalent to using #unsafeCast#:
+
+{{
+    a := SpatialCoord.unsafeCast(Coord(10, 20));
+}}
+
+The major difference being that it isn't unsafe: #unsafeCast()# accepts any
+kind of argument, appendage initialization only accepts an instance of
+something derived from the anchor class, and does the correct pointer
+offseting to ensure a reference to the body of the anchor class.
+
+An appendage may also be derived from one or more other appendages, as long as
+they all have the same anchor class.  For example, we might use this feature
+to bundle together a set of appendages:
+
+{{
+    class DumpingCoord = Coord {
+        void dump() {
+            cerr `$(coord)\n`;
+        }
+    }
+
+    class MyCoord = SpatialCoord, DumpingCoord {}
+}}
+
+Appendages are limited in that they may add no additional state to an object.
+You can not define instance variables or virtual functions in an appendage.
+
 Modules
 -------
 
