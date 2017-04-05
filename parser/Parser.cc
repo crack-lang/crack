@@ -3402,8 +3402,10 @@ TypeDefPtr Parser::parseClassDef() {
    else if (flags & TypeDef::finalClass)
       type->final = true;
 
-   if (isAppendage)
+   if (isAppendage) {
       type->appendage = true;
+      type->hasVTable = false;
+   }
 
    // add the "oper class" and "cast" methods
    FuncDefPtr throwingCast, defaultingCast;
@@ -3435,7 +3437,7 @@ TypeDefPtr Parser::parseClassDef() {
    parseClassBody();
 
    // Generate the cast functions.
-   if (type->hasVTable) {
+   if (type->hasVTable && !isAppendage) {
       type->createCast(*classContext, true, throwingCast.get());
       type->createCast(*classContext, false, defaultingCast.get());
    }
