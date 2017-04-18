@@ -828,7 +828,7 @@ String _getRepr(Buffer buffer) {
     buf.append(b"'");
     for (uintz i = 0; i < buffer.size; ++i) {
         ch := buffer.buffer[i];
-        if (ch < 32 || ch > 127 || ch == 39 || ch == 92) {
+        if (ch < 32 || ch > 126 || ch == 39 || ch == 92) {
             buf.append(b'\\'); # '\'
             buf.append(b'0' + (ch >> 6));
             buf.append(b'0' + ((ch & 56) >> 3));
