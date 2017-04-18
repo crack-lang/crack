@@ -354,16 +354,16 @@ two words: $(block)\n`);
 
     void expandTemplate(FullReader src, TextBlock block) {
         for (line :in src) {
-            line = strip(line);
-            if (line == '&expand') {
+            cmd := strip(line);
+            if (cmd == '&expand') {
                 format(block);
-            } else if (line == '&title') {
+            } else if (cmd == '&title') {
                 header := getHeader(block);
                 if (header) {
                     __out.write(encode(header));
                     __out.write('\n');
                 }
-            } else if (line == '&toc') {
+            } else if (cmd == '&toc') {
                 generateIndex(block.words);
             } else {
                 __out.write(line);
