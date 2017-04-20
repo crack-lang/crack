@@ -3645,7 +3645,9 @@ way that strings are represented in C).  All static strings in Crack happen
 to be null terminated, so we can easily do this with a static string.  If we
 wanted to do the same with a constructed string we'd have to do something to
 guarantee that the string were null terminated (converting it to a #CString#
-would work, but there are often cheaper ways to accomplish this).
+would work, but there are often cheaper ways to accomplish this.  Also note
+that the entire practice of injecting strings should be avoided in favor of
+the use of \X(Token Sequence Literals).)
 
 Using an annotation requires some special syntax.  First, we import it using
 the #@import# statement.  #@import# is just like #import# except that it
@@ -4157,6 +4159,109 @@ successfully written our last example like this:
 
 In this case, #define# is passed through (because it's an import) and #func#
 will be defined within the generic at the time of its instantiation.
+
+Token Sequence Literals
+'''''''''''''''''''''''
+
+When using annotations for code generation, it's often necessary to emit
+boilerplate code and inject it into the tokenizer.  We've demonstracted how
+this can be done using the #inject()# and #putBack()# methods of
+#CrackContext#, a better approach is through the token sequence literal
+annotations - #@tokens# and #@xtokens#.
+
+#@tokens# is an annotation defined in #crack.ann# that consumes a sequence of
+tokens following it and expands to a #NodeList# object, which can then be
+expanded into a #CrackContext#, creating a sort of macro system for
+annotations.  For example, if we wanted to define a macro that wrote the
+current line number to standard error, we could do something like this:
+
+{{
+
+    import crack.ann deserializeNodeList;;
+    @import crack.ann tokens;
+
+    void linenum(CrackContext ctx) {
+        @tokens {
+            cerr `$(@FILE):$(@LINE)\n`;
+        }.expand(ctx, null);
+    }
+}}
+
+The #@tokens# annotation consumes the curly-brace delimited block following it
+and emits the code to construct a #NodeList# from it.  We then call the
+#expand()# method to expand the node list into the usage context (the second
+argument to #expand()# is an argument vector, which can be null here because
+the #NodeList# contains no parameters).
+
+It is worth noting exactly what is going on here, as this involves annotations
+at multiple levels:
+
+-   #@tokens# consumes the delimited list of tokens following it and
+    constructs its own internal NodeList.
+-   It then calls #serializeNodeList()# to convert the node list into a string
+    constant token.
+-   Finally, it emits a call to deserializeNodeList() with the string constant
+    as its argument.
+
+In this way, a serialized #NodeList# that exists at compile-time is passed
+through to the code that subsequently reuses it at runtime.
+
+The list of tokens following the #@tokens# annotation can be delimited by
+curly braces, square brackets, or parentheses.  The only restriction is that
+if the symbol is nested within the sequence, it must include a matching
+terminator within the sequence.  So something like this is perfectly legal:
+
+{{
+    # The curly is unmatched, but the sequence is delimited by the square
+    # brackets.
+    @tokens [ while (true) { ].expand(ctx, null);
+}}
+
+The #@tokens# annotation is great for constant sequences, but typically in
+code generation scenarios we want to parameterize our code blocks.  The
+#@xmac# token lets us do this:
+
+{{
+    import crack.ann deserializeXMac;
+    @import crack.ann xmac;
+
+    void exception(CrackContext ctx) {
+        tok := ctx.getToken();
+
+        @xmac {
+            class $className {
+                int i;
+            }
+        }.set('className', tok).expand(ctx);
+    }
+}}
+
+In this case, the #className# variable is a parameter.  We substitute it for a
+token (which will be converted to a node list) and then expand it into the
+context.  The #@xmac# annotation expands to an expression returning a
+#crack.ann.XMacro#.  #XMacro#'s #extend()# method doesn't accept an argument
+list, but it maintains one internally.  All variables must be defined at the
+time of expansion or an #InvalidStateError# exception will be thrown.
+
+If #@xmac# is followed immediately by an asterisk, it will expand its
+variables from your local context.  So we could have written the code above
+like this:
+
+{{
+    void exception(CrackContext ctx) {
+        className := ctx.getToken();
+
+        @xmac {
+            class $className {
+                int i;
+            }
+        }.expand(ctx);
+    }
+}}
+
+A more complete example of this concept can be found in
+#`example/struct_ann.crk`#, which provides a toy implementation of the
+#@struct# annotation using #@xmac#.
 
 Extensions
 ----------
