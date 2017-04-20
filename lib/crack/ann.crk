@@ -32,7 +32,7 @@ import crack.cont.treemap TreeMap;
 import crack.io cerr, FStr, Reader, StandardFormatter, StringFormatter,
     StringWriter, Writer;
 import crack.lang die, AssertionError, CString, Exception, Formatter,
-    IndexError, InvalidArgumentError;
+    IndexError, InvalidArgumentError, InvalidStateError;
 import crack.runtime free;
 import crack.serial SerialReader, SerialWriter;
 
@@ -1615,11 +1615,18 @@ class _ParseError : Exception {
         return this;
     }
 
+    ## Set the macro variable to the value, converting the token to a node
+    ## list.  Throws KeyError if varName is not defined.
+    ## Returns 'this' to allow method chaining.
+    XMacro set(String varName, Token tok) {
+        return set(varName, NodeListImpl![Tok(tok)]);
+    }
+
     void __checkArgsDefined() {
         # Make sure all arguments are defined.
         for (def :in __defs) {
-            if (!__args[def.val.index])
-                throw Exception(
+            if (__args[def.val.index] is null)
+                throw InvalidStateError(
                     FStr() I`XMacro argument $(def.val.name) has not been \
                              defined`
                 );

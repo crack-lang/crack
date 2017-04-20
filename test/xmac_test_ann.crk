@@ -23,7 +23,7 @@ void expand2(CrackContext ctx) {
 
 void expand3(CrackContext ctx) {
     a := makeNodeList(ctx.getToken());
-    b := makeNodeList(ctx.getToken());
+    b := ctx.getToken();
 
     c := @xmac* { $a $b }.expand();
     @xmac* { $c + ' world' }.expand(ctx);
