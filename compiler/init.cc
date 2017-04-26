@@ -593,9 +593,11 @@ void init(Module *mod) {
     mod->addConstant(mod->getIntType(), "TOK_CONTINUEKW",
                      parser::Token::continueKw
                      );
+    mod->addConstant(mod->getIntType(), "TOK_DOKW", parser::Token::doKw);
     mod->addConstant(mod->getIntType(), "TOK_DOLLAR",
                      parser::Token::dollar
                      );
+    mod->addConstant(mod->getIntType(), "TOK_ENUMKW", parser::Token::enumKw);
     mod->addConstant(mod->getIntType(), "TOK_FORKW", parser::Token::forKw);
     mod->addConstant(mod->getIntType(), "TOK_ELSEKW", parser::Token::elseKw);
     mod->addConstant(mod->getIntType(), "TOK_IFKW", parser::Token::ifKw);
@@ -648,13 +650,18 @@ void init(Module *mod) {
                      parser::Token::asterisk
                      );
     mod->addConstant(mod->getIntType(), "TOK_BANG", parser::Token::bang);
+    mod->addConstant(mod->getIntType(), "TOK_CASEKW", parser::Token::caseKw);
+    mod->addConstant(mod->getIntType(), "TOK_CATCHKW", parser::Token::catchKw);
     mod->addConstant(mod->getIntType(), "TOK_COLON", parser::Token::colon);
     mod->addConstant(mod->getIntType(), "TOK_COMMA", parser::Token::comma);
+    mod->addConstant(mod->getIntType(), "TOK_CONSTKW", parser::Token::constKw);
     mod->addConstant(mod->getIntType(), "TOK_DECR", parser::Token::decr);
     mod->addConstant(mod->getIntType(), "TOK_DEFINE", parser::Token::define);
+    mod->addConstant(mod->getIntType(), "TOK_DOC", parser::Token::doc);
     mod->addConstant(mod->getIntType(), "TOK_DOT", parser::Token::dot);
     mod->addConstant(mod->getIntType(), "TOK_END", parser::Token::end);
     mod->addConstant(mod->getIntType(), "TOK_EQ", parser::Token::eq);
+    mod->addConstant(mod->getIntType(), "TOK_FILENAME", parser::Token::bang);
     mod->addConstant(mod->getIntType(), "TOK_GE", parser::Token::ge);
     mod->addConstant(mod->getIntType(), "TOK_GT", parser::Token::gt);
     mod->addConstant(mod->getIntType(), "TOK_IDENT", parser::Token::ident);
@@ -667,9 +674,15 @@ void init(Module *mod) {
                      );
     mod->addConstant(mod->getIntType(), "TOK_LCURLY", parser::Token::lcurly);
     mod->addConstant(mod->getIntType(), "TOK_LE", parser::Token::le);
+    mod->addConstant(mod->getIntType(), "TOK_LINENUMBER",
+                     parser::Token::lineNumber
+                     );
     mod->addConstant(mod->getIntType(), "TOK_LPAREN", parser::Token::lparen);
     mod->addConstant(mod->getIntType(), "TOK_LT", parser::Token::lt);
     mod->addConstant(mod->getIntType(), "TOK_MINUS", parser::Token::minus);
+    mod->addConstant(mod->getIntType(), "TOK_MODULEKW",
+                     parser::Token::moduleKw
+                     );
     mod->addConstant(mod->getIntType(), "TOK_NE", parser::Token::ne);
     mod->addConstant(mod->getIntType(), "TOK_PERCENT",
                      parser::Token::percent
@@ -680,14 +693,24 @@ void init(Module *mod) {
                      parser::Token::rbracket);
     mod->addConstant(mod->getIntType(), "TOK_RCURLY", parser::Token::rcurly);
     mod->addConstant(mod->getIntType(), "TOK_RPAREN", parser::Token::rparen);
+    mod->addConstant(mod->getIntType(), "TOK_SCOPING", parser::Token::scoping);
     mod->addConstant(mod->getIntType(), "TOK_SEMI", parser::Token::semi);
     mod->addConstant(mod->getIntType(), "TOK_SLASH", parser::Token::slash);
     mod->addConstant(mod->getIntType(), "TOK_STRING", parser::Token::string);
+    mod->addConstant(mod->getIntType(), "TOK_SWITCHKW",
+                     parser::Token::switchKw
+                     );
+    mod->addConstant(mod->getIntType(), "TOK_THROWKW", parser::Token::throwKw);
     mod->addConstant(mod->getIntType(), "TOK_TILDE", parser::Token::tilde);
+    mod->addConstant(mod->getIntType(), "TOK_TRYKW", parser::Token::tryKw);
+    mod->addConstant(mod->getIntType(), "TOK_TYPEOFKW",
+                     parser::Token::typeofKw
+                     );
     mod->addConstant(mod->getIntType(), "TOK_ISTRBEGIN",
                      parser::Token::istrBegin
                      );
     mod->addConstant(mod->getIntType(), "TOK_ISTREND", parser::Token::istrEnd);
+    mod->addConstant(mod->getIntType(), "TOK_LAMBDAKW", parser::Token::lambdaKw);
     mod->addConstant(mod->getIntType(), "TOK_LOGICAND",
                      parser::Token::logicAnd
                      );
