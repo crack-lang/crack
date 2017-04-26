@@ -121,6 +121,7 @@ class Token {
       bool isBreak() const { return type == breakKw; }
       bool isClass() const { return type == classKw; }
       bool isContinue() const { return type == continueKw; }
+      bool isDo() const { return type == doKw; }
       bool isDollar() const { return type == dollar; }
       bool isNull() const { return type == nullKw; }
       bool isIdent() const { return type == ident; }
