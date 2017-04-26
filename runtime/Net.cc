@@ -199,9 +199,9 @@ int getSockName(int s, SockAddr *addr) {
     socklen_t size = sizeof(au);
     if (getsockname(s, reinterpret_cast<sockaddr *>(&au), &size))
         return -1;
-    if (addr->family == AF_INET)
+    if (addr->family == AF_INET && au.in.sin_family == AF_INET)
         get_sockaddr_in(&au.in, reinterpret_cast<SockAddrIn *>(addr));
-    else if (addr->family == AF_UNIX)
+    else if (addr->family == AF_UNIX && au.un.sun_family == AF_UNIX)
         get_sockaddr_un(&au.un, reinterpret_cast<SockAddrUn *>(addr));
     else
         return -1;

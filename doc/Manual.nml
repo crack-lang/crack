@@ -5663,12 +5663,12 @@ A socket is a communication endpoint for TCP\/IP communications.  Sockets can
 either be connection channels, allowing you to send data to a matching socket
 elsewhere on the network, or listeners which wait for new connections.
 
-We create a socket as an instance of the #Socket# class:
+We create a socket with the #makeSocket()# function:
 
 {{
-    import crack.net Socket, AF_INET, SOCK_STREAM;
+    import crack.net makeSocket, AF_INET, SOCK_STREAM;
 
-    s := Socket(AF_INET, SOCK_STREAM, 0);
+    s := makeSocket(AF_INET, SOCK_STREAM, 0);
 }}
 
 This creates a "stream" (TCP) socket for a reliable connection over the INET
@@ -5678,10 +5678,10 @@ With a little more code, we can create a very basic server program:
 
 {{
 
-    import crack.net Socket, InetAddress, AF_INET, INADDR_ANY, SOCK_STREAM;
+    import crack.net makeSocket, InetAddress, AF_INET, INADDR_ANY, SOCK_STREAM;
     import crack.exp.error err;
 
-    Socket srv = {AF_INET, SOCK_STREAM, 0};
+    srv := makeSocket(AF_INET, SOCK_STREAM, 0);
 
     # allow the socket's port to be immediately reused after the program
     # terminates (useful for debugging and server restarts)
@@ -5719,11 +5719,11 @@ A client script might look like this:
 
 {{
     import crack.sys exit, strerror;
-    import crack.net InetAddress, Socket, AF_INET, SOCK_STREAM;
+    import crack.net InetAddress, makeSocket, AF_INET, SOCK_STREAM;
     import crack.lang ManagedBuffer;
     import crack.io cout, cerr;
 
-    Socket s = {AF_INET, SOCK_STREAM, 0};
+    s := makeSocket(AF_INET, SOCK_STREAM, 0);
 
     # connect to localhost (127.0.0.1)
     if (!s.connect(InetAddress(127, 0, 0, 1, 1900))) {
@@ -5749,8 +5749,10 @@ A client script might look like this:
 
 When writing a server, you usually want to manage multiple connections.  You
 can use the #Poller# class for this.  #Poller# wraps the POSIX poll interface,
-which allows you to wait for an event on a set of #Pollable# objects (#Socket#
-is derived from #Pollable#, so you can use this to manage sockets).
+which allows you to wait for an event on a set of #Pollable# objects. (#Socket#
+is derived from #Pollable#, so you can use this to manage sockets.  We'll use
+#SocketApd# below, an appendage on #Socket# which adds some extra
+functionality.)
 
 #Poller# allows you to add any number of #Pollable#s and the events you care
 about on them.  You can then wait for an event (or a timeout) using the
@@ -5758,17 +5760,18 @@ about on them.  You can then wait for an event (or a timeout) using the
 back whatever it reads from a client) written using #Poller#:
 
 {{
-    import crack.net InetAddress, Poller, PollEvent, PollEventCallback,
-        Socket, AF_INET, INADDR_ANY, POLLIN, POLLOUT, POLLERR, SOCK_STREAM;
+    import crack.net makeSocket, InetAddress, Poller, PollEvent,
+        PollEventCallback, SocketApd, AF_INET, INADDR_ANY, POLLIN, POLLOUT,
+        POLLERR, SOCK_STREAM;
     import crack.logger error;
     import crack.sys exit;
 
     @import crack.ann impl;
 
     class ClientHandler @impl PollEventCallback {
-        Socket sock;
+        SocketApd sock;
 
-        oper init(Socket sock) : sock = sock {}
+        oper init(SocketApd sock) : sock = sock {}
 
         int oper call(Poller poller, PollEvent event) {
             if (event.revents & POLLIN) {
@@ -5796,8 +5799,8 @@ back whatever it reads from a client) written using #Poller#:
     }
 
     class ServerHandler @impl PollEventCallback {
-        Socket sock;
-        oper init(Socket sock) : sock = sock {}
+        SocketApd sock;
+        oper init(SocketApd sock) : sock = sock {}
         int oper call(Poller poller, PollEvent event) {
             if (event.revents & POLLIN) {
                 accepted := sock.accept();
@@ -5809,7 +5812,7 @@ back whatever it reads from a client) written using #Poller#:
         }
     }
 
-    Socket srv = {AF_INET, SOCK_STREAM, 0};
+    srv := makeSocket(AF_INET, SOCK_STREAM, 0);
 
     # allow the socket's port to be immediately reused after the program
     # terminates (useful for debugging and server restarts)
