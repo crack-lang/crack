@@ -4,7 +4,17 @@ Crack ToDo File & Project Plan
 
 Copyright 2009 Google Inc.
 
--   @struct doesn't deal with internal doc-comments correctly.
+-   audit locations where token definitions are replicated, make sure that
+    all tokens are represented in all locations.  Things I've found are:
+    -   compiler.Token doesn't have "is" methods for the following:
+        do, enum, assignXXX (it does have "isAugAssign"), bitXXX (it has
+        isBinOp), filename, for, is, lineNumber, PopErrCtx.
+        I can't add these because Token is non-final and has a visible
+        constructor.
+    -   A bunch of these were missing in the TOK_* definitions, I've fixed
+        these.
+
+-   Expansions (non-heap storage types)
 -   Remove generic line information from the meta-digest
 
 Unassigned
@@ -16,7 +26,7 @@ Unassigned
 Roadmap
 -------
 
-for 1.0:
+recategorize:
 -   cleanup:
     -   combine FuncDef and OverloadDef into a base class with a virtual
         matches() for arg list defs, or just make FuncDef a smaller thing and
