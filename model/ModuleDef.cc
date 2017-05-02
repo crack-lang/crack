@@ -83,25 +83,20 @@ void ModuleDef::serializeAsCTDep(Serializer &serializer) const {
     serializer.write(headerDigest.asHex(), "headerDigest");
 }
 
-bool ModuleDef::deserializeCTDep(Deserializer &deser,
-                                 pair<string, ModuleDefPtr> &info
-                                 ) {
+pair<string, string> ModuleDef::deserializeCTDep(Deserializer &deser) {
+    pair<string, string> result;
     CRACK_PB_BEGIN(deser, 256, compileDep)
         CRACK_PB_FIELD(1, string) {
-            info.second =
-                deser.context->construct->getModule(
-                    compileDepDeser.readString(64, "canonicalName")
-                );
+            result.second = compileDepDeser.readString(64, "canonicalName");
             break;
         }
         CRACK_PB_FIELD(2, string) {
-            info.first = compileDepDeser.readString(32, "headerDigest");
+            result.first = compileDepDeser.readString(32, "headerDigest");
             break;
         }
     CRACK_PB_END
 
-    return info.second && info.second->finished &&
-           info.second->headerDigest.asHex() == info.first;
+    return result;
 }
 
 ModuleDef::ModuleDef(const std::string &name, Namespace *parent) :
@@ -522,22 +517,27 @@ ModuleDefPtr ModuleDef::deserialize(Deserializer &deser,
 
     CRACK_PB_BEGIN(deser, 256, optional)
         CRACK_PB_FIELD(1, string) {
-            pair<string, ModuleDefPtr> depInfo;
-            bool upToDate = deserializeCTDep(optionalDeser, depInfo);
+            pair<string, string> depInfo = deserializeCTDep(optionalDeser);
+            if (mustRebuild)
+                break;
+
+            ModuleDefPtr depMod =
+                deser.context->construct->getModule(depInfo.second);
+            bool upToDate = depMod && depMod->finished &&
+                            depMod->headerDigest.asHex() == depInfo.first;
             if (!upToDate) {
                 if (Construct::traceCaching) {
-                    if (!depInfo.second)
+                    if (!depMod)
                         cerr << "No cache module for compile-time "
-                            "dependency " <<
-                            depInfo.second->getFullName() <<
+                            "dependency " << depMod->getFullName() <<
                             ", need to rebuild " << canonicalName << endl;
                     else
                         cerr << "header digest doesn't match for "
                             "compile-time dependency on " <<
-                            depInfo.second->getFullName() <<
+                            depMod->getFullName() <<
                             ", need to rebuild " << canonicalName <<
                             " (depending on " << depInfo.first << ", got " <<
-                            depInfo.second->headerDigest.asHex() <<  ")" <<
+                            depMod->headerDigest.asHex() <<  ")" <<
                             endl;
                 }
                 mustRebuild = true;
