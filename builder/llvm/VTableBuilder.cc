@@ -295,6 +295,21 @@ void VTableBuilder::emit(BTypeDef *type) {
     assert(type->firstVTableType);
 }
 
+void VTableBuilder::emitAppendageVTable(LLVMBuilder *builder,
+                                        BTypeDef *type
+                                        ) {
+    // Get the vtables array of the anchor class.
+    BTypeDefPtr anchor = BTypeDefPtr::acast(type->getAnchorType());
+    GlobalVariable *anchorGVar =
+        builder->module->getGlobalVariable(anchor->getFullName() + ":vtables");
+    Constant *vtablesArrayConst = anchorGVar->getInitializer();
+
+    // Use it to initialize our :vtables variable..
+    GlobalVariable *vtablesGVar =
+        builder->module->getGlobalVariable(type->getFullName() + ":vtables");
+    vtablesGVar->setInitializer(vtablesArrayConst);
+}
+
 void VTableBuilder::materialize(BTypeDef *type) {
     for (VTableMap::iterator iter = vtables.begin();
          iter != vtables.end();

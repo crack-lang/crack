@@ -3385,7 +3385,9 @@ TypeDefPtr Parser::parseClassDef() {
    BSTATS_GO(s1)
    TypeDefPtr type =
       context->builder.emitBeginClass(*classContext, className, bases,
-                                      existing.get()
+                                      existing.get(),
+                                      isAppendage ? TypeDef::appendageFlag :
+                                                    TypeDef::noFlags
                                       );
    BSTATS_END
 
@@ -3402,10 +3404,8 @@ TypeDefPtr Parser::parseClassDef() {
    else if (flags & TypeDef::finalClass)
       type->final = true;
 
-   if (isAppendage) {
+   if (isAppendage)
       type->appendage = true;
-      type->hasVTable = false;
-   }
 
    // add the "oper class" and "cast" methods
    FuncDefPtr throwingCast, defaultingCast;

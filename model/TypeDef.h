@@ -164,6 +164,7 @@ class TypeDef : public VarDef, public Namespace {
             noFlags = 0,
             abstractClass = 1,
             finalClass = 2,
+            appendageFlag = 3,
             explicitFlags = 256  // these flags were set by an annotation
         };
 
@@ -183,7 +184,8 @@ class TypeDef : public VarDef, public Namespace {
         parser::Location noBindInferred, noReleaseInferred;
 
         TypeDef(TypeDef *metaType, const std::string &name,
-                bool pointer = false
+                bool pointer = false,
+                Flags flags = noFlags
                 ) :
             VarDef(metaType, name),
             Namespace(name),
@@ -200,7 +202,7 @@ class TypeDef : public VarDef, public Namespace {
             initializersEmitted(false),
             abstract(false),
             final(false),
-            appendage(false),
+            appendage(flags & appendageFlag),
             gotExplicitOperNew(false),
             fieldCount(0) {
         }

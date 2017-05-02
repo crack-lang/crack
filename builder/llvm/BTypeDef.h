@@ -65,9 +65,10 @@ public:
     BTypeDef(TypeDef *metaType, const std::string &name,
              llvm::Type *rep,
              bool pointer = false,
-             unsigned nextVTableSlot = 0
+             unsigned nextVTableSlot = 0,
+             model::TypeDef::Flags flags = model::TypeDef::noFlags
              ) :
-        model::TypeDef(metaType, name, pointer),
+        model::TypeDef(metaType, name, pointer, flags),
         classInst(0),
         classInstType(0),
         classInstModuleId(-1),

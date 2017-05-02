@@ -141,7 +141,10 @@ class VTableType : public Type {
                             ctx->compileNS.get()
                 );
             TypeDefPtr td =
-                ctx->builder.emitBeginClass(*clsCtx, proxyName, bases, 0);
+                ctx->builder.emitBeginClass(*clsCtx, proxyName, bases, 0,
+                                            // TODO: support appendages
+                                            TypeDef::noFlags
+                                            );
             ctx->ns->addDef(td.get());
             td->aliasBaseMetaTypes();
 

@@ -1494,12 +1494,14 @@ namespace {
     BTypeDefPtr createTypeDef(Context &context, const string &name,
                               BTypeDef *metaType,
                               Type *llvmType,
-                              unsigned int nextVTableSlot
+                              unsigned int nextVTableSlot,
+                              TypeDef::Flags flags
                               ) {
         BTypeDefPtr type = new BTypeDef(metaType, name,
                                         PointerType::getUnqual(llvmType),
                                         true,
-                                        nextVTableSlot
+                                        nextVTableSlot,
+                                        flags
                                         );
 
         // tie the meta-class to the class
@@ -1521,7 +1523,8 @@ namespace {
 }
 
 BTypeDefPtr LLVMBuilder::createClass(Context &context, const string &name,
-                                     unsigned int nextVTableSlot
+                                     unsigned int nextVTableSlot,
+                                     TypeDef::Flags flags
                                      ) {
     BTypeDefPtr type;
     BTypeDefPtr metaType = createMetaClass(context, name);
@@ -1541,14 +1544,15 @@ BTypeDefPtr LLVMBuilder::createClass(Context &context, const string &name,
         putLLVMType(canonicalName, curType);
     }
     return createTypeDef(context, name, metaType.get(), curType,
-                         nextVTableSlot
+                         nextVTableSlot,
+                         flags
                          );
 }
 
 TypeDefPtr LLVMBuilder::createClassForward(Context &context,
                                            const string &name
                                            ) {
-    TypeDefPtr result = createClass(context, name, 0);
+    TypeDefPtr result = createClass(context, name, 0, TypeDef::noFlags);
     result->forward = true;
     return result;
 }
@@ -1799,7 +1803,8 @@ TypeDefPtr LLVMBuilder::createGenericClass(Context &context,
 TypeDefPtr LLVMBuilder::emitBeginClass(Context &context,
                                        const string &name,
                                        const vector<TypeDefPtr> &bases,
-                                       TypeDef *forwardDef
+                                       TypeDef *forwardDef,
+                                       TypeDef::Flags flags
                                        ) {
     assert(!context.builderData);
     BBuilderContextData *bdata =
@@ -1822,7 +1827,8 @@ TypeDefPtr LLVMBuilder::emitBeginClass(Context &context,
     if (!forwardDef) {
         type = createClass(context, name,
                            baseWithVTable ?
-                                baseWithVTable->nextVTableSlot : 0
+                                baseWithVTable->nextVTableSlot : 0,
+                           flags
                            );
     } else {
         type = BTypeDefPtr::acast(forwardDef);
@@ -2262,7 +2268,9 @@ TypeDefPtr LLVMBuilder::materializeType(Context &context, const string &name,
     // owner of the new meta-class.
     BTypeDefPtr metaType = createMetaClass(context, name, context.ns.get());
     BTypeDefPtr result =
-        createTypeDef(context, name, metaType.get(), llvmType, 0);
+        createTypeDef(context, name, metaType.get(), llvmType, 0,
+                      TypeDef::noFlags
+                      );
 
     // get the class body instance global variable.
     GlobalVariable *gvar = module->getGlobalVariable(fullName);

@@ -442,7 +442,7 @@ void TypeDef::createDefaultDestructor(Context &classContext) {
 
     FuncDef::Flags flags =
         FuncDef::method |
-        (hasVTable ? FuncDef::virtualized : FuncDef::noFlags);
+        ((hasVTable && !appendage) ? FuncDef::virtualized : FuncDef::noFlags);
 
     // check for an override, if this is a virtual destructor but the function
     // we're overriding _isn't_ virtual, ignore it.
@@ -506,7 +506,7 @@ void TypeDef::createNewFunc(Context &classContext, FuncDef *initFunc) {
 
     // initialize all vtable_base pointers. XXX hack.  Replace this with code
     // in vtable_base.oper init() once we get proper constructor composition
-    if (hasVTable) {
+    if (hasVTable && !appendage) {
         thisRef->emit(*funcContext);
         classContext.builder.emitVTableInit(*funcContext, this);
     }
@@ -1569,7 +1569,7 @@ TypeDefPtr TypeDef::deserializeTypeDef(Deserializer &deser, const char *name) {
                                             &type->name
                                             );
         // add the "cast" methods (This is duplicated in the parser, refactor)
-        if (type->hasVTable)
+        if (type->hasVTable && !type->appendage)
             materializeCastFuncs(*classContext, type.get());
 
         // 'defs' - fill in the body.
@@ -1578,7 +1578,7 @@ TypeDefPtr TypeDef::deserializeTypeDef(Deserializer &deser, const char *name) {
 
         // If we need to reconstruct the vtable, give the type the chance to
         // do that here.
-        if (type->hasVTable)
+        if (type->hasVTable && !type->appendage)
             type->materializeVTable(*deser.context);
     }
     if (Serializer::trace)
