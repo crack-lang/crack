@@ -254,6 +254,7 @@ class Request : HashMapFieldSet {
     void sendRedirect(int code, String location) {
         info `$clientAddr $method $path $code`;
         __clt `HTTP/1.1 $code Stat
+Content-length: 0
 Location: $location
 
 `;
