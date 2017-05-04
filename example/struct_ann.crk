@@ -1,0 +1,150 @@
+## This module is an example of a toy implementation of something like
+## "crack.ann.struct" using XMacros.
+##
+## See test/test_struct_example.crk for usage.  Field types are limited to
+## single identifiers, and the structures can have no other punctuation, just
+## type and variable name.
+
+import crack.ann deserializeXMac, NodeList, NodeListImpl, Tok;
+import crack.compiler CrackContext, Token, TOK_COMMA;
+import crack.cont.array Array;
+import crack.io cerr;
+
+@import crack.ann tokens, xmac;
+
+class Context = CrackContext {
+    Token getIdent() {
+        tok := getToken();
+        if (!tok.isIdent()) error(tok, 'Identifier expected'.buffer);
+        return tok;
+    }
+
+    Token getLCurly() {
+        tok := getToken();
+        if (!tok.isLCurly()) error(tok, 'Left-curly brace expected'.buffer);
+        return tok;
+    }
+}
+
+## Data class to hold the variable type and name.
+class Var {
+    Token type;
+    Token name;
+    oper init(Token type, Token name) : type = type, name = name {}
+}
+
+## Class to encapsulate the entire structure definition.
+class MyStruct : Array[Var] {
+    Token className;
+
+    oper init(Token className) : className = className {}
+
+    ## Emit the variables as instance variable definitions.
+    NodeList emitVarDefs() {
+        NodeList result = NodeListImpl();
+        for (var :in this) {
+            type := var.type;
+            name := var.name;
+            result = @xmac* {
+                $result
+                $type $name;
+            }.expand();
+        }
+        return result;
+    }
+
+    ## Emit variable list as a list of function arguments for the constructor.
+    NodeList emitArgs() {
+        NodeList result = NodeListImpl();
+        for (var :in this) {
+            type := var.type;
+            name := var.name;
+            result = @xmac* { $result $type $name, }.expand();
+        }
+        return result;
+    }
+
+    ## Emit the constructor initializer list.
+    NodeList emitConstructorInits() {
+        NodeList result = NodeListImpl();
+        for (var :in this) {
+            name := var.name;
+
+            # If this isn't the first variable, emit a comma.
+            if (result)
+                result.pushHead(
+                    Tok(Token(TOK_COMMA, ",".buffer, name.getLocation()))
+                );
+
+            result = @xmac* { $result $name = $name }.expand();
+        }
+        return result;
+    }
+
+    ## Emit a set of comparisons for the variables.
+    NodeList emitComparisons() {
+        NodeList result = NodeListImpl();
+        for (var :in this) {
+            name := var.name;
+            type := var.type;
+
+            result = @xmac* {
+                $result
+                if (rc := cmp($name, other.$name))
+                    return rc;
+                else
+            }.expand();
+        }
+        return result;
+    }
+
+    ## Emit the structure in the context.
+    void emit(CrackContext ctx) {
+        varDefs := emitVarDefs();
+        constructorArgs := emitArgs();
+        constructorInits := emitConstructorInits();
+        comparisons := emitComparisons();
+
+        result := @xmac* {
+            class $className {
+                $varDefs
+                oper init($constructorArgs) : $constructorInits {}
+
+                int cmp($className other) {
+                    import crack.lang cmp;
+
+                    $comparisons  # These end with an "else"
+                        return 0;
+                }
+
+                int cmp(Object other) {
+                    if (o := $className.cast(other))
+                        return cmp(o);
+                    else
+                        return Object.cmp(other);
+                }
+            }
+        };
+
+        result.expand(ctx);
+    }
+}
+
+void mystruct(CrackContext crackContext) {
+    ctx := Context(crackContext);
+    className := ctx.getIdent();
+
+    ctx.getLCurly();
+
+    struct := MyStruct(className);
+    while (!(tok := ctx.getToken()).isRCurly()) {
+        # We're going to cheat and only allow very simple type names.  See
+        # #crack.ann.Field for the correct approach.
+        if (!tok.isIdent()) ctx.error(tok, 'Identifier expected'.buffer);
+
+        name := ctx.getIdent();
+        struct.append(Var(tok, name));
+    }
+
+    struct.emit(ctx);
+}

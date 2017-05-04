@@ -1,0 +1,52 @@
+%%TEST%%
+appendages - post bootstrapped
+%%ARGS%%
+%%FILE%%
+import crack.io cerr;
+
+class A {
+    int i;
+    oper init(int i) : i = i {}
+    void a() { cerr `A.a($i)\n`; }
+    oper del() {
+        cerr `deleted $i\n`;
+    }
+}
+
+class B = A {
+    void b() {
+        cerr `called b, `;
+        a();
+    }
+}
+
+class C = A {
+    void c() {
+        cerr `called c, `;
+        a();
+    }
+}
+
+class D = B, C {}
+
+d := D(A(100));
+d.b();
+d.c();
+
+class AA : A {
+    oper init(int i) : A(i) {}
+    void a() { cerr `AA.a($i)\n` }
+}
+
+d1 := D(AA(200));
+d1.b();
+d1.c();
+
+%%EXPECT%%
+called b, A.a(100)
+called c, A.a(100)
+called b, AA.a(200)
+called c, AA.a(200)
+deleted 200
+deleted 100
+%%STDIN%%

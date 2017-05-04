@@ -46,11 +46,24 @@ namespace {
         sa->sin_addr.s_addr = htonl(addr->addr);
     }
 
+    static void get_sockaddr_in(struct sockaddr_in *sa,
+                                crack::runtime::SockAddrIn *addr
+                                ) {
+        addr->port = ntohs(sa->sin_port);
+        addr->addr = ntohl(sa->sin_addr.s_addr);
+    }
+
     static void set_sockaddr_un(struct sockaddr_un *sa,
                                 crack::runtime::SockAddrUn *addr
                                 ) {
         sa->sun_family = AF_UNIX;
         strcpy(sa->sun_path, addr->path);
+    }
+
+    static void get_sockaddr_un(struct sockaddr_un *sa,
+                                crack::runtime::SockAddrUn *addr
+                                ) {
+        strcpy(addr->path, sa->sun_path);
     }
 
     typedef union {
@@ -74,7 +87,6 @@ namespace {
 
         return sz;
     }
-
 }
 
 // our exported functions
@@ -180,6 +192,20 @@ int accept(int s, SockAddr *addr) {
     }
 
     return newSock;
+}
+
+int getSockName(int s, SockAddr *addr) {
+    AddrUnion au;
+    socklen_t size = sizeof(au);
+    if (getsockname(s, reinterpret_cast<sockaddr *>(&au), &size))
+        return -1;
+    if (addr->family == AF_INET && au.in.sin_family == AF_INET)
+        get_sockaddr_in(&au.in, reinterpret_cast<SockAddrIn *>(addr));
+    else if (addr->family == AF_UNIX && au.un.sun_family == AF_UNIX)
+        get_sockaddr_un(&au.un, reinterpret_cast<SockAddrUn *>(addr));
+    else
+        return -1;
+    return 0;
 }
 
 int setsockopt_int(int fd, int level, int optname, int val) {

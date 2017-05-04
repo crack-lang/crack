@@ -1816,8 +1816,10 @@ int Parser::parseFuncDef(TypeDef *returnType, const Token &nameTok,
             );
 
    // a function is virtual if a) it is a method, b) the class has a vtable
-   // and c) it is neither implicitly or explicitly final.
+   // and is not an appendage and c) it is neither implicitly or explicitly
+   // final.
    bool isVirtual = isMethod && classTypeDef->hasVTable &&
+                    !classTypeDef->appendage &&
                     !TypeDef::isImplicitFinal(name) &&
                     (!nextFuncFlags || nextFuncFlags & FuncDef::virtualized);
 
@@ -2219,6 +2221,13 @@ bool Parser::parseDef(TypeDef *type) {
 
             // make sure we're not hiding anything else
             checkForExistingDef(tok, tok.getData());
+            
+            // Make sure that this isn't an appendage.
+            if (TypeDefPtr typeDef = 
+                 TypeDefPtr::rcast(context->getDefContext()->ns)
+                )
+               if (typeDef->appendage)
+                  error(tok, "Appendages can not contain instance variables.");
 
             // we should now _always_ have a default constructor (unless the
             // type is void).
@@ -2920,7 +2929,8 @@ void Parser::parsePostOper(TypeDef *returnType) {
       const string &ident = tok.getData();
       context->setLocation(tok.getLocation());
       bool isInit = ident == "init";
-      if (isInit || ident == "release" || ident == "bind" || ident == "del") {
+      bool isDel = ident == "del";
+      if (isInit || isDel || ident == "release" || ident == "bind") {
 
          // these can only be defined in an instance context
          if (context->scope != Context::composite)
@@ -2943,6 +2953,14 @@ void Parser::parsePostOper(TypeDef *returnType) {
          expectToken(Token::lparen, "expected argument list");
 
          TypeDefPtr enclosingType = context->parent->ns;
+
+         // Disallow certain operators in appendages.
+         if (enclosingType->appendage && (isInit || isDel))
+            error(tok,
+                  "Constructors and destructors are not allowed in an "
+                   "appendage."
+                  );
+
          if (ident == "bind" && enclosingType->noBindInferred)
             error(tok,
                   SPUG_FSTR("oper bind() must be defined before all uses that "
@@ -2969,7 +2987,7 @@ void Parser::parsePostOper(TypeDef *returnType) {
          FuncFlags flags;
          if (isInit)
             flags = hasMemberInits;
-         else if (ident == "del")
+         else if (isDel)
             flags = hasMemberDels;
          else
             flags = normal;
@@ -3258,7 +3276,12 @@ TypeDefPtr Parser::parseClassDef() {
    // parse base class list
    vector<TypeDefPtr> bases;
    vector<TypeDefPtr> ancestors;  // keeps track of all ancestors
-   if (tok.isColon()) {
+   bool isAppendage = false;
+   const TypeDef *anchorType = 0;
+   if (tok.isColon() || tok.isAssign()) {
+      if (tok.isAssign())
+         isAppendage = true;
+
       while (true) {
          // parse the base class name
          TypeDefPtr baseClass = parseTypeSpec(0);
@@ -3290,9 +3313,34 @@ TypeDefPtr Parser::parseClassDef() {
                      "first class specified in the base class list."
                      );
 
-            // make sure it's safe to add this as a base class given the
-            // existing set, and add it to the list.
-            baseClass->addToAncestors(*context, ancestors);
+            if (isAppendage) {
+               // Make sure that all appendage ancestors have the same anchor
+               // type.
+               if (!anchorType)
+                  anchorType = baseClass->getAnchorType();
+               else if (baseClass->getAnchorType() != anchorType)
+                  error(identLoc,
+                        SPUG_FSTR(
+                            "Base class " << baseClass->getDisplayName() <<
+                             " has a different anchor type (" <<
+                             anchorType->getAnchorType()->getDisplayName() <<
+                             ") than the established anchor type (" <<
+                             anchorType->getDisplayName() << ')'
+                        ));
+            } else {
+               // Make sure that the base class is not an appendage.
+               if (baseClass->appendage)
+                  error(identLoc,
+                        SPUG_FSTR("You may not derive a non-appendage class "
+                                   "from appendage class " <<
+                                   baseClass->getDisplayName()
+                                  )
+                        );
+
+               // Make sure it's safe to add this as a base class given the
+               // existing set, and add it to the list.
+               baseClass->addToAncestors(*context, ancestors);
+            }
             bases.push_back(baseClass);
          }
 
@@ -3337,7 +3385,9 @@ TypeDefPtr Parser::parseClassDef() {
    BSTATS_GO(s1)
    TypeDefPtr type =
       context->builder.emitBeginClass(*classContext, className, bases,
-                                      existing.get()
+                                      existing.get(),
+                                      isAppendage ? TypeDef::appendageFlag :
+                                                    TypeDef::noFlags
                                       );
    BSTATS_END
 
@@ -3354,9 +3404,12 @@ TypeDefPtr Parser::parseClassDef() {
    else if (flags & TypeDef::finalClass)
       type->final = true;
 
+   if (isAppendage)
+      type->appendage = true;
+
    // add the "oper class" and "cast" methods
    FuncDefPtr throwingCast, defaultingCast;
-   if (type->hasVTable) {
+   if (type->hasVTable && !isAppendage) {
       // "oper class" _must_ come first!
       type->createOperClass(*classContext);
       throwingCast = type->createCastForward(*classContext, true);
@@ -3384,7 +3437,7 @@ TypeDefPtr Parser::parseClassDef() {
    parseClassBody();
 
    // Generate the cast functions.
-   if (type->hasVTable) {
+   if (type->hasVTable && !isAppendage) {
       type->createCast(*classContext, true, throwingCast.get());
       type->createCast(*classContext, false, defaultingCast.get());
    }

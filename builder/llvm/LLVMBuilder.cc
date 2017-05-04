@@ -518,9 +518,24 @@ void LLVMBuilder::narrow(TypeDef *curType, TypeDef *ancestor) {
         return;
 
     assert(curType->isDerivedFrom(ancestor));
+    BTypeDef *bancestor = BTypeDefPtr::acast(ancestor);
+
+    // For appendage types, we can just do an unsafeCast to either the
+    // ancestor or to the anchor type (whichever is closer).
+    if (curType->appendage) {
+        BTypeDef *anchor =
+            BTypeDefPtr::acast(curType->getAnchorType());
+
+        BTypeDef *intermediate =
+            anchor->isDerivedFrom(ancestor) ? anchor : bancestor;
+
+        lastValue = builder.CreateBitCast(lastValue, intermediate->rep);
+        if (intermediate == ancestor)
+            return;
+        curType = const_cast<BTypeDef *>(intermediate);
+    }
 
     BTypeDef *bcurType = BTypeDefPtr::acast(curType);
-    BTypeDef *bancestor = BTypeDefPtr::acast(ancestor);
     if (curType->complete) {
         lastValue = IncompleteNarrower::emitGEP(builder, bcurType, bancestor,
                                                 lastValue
@@ -1479,12 +1494,14 @@ namespace {
     BTypeDefPtr createTypeDef(Context &context, const string &name,
                               BTypeDef *metaType,
                               Type *llvmType,
-                              unsigned int nextVTableSlot
+                              unsigned int nextVTableSlot,
+                              TypeDef::Flags flags
                               ) {
         BTypeDefPtr type = new BTypeDef(metaType, name,
                                         PointerType::getUnqual(llvmType),
                                         true,
-                                        nextVTableSlot
+                                        nextVTableSlot,
+                                        flags
                                         );
 
         // tie the meta-class to the class
@@ -1506,7 +1523,8 @@ namespace {
 }
 
 BTypeDefPtr LLVMBuilder::createClass(Context &context, const string &name,
-                                     unsigned int nextVTableSlot
+                                     unsigned int nextVTableSlot,
+                                     TypeDef::Flags flags
                                      ) {
     BTypeDefPtr type;
     BTypeDefPtr metaType = createMetaClass(context, name);
@@ -1526,14 +1544,15 @@ BTypeDefPtr LLVMBuilder::createClass(Context &context, const string &name,
         putLLVMType(canonicalName, curType);
     }
     return createTypeDef(context, name, metaType.get(), curType,
-                         nextVTableSlot
+                         nextVTableSlot,
+                         flags
                          );
 }
 
 TypeDefPtr LLVMBuilder::createClassForward(Context &context,
                                            const string &name
                                            ) {
-    TypeDefPtr result = createClass(context, name, 0);
+    TypeDefPtr result = createClass(context, name, 0, TypeDef::noFlags);
     result->forward = true;
     return result;
 }
@@ -1784,7 +1803,8 @@ TypeDefPtr LLVMBuilder::createGenericClass(Context &context,
 TypeDefPtr LLVMBuilder::emitBeginClass(Context &context,
                                        const string &name,
                                        const vector<TypeDefPtr> &bases,
-                                       TypeDef *forwardDef
+                                       TypeDef *forwardDef,
+                                       TypeDef::Flags flags
                                        ) {
     assert(!context.builderData);
     BBuilderContextData *bdata =
@@ -1807,7 +1827,8 @@ TypeDefPtr LLVMBuilder::emitBeginClass(Context &context,
     if (!forwardDef) {
         type = createClass(context, name,
                            baseWithVTable ?
-                                baseWithVTable->nextVTableSlot : 0
+                                baseWithVTable->nextVTableSlot : 0,
+                           flags
                            );
     } else {
         type = BTypeDefPtr::acast(forwardDef);
@@ -1840,12 +1861,18 @@ void LLVMBuilder::emitEndClass(Context &context) {
 
     // first the base classes
     BTypeDef *type = BTypeDefPtr::arcast(context.ns);
-    for (TypeDef::TypeVec::iterator baseIter = type->parents.begin();
-         baseIter != type->parents.end();
-         ++baseIter
-         ) {
-        BTypeDef *typeDef = BTypeDefPtr::arcast(*baseIter);
-        members.push_back(cast<PointerType>(typeDef->rep)->getElementType());
+    if (type->appendage) {
+        // For an appendage, we just do the first one.
+        BTypeDef *baseType = BTypeDefPtr::arcast(type->parents[0]);
+        members.push_back(cast<PointerType>(baseType->rep)->getElementType());
+    } else {
+        for (TypeDef::TypeVec::iterator baseIter = type->parents.begin();
+            baseIter != type->parents.end();
+            ++baseIter
+            ) {
+            BTypeDef *typeDef = BTypeDefPtr::arcast(*baseIter);
+            members.push_back(cast<PointerType>(typeDef->rep)->getElementType());
+        }
     }
 
     for (TypeDef::VarDefMap::iterator iter = type->beginDefs();
@@ -2241,7 +2268,9 @@ TypeDefPtr LLVMBuilder::materializeType(Context &context, const string &name,
     // owner of the new meta-class.
     BTypeDefPtr metaType = createMetaClass(context, name, context.ns.get());
     BTypeDefPtr result =
-        createTypeDef(context, name, metaType.get(), llvmType, 0);
+        createTypeDef(context, name, metaType.get(), llvmType, 0,
+                      TypeDef::noFlags
+                      );
 
     // get the class body instance global variable.
     GlobalVariable *gvar = module->getGlobalVariable(fullName);

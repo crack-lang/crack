@@ -10,15 +10,15 @@ import crack.cont.array Array;
 import crack.functor Function2;
 import crack.lang die, ManagedBuffer;
 import crack.io cout, FStr;
-import crack.net resolve, Address, InetAddress, Socket, UnixAddress, Poller,
-    PollEvent, AF_INET, AF_UNIX, INADDR_ANY, POLLIN, POLLERR, SHUT_RDWR,
-    SOCK_STREAM;
+import crack.net makeSocket, resolve, Address, InetAddress, SocketApd,
+    UnixAddress, Poller, PollEvent, AF_INET, AF_UNIX, INADDR_ANY, POLLIN,
+    POLLERR, SHUT_RDWR, SOCK_STREAM;
 import crack.time TimeDelta;
 
-@import crack.ann assert;
+@import crack.ann assert, struct;
 
 # create a server socket, bind to a port and listen.
-srv := Socket(AF_INET, SOCK_STREAM, 0);
+srv := makeSocket(AF_INET, SOCK_STREAM, 0);
 srv.setReuseAddr(true);
 if (!srv.bind(InetAddress(INADDR_ANY, 9923)))
     die('bind failed');
@@ -26,7 +26,7 @@ if (!srv.listen(5))
     die('listen failed');
 
 # create a client socket
-cln := Socket(AF_INET, SOCK_STREAM, 0);
+cln := makeSocket(AF_INET, SOCK_STREAM, 0);
 if (!cln.connect(InetAddress(127, 0, 0, 1, 9923)))
     die('connect failed');
 
@@ -112,27 +112,49 @@ if (localhost != Array[Address]![InetAddress(127, 0, 0, 1, 0)])
 @assert(!cln.recv(buf, 0));
 @assert(!accepted.sock.recv(buf, 0));
 
-# create a unix domain socket
-if (1) {
-    const UNIX_SOCK_PATH := '/tmp/crack_test.sock';
+const UNIX_SOCK_PATH := '/tmp/crack_test.sock';
+
+@struct UnixSockInfo {
+    SocketApd sock;
+    UnixAddress addr;
+}
+
+UnixSockInfo makeUnixSocket() {
     if (fileExists(UNIX_SOCK_PATH.buffer))
         fileRemove(UNIX_SOCK_PATH.buffer);
-    usrv := Socket(AF_UNIX, SOCK_STREAM, 0);
+    usrv := makeSocket(AF_UNIX, SOCK_STREAM, 0);
     unixAddr := UnixAddress(UNIX_SOCK_PATH);
     if (!usrv.bind(unixAddr))
         cout `FAILED error during bind: $(c_strerror())\n`;
     usrv.listen(5);
-    uclt := Socket(AF_UNIX, SOCK_STREAM, 0);
-    if (!uclt.connect(unixAddr))
+    return UnixSockInfo(usrv, unixAddr);
+}
+
+# create a unix domain socket
+if (1) {
+    i := makeUnixSocket();
+    uclt := makeSocket(AF_UNIX, SOCK_STREAM, 0);
+    if (!uclt.connect(i.addr))
         cout `FAILED error duing connect: $(c_strerror())\n`;
-    conn := usrv.accept();
+    conn := i.sock.accept();
     uclt.send('test string', 0);
     if (conn.sock.recv(buf, 0) != 11 || buf != 'test string')
         die('FAILED unix sockets');
     uclt.close();
     conn.sock.close();
-    usrv.close();
+    i.sock.close();
     fileRemove(UNIX_SOCK_PATH.buffer);
+}
+
+# Test variation of getSocketAddress() that returns an Address object.
+if (true) {
+    i := makeUnixSocket();
+    @assert(i.sock.getSocketAddress().isa(UnixAddress));
+
+    s := makeSocket(AF_INET, SOCK_STREAM, 0);
+    s.bind(InetAddress(127, 0, 0, 1, 0));
+    s.listen(5);
+    @assert(s.getSocketAddress().isa(InetAddress));
 }
 
 cout `ok\n`;

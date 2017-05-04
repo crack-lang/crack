@@ -1,0 +1,9 @@
+%%TEST%%
+error on instance vars in an appendage
+%%ARGS%%
+%%FILE%%
+class A {}
+class B = A { int x; }
+%%EXPECT%%
+ParseError: %SCRIPTNAME%:2:19: Appendages can not contain instance variables.
+%%STDIN%%

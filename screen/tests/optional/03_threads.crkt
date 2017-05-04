@@ -5,7 +5,9 @@ threads
 # Tests the threads module.
 import crack.io cout, StandardFormatter, Writer;
 import crack.lang Buffer, ManagedBuffer;
-import crack.threads Thread, Queue;
+import crack.threads Event, MutexLock, Thread, Queue;
+
+@import crack.ann assert;
 
 Queue[Object] mainQueue = {};
 
@@ -47,6 +49,35 @@ getMsg();
 thread.join();
 
 cout `joined\n`;
+
+event := Event();
+@assert(!event.signalled());
+event.lockAndSignal();
+if (true) {
+    MutexLock lock = {event.getMutex()};
+    event.wait();
+}
+@assert(event.signalled());
+
+event.reset();
+@assert(!event.signalled());
+
+Queue[int] queue = {};
+class EventThread : Thread {
+    void run() {
+        queue.get();
+        event.lockAndSignal();
+    }
+}
+et := EventThread();
+et.start();
+queue.add(1);
+if (true) {
+    MutexLock lock = {event.getMutex()};
+    event.wait();
+}
+@assert(event.signalled());
+et.join();
 
 %%EXPECT%%
 main started

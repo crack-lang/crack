@@ -1,0 +1,17 @@
+
+import crack.io cout;
+
+@import crack.ann assert;
+@import example.struct_ann mystruct;
+
+@mystruct Foo {
+    int a
+    String b
+}
+
+f := Foo(1, 'a test');
+@assert(f == Foo(1, 'a test'));
+@assert(f != Foo(2, 'a test'));
+@assert(f != Foo(1, 'not a test'));
+cout `ok\n`;
+
