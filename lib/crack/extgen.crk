@@ -328,6 +328,14 @@ class TypeImpl : Type {
                         out `        f = $typeVar->addConstructor("oper init",
                             (void *)$(method.cname)
                         );\n`;
+                    else if (method.name == 'new')
+                        out I`\
+                            f = $typeVar->addStaticMethod(
+                                $typeVar,
+                                "oper $(method.name)",
+                                (void *)$(method.cname)
+                            );
+                            `;
                     else
                         out I`\
                             f = $typeVar->addMethod(
