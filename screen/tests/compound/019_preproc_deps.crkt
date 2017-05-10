@@ -1,0 +1,26 @@
+%%TEST%%
+preprocessor deps
+%%ARGS%%
+%%FILE%%
+# Verify that we don't reload annotation imports when the dependency is known
+# to be different from its source file.  This isn't really visible except when
+# the annotation module has compile errors, so on the second run we provide one
+# with bad syntax.
+import crack.io cerr, FStr;
+import systest test;
+test.preBootstrap = true;
+
+test.mod('ann', "puts('loaded ann')");
+test.main('@import ann;');
+test.run();
+
+test.mod('ann', "bad beef!");
+test.main("puts('not importing ann')");
+test.run();
+
+%%EXPECT%%
+out: loaded ann
+terminated: success
+out: not importing ann
+terminated: success
+%%STDIN%%

@@ -1,0 +1,11 @@
+%%TEST%%
+final cleared after class definition
+%%ARGS%%
+%%FILE%%
+@final class D {}
+class E {}
+class F : E {}
+puts('ok');
+%%EXPECT%%
+ok
+%%STDIN%%

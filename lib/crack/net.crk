@@ -12,15 +12,16 @@ import crack.cont.hashmap HashMap;
 import crack.functor Functor2;
 import crack.io cerr, FDReader, FDWriter, FileHandle, FStr, Reader, Writer;
 import crack.lang Buffer, CString, Exception, Formatter, FreeBase,
-    InvalidArgumentError, InvalidStateError, ManagedBuffer, WriteBuffer;
-import crack.runtime accept, bind, close, connect, errno, free, listen,
-    makeIPV4, recv, send, setNonBlocking, setsockopt, shutdown, socket, strlen,
-    AddrInfo, AF_AX25, AF_INET6, AF_X25, PipeAddr, PollEvt, PollSet, SigSet,
-    SockAddr, SockAddrIn, SockAddrUn, TimeVal, AF_APPLETALK, AF_ATMPVC, AF_INET,
-    AF_IPX, AF_LOCAL, AF_NETLINK, AF_PACKET, AF_UNIX, EAGAIN, EWOULDBLOCK,
-    INADDR_ANY, POLLERR, POLLHUP, POLLIN, POLLNVAL, POLLOUT, POLLPRI, SHUT_RD,
-    SHUT_RDWR, SHUT_WR, SOCK_DGRAM, SOCK_PACKET, SOCK_RAW, SOCK_RDM,
-    SOCK_SEQPACKET, SOCK_STREAM, SOL_SOCKET, SO_REUSEADDR;
+    InvalidArgumentError, InvalidStateError, ManagedBuffer, SystemError,
+    WriteBuffer;
+import crack.runtime accept, bind, close, connect, errno, free, getSockName,
+    listen, makeIPV4, recv, send, setNonBlocking, setsockopt, shutdown, socket,
+    strlen, AddrInfo, AF_AX25, AF_INET6, AF_X25, PipeAddr, PollEvt, PollSet,
+    SigSet, SockAddr, SockAddrIn, SockAddrUn, TimeVal, AF_APPLETALK, AF_ATMPVC,
+    AF_INET, AF_IPX, AF_LOCAL, AF_NETLINK, AF_PACKET, AF_UNIX, EAGAIN,
+    EWOULDBLOCK, INADDR_ANY, POLLERR, POLLHUP, POLLIN, POLLNVAL, POLLOUT,
+    POLLPRI, SHUT_RD, SHUT_RDWR, SHUT_WR, SOCK_DGRAM, SOCK_PACKET, SOCK_RAW,
+    SOCK_RDM, SOCK_SEQPACKET, SOCK_STREAM, SOL_SOCKET, SO_REUSEADDR;
 import crack.sys strerror;
 import crack.time TimeDelta;
 
@@ -108,10 +109,15 @@ class InetAddress : Address {
     }
 }
 
+class _PrivateConstructor {}
+_PrivateConstructor _PRIV_CONS;
+
 ## Address of a UNIX domain socket.
 class UnixAddress : Address {
     oper init(Buffer name) : Address(SockAddrUn(name.buffer, name.size)) {
     }
+
+    oper init(_PrivateConstructor arg) : Address(SockAddrUn(null, 0)) {}
 
     Address create() {
         i := SockAddrUn.unsafeCast(_addr);
@@ -604,5 +610,39 @@ class Poller {
         fmt.write("Poller:");
         fmt.format(__pollables);
     }
+}
 
+## Socket appendage.  Growth class for Socket, use makeSocket() to make one of
+## these directly.
+@final class SocketApd = Socket {
+    ## Get the address of the socket.  Throw a SystemError if there is an error.
+    ## Note that the address must be of the same type as the socket.
+    void getSocketAddress(Address addr) {
+        if (getSockName(fd, addr._addr) == -1)
+            throw SystemError('Failed getting socket address.');
+    }
+
+    ## Get the address of the socket.  Throw a SystemError if there is an error.
+    ## This generates an address of the correct type for all known address types,
+    ## but is slightly less efficient than the two argument version.
+    Address getSocketAddress() {
+        Address addr = InetAddress(0, 0);
+        if (getSockName(fd, addr._addr) != -1)
+            return addr;
+
+        addr = UnixAddress(_PRIV_CONS);
+        if (getSockName(fd, addr._addr) == -1)
+            throw SystemError('Failed getting socket address.');
+        return addr;
+    }
+}
+
+## Utility function to create a SocketApd from the standard arguments.
+SocketApd makeSocket(int domain, int type, int protocol) {
+    return SocketApd(Socket(domain, type, protocol));
+}
+
+## Utility function to create a SocketApd from a file descriptor.
+SocketApd makeSocket(int fd) {
+    return SocketApd(Socket(fd));
 }

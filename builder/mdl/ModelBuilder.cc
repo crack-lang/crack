@@ -97,9 +97,11 @@ namespace {
 
     // Creates a class for a pointer type.  'context' is the context of the
     // new class.
-    TypeDefPtr createClass(Context &context, const string &name) {
+    TypeDefPtr createClass(Context &context, const string &name,
+                           TypeDef::Flags flags
+                           ) {
         TypeDefPtr metaClass = createMetaClass(context, name);
-        TypeDefPtr type = new TypeDef(metaClass.get(), name, true);
+        TypeDefPtr type = new TypeDef(metaClass.get(), name, true, flags);
         metaClass->meta = type.get();
 
         FuncDefPtr unsafeCast =
@@ -195,7 +197,7 @@ namespace {
 TypeDefPtr ModelBuilder::createClassForward(Context &context,
                                             const string &name
                                             ) {
-    model::TypeDefPtr result = createClass(context, name);
+    model::TypeDefPtr result = createClass(context, name, TypeDef::noFlags);
     result->forward = true;
     return result;
 }
@@ -289,20 +291,23 @@ TypeDefPtr ModelBuilder::createGenericClass(Context &context,
                                             const string &name,
                                             bool weak
                                             ) {
-    return createClass(context, name);
+    return createClass(context, name, TypeDef::noFlags);
 }
 
 model::TypeDefPtr ModelBuilder::emitBeginClass(Context &context,
                                                const string &name,
                                                const vector<TypeDefPtr> &bases,
-                                               TypeDef *forwardDef
+                                               TypeDef *forwardDef,
+                                               TypeDef::Flags flags
                                                ) {
     TypeDefPtr result;
     if (forwardDef) {
         result = forwardDef;
         result->forward = false;
+        if (flags & TypeDef::appendageFlag)
+            result->appendage = true;
     } else {
-        result = createClass(context, name);
+        result = createClass(context, name, flags);
     }
     SPUG_FOR(vector<TypeDefPtr>, iter, bases)
         result->addBaseClass(iter->get());
@@ -693,12 +698,25 @@ ModuleDefPtr ModelBuilder::registerPrimFuncs(Context &context) {
     context.addDef(newUnOpDef(intzType, "oper to .builtin.intz", true).get(),
                    atomicType
                    );
+    context.addDef(newUnOpDef(uintzType, "oper to .builtin.uintz", true).get(),
+                   atomicType
+                   );
     context.addDef(newUnOpDef(gd->intType.get(), "oper to .builtin.int",
                               true
                               ).get(),
                    atomicType
                    );
     context.addDef(newUnOpDef(gd->uintType.get(), "oper to .builtin.uint",
+                              true
+                              ).get(),
+                   atomicType
+                   );
+    context.addDef(newUnOpDef(gd->int64Type.get(), "oper to .builtin.int64",
+                              true
+                              ).get(),
+                   atomicType
+                   );
+    context.addDef(newUnOpDef(gd->uint64Type.get(), "oper to .builtin.uint64",
                               true
                               ).get(),
                    atomicType

@@ -237,7 +237,8 @@ class MockBuilder : public builder::Builder {
             model::Context &context,
             const std::string &name,
             const std::vector<model::TypeDefPtr> &bases,
-            model::TypeDef *forwardDef
+            model::TypeDef *forwardDef,
+            model::TypeDef::Flags flags
         ) {
             model::TypeDefPtr result;
             if (forwardDef)

@@ -17,6 +17,7 @@
 #include "CrackContext.h"
 #include "Token.h"
 #include "Location.h"
+#include "TokSerializer.h"
 
 using namespace std;
 using namespace crack::ext;
@@ -63,75 +64,15 @@ struct CallbackManager {
 
 typedef CrackContext::AnnotationFuncWrapper<CallbackManager> CallbackBatch;
 
-void funcAnnCheck(CrackContext *ctx, const char *name) {
-    parser::Parser::State parseState =
-        static_cast<parser::Parser::State>(ctx->getParseState());
-    if (ctx->getScope() != model::Context::composite ||
-        (parseState != parser::Parser::st_base &&
-         parseState != parser::Parser::st_optElse
-         )
-        )
-        ctx->error(SPUG_FSTR(name << " annotation can not be used  here (it "
-                                     "must precede a function "
-                                     "definition in a class body)"
-                             ).c_str()
-                   );
-
-    CallbackManager *cbm =
-        new CallbackManager("Function expected after annotation");
-    cbm->add(ctx->addCallback(parser::Parser::funcDef,
-                              new CallbackBatch(
-                                  &CallbackManager::cleanUpAfterFunc,
-                                  cbm
-                               )
-                              )
-             );
-    cbm->add(ctx->addCallback(parser::Parser::classDef,
-                              new CallbackBatch(
-                                  &CallbackManager::unexpectedElement,
-                                  cbm
-                               )
-                              )
-             );
-    cbm->add(ctx->addCallback(parser::Parser::exprBegin,
-                              new CallbackBatch(
-                                  &CallbackManager::unexpectedElement,
-                                  cbm
-                               )
-                              )
-             );
-    cbm->add(ctx->addCallback(parser::Parser::controlStmt,
-                              new CallbackBatch(
-                                  &CallbackManager::unexpectedElement,
-                                  cbm
-                               )
-                              )
-             );
-}
-
-void staticAnn(CrackContext *ctx) {
-    funcAnnCheck(ctx, "static");
-    ctx->setNextFuncFlags(model::FuncDef::explicitFlags);
-}
-
-void finalAnn(CrackContext *ctx) {
-    funcAnnCheck(ctx, "final");
-    ctx->setNextFuncFlags(model::FuncDef::explicitFlags |
-                          model::FuncDef::method
-                          );
-}
-
-void abstractAnn(CrackContext *ctx) {
-
-    // @abstract is not strictly a function annotation, it may precede a class
-    // definition.
+void classFuncAnnCheck(CrackContext *ctx, const char *name) {
     parser::Parser::State parseState =
         static_cast<parser::Parser::State>(ctx->getParseState());
     if (parseState != parser::Parser::st_base &&
         parseState != parser::Parser::st_optElse
         )
-        ctx->error("abstract annotation can not be used here (it must precede "
-                    "a function or class definition)"
+        ctx->error(SPUG_FSTR(name << " annotation can not be used here (it "
+                              "must precede a function or class definition)"
+                             ).c_str()
                    );
 
     CallbackManager *cbm =
@@ -171,6 +112,65 @@ void abstractAnn(CrackContext *ctx) {
                          )
     );
 
+}
+
+void staticAnn(CrackContext *ctx) {
+    parser::Parser::State parseState =
+        static_cast<parser::Parser::State>(ctx->getParseState());
+    if (ctx->getScope() != model::Context::composite ||
+        (parseState != parser::Parser::st_base &&
+         parseState != parser::Parser::st_optElse
+         )
+        )
+        ctx->error("static annotation can not be used  here (it must precede "
+                    "a function definition in a class body)"
+                   );
+
+    CallbackManager *cbm =
+        new CallbackManager("Function expected after annotation");
+    cbm->add(ctx->addCallback(parser::Parser::funcDef,
+                              new CallbackBatch(
+                                  &CallbackManager::cleanUpAfterFunc,
+                                  cbm
+                               )
+                              )
+             );
+    cbm->add(ctx->addCallback(parser::Parser::classDef,
+                              new CallbackBatch(
+                                  &CallbackManager::unexpectedElement,
+                                  cbm
+                               )
+                              )
+             );
+    cbm->add(ctx->addCallback(parser::Parser::exprBegin,
+                              new CallbackBatch(
+                                  &CallbackManager::unexpectedElement,
+                                  cbm
+                               )
+                              )
+             );
+    cbm->add(ctx->addCallback(parser::Parser::controlStmt,
+                              new CallbackBatch(
+                                  &CallbackManager::unexpectedElement,
+                                  cbm
+                               )
+                              )
+             );
+    ctx->setNextFuncFlags(model::FuncDef::explicitFlags);
+}
+
+void finalAnn(CrackContext *ctx) {
+    classFuncAnnCheck(ctx, "final");
+    ctx->setNextFuncFlags(model::FuncDef::explicitFlags |
+                          model::FuncDef::method
+                          );
+    ctx->setNextClassFlags(model::TypeDef::explicitFlags |
+                           model::TypeDef::finalClass
+                           );
+}
+
+void abstractAnn(CrackContext *ctx) {
+    classFuncAnnCheck(ctx, "abstract");
     ctx->setNextFuncFlags(model::FuncDef::explicitFlags |
                           model::FuncDef::method |
                           model::FuncDef::virtualized |
@@ -243,6 +243,12 @@ void init(Module *mod) {
     locationType->addMethod(mod->getIntType(), "getLineNumber",
                             (void *)Location::_getLineNumber
                             );
+    locationType->addMethod(mod->getIntType(), "getStartCol",
+                            (void *)Location::_getStartCol
+                            );
+    locationType->addMethod(mod->getIntType(), "getEndCol",
+                            (void *)Location::_getLineNumber
+                            );
     locationType->addMethod(mod->getVoidType(), "oper bind",
                             (void *)Location::_bind
                             );
@@ -252,11 +258,21 @@ void init(Module *mod) {
     locationType->finish();
 
     Type *tokenType = mod->addType("Token", sizeof(Token));
+
+    typedef Token *(*L5)(int, const char *, Location *);
+    typedef Token *(*L6)(int, const char *, size_t, Location *);
     f = tokenType->addStaticMethod(tokenType, "oper new",
-                                   (void *)&Token::create
+                                   (void *)static_cast<L5>(Token::create)
                                    );
     f->addArg(mod->getIntType(), "type");
     f->addArg(mod->getByteptrType(), "text");
+    f->addArg(locationType, "loc");
+    f = tokenType->addStaticMethod(tokenType, "oper new",
+                                   (void *)static_cast<L6>(Token::create)
+                                   );
+    f->addArg(mod->getIntType(), "type");
+    f->addArg(mod->getByteptrType(), "text");
+    f->addArg(mod->getUintzType(), "size");
     f->addArg(locationType, "loc");
     tokenType->addMethod(mod->getVoidType(), "oper bind",
                          (void *)Token::_bind
@@ -507,6 +523,42 @@ void init(Module *mod) {
 
     cc->finish();
 
+    // TokSerializer.
+    Type *ts = mod->addType("TokSerializer", sizeof(TokSerializer));
+
+    typedef TokSerializer *(*L3)(const char *, size_t);
+    typedef TokSerializer *(*L4)();
+    f = ts->addStaticMethod(ts, "oper new",
+                            (void *)static_cast<L3>(TokSerializer::create)
+                            );
+    f->addArg(mod->getByteptrType(), "serialized");
+    f->addArg(mod->getUintzType(), "size");
+
+    ts->addStaticMethod(ts, "oper new",
+                        (void *)static_cast<L4>(TokSerializer::create)
+                        );
+
+    f = ts->addMethod(mod->getVoidType(), "insert",
+                      (void *)TokSerializer::insert
+                      );
+    f->addArg(tokenType, "tok");
+
+    ts->addMethod(tokenType, "getToken", (void *)TokSerializer::getToken);
+    ts->addMethod(mod->getByteptrType(), "serialize",
+                  (void *)TokSerializer::serialize
+                  );
+
+    f = ts->addMethod(mod->getVoidType(), "setLocation",
+                      (void *)TokSerializer::setLocation
+                      );
+    f->addArg(locationType, "loc");
+
+    f = ts->addMethod(locationType, "getLocation",
+                      (void *)TokSerializer::getLocation
+                      );
+
+    ts->finish();
+
     // our annotations
     f = mod->addFunc(mod->getVoidType(), "static", (void *)staticAnn);
     f->addArg(cc, "ctx");
@@ -541,9 +593,11 @@ void init(Module *mod) {
     mod->addConstant(mod->getIntType(), "TOK_CONTINUEKW",
                      parser::Token::continueKw
                      );
+    mod->addConstant(mod->getIntType(), "TOK_DOKW", parser::Token::doKw);
     mod->addConstant(mod->getIntType(), "TOK_DOLLAR",
                      parser::Token::dollar
                      );
+    mod->addConstant(mod->getIntType(), "TOK_ENUMKW", parser::Token::enumKw);
     mod->addConstant(mod->getIntType(), "TOK_FORKW", parser::Token::forKw);
     mod->addConstant(mod->getIntType(), "TOK_ELSEKW", parser::Token::elseKw);
     mod->addConstant(mod->getIntType(), "TOK_IFKW", parser::Token::ifKw);
@@ -596,13 +650,18 @@ void init(Module *mod) {
                      parser::Token::asterisk
                      );
     mod->addConstant(mod->getIntType(), "TOK_BANG", parser::Token::bang);
+    mod->addConstant(mod->getIntType(), "TOK_CASEKW", parser::Token::caseKw);
+    mod->addConstant(mod->getIntType(), "TOK_CATCHKW", parser::Token::catchKw);
     mod->addConstant(mod->getIntType(), "TOK_COLON", parser::Token::colon);
     mod->addConstant(mod->getIntType(), "TOK_COMMA", parser::Token::comma);
+    mod->addConstant(mod->getIntType(), "TOK_CONSTKW", parser::Token::constKw);
     mod->addConstant(mod->getIntType(), "TOK_DECR", parser::Token::decr);
     mod->addConstant(mod->getIntType(), "TOK_DEFINE", parser::Token::define);
+    mod->addConstant(mod->getIntType(), "TOK_DOC", parser::Token::doc);
     mod->addConstant(mod->getIntType(), "TOK_DOT", parser::Token::dot);
     mod->addConstant(mod->getIntType(), "TOK_END", parser::Token::end);
     mod->addConstant(mod->getIntType(), "TOK_EQ", parser::Token::eq);
+    mod->addConstant(mod->getIntType(), "TOK_FILENAME", parser::Token::bang);
     mod->addConstant(mod->getIntType(), "TOK_GE", parser::Token::ge);
     mod->addConstant(mod->getIntType(), "TOK_GT", parser::Token::gt);
     mod->addConstant(mod->getIntType(), "TOK_IDENT", parser::Token::ident);
@@ -615,9 +674,15 @@ void init(Module *mod) {
                      );
     mod->addConstant(mod->getIntType(), "TOK_LCURLY", parser::Token::lcurly);
     mod->addConstant(mod->getIntType(), "TOK_LE", parser::Token::le);
+    mod->addConstant(mod->getIntType(), "TOK_LINENUMBER",
+                     parser::Token::lineNumber
+                     );
     mod->addConstant(mod->getIntType(), "TOK_LPAREN", parser::Token::lparen);
     mod->addConstant(mod->getIntType(), "TOK_LT", parser::Token::lt);
     mod->addConstant(mod->getIntType(), "TOK_MINUS", parser::Token::minus);
+    mod->addConstant(mod->getIntType(), "TOK_MODULEKW",
+                     parser::Token::moduleKw
+                     );
     mod->addConstant(mod->getIntType(), "TOK_NE", parser::Token::ne);
     mod->addConstant(mod->getIntType(), "TOK_PERCENT",
                      parser::Token::percent
@@ -628,14 +693,24 @@ void init(Module *mod) {
                      parser::Token::rbracket);
     mod->addConstant(mod->getIntType(), "TOK_RCURLY", parser::Token::rcurly);
     mod->addConstant(mod->getIntType(), "TOK_RPAREN", parser::Token::rparen);
+    mod->addConstant(mod->getIntType(), "TOK_SCOPING", parser::Token::scoping);
     mod->addConstant(mod->getIntType(), "TOK_SEMI", parser::Token::semi);
     mod->addConstant(mod->getIntType(), "TOK_SLASH", parser::Token::slash);
     mod->addConstant(mod->getIntType(), "TOK_STRING", parser::Token::string);
+    mod->addConstant(mod->getIntType(), "TOK_SWITCHKW",
+                     parser::Token::switchKw
+                     );
+    mod->addConstant(mod->getIntType(), "TOK_THROWKW", parser::Token::throwKw);
     mod->addConstant(mod->getIntType(), "TOK_TILDE", parser::Token::tilde);
+    mod->addConstant(mod->getIntType(), "TOK_TRYKW", parser::Token::tryKw);
+    mod->addConstant(mod->getIntType(), "TOK_TYPEOFKW",
+                     parser::Token::typeofKw
+                     );
     mod->addConstant(mod->getIntType(), "TOK_ISTRBEGIN",
                      parser::Token::istrBegin
                      );
     mod->addConstant(mod->getIntType(), "TOK_ISTREND", parser::Token::istrEnd);
+    mod->addConstant(mod->getIntType(), "TOK_LAMBDAKW", parser::Token::lambdaKw);
     mod->addConstant(mod->getIntType(), "TOK_LOGICAND",
                      parser::Token::logicAnd
                      );

@@ -100,6 +100,17 @@ TimeDelta seconds(int secs) {
     return TimeDelta(int32(secs), 0);
 }
 
+## Return a new time that is t + d.
+Time add(Time t, TimeDelta d) {
+    nsecs := t.nsecs + d.nsecs;
+    secs := t.secs + d.secs;
+    if (nsecs > BILLION || nsecs < 0) {
+        secs += nsecs / BILLION;
+        nsecs = nsecs % BILLION;
+    }
+    return Time(secs, nsecs);
+}
+
 // From http://en.wikipedia.org/wiki/Leap_year retrieved on 7/12/2012
 bool isLeap(int year) {
    if (year % 400 == 0) return true;

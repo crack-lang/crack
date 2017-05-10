@@ -24,8 +24,8 @@ cost).
 
 Build Crack:
 
-$ tar -xvzf crack-0.13.1.tar.gz
-$ cd crack-0.13.1
+$ tar -xvzf crack-1.1.tar.gz
+$ cd crack-1.1
 $ ./configure
 $ make
 $ make check  # optional
@@ -38,7 +38,7 @@ CMake Install Instructions
 --------------------------
 
 CMake version 2.6 or greater is required. We recommend an out-of-tree
-build. You should ensure llvm 2. is already installed (see above) before
+build. You should ensure llvm is already installed (see above) before
 running cmake.
 
 Quick Install:
@@ -46,7 +46,7 @@ Quick Install:
 (if llvm and spug are in standard locations, and you wish to install in
  the default /usr/local)
 
-$ cd crack-0.13.1
+$ cd crack-1.1
 $ mkdir build; cd build
 $ cmake ..
 $ make

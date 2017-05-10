@@ -1,0 +1,55 @@
+%%TEST%%
+appendages
+%%ARGS%%
+%%FILE%%
+class A {
+    int i;
+    oper init(int i) : i = i {}
+    void put() {
+        printint(i);
+        puts('');
+    }
+}
+
+class B = A {
+    void foo() {
+        puts('B.foo()');
+        put();
+    }
+}
+
+# This constructor should be a no-op.
+b := B(A(100));
+b.foo();
+
+class C = A {
+    void bar() {
+        puts('C.bar()'); put();
+    }
+}
+
+class D = B, C {}
+
+d := D(A(200));
+d.foo();
+d.bar();
+
+# Verify that derived appendage constructors work as we expect.
+if (D(C(A(200))).i != 200)
+    puts('FAILED creating appendage from a non-anchor intermediate');
+
+class G[T] = T {
+    void putter() { put() }
+}
+
+G[A](A(300)).putter();
+
+%%EXPECT%%
+B.foo()
+100
+B.foo()
+200
+C.bar()
+200
+300
+%%STDIN%%

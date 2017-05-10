@@ -1,0 +1,8 @@
+%%TEST%%
+xmacros
+%%ARGS%%
+%%FILE%%
+import test.xmac_test;
+%%EXPECT%%
+ok
+%%STDIN%%

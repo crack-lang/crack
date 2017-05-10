@@ -305,7 +305,9 @@ void Type::finish() {
                                     ctx->compileNS.get()
                                    );
     TypeDefPtr td =
-        ctx->builder.emitBeginClass(*clsCtx, impl->name, bases, typeDef);
+        ctx->builder.emitBeginClass(*clsCtx, impl->name, bases, typeDef,
+                                    TypeDef::noFlags // TODO: support appendage
+                                    );
     typeDef = td.get();
     typeDef->aliasBaseMetaTypes();
 

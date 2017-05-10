@@ -232,6 +232,10 @@ void BTypeDef::createEmptyOffsetsInitializer(Context &context) {
 }
 
 Constant *BTypeDef::getParentOffset(const LLVMBuilder &builder, int parentIndex) const {
+    // For appendages, all base classes are of offset 0.
+    if (appendage)
+        return Constant::getNullValue(builder.intzLLVM);
+
     // get the pointer to the inner "Class" object of "Class[BaseName]"
     BTypeDefPtr base = BTypeDefPtr::arcast(parents[parentIndex]);
 
@@ -292,15 +296,22 @@ void BTypeDef::createBaseOffsets(Context &context) const {
 void BTypeDef::fixIncompletes(Context &context) {
     // construct the vtable if necessary
     if (hasVTable) {
-        VTableBuilder vtableBuilder(
-            dynamic_cast<LLVMBuilder*>(&context.builder),
-            BTypeDefPtr::arcast(context.construct->vtableBaseType)
-        );
-        createAllVTables(
-            vtableBuilder,
-            ".vtable." + context.parent->ns->getNamespaceName() + "." + name
-        );
-        vtableBuilder.emit(this);
+        if (appendage) {
+            VTableBuilder::emitAppendageVTable(
+                dynamic_cast<LLVMBuilder*>(&context.builder),
+                this
+            );
+        } else {
+            VTableBuilder vtableBuilder(
+                dynamic_cast<LLVMBuilder*>(&context.builder),
+                BTypeDefPtr::arcast(context.construct->vtableBaseType)
+            );
+            createAllVTables(
+                vtableBuilder,
+                ".vtable." + context.parent->ns->getNamespaceName() + "." + name
+            );
+            vtableBuilder.emit(this);
+        }
     }
 
     createBaseOffsets(context);
@@ -499,12 +510,15 @@ GlobalVariable *BTypeDef::createClassImpl(Context &context) {
     // from the beginning of the instances.
     Type *intPtrType =
         Type::getInt8Ty(getGlobalContext())->getPointerTo();
-    Type *voidptrArrayType =
-        ArrayType::get(intPtrType,
-                       this == context.construct->vtableBaseType.get() ?
-                           2 :
-                           countRootAncestors() * 2
-                       );
+    int rootCount;
+    if (this == context.construct->vtableBaseType.get())
+        rootCount = 1;
+    else if (appendage) {
+        rootCount = getAnchorType()->countRootAncestors();
+    } else {
+        rootCount = countRootAncestors();
+    }
+    Type *voidptrArrayType = ArrayType::get(intPtrType, rootCount * 2);
     if (hasVTable) {
         GlobalVariable *vtablesGVar =
             new GlobalVariable(*llvmBuilder.module,

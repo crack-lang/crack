@@ -22,14 +22,17 @@
 #   Equivalent to "class A : Object I, J { ... }".  Shorthand for the most
 #   common case.
 
-import crack.compiler CrackContext, Location, Token, TOK_COMMA, TOK_LCURLY,
-    TOK_LPAREN, TOK_POPERRCTX, TOK_RCURLY, TOK_RPAREN, TOK_STRING;
+import crack.compiler CrackContext, Location, Token, TokSerializer,
+    TOK_BREAKKW, TOK_CLASSKW, TOK_COMMA, TOK_CONTINUEKW, TOK_ELSEKW, TOK_FORKW,
+    TOK_IFKW, TOK_IMPORTKW, TOK_INKW, TOK_ISKW, TOK_LBRACKET, TOK_LCURLY,
+    TOK_LPAREN, TOK_NULLKW, TOK_ONKW, TOK_OPERKW, TOK_POPERRCTX, TOK_RBRACKET,
+    TOK_RCURLY, TOK_RETURNKW, TOK_RPAREN, TOK_STRING, TOK_WHILEKW;
 import crack.cont.array Array;
 import crack.cont.treemap TreeMap;
-import crack.io cout, FStr, Reader, StandardFormatter, StringFormatter,
+import crack.io cerr, FStr, Reader, StandardFormatter, StringFormatter,
     StringWriter, Writer;
 import crack.lang die, AssertionError, CString, Exception, Formatter,
-    IndexError, InvalidArgumentError;
+    IndexError, InvalidArgumentError, InvalidStateError;
 import crack.runtime free;
 import crack.serial SerialReader, SerialWriter;
 
@@ -102,6 +105,7 @@ class NodeIter;
     @abstract Node getFirst();
     @abstract void expand(CrackContext ctx, Array[NodeList] args);
     @abstract String toString(Array[NodeList] args);
+    @abstract Location getLocation();
 }
 
 @abstract class Node {
@@ -128,8 +132,10 @@ Node _readNode(MacroDeserializer src);
 ## token stream (after putBack() they will be in the correct order once again)
 class NodeListImpl : NodeList {
     Node first, last;
+    Location loc;
 
     oper init() {}
+    oper init(Location loc) : loc = loc {}
 
     void pushHead(Node node) {
         if (first) {
@@ -235,6 +241,15 @@ class NodeListImpl : NodeList {
 
         return sf.string();
     }
+
+    Location getLocation() {
+        if (!(loc is null))
+            return loc;
+        else if (first)
+            return first.getLocation();
+        else
+            throw AssertionError('Location undefined.');
+    }
 }
 
 class Tok : Node {
@@ -249,10 +264,40 @@ class Tok : Node {
     }
 
     String toString(Array[NodeList] args) {
-        if (tok.isString())
+        type := tok.getType();
+        if (tok.isString()) {
             return String(tok.getText()).getRepr();
-        else
+        } else if (type == TOK_BREAKKW) {
+            return 'break';
+        } else if (type == TOK_CLASSKW) {
+            return 'class';
+        } else if (type == TOK_CONTINUEKW) {
+            return 'continue';
+        } else if (type == TOK_FORKW) {
+            return 'for';
+        } else if (type == TOK_ELSEKW) {
+            return 'else';
+        } else if (type == TOK_IFKW) {
+            return 'if';
+        } else if (type == TOK_IMPORTKW) {
+            return 'import';
+        } else if (type == TOK_INKW) {
+            return 'in';
+        } else if (type == TOK_ISKW) {
+            return 'is';
+        } else if (type == TOK_NULLKW) {
+            return 'null';
+        } else if (type == TOK_ONKW) {
+            return 'on';
+        } else if (type == TOK_OPERKW) {
+            return 'oper';
+        } else if (type == TOK_RETURNKW) {
+            return 'return';
+        } else if (type == TOK_WHILEKW) {
+            return 'while';
+        } else {
             return String(tok.getText());
+        }
     }
 
     Location getLocation() {
@@ -414,6 +459,7 @@ class Concat : Node {
     }
 }
 
+## A Node that converts its arguments to a string.
 class Stringify : Node {
     Node node;
 
@@ -814,21 +860,12 @@ void readIStr(CrackContext ctx, NodeList nodes) {
     }
 }
 
-## Reads a sequence of tokens between a specified left and right delimiter
-## which can be nested.  For example, if left and right are TOK_LPAREN and
-## TOK_RPAREN this function would read the following sequence:
-##    ( 1 + 2 + (3 + 4) )
-##   ^                   ^
-##
-## if storeDelimiters is true, parses and processes the beginning and ending
-## delimiter and adds them to the returned node list, otherwise the next
-## available token should be the one immediately following the opening
-## delimiter and the last token will be put back.
-NodeList readDelimited(CrackContext ctx, int left, int right,
-                       bool storeDelimiters
-                       ) {
-    NodeListImpl result = {};
-
+## Just like the other readDelimited() except that it passes in the 'result'
+## list instead of returning it, allowing you to compose on an existing list.
+void readDelimited(CrackContext ctx, int left, int right,
+                   bool storeDelimiters,
+                   NodeList result
+                   ) {
     # get the opening delimiter.
     Token tok;
     if (storeDelimiters) {
@@ -857,7 +894,23 @@ NodeList readDelimited(CrackContext ctx, int left, int right,
         if (tok.isIstrBegin())
             readIStr(ctx, result);
     }
+}
 
+## Reads a sequence of tokens between a specified left and right delimiter
+## which can be nested.  For example, if left and right are TOK_LPAREN and
+## TOK_RPAREN this function would read the following sequence:
+##    ( 1 + 2 + (3 + 4) )
+##   ^                   ^
+##
+## if storeDelimiters is true, parses and processes the beginning and ending
+## delimiter and adds them to the returned node list, otherwise the next
+## available token should be the one immediately following the opening
+## delimiter and the last token will be put back.
+NodeList readDelimited(CrackContext ctx, int left, int right,
+                       bool storeDelimiters
+                       ) {
+    NodeListImpl result = {};
+    readDelimited(ctx, left, right, storeDelimiters, result);
     return result;
 }
 
@@ -1048,13 +1101,20 @@ void struct(CrackContext ctx) {
     while (true) {
 
         tok = ctx.getToken();
+
+        # Stuff doc-comments into the result.
+        if (tok.isDoc()) {
+            result.pushHead(Tok(tok));
+            tok = ctx.getToken();
+        }
+
         if (tok.isRCurly()) {
             break;
         }
 
         # put it back and parse a field
         ctx.putBack(tok);
-        Field.parse(ctx, fields, result)
+        Field.parse(ctx, fields, result);
     }
 
     # create the constructor.
@@ -1423,6 +1483,296 @@ void implements(CrackContext ctx) {
 ## "class A : Object @implements IFace"
 void impl(CrackContext ctx) {
     _implements(ctx, true);
+}
+
+## Read a sequence of tokens delimited by the next token and it's closing
+## counterpart.  Consumes the closing delimiter and doesn't return the
+## delimiters. Delimiters can be curly brackets, square brackets or
+## parenthesis.
+NodeList readAnyDelimited(CrackContext ctx) {
+    delim := ctx.getToken();
+    ttype := delim.getType();
+    NodeListImpl result = {delim.getLocation()};
+    if (ttype == TOK_LPAREN)
+        readDelimited(ctx, TOK_LPAREN, TOK_RPAREN, false, result);
+    else if (ttype == TOK_LBRACKET)
+        readDelimited(ctx, TOK_LBRACKET, TOK_RBRACKET, false, result);
+    else if (ttype == TOK_LCURLY)
+        readDelimited(ctx, TOK_LCURLY, TOK_RCURLY, false, result);
+
+    # Read the closing delimiter.
+    ctx.getToken();
+
+    return result;
+}
+
+## Returns the node list serialized to a string token.
+Token serializeNodeList(NodeList list) {
+    ser := TokSerializer();
+    ser.setLocation(list.getLocation());
+    for (node :in list) {
+        tok := Tok.cast(node).tok;
+        ser.insert(tok);
+    }
+
+    serialized := ser.serialize();
+    size := array[uint32](serialized)[0];
+    tok := Token(TOK_STRING, serialized + 4, size, list.getLocation());
+    free(serialized);
+    return tok;
+}
+
+## Converts a delimited stream of tokens to a string that can be converted
+## back to a NodeList at runtime with deserializeNodeList().
+##
+## Example:
+##
+##   code := deserializeNodeList(@token_str {
+##       if ($1 == $2)
+##           cout `values are equal!\n`;
+##   });
+##   code.expand(ctx, params);
+##
+## The delimiters ('{' and '}' in the example) are not included in the list.
+## Curly brackets, square brackets and parenthesis may be used as delimiters.
+## The only restriction is that if a delimiter is nested, it must be balanced
+## within the list.  For example, @tokens ( class Foo { ) is legal, @tokens {
+## class foo { } is not.
+void token_str(CrackContext ctx) {
+    list := readAnyDelimited(ctx);
+    first := list.getFirst();
+    ctx.putBack(serializeNodeList(list));
+}
+
+## Given a serialized list of tokens created from the tokens() annotation,
+## return the deserialized NodeList.
+NodeList deserializeNodeList(String tokens) {
+    ser := TokSerializer(tokens.buffer, tokens.size);
+    list := NodeListImpl(ser.getLocation());
+    while (!((tok := ser.getToken()) is null))
+        list.pushHead(Tok(tok));
+    return list;
+}
+
+## @tokens is shorthand for "deserializeNodeList(@token_str { ... })"
+## For example, we could do:
+##
+##   import crack.ann deserializeNodeList;
+##
+##   void hello(CrackContext ctx) {
+##       (@tokens { cerr `hello world!\n` }).expand(ctx, null);
+##   }
+void tokens(CrackContext ctx) {
+    tokStr := serializeNodeList(readAnyDelimited(ctx));
+    ctx.inject(@FILE.buffer, @LINE, ')'.buffer);
+    ctx.putBack(tokStr);
+    ctx.inject(@FILE.buffer, @LINE, 'deserializeNodeList('.buffer);
+}
+
+## An argument definition, for use with x-macs.
+class _ArgDef {
+    ## The argument variable name.
+    String name;
+
+    ## The index of the argument in the macro's arg list.
+    int index;
+
+    ## The node list to be expanded into the argument of the macro's arg list.
+    NodeList nodes;
+
+    oper init(String name, int index, NodeList nodes) :
+        name = name,
+        index = index,
+        nodes = nodes {
+    }
+
+    @final void expand(CrackContext ctx, Array[NodeList] args) {
+        nodes.expand(ctx, args);
+    }
+}
+
+class _ParseError : Exception {
+    Token tok;
+    oper init(Token tok, String text) : Exception(text), tok = tok {}
+}
+
+@final class XMacro {
+    NodeList __nodes;
+    TreeMap[String, _ArgDef] __defs;
+    Array[NodeList] __args;
+
+    oper init(NodeList nodes, TreeMap[String, _ArgDef] defs) :
+        __nodes = nodes,
+        __defs = defs,
+        __args = Array[NodeList](defs.count(), null) {
+    }
+
+    ## Set the macro variable to the value.  Throws KeyError if varName is not
+    ## defined.
+    ## Returns 'this' to allow method chaining.
+    XMacro set(String varName, NodeList value) {
+        __args[__defs[varName].index] = value;
+        return this;
+    }
+
+    ## Set the macro variable to the value, converting the token to a node
+    ## list.  Throws KeyError if varName is not defined.
+    ## Returns 'this' to allow method chaining.
+    XMacro set(String varName, Token tok) {
+        return set(varName, NodeListImpl![Tok(tok)]);
+    }
+
+    void __checkArgsDefined() {
+        # Make sure all arguments are defined.
+        for (def :in __defs) {
+            if (__args[def.val.index] is null)
+                throw InvalidStateError(
+                    FStr() I`XMacro argument $(def.val.name) has not been \
+                             defined`
+                );
+        }
+    }
+
+    ## A No-args version of expand, uses the argument array that we've already
+    ## defined.
+    void expand(CrackContext ctx) {
+        __checkArgsDefined();
+        __nodes.expand(ctx, __args);
+    }
+
+    NodeList expand() {
+        NodeListImpl result = {};
+        __checkArgsDefined();
+        for (node :in __nodes) {
+            if (arg := Arg.cast(node, null)) {
+                # An arg value must be comprised entirely of Tok nodes, add
+                # then to the result.
+                for (child :in __args[arg.argIndex])
+                    result.append(Tok(Tok.cast(child).tok));
+            } else {
+                result.append(Tok(Tok.cast(node).tok));
+            }
+        }
+
+        return result;
+    }
+
+}
+
+XMacro deserializeXMac(String tokens) {
+    ser := TokSerializer(tokens.buffer, tokens.size);
+    list := NodeListImpl(ser.getLocation());
+    TreeMap[String, _ArgDef] vars = {};
+    bool gotDollar;
+    int lastArgIndex;
+    while (!((tok := ser.getToken()) is null)) {
+        if (gotDollar) {
+            if (tok.isIdent()) {
+
+                # Get the argument def for the variable or create a new one.
+                id := String(tok.getText());
+                argDef := vars.get(id);
+                if (!argDef) {
+                    vars[id] = argDef = _ArgDef(id,
+                                                lastArgIndex++,
+                                                NodeListImpl![Tok(tok)]
+                                                );
+                }
+
+                list.pushHead(Arg(tok.getLocation(), argDef.index));
+            } else {
+                throw _ParseError(tok, "Identifier expected after '$'");
+            }
+            gotDollar = false;
+        } else if (tok.isDollar()) {
+            gotDollar = true;
+        } else {
+            list.pushHead(Tok(tok));
+        }
+    }
+
+    return XMacro(list, vars);
+}
+
+## Get the variable names given a _reversed_ list of tokens.
+TreeMap[String, uint] _getVarNames(NodeList nodes) {
+    bool gotDollar;
+    TreeMap[String, uint] result = {};
+
+    # Since the list is backwards, when we get a dollar sign, we need to check
+    # and record the last token.
+    Token lastTok;
+    for (node :in nodes) {
+        tok := (t := Tok.cast(node, null)) ? t.tok : null;
+        if (!(tok is null) && tok.isDollar()) {
+            if (!(lastTok is null) && lastTok.isIdent())
+                result[String(lastTok.getText())] = 1;
+            else
+                throw _ParseError(lastTok, "Identifier expected after '$'");
+        }
+        lastTok = tok;
+    }
+    return result;
+}
+
+## "xmacs" are a cross between @tokens sequences and macros.  They're mainly
+## useful for doing code generation from annotations.  Like @tokens, @xmac
+## creates a string literal encoding of the delimited list of tokens that
+## follow it.  However, it unpacks them using deserializeXMac(), which
+## understands simple variable expansions of the form "$identifier".
+##
+## You can set these variables to NodeList values using the set() method:
+##
+##     m := @xmac { cerr.format($val) };
+##     m.set('val', makeNodeList(tok));  # Where 'tok' is a crack.compiler.Token
+##
+## You can also use the @xmac* variation of the macro to interpolate local
+## variables of the same name:
+##
+##     val := nodeList(tok);
+##     m := @xmac* { cerr.format($val) };
+##
+## The xmac can then be expanded into a context as follows:
+##
+##     m.expand(ctx);
+void xmac(CrackContext ctx) {
+    # See if the next token is '*', indicating that we should interpolate
+    # variables.
+    bool interpolate;
+    tok := ctx.getToken();
+    if (tok.isAsterisk())
+        interpolate = true;
+    else
+        ctx.putBack(tok);
+
+    nodeList := readAnyDelimited(ctx);
+    TreeMap[String, uint] varNames =
+        interpolate ? _getVarNames(nodeList) : null;
+
+    tokStr := serializeNodeList(nodeList);
+    try {
+        TreeMap[String, _ArgDef] args = {};
+
+        if (interpolate) {
+            for (var :in varNames)
+                ctx.inject(@FILE.buffer, @LINE,
+                           FStr() `.set('$(var.key)', $(var.key))\0`.buffer
+                           );
+        }
+
+        # We deserialize the XMac once here to obtain the arg list.  Then we
+        # generate code to deserialize and expand it in the client code.
+        ctx.inject(@FILE.buffer, @LINE, ')'.buffer);
+        ctx.putBack(tokStr);
+        ctx.inject(@FILE.buffer, @LINE, 'deserializeXMac('.buffer);
+    } catch (_ParseError ex) {
+        ctx.error(ex.tok, CString(ex.text).buffer);
+    }
+}
+
+## Returns a node list wrapping a single token.
+NodeList makeNodeList(Token tok) {
+    return NodeListImpl![Tok(tok)];
 }
 
 ## Expands the sanitized scope name as a string.

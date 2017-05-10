@@ -17,7 +17,7 @@ lib_LTLIBRARIES = libCrackDebugTools.la libCrackLang.la \
     libCrackNativeRuntime.la
 libCrackLang_la_SOURCES = %libCrackSources%
 libCrackLang_la_CPPFLAGS = $(AM_CPPFLAGS)
-libCrackLang_la_LDFLAGS = -version-info 10:0:0 @LLVM_LDFLAGS@ @LLVM_LIBS@ \
+libCrackLang_la_LDFLAGS = -version-info 11:0:1 @LLVM_LDFLAGS@ @LLVM_LIBS@ \
     $(AM_LDFLAGS)
 libCrackLang_la_LIBADD = libCrackDebugTools.la
 
@@ -326,7 +326,8 @@ compilerinc_HEADERS = \
     compiler/Annotation.h \
     compiler/CrackContext.h \
     compiler/Location.h \
-    compiler/Token.h
+    compiler/Token.h \
+    compiler/TokSerializer.h
 
 extincdir = $(includedir)/crack-$(VERSION)/crack/ext
 extinc_HEADERS = \
@@ -346,7 +347,7 @@ EXTRA_DIST = $(srcdir)/test/*.crk $(srcdir)/test/bad_extension.so \
     $(srcdir)/screen/config.crk $(srcdir)/screen/screen.crk $(srcdir)/screen/stats.crk \
     $(srcdir)/screen/testdata.crk $(srcdir)/screen/planB \
     $(srcdir)/screen/tests $(srcdir)/screen/systest.crk $(srcdir)/opt/*.crk \
-    $(srcdir)/doc $(srcdir)/lib
+    $(srcdir)/doc $(srcdir)/lib $(srcdir)/example/*.crk
 
 bin_PROGRAMS = crack
 
@@ -391,10 +392,20 @@ install-data-local: doc/Manual.html
 	$(MKDIR_P) $(DESTDIR)$(docdir)
 	$(INSTALL) doc/Manual.html $(DESTDIR)$(docdir)
 
-install-exec-local: install-binPROGRAMS
+# A note on the build of crackdoc:
+# "make distcheck" installs images built to be installed in a special
+# "_inst" staging directory into a temporary directory for reasons I don't
+# understand.  Unfortunately, it does so after the _inst directory has been
+# removed, so we end up falling through to the system shared libraries.
+# To avoid this, set the shared library path to the one for the installation
+# directory.
+install-exec-local: install-binPROGRAMS  install-libLTLIBRARIES \
+                    install-rtlibLTLIBRARIES install-extlibLTLIBRARIES \
+                    install-data-local
 	ln -f $(DESTDIR)$(bindir)/crack $(DESTDIR)$(bindir)/crack-$(VERSION)
 	ln -sf $(DESTDIR)$(bindir)/crack-$(VERSION) $(DESTDIR)$(bindir)/crackc
-	./crack -B llvm-native -l $(srcdir)/lib:./lib:.libs \
+	LD_LIBRARY_PATH=$(DESTDIR)/$(libdir) $(DESTDIR)$(bindir)/crackc \
+	    -l ${DESTDIR}$(libdir)/crack-$(VERSION) \
 	    -b out=$(DESTDIR)$(bindir)/crackdoc$(EXEEXT) \
 	    $(srcdir)/tools/crackdoc.crk
 

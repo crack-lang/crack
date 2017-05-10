@@ -1,3 +1,17 @@
+
+1.1
+    -   Implemented Appendages.
+    -   Implemented the @xtokens and @xmac annotations.
+    -   Added the crack.net.comm module providing general client/server
+        communication functionality.
+    -   Added crack.eventmgr which provides event scheduling in a poller.
+    -   Various minor enhancements and fixes.
+
+1.0
+    -   Fixed potential use-after-free of arguments bound to volatile
+        variables.
+    -   Many documentation corrections.
+
 0.13.1
     -   Make crackdoc cache output files and show full source if requested.
     -   Fix issues with "seek()" on 32-bit platforms.

@@ -1,0 +1,8 @@
+%%TEST%%
+event managers
+%%ARGS%%
+%%FILE%%
+import test.test_eventmgr;
+%%EXPECT%%
+ok
+%%STDIN%%

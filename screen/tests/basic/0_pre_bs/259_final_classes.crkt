@@ -1,0 +1,10 @@
+%%TEST%%
+final classes
+%%ARGS%%
+%%FILE%%
+@final class A {}
+class B : A {}
+
+%%EXPECT%%
+ParseError: %SCRIPTNAME%:2:11: You may not derive from final class A
+%%STDIN%%

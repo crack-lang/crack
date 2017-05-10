@@ -113,9 +113,13 @@ class Token : public crack::ext::RCObj {
 
         Token(const parser::Token &tok);
         Token(int type, const char *text, Location *loc);
+        Token(int type, const char *text, size_t size, Location *loc);
         ~Token();
 
         static Token *create(int type, const char *text, Location *loc);
+        static Token *create(int type, const char *text, size_t size,
+                             Location *loc
+                             );
 
         /**
          * Returns true if the token's text form is the same as the string

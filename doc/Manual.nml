@@ -12,35 +12,10 @@
 The Crack Programming Language Guide
 ====================================
 
-This is the Manual for version 0.13.1 of the Crack Programming Language.  We
-regard this version largely as an alpha 1.0 release - compatibility breakage
-between this and 1.0 should be very limited.  There are still some usability
-gaps in the system, mostly with respect to debugging and caching.  And as of
-now, we've only verified the functionality of the platform on Linux.
-
-But that said, Crack is now largely usable for real work, and if you're
-looking for a language like this, now is an excellent time to get involved in
-it.
-
-So without further caveats - let's do some Crack!
-
-Important Note on Caching
--------------------------
-
-Crack 0.13.1 enables module caching by default.  When a Crack module is
-compiled, the compiler stores the modules metadata and LLVM bitcode in your
-`$HOME/.crack/cache` directory and reuses this information if it exists and is
-up to date with respect to the source file and all dependencies.
-
-While there are no known bugs in the caching mechanism, it is extremely likely
-that there are a few unknown bugs in it.  If the compiler breaks or throws an
-exception, try moving `$HOME/.crack/cache` to `$HOME/.crack/cache.org` and run
-your program again.  If it succeeds the second time, then you have most likely
-discovered a caching bug and we'd greatly appreciate it if you'd report this,
-ideally including the cache files and source files that manifested it.
-
-To disable caching entirely, you may use the -K command line option or set the
-"`CRACK_CACHING`" environment variable to false.
+This is the manual for version 1.1 of the Crack Programming Language.  Crack
+is an imperative, object-oriented language along the lines of Java, Python and
+C++.  It can be compiled in Just In Time and Ahead Of Time modes and has been
+tested on 32 and 64 bit x86 Linux Debian and Ubuntu systems.
 
 Overview
 --------
@@ -75,7 +50,7 @@ See the INSTALL file for the latest installation instructions.
 Execution
 ---------
 
-crack may be run in one of two ways: as a scripting language (like Python)
+Crack may be run in one of two ways: as a scripting language (like Python)
 or as a traditional compiler that creates native binaries (like C++).
 Both methods will compile to the native instruction set and run similar
 optimizations. We call these two methods JIT (Just In Time) and AOT (Ahead Of
@@ -125,11 +100,10 @@ Note that during native compilation, all imported crack scripts will be
 import from the crack standard library, will become a static part of your
 standalone binary and consecutive changes or updates to those scripts will not
 affect your (previously compiled) standalone binaries. In other words, there are
-no  "shared crack libraries" currently.
+currently no "shared crack libraries."
 
 For more command line options that affect execution and compilation including
 verbosity, optimization levels, and debug output, see "crack --help".
-
 
 Hello World
 -----------
@@ -162,7 +136,6 @@ string translates into a newline (the ASCII "LF" character, character code 10).
 
 Expressions consisting of a value followed by back-tick quoted text and code
 are called "interpolation expressions."
-
 
 Comments
 --------
@@ -208,7 +181,7 @@ The #module# keyword is necessary in this case to prevent the doc-comment
 from being consumed by the next element in the code and to instead be
 associated with the module.  If there are import statements, the module
 documentation is consumed by the module upon arriving at the first import
-statement.
+statement, so the #module# keyword is usually unnecessary.
 
 Variables and Types
 -------------------
@@ -222,7 +195,6 @@ other scripting languages, Crack is statically typed so you must specify
     int i = 100;
 }}
 
-
 You can also define variables using the more terse ":=" operator, which derives
 the type from that of the value:
 
@@ -233,7 +205,7 @@ the type from that of the value:
 
 If you don't specify an initializer for a variable, the default initializer
 will be used.  For the numeric types, this is zero.  For #bool#, it's #false#.
-For complex types (which we'll discuss later), a null pointer is used..
+For complex types (which we'll discuss later), it is a null pointer.
 
 Constants
 '''''''''
@@ -261,7 +233,7 @@ the objects they reference.  For example, the following code is legal:
     VALS[0] = 100;
 }}
 
-We can modify #VALS[0]#, it would have been an error to do this:
+While we can modify #VALS[0]#, it would have been an error to do this:
 
 {{
     VALS = array[int](10);  # ParseError!
@@ -278,7 +250,7 @@ void::
     The "void" type - this only exists so you can have a function that doesn't
     return anything.  You cannot declare a variable of type 'void'.
 byte::
-    An 8-bit unsigned integer (like C's unsigned char)
+    An 8-bit unsigned integer (like C's #unsigned char#)
 bool::
     A boolean.  Values are *true* and *false*, which are built-in variables.
 int16::
@@ -305,10 +277,10 @@ uint::
     platform.  Like int, this must be at least 32 bits and no more than 64
     bits in size.
 intz::
-    An integer the size of the C compiler's pointer.  #intz# and #uintz# are
-    used for memory sizes, pointer offsets, array indices and cases where we
-    want to represent pointers as integers.  #intz# is equivalent to #ssize\_t#
-    in C++.
+    An integer the size of the C compiler's pointer types.  #intz# and #uintz#
+    are used for memory sizes, pointer offsets, array indices and cases where
+    we want to represent pointers as integers.  #intz# is equivalent to
+    #ssize\_t# in C++.
 uintz::
     An unsigned integer the size of the C compiler's pointer.  #uintz# is
     equivalent to #size\_t# in C and C++.
@@ -357,10 +329,10 @@ value: the memory that they reference is not.
 Primitive types, primitive pointer types, and the #void# type are all
 classified as /low-level/ types.  They are distinguished from the higher
 level aggregate types by naming convention: low-level types will always be all
-lower case (and digits) while high-level types (at least the ones in the standard
-libraries) will always begin with an upper-case character.  You may not
-currently subclass low-level types (see \X(Inheritance)) but this restriction
-will be lifted in a future version of Crack.
+lower case (and digits) while high-level types (at least the ones in the
+standard libraries) will always begin with an upper-case character.  You may
+not currently subclass low-level types (see \X(Inheritance)) but this
+restriction will be lifted in a future version of Crack.
 
 /High level/ or /aggregate/ types are first class objects: variables of these
 types are pointers to allocated regions of memory large enough to accommodate
@@ -458,12 +430,12 @@ numeric types using type constructor notation (see \X(Constructors) below):
 There are two kinds of numeric types, Universal Numeric Types (UNTs) and
 Platform Dependent Numeric Types.  The UNT types are byte, int16, uint16,
 int32, uint32, int64, uint64, float32 and float64.  These are guaranteed to
-be of the same size no matter what the preferences of the platform.  A
-numeric type can implicitly convert to a UNT as long as there is no risk of
-precision loss on any platform.  Since we define most PDNTs to be either
-32-bit or 64-bit values, this means that we can always implicitly convert
-from, for example, an unsigned int to a uint64, but we can never implicitly
-convert from an uint to a uint32.
+be of the same size regardless of the platform.  A numeric type can
+implicitly convert to a UNT as long as there is no risk of precision loss on
+any platform.  Since we define most PDNTs to be either 32-bit or 64-bit
+values, this means that we can always implicitly convert from, for example,
+an unsigned int to a uint64, but we can never implicitly convert from an uint
+to a uint32.
 
 The PDNTs are int, uint, intz, and float.  Any numeric type can implicitly
 convert to a PDNT.
@@ -647,8 +619,8 @@ To solve this problem more elegantly, Crack introduces indented string
 constants.  A string prefixed with a capital "I" is treated as an indented
 string.  Indented strings are handled as follows:
 
--   the shortest sequence of whitespace after a newline is stripped from all
-    lines.
+-   the shortest sequence of whitespace after a newline is stripped from the
+    beginning of all lines.
 -   An escaped newline also consumes all following whitespace, but the
     whitespace is still considered for the purpose of establishing the
     shortest line.
@@ -697,8 +669,8 @@ notation to write the definition above as follows:
     a := array[int]![1, 2, 3, 4];
 }}
 
-Sequence constants can also be used with aggregate types.  Types need only
-implement \X(The Sequence Constant Protocol) as defined below.
+Sequence constants can also be used to create instances of aggregate types.
+Types need only implement \X(The Sequence Constant Protocol) as defined below.
 
 As a reminder, we're using #array# here because we've already introduced it.
 You'll generally want to use the memory-managed #Array# collection instead
@@ -707,7 +679,7 @@ You'll generally want to use the memory-managed #Array# collection instead
 Control Structures
 ------------------
 
-Crack 0.13.1 supports four control structures: the "if\/else" statement,
+Crack 1.1 supports four control structures: the "if\/else" statement,
 the "while" statement, the "for" statement and the "try\/catch" statement.
 "if" runs code blocks depending on whether a condition is true or false:
 
@@ -876,7 +848,7 @@ defines the variable for the scope of the loop, so we could have omitted the
 The value on the right side of the "in" keyword (in this case #argv#) must
 conform to \X(The Iteration Protocol) as documented below.  All high-level
 container types implement this protocol.  Sadly, low-level arrays can not
-because there is no way to specify a length for them.
+because there is no way to determine their length.
 
 "for-in" creates an underlying iterator variable, but hides it.  It is often
 desirable to have access to the iterator.  For example, you may want to modify
@@ -1224,8 +1196,8 @@ are defined.
 Aliases can be useful for providing shorter names, but their main value comes
 from defining alternate names for \X(Generics).
 
-As noted in \X(Member Access Protection), aliases can also be used to make private
-variables externally visible.
+As noted in \X(Member Access Protection), aliases can also be used to make
+private variables externally visible.
 
 Operators
 ---------
@@ -1322,7 +1294,7 @@ the concept of a "negative unsigned."  Think of a negative unsigned as an
 infinitely large value whose high bytes are all 1.  All of the other binary
 operations behave according to this rule.  What this ends up providing is the
 ability to fit the result of an operation on constants into an integer type
-large enough to accomodate the initial significant bits of the inputs:
+large enough to accommodate the initial significant bits of the inputs:
 
 {{
     byte b = ~0 ^ 5;  # b = 250
@@ -1335,7 +1307,7 @@ All of the binary operators but the comparison operators can be used
 with assignment to do C-like "augmented assignment."  In general, the
 augmented expression #x #/op/#= y# is equivalent to #x = x #/op/# y#.
 
-So specifically, the augmented assignment operators are: #+=#, #-=#, #\/=#,
+Specifically, the augmented assignment operators are: #+=#, #-=#, #\/=#,
 #\*=#, #&=#, #|=#, #>>=#, #<<=#, #^=#.
 
 The Ternary Operator
@@ -1432,7 +1404,6 @@ simple example of a class, consider the representation of an x, y graphics
 coordinate:
 
 {{
-    import crack.lang Writer;
     import crack.io cout, Formatter;
 
     class Coord {
@@ -1441,8 +1412,8 @@ coordinate:
         oper init(int x0, int y0) : x = x0, y = y0 {}
         oper init() {}
 
-        void writeTo(Writer out) {
-            Formatter(out) `Coord($x, $y)`;
+        void formatTo(Formatter out) {
+            out `Coord($x, $y)`;
         }
     }
 }}
@@ -1553,15 +1524,14 @@ For classes derived from #Object#, #null# values are always treated as false:
         cout `this will always be printed\n`;
 }}
 
-Our #Coord# class also has a #writeTo()# method.  This allows us to implement
-the #writeTo()# method which controls how an Object is written using the
-back-tick operator.  For example:
+Our #Coord# class also has a #formatTo()# method.  This controls how an
+Object is written using the back-tick operator.  For example:
 
 {{
     cout `$(Coord(10, 20))\n`; # prints "Coord(10, 10)" to standard output.
 }}
 
-#writeTo()# uses the instance variables #x# and #y#.  One characteristic of
+#formatTo()# uses the instance variables #x# and #y#.  One characteristic of
 methods is that instance variables and other methods can be used without
 qualification (you don't need a "self" or "this" variable, although this is
 possible, see below). As another example, we could define a method to give us
@@ -1583,7 +1553,7 @@ We could then add this information to our #writeTo()# method:
 
 Methods also have a special variable called "#this#".  Just as in C++,
 #this# refers to the object that the method has been called on.  In
-traditional Object-Oriented parlance, this object is called "the receiver."
+traditional object-oriented parlance, this object is called "the receiver."
 
 We could have rewritten #distOrgSquared()# as follows:
 
@@ -1722,9 +1692,10 @@ variables from the arguments x0 and y0.  Note that the initializers are
 specified using assignment syntax: "x = x0" instead of the construction syntax
 that C++ would have used: "x(x0)".
 
-The construction syntax can be used, too, but it has a different meaning.
-Construction syntax means "construct the variable with the given arguments."
-Assignment syntax means "initialize the variable from the given value."
+The C++ style construction syntax can be used, too, but it has a different
+meaning. Construction syntax means "construct the variable with the given
+arguments." Assignment syntax means "initialize the variable from the given
+value."
 
 So, for example, "x(x0)" would be equivalent to "x = int(x0)", which is also
 perfectly legal.  The uses for these two types of syntax becomes more obvious
@@ -1816,8 +1787,10 @@ can tell the difference between them from their argument types.
 The /default constructor/ is the constructor without any arguments.  If you
 don't define any constructors in your class, the compiler will attempt to
 generate a default constructor for you - it will generate a constructor that
-initializes the members with their variable initializers, using their default
-constructors if there were no initializers.
+initializes the members with their variable initializers, using default
+initializers if there were no explicit initializers.  Default initializers are
+zero for primitive numeric types and null for aggregate types and primitive
+pointer types.
 
 In future versions of Crack, if a class defines no constructors, it will
 attempt to inherit _all_ of the constructors of the base classes (see
@@ -1850,8 +1823,8 @@ same bug in #NamedCoord#.  Inheritance provides a better way to reuse code:
 
         oper init(int x, int y, String name0) : Coord(x, y), name = name0 {}
 
-        void writeTo(Writer out) {
-            Formatter(out) `NamedCoord($x, $y)`;
+        void formatTo(Formatter out) {
+            out `NamedCoord($x, $y)`;
         }
     }
 }}
@@ -1915,37 +1888,40 @@ This will print the following:
     initializing a2
 }}
 
-Going back to our #NamedCoord# example, we also defined another #writeTo()#
+Going back to our #NamedCoord# example, we also defined another #formatTo()#
 method:
 
 {{
-    void writeTo(Writer out) {
-        Formatter(out) `NamedCoord($x, $y)`;
+    void formatTo(Formatter out) {
+        out `NamedCoord($x, $y)`;
     }
 }}
 
-We did this because #Coord#'s #writeTo()# method writes out "Coord($x, $y)".
+We did this because #Coord#'s #formatTo()# method writes out "Coord($x, $y)".
 We want to write "NamedCoord($x, $y)".
 
 Sometimes you want to call the base class version of a function that is
 overridden in the derived class.  Most often this is used to extend the base
 class functionality.  Crack lets you do this by qualifying the method with the
-class name.  For example, we could have instead overridden #writeTo()#
+class name.  For example, we could have instead overridden #formatTo()#
 like this:
 
 {{
-    void writeTo(Writer out) {
-        out.write('Named');
-        Coord.writeTo(out);
+    void formatTo(Writer out) {
+        out.format('Named');
+        Coord.formatTo(out);
     }
 }}
+
+Note that this makes use of scoping behavior, so #Coord::formatTo(out)# would
+have been equivalent (see \X(Dereferencing Versus Scoping)).
 
 Multiple Inheritance
 ''''''''''''''''''''
 
 Crack supports /multiple inheritance/: you can have any number of base
 classes.  With the exception of the special #VTableBase# class, it is an error
-to inherit from the same base class multiple times, even indirectly.
+to inherit from the same base class more than once, even indirectly.
 Eventually, Crack will support this using virtual base classes like in C++.
 
 Member Access Protection
@@ -1959,8 +1935,9 @@ cannot be easily circumvented.
 
 Crack gives special access protection to names that begin with an underscore:
 
--   A name beginning with a single underscore is /module protected/.  When
-    defined in a class, such a symbol is accessible within the module where it
+-   A name beginning with a single underscore is /module protected/.  At
+    module scope, such a symbol is inaccessible from other modules. When
+    used in a class, such a symbol is accessible within the module where it
     is defined and in methods of all derived classes, regardless of whether
     they are declared in the same module.  (See \X(Access Protection) for
     more information on module protected symbols in the module's scope)
@@ -2064,10 +2041,10 @@ to make sure that its file descriptor is closed upon destruction.
 
 It should be noted that an object must do nothing to change its own reference
 count during processing of #oper del#, such as assigning it to an external
-variable, or inserting it into an external collection.  If you do this, the
-object will still be deleted and the external reference will be invalid.
-Future versions of Crack will have some degree of protection against this, but
-for now - don't do it.
+variable, or inserting it into an external collection.  For classes derived
+from #Object#, doing this will result in a runtime error. Future versions of
+Crack may have some degree of protection against this, but for now - don't do
+it.
 
 Abstract Methods
 ''''''''''''''''
@@ -2168,6 +2145,26 @@ For examples, let's return to our #Coord# class:
     }
 }}
 
+Final Classes
+'''''''''''''
+
+The @final annotation can also be applied to a class.  A final class may not
+be used as a base class for other classes:
+
+{{
+    @final class A {}
+    class B : A {}  # ERROR: deriving from a final class.
+}}
+
+Final classes have no performance benefits over non-final classes.  They are
+mainly useful for ensuring that new members can be added to the class without
+breaking compatibility.
+
+For non-final public classes, you can not introduce a public or protected
+member without breaking compatibility.  A user may have derived from the class
+and introduced another member with a conflicting name.  Using #@final# guards
+against this.
+
 The Special Base Classes
 ''''''''''''''''''''''''
 
@@ -2252,9 +2249,7 @@ comparison function would typically be implemented as:
 }}
 
 The #cast()# function is defined for all classes that derive from
-#VTableBase# (including all classes derived from #Object#).  If you attempt
-to cast an object to a type that it is not an instance of, the program will
-abort with a (fairly useless) class cast error.
+#VTableBase# (including all classes derived from #Object#).
 
 For classes not derived from #VTableBase#, you can use #unsafeCast()#:
 
@@ -2269,11 +2264,12 @@ For classes not derived from #VTableBase#, you can use #unsafeCast()#:
 Unlike #cast()#, #unsafeCast()# does no checking whatsoever - the programmer
 is responsible for insuring that the object is of the type that he is casting
 it to.  If it's not, #unsafeCast()# will happily deliver a reference to an
-invalid object.
+invalid object.  It also doesn't work well with multiple inheritance.  For
+anything other than the linage of first base classes, #unsafeCast()# won't do
+the pointer offsetting necessary for conversion.
 
-For classes derived from #VTableBase#, you can verify prior to doing an
-#unsafeCast()# in the same method that #cast()# does, by looking at the
-associated class object:
+For classes derived from #VTableBase#, you can verify that an object is
+an instance of a class by looking at the associated "class" attribute:
 
 {{
     Foo obj;
@@ -2363,10 +2359,10 @@ injects three special methods: #oper bind()#, #oper release()# and
 #Drawable# in the example above).
 
 #oper from# is a special operator created to facilitate interfaces (as well as
-general translation across inheritance hierarchies).  For interfaces, these methods
-are defined with a return type of #Object# and they exist to provide an instance of
-#Object# for the #oper bind()# and #oper release()# methods to delegate to.
-These are defined as #@abstract# in the interface class.
+general translation across inheritance hierarchies).  For interfaces, these
+methods are defined with a return type of #Object# and they exist to provide
+an instance of #Object# for the #oper bind()# and #oper release()# methods to
+delegate to. These are defined as #@abstract# in the interface class.
 
 #@implements# does something similar with the implementation class:
 for every interface class name that follows it (you can have a comma
@@ -2412,11 +2408,11 @@ Special Methods
 Certain methods have special meaning within the language or the standard
 libraries.
 
-*final* is used to designate methods that are declared with the #@final#
-annotation in #crack.lang.Object#.  As explained in \X(Static and Final
-Methods), this indicates that the method is non-virtual - even if
-the class derives from VTableBase, the method will not be turned into a
-virtual method.  As such, the method can not be overloaded.  It may also be
+In the table below, *final* is used to designate methods that are declared
+with the #@final# annotation in #crack.lang.Object#.  As explained in
+\X(Static and Final Methods), this indicates that the method is non-virtual -
+even if the class derives from VTableBase, the method will not be turned into
+a virtual method.  As such, the method can not be overloaded.  It may also be
 invoked using a #null# value as the receiver.
 
 #oper init#::
@@ -2429,6 +2425,11 @@ invoked using a #null# value as the receiver.
     This is a special function used to implement interfaces.  The interface
     annotations defines it as an abstract method and the @implements macro
     generates an implementation for it.
+
+    The only thing special about "oper from" is that its name is unambiguously
+    derived from the specified type.  This allows it to be used by multiple
+    interfaces without resulting in a name collision if those interfaces are
+    mixed together by a derived class.
 #oper del#::
     The destructor.
 #oper bind#::
@@ -2452,8 +2453,8 @@ invoked using a #null# value as the receiver.
 
     If you implement this, all of the normal comparison operators ("#==#",
     "#!=#", "#<#", "#>#", "#<=#" and "#>=#") will work for you.
-#void writeTo(Writer writer)#::
-    Write the receiver to #writer#.  This is used to allow the object to write
+#void formatTo(Formatter out)#::
+    Format the receiver to #out#.  This is used to allow the object to write
     itself in its most natural representation - whatever that means for the
     object type.
 #void format(#/type/ #object)#::
@@ -2561,8 +2562,8 @@ compiler:
     argument matching the type of the right operand.
 -   Checks for a method named for the reverse operator on the right operand
     with an argument matching the type of the left operand.
--   Checks for a function named for the operator with two arguments, the first
-    matching the left operand and the second matching the right operand.
+-   Checks for a function named for the operator with two arguments where the
+    first matching the left operand and the second matching the right operand.
 
 Each of these steps uses the existing method resolution rules as defined
 above in \X(Functions) and below in \X(Method Resolution in Classes).
@@ -2778,7 +2779,7 @@ When such a specification is encountered, the Crack compiler instantiates the
 generic for its parameter types by actually compiling the code of the generic
 with its parameters aliased to the types provided.  It only does this the
 first time it encounters the generic - after that it just imports the original
-generic.
+instantiation.
 
 Generics in Crack are essentially macros.  When they are defined, the contents
 of the generic class is simply recorded.  When instantiated, that recording is
@@ -2805,6 +2806,111 @@ a class #PrimitivePair# from #Pair# as follows:
         }
     }
 }}
+
+Appendages
+----------
+
+Appendages allow you to add functionality to a class hierarchy without
+using inheritance.  As an example of why you would want to do this, let's go
+back to a stripped-down form of our #Coord# example:
+
+{{
+    class Coord {
+        int x, y;
+        oper init(int x, int y) : x = x, y = y {}
+    }
+
+    class NamedCoord : Coord {
+        String name;
+        oper init(int x, int y, String name) : Coord(x, y), name = name {}
+    }
+}}
+
+Let's say that you want to add a few methods to #Coord# but #Coord# and
+#NamedCoord# are part of an external module.  Without appendages, you wouldn't
+be able to add them as methods.  You could extend #Coord#, but then you would
+lose the ability to use those methods on #NamedCoord#.
+
+To deal with this, you'd have to instead create functions:
+
+{{
+    float distanceFromOrigin(Coord c) {
+        return sqrt(float(c.x) + float(c.y));
+    }
+
+    int area(Coord c) {
+        return c.x * c.y;
+    }
+}}
+
+This works, but it's suboptimal:
+
+-   You lose the /receiver/ *.* /method/ *()* syntax and the implicit use of
+    instance variables (you can't just use #x# and #y#, you have to use #c.x#
+    and #c.y#).
+-   You have to import the methods individually into any other module that
+    uses them.
+
+Appendages let you bundle functionality that is associated with a class
+external to the class and its hierarchy.  An appendage based solution would
+look like this:
+
+{{
+    class SpatialCoord = Coord {
+        float distanceFromOrigin() {
+            return sqrt(float(x) + float(y));
+        }
+
+        int area() {
+            return x * y;
+        }
+    }
+}}
+
+Note the use of the equal sign ("=") in the class definition where a colon
+would normally be.  This identifies #SpatialCoord# as an appendage.  In this
+relationship #Coord# is the /anchor class/.  It is the base class of the
+hierarchy that the appendage's methods manipulate.
+
+To use #SpatialCoord#, you just convert any kind of #Coord# object:
+
+{{
+    a := SpatialCoord(Coord(10, 20));
+    b := SpatialCoord(NamedCoord(10, 20, 'my location'));
+
+    cerr `area is $(b.area())\n`;
+}}
+
+For an appendage, calling the class (#SpatialCoord(...)#) doesn't create a new
+instance of SpatialCoord.  Rather, it converts the argument (which must be an
+instance of #Coord# or a derived class) to a SpatialCoord.  Doing this is
+equivalent to using #unsafeCast#:
+
+{{
+    a := SpatialCoord.unsafeCast(Coord(10, 20));
+}}
+
+The major difference being that it isn't unsafe: #unsafeCast()# accepts any
+kind of argument, appendage initialization only accepts an instance of
+something derived from the anchor class, and does the correct pointer
+offseting to ensure a reference to the body of the anchor class.
+
+An appendage may also be derived from one or more other appendages, as long as
+they all have the same anchor class.  For example, we might use this feature
+to bundle together a set of appendages:
+
+{{
+    class DumpingCoord = Coord {
+        void dump() {
+            cerr `$(coord)\n`;
+        }
+    }
+
+    class MyCoord = SpatialCoord, DumpingCoord {}
+}}
+
+Appendages are limited in that they may add no additional state to an object.
+You can not define instance variables or virtual functions in an appendage.
 
 Modules
 -------
@@ -2844,22 +2950,20 @@ Module names correspond directly to directory and file names in the Crack
 
 -   checks to see if the module has already been loaded, if so it just uses the
     existing module information.
--   loads the parent module (if the parent module is not found, this is not an
-    error)
 -   splits the name up by periods, concatenates all but the last part of the
     name into a relative directory path.  The last part of the name becomes
     the filename.  Example: "foo.bar.baz" -> path = "`foo/bar`", filename =
     "baz"
 -   for every directory in the crack library path, search for a subdirectory
     matching the path and the filename with a ".crk" extension
--   when we find it, compile it and then execute the module top-level code
-    (everything that's not in a function).
+-   when we find it, compile it. Prior to executing any code in the importing
+    module, the module top-level code will be executed (everything that's not
+    in a function or class).
 
 So for example, to load the #crack.lang# module for the first time we:
 
--   First try to load the #crack# module.
 -   Search the library path for "`crack/lang.crk`"
--   Compile and execute the file.
+-   Compile the file.
 
 The crack library path is specified with the "-l" option values on the command
 line.  By default, the executor inserts the `$PREFIX/lib/crack$VERSION`  path
@@ -2903,8 +3007,8 @@ An error will be generated if you import #func# from this module because the
 symbol #func# includes overloads from #mod#.  This is even true in the
 pathological case where all overloads in the second order module are
 overriden in the imported module.  If not, the owner of that module could
-introduce another overload (which should be backwards compatible) and break
-compatibility.
+introduce another overload (an action which should be backwards compatible)
+and break compatibility.
 
 There are times when you want to allow other modules to import a second-order
 symbol.  For example, sometimes you want to set up a "convenience module" that
@@ -3086,16 +3190,17 @@ and extend its functionality:
     ## Formatter that encloses strings in quotes.
     class StrQuoter : StandardFormatter {
 
-        oper init(Writer w) : Formatter(w) {}
-
-        ## implemented so we don't quote StaticString
-        void format(StaticString s) { rep.write(s); }
+        oper init(Writer w) : StandardFormatter(w) {}
 
         ## Write strings wrapped in quotes.
         void format(String s) {
-            rep.write('"');
-            rep.write(s);
-            rep.write('"');
+            if (s := String.cast(obj, null)) {
+                rep.write('"');
+                rep.write(s);
+                rep.write('"');
+            } else {
+                StandardFormatter.format(obj);
+            }
         }
     }
 
@@ -3106,16 +3211,18 @@ and extend its functionality:
     StrQuoter(cout.rep) `value is $s\n`;
 }}
 
-Note that we had to reimplement #format(StaticString)# in the example above.
-The static content in an interpolation expression is of type #StaticString#
-like all string constants in crack.  If we had not defined
-#format(StaticString)#, the normal format method would have been used for the
-"value is " string (this is because of the current resolution order of
-methods: it will be changed in a future version of the language so that we
-don't have this problem).
+Note that we have to check for a string dynamically using casting.
+StandardFormatter doesn't have a #format(String)# method.  If we had defined
+one at this level,  it would have matched all #String# types, including
+#StaticString#, which is the type of the static portion of the interpolation
+string.  Adding a #format(StaticString)# method wouldn't have helped us,
+because this is a virtual function defined in #StandardFormatter#, and by
+method resolution order, the local #format(String)# method would have been
+checked first.
 
-You can create your own #StandardFormatter# objects given a #Writer# object.  There
-are already a few specializations of this class in the #crack.io# module.
+You can create your own #StandardFormatter# objects given a #Writer# object.
+There are already a few specializations of this class in the #crack.io#
+module.
 
 #StringFormatter# allows you to construct a string using a formatter:
 
@@ -3124,11 +3231,11 @@ are already a few specializations of this class in the #crack.io# module.
 
     f := StringFormatter();
     f `some text`;
-    s := f.createString();  # s == "some text"
+    s := f.string();  # s == "some text"
 }}
 
 It's often useful to be able to format a string in an expression.  For
-example, throwing an exception like this would be unwieldy:
+example, throwing an exception like this is unwieldy:
 
 {{
     if (foo > MAX_FOO) {
@@ -3151,10 +3258,10 @@ above with:
 
 \4{Using the Formatter FieldSet Interface}
 
-The #Formatter# interface derives from #FieldSet#, allowing users to inject
-and obtain state information from anything implementing it.  This can be used
-to implement special formatting functionality and to vary formatting behavior
-of specific classes.
+The #Formatter# interface derives from #FieldSet#, which allows users to inject
+and obtain state information from anything implementing it (see \X(Field
+Sets)).  This can be used to implement special formatting functionality and
+to vary the formatting behavior of specific classes.
 
 One utility that exploits this feature is #crack.io.fmtutil.Indenter#.  As its
 name suggests, the #Indenter# class provides indented output that can be used
@@ -3201,8 +3308,8 @@ output form:
     class A;
 
     # AFmt is a class that can be stored in a FieldSet.  It's purpose is to
-    # dispatch formatting to different methods depending on which specialization
-    # is active in the Formatter.
+    # dispatch formatting to different methods depending on which
+    # specialization is active in the Formatter.
     @abstract class AFmt {
         @abstract void format(Formatter out, A inst);
         @fieldset_accessors(AFmt);
@@ -3214,8 +3321,8 @@ output form:
 
         void formatTo(Formatter out) {
 
-            # Get the AFmt object for the Formatter, and invoke it's format method
-            # to do the formatting.
+            # Get the AFmt object for the Formatter, and invoke it's format
+            # method to do the formatting.
             AFmt fmt;
             if (!(fmt = AFmt.get(out))) {
                 fmt = _makeAPrettyFmt();
@@ -3305,7 +3412,7 @@ variable is actually defined.
 When a sequence constant is defined, the compiler does the following:
 
 -   Searches for a constructor for the type that can accept an unsigned
-    integer value (as of 0.13 - we will eventually be switching to an integer
+    integer value (as of 1.1 - we will eventually be switching to an integer
     type large enough to accommodate a memory size).  This #uint# value is
     assumed to be the number of elements in the sequence.
 -   That failing, it searches for a default constructor for the type.
@@ -3347,9 +3454,9 @@ defined.  Note that if you were to pass such an object out of that scope, the
 results would be undefined.
 
 For efficiency, Crack does not bind and release every time you might expect:
-for one thing, objects passed as function arguments are not bound and released
-for the function call - we know that the external caller has a reference to
-these objects.  The called function can simply borrow them.
+for one thing, objects passed as function arguments are often not bound and
+released for the function call - we know that the external caller has a
+reference to these objects.  The called function can simply borrow them.
 
 Crack also has the notion of "productive" and "non-productive" expressions.  A
 productive expression is one that produces a reference.  A non-productive
@@ -3358,13 +3465,24 @@ always non-productive.  Functions returning values are (almost) always
 productive.
 
 The compiler will call #oper bind# when assigning a non-productive value to
-a reference, or when returning a non-productive value.  It will call "oper
+a variable, or when returning a non-productive value.  It will call "oper
 release" when a variable goes out of scope or when productive temporary value
 is cleaned up.  In general, temporaries get cleaned up at the end of the
-outermost expression.  For the "#&&#" and "#||#" operators, temporaries get
-cleaned up for the secondary expression prior to cleanup of outer expressions.
+outermost expression of a statement.  For the "#&&#" and "#||#" operators,
+temporaries get cleaned up for the secondary expression prior to cleanup of
+outer expressions.
 
-There's one thing you need to be aware of about reference counting: the
+Related to productivity is the concept of volatility: a variable is "volatile"
+if it can be modified in a function call.  Globals and instance variables are
+volatile, function local variables are not (because a called function has no
+way to access them).  An expression, in turn, is volatile if it is a simple
+reference to a volatile variable.  When a volatile expression is passed as a
+function argument or used as the receiver in a method call, "oper bind" is
+called on the value.  Otherwise, the function or method could change the
+value of the volatile variable and delete the object while it's still being
+referenced by a parameter.
+
+There's one other thing you need to be aware of about reference counting: the
 mechanism is susceptible to the problem of reference cycles - this is when an
 object directly or indirectly references itself.  When this happens, the
 entire cycle of objects can become unfreeable, potentially resulting in a
@@ -3460,14 +3578,12 @@ You can get this effect by defining a function and using a parameter type of
 This won't work for overloaded functions: the compiler won't be able to tell
 which overload to use.
 
-
 Crack's current approach to bindings is not without its problems:
 
 -   This whole business is extremely platform dependent.  There's no guarantee
     that the shared libraries that you're importing will have the same names
-    on other platforms, or that the functions you define will not be
-    implemented as macros.  See \X(Extensions) for information on a more
-    portable approach.
+    on other platforms, or that the functions you try to import will not be
+    implemented as macros.
 -   You can't currently import global variables.
 -   #crack.exp.bindings# is experimental and may be discontinued.  Its use is
     considered deprecated.
@@ -3505,7 +3621,7 @@ it and invoking the annotation:
     @import myann writeMarker;
 
     # equivalent to 'cout `marker\n`;'
-    @myann
+    @writeMarker
 }}
 
 In #myann#, we define the #writeMarker()# function, which accepts a
@@ -3529,7 +3645,9 @@ way that strings are represented in C).  All static strings in Crack happen
 to be null terminated, so we can easily do this with a static string.  If we
 wanted to do the same with a constructed string we'd have to do something to
 guarantee that the string were null terminated (converting it to a #CString#
-would work, but there are often cheaper ways to accomplish this).
+would work, but there are often cheaper ways to accomplish this.  Also note
+that the entire practice of injecting strings should be avoided in favor of
+the use of \X(Token Sequence Literals).)
 
 Using an annotation requires some special syntax.  First, we import it using
 the #@import# statement.  #@import# is just like #import# except that it
@@ -3539,7 +3657,7 @@ the annotation namespace can be invoked with the syntax "@" /symbol/.
 argument.
 
 An annotation is invoked at compile time immediately after tokenization of
-the symbol.
+the symbol associated with it.
 
 Here's a more complicated example involving reading tokens.  In this example,
 we process a simple variable definition and generate a getter and a setter for
@@ -3621,7 +3739,7 @@ Annotations anywhere else would not be in the base state.
 A return value of #`STATE_OPT_ELSE`# indicates that we've completed parsing
 an if statement and the next thing might be an else clause.
 
-These functions can be used in conjunction with parser callbacks to insure
+These functions can be used in conjunction with parser callbacks to ensure
 that an annotation used to modify a definition or statement precedes the right
 kind of syntactic construct.
 
@@ -3733,7 +3851,8 @@ we could implement the #@static# built-in annotation as follows:
     }
 }}
 
-The only other function flag supported at this time is #`FUNCFLAG_FINAL`#.
+The only other function flags supported at this time are #`FUNCFLAG_FINAL`#
+and #`FUNCFLAG_ABSTRACT`#.
 
 Error Contexts
 ''''''''''''''
@@ -3995,7 +4114,7 @@ member variables.  For example:
     Coord c = {10, 20};
 }}
 
-Structs are very limited as of Crack 0.13.  In particular:
+Structs are very limited as of Crack 1.1.  In particular:
 
 -   They don't support inheritence.
 -   You can't add any other methods.
@@ -4040,6 +4159,109 @@ successfully written our last example like this:
 
 In this case, #define# is passed through (because it's an import) and #func#
 will be defined within the generic at the time of its instantiation.
+
+Token Sequence Literals
+'''''''''''''''''''''''
+
+When using annotations for code generation, it's often necessary to emit
+boilerplate code and inject it into the tokenizer.  We've demonstracted how
+this can be done using the #inject()# and #putBack()# methods of
+#CrackContext#, a better approach is through the token sequence literal
+annotations - #@tokens# and #@xtokens#.
+
+#@tokens# is an annotation defined in #crack.ann# that consumes a sequence of
+tokens following it and expands to a #NodeList# object, which can then be
+expanded into a #CrackContext#, creating a sort of macro system for
+annotations.  For example, if we wanted to define a macro that wrote the
+current line number to standard error, we could do something like this:
+
+{{
+
+    import crack.ann deserializeNodeList;;
+    @import crack.ann tokens;
+
+    void linenum(CrackContext ctx) {
+        @tokens {
+            cerr `$(@FILE):$(@LINE)\n`;
+        }.expand(ctx, null);
+    }
+}}
+
+The #@tokens# annotation consumes the curly-brace delimited block following it
+and emits the code to construct a #NodeList# from it.  We then call the
+#expand()# method to expand the node list into the usage context (the second
+argument to #expand()# is an argument vector, which can be null here because
+the #NodeList# contains no parameters).
+
+It is worth noting exactly what is going on here, as this involves annotations
+at multiple levels:
+
+-   #@tokens# consumes the delimited list of tokens following it and
+    constructs its own internal NodeList.
+-   It then calls #serializeNodeList()# to convert the node list into a string
+    constant token.
+-   Finally, it emits a call to deserializeNodeList() with the string constant
+    as its argument.
+
+In this way, a serialized #NodeList# that exists at compile-time is passed
+through to the code that subsequently reuses it at runtime.
+
+The list of tokens following the #@tokens# annotation can be delimited by
+curly braces, square brackets, or parentheses.  The only restriction is that
+if the symbol is nested within the sequence, it must include a matching
+terminator within the sequence.  So something like this is perfectly legal:
+
+{{
+    # The curly is unmatched, but the sequence is delimited by the square
+    # brackets.
+    @tokens [ while (true) { ].expand(ctx, null);
+}}
+
+The #@tokens# annotation is great for constant sequences, but typically in
+code generation scenarios we want to parameterize our code blocks.  The
+#@xmac# token lets us do this:
+
+{{
+    import crack.ann deserializeXMac;
+    @import crack.ann xmac;
+
+    void exception(CrackContext ctx) {
+        tok := ctx.getToken();
+
+        @xmac {
+            class $className {
+                int i;
+            }
+        }.set('className', tok).expand(ctx);
+    }
+}}
+
+In this case, the #className# variable is a parameter.  We substitute it for a
+token (which will be converted to a node list) and then expand it into the
+context.  The #@xmac# annotation expands to an expression returning a
+#crack.ann.XMacro#.  #XMacro#'s #extend()# method doesn't accept an argument
+list, but it maintains one internally.  All variables must be defined at the
+time of expansion or an #InvalidStateError# exception will be thrown.
+
+If #@xmac# is followed immediately by an asterisk, it will expand its
+variables from your local context.  So we could have written the code above
+like this:
+
+{{
+    void exception(CrackContext ctx) {
+        className := ctx.getToken();
+
+        @xmac {
+            class $className {
+                int i;
+            }
+        }.expand(ctx);
+    }
+}}
+
+A more complete example of this concept can be found in
+#`example/struct_ann.crk`#, which provides a toy implementation of the
+#@struct# annotation using #@xmac#.
 
 Extensions
 ----------
@@ -4111,7 +4333,7 @@ extension, you'll want to:
 -   build it into a shared library, linked with whatever support code it needs
     (usually the code it's wrapping)
 -   Add the include directory for crack headers to the include path (usually
-    something like #`/usr/local/include/crack-0.13.1`#)
+    something like #`/usr/local/include/crack-1.1`#)
 
 The Extension Generator
 '''''''''''''''''''''''
@@ -4159,7 +4381,7 @@ file defining the extension.  Its usage is best illustrated by example:
             SIMPLE_NAME = 'ONE_HUNDRED >> 1';
 
         # @ifdef lets you define bindings based on preprocessor values (there
-        is also an @ifndef)
+        # is also an @ifndef)
         @ifdef FOO_FEATURE_X {
             int useFeatureX();
         }
@@ -4265,9 +4487,16 @@ threading.
 Debugging
 ---------
 
-Crack has only minimal support for debugging in 0.13.1.  If your program
+
+Crack has only minimal support for debugging.  If your program
 seg-faults or aborts, you can at least get a sparse stack-trace by running it
 in JIT mode under a fairly recent version of GDB (7.0 or later).
+
+The recommended approach to debugging Crack programs is to instrument the code
+with console writes, assertions, and other forms of intrusive inspection.
+This can be done for the standard library or any intermediate package by
+cloning all or a portion of the library tree and adding instrumentation to the
+cloned code.
 
 Encoding
 --------
@@ -4338,10 +4567,10 @@ Appendix 1 - Libraries
 
 Crack comes with its own (sparse but growing) set of standard libraries.
 These are loosely organized as the modules under #crack# and #crack.exp#.
-#crack.exp# includes modules that are designated as "experimental."  These
-have interfaces that are likely to change as Crack matures.  In some cases,
-these are older, deprecated libraries that may be removed entirely.  The other
-libraries are also changeable, but should be frozen by version 1.0.
+#crack.exp# includes modules that are designated as "experimental."  Modules
+in the experimental tree do not have the same guarantees as the other modules.
+Their interfaces may change going forwards.  In some cases, these are older,
+deprecated libraries that may be removed entirely.
 
 Special Language Types
 ----------------------
@@ -4370,8 +4599,8 @@ guaranteed to be null terminated, making them suitable for use with low-level
 C functions defined in extensions and primitive bindings.  This is not true of
 strings or buffers in general, see \X(CString) for a more general solution.
 
-Like any object, a buffer can be converted to a #bool#.  A buffer converts to
-*true* if it has a non-zero size.
+Like any object, a buffer can be converted to a #bool#.  A buffer is *true*
+if it has a non-zero size.
 
 Any two buffers can be compared - a byte-for-byte comparison is performed.
 If one buffer is identical to the beginning of the other, but is shorter, the
@@ -4620,6 +4849,18 @@ Finally, like all containers, you can iterate over the elements of an array:
         cout `elem: $(i.elem())\n`;
 }}
 
+Array iterators expose an "index" field allowing you to obtain the index of
+the current element.  This is useful in cases where you want to mutate the
+array during iteration:
+
+{{
+    # Zero out all elements divisible by three.
+    for (i :on arr) {
+        if (!(i.elem() % 3))
+            arr[i.index] = 0;
+    }
+}}
+
 It should be noted that there is a specialization of #Array[String]# called
 #StringArray# defined in the #crack.strutil# module.  In addition to the
 standard #Array# functionality, it's contains methods for obtaining a
@@ -4736,9 +4977,9 @@ TreeMap
 
 A "map" or an "associative array" is a container that stores a set of values
 each indexed by a key.  Both keys and values can be arbitrary types.  The
-Crack library provides both hashtable and red-black tree map implementations.
-Red-black trees provide a natural sort order, and provide O(log n) insertion
-and lookup with constant time rebalancing.
+Crack library provides both hashtable and red-black tree map implementations,
+#TreeMap# is a red-black tree. Red-black trees provide a natural sort order,
+and provide O(log n) insertion and lookup with constant time rebalancing.
 
 To create red-black tree map:
 
@@ -4832,7 +5073,7 @@ external dependencies making them unsuitable for inclusion in the #String# or
     # concatenate all of the elements together, separated by a space
     text := arr.join(' ');  # text = 'first second third';
 
-    # split them backk apart
+    # split them backk apart (see also crack.ascii.wsplit())
     arr2 := split(text, ' ');  # arr2 = ['first', 'second', 'third']
 }}
 
@@ -4847,13 +5088,16 @@ encoding more ubiquitous than ascii.  Therefore, we include this kind of
 functionality in the #crack.ascii# module:
 
 {{
-    import crack.ascii strip, toUpper, radix;
+    import crack.ascii radix, strip, toUpper, wsplit;
 
     # strip trailing and leading whitespace
     a := strip('  this is a string   ');  # a = 'this is a string'
 
     # uppercase it
     b := toUpper(a);  # b = 'THIS IS A STRING'
+
+    # split it into words
+    words := wsplit(b);  # b = ['THIS', 'IS', 'A', 'STRING']
 
     # obtain the ascii representation of a number in a given base (base 16, in
     # this case)
@@ -4864,7 +5108,7 @@ Program Control (sys)
 ---------------------
 
 #crack.sys# contains symbols for interacting with the executable context.  It
-defines the #exit()# function and #argv# variable.
+mainly defines the #exit()# function and #argv# variable.
 
 The #exit()# function can be used to terminate the program at any point with
 the given exit code:
@@ -4999,9 +5243,8 @@ and returns a string.
     bytesRead = cin.read(buf);  # read up to 1024 bytes into 'buf'
 }}
 
-#read(WriteBuffer)# doesn't modify the size of its input buffer.  It does
-return the number of bytes read.  It is the responsibility of the caller to
-change the size of the buffer if desired.
+#read(WriteBuffer)# modifies the size of its input buffer and also returns
+the number of bytes read.
 
 We could have done something similar with the heavy-weight form:
 
@@ -5023,9 +5266,9 @@ We could implement the most basic functionality of the #cat# command like this:
 }}
 
 #cin#, #cout# and #cerr# are implemented using #FDReader# and #FDWriter#.
-These classes implement #Reader# and #Writer# to read from and write to a file
-descriptor.  You can obtain a file descriptor from any of the low-level IO
-functions on your system ("#open()#", for example).
+These classes respectively implement #Reader# and #Writer# to read from and
+write to a file descriptor.  You can obtain a file descriptor from any of the
+low-level IO functions on your system ("#open()#", for example).
 
 The #crack.io# module also provides the #Formatter# class.  See \X(The
 Formatter Protocol) for details on how to use this.
@@ -5127,7 +5370,7 @@ Conditions
 
 Conditions allow you to send events between threads.  They must be used in
 conjuntion with a #Mutex#.  The mutex protects a shared resource, the
-notifies observers of changes in that resource:
+condition notifies observers of changes in that resource:
 
 {{
 
@@ -5153,6 +5396,7 @@ notifies observers of changes in that resource:
                 cout `value changed, new value = $value\n`;
             }
         }
+    }
 }}
 
 Queues
@@ -5188,20 +5432,16 @@ Here's how we could use #Queue# to implement a worker pool:
 Line Readers
 ------------
 
-The #crack.readers# module provides a #LineReader# class that lets you read
+The #crack.io.readers# module provides a #LineReader# class that lets you read
 from a writer a line at a time:
 
 {{
-    import crack.readers LineReader;
+    import crack.io.readers LineReader;
 
     reader := LineReader(cin);
-    String line = null;
-    while (line = reader.next()) {
+    for (line :in reader)
         cout `got line: $line\n`;
-    }
 }}
-
-The #next()# method returns #null# when there is no more data to read.
 
 Dealing with the Filesystem
 ---------------------------
@@ -5259,145 +5499,15 @@ In addition to file operations, #Path# objects can be used to create
 directories, remove files and directories and (as seen above with #exists()#)
 obtain status information.
 
-Files and Directories (the Old Way)
------------------------------------
-
-The #crack.exp.file# module is the deprecated module for file access.  It
-contains two classes that provide a basic interface for manipulating files as
-objects, including obtaining file information and simple reading and writing.
-
-FileInfo
-''''''''
-
-A #FileInfo# object can be constructed from a #String#, which should contain a
-full path name (where the file does not have to exist). The class will provide
-methods for obtaining information on a file (if it exists) and manipulating file
-and path information. If the file exists, information will include size, owner
-and group information, file permissions, and the like. Regardless of file
-existence, file information such as such as glob matching, basename, and dirname
-will be available.
-
-Currently, however, the only implemented methods are #matches#, for matching a
-file name against a pattern such as '\*.txt', #basename# to return the file name
-portion of a full path (optionally stripping extension), and #dirname# for
-returning just the directory portion of a full path.
-
-Example:
-
-{{
-    fi := FileInfo('/etc/resolv.conf');
-    if (fi.matches('*.conf'))
-        cout `it's a conf file!\n`;
-    basename := fi.basename(true); // strip extension
-    // basename contains a string 'resolv'
-    basename := fi.basename(false); // don't strip extension
-    // basename contains a string 'resolv.conf'
-    dirname := fi.dirname();
-    // dirname contains '/etc';
-}}
-
-
-File
-''''
-
-The #File# object can be used for reading and writing to files on disk. It
-extends #FileInfo# and so all informational functionality available with that
-class is also available to #File#.
-
-A #File# should be constructed with the full path to the file and the mode to
-open in, which is one of 'r' or 'w' for read or write, respectively.
-If the file is opened in read mode, a #LineReader# is automatically created
-which allows for reading the file line by line via the #nextLine#
-method. Note that the trailing newline is include in the return value.
-
-Read Example:
-
-{{
-
-    f := File('/etc/resolv.conf', 'r');
-    String lineBuf = null;
-    lineNum := 1;
-    while (lineBuf = f.nextLine()) {
-        cout `$lineNum: $lineBuf`;
-    }
-
-}}
-
-When opened in write mode, a file may be written to by passing a #String# to
-the #write# method:
-
-{{
-
-    f := File('/tmp/myfile.txt', 'w');
-    f.write("lorem ipsum rock");
-
-}}
-
-Note, there is currently no append mode; if the file already exist, it will be
-overwritten upon opening in write mode.
-
-File objects may be closed with the #close# method. This is done automatically
-when the File object destructor runs (if it hasn't been closed manually).
-
-
-Directory
-'''''''''
-
-#crack.exp.dir# (also deprecated) contains the #Directory# class, used to
-iterate through a directory hierarchy. A #Directory# object can be
-constructed by passing the full path of a directory to the constructor. If
-the path is valid, you can iterate through the list of directories and files
-contained in the directory.
-
-You do this by calling the #dirIter# and #fileInfoIter# methods. They will both
-return an #Iterator# object. A #dirIter# Iterator will iterate through
-#Directory# objects, while a #fileInfoIter# will iterate through #FileInfo#
-objects. Like all uses of #Iterator# currently, you must cast these objects
-yourself in the calling code.
-
-For example, to recursively scan a directory for a file pattern:
-
-{{
-
-void scanForScripts(Directory dir) {
-
-    Iterator i;
-    pattern := "*.crk";
-
-    FileInfo curFile = null;
-    i = dir.fileInfoIter();
-    while (i.nx()) {
-        curFile = FileInfo.cast(i.elem());
-        if (curFile.matches(pattern)) {
-            cout `found crack script file: $curFile\n`;
-        }
-    }
-
-    // recurse to directories
-    Directory nextDir = null;
-    i = dir.dirIter();
-    while (i.nx()) {
-        nextDir = Directory.cast(i.elem());
-        scanForScripts(nextDir);
-    }
-
-}
-
-}}
-
-When a #Directory# object is created, it canonicalizes the name by stripping
-a trailing path separator (i.e. "\/") if it exists. If you need a version with
-the trailing separator (for example, to build a full path name with string
-concatenation), you can call #nameWithTrailing#.
-
 Process
 -------
+
 Crack provides a method for executing and controlling sub-processes and
 retrieving their output via the #Process# class, which is located in
 #crack.process#
 
-You run a new process by constructing a Process class with the full command line
-to execute. If successful, you can retrieve the process ID with getPid().
+You run a new process by constructing a Process class with the full command
+line to execute. If successful, you can retrieve the process ID with getPid().
 
 Once running, you can poll() the process to find its status, or wait() for the
 process to finish execution. Once finished, you can call getReturnCode() for
@@ -5483,8 +5593,10 @@ Math
 
 The #crack.math# library provides access to functions and constants from the C
 standard math library. A description can be found on
-\ref(`http://en.wikipedia.org/wiki/Math.h` WikiPedia) or a more complete reference at
-\ref(`http://www.dinkumware.com/manuals/?manual=compleat&page=math.html` Dinkumware).
+\ref(`http://en.wikipedia.org/wiki/Math.h` WikiPedia) or a more complete
+reference at
+\ref(`http://www.dinkumware.com/manuals/?manual=compleat&page=math.html`
+Dinkumware).
 
 Each function has three versions: one overloaded for different floating
 point types, and one each for #float32# and #float64# values respectively
@@ -5495,8 +5607,8 @@ unambiguous function type. I.e. there are functions #sin#, #sin32# and
 The library provides:
 
 *trigonometric functions*::
-   #sin#, #cos#, #tan#, #asin#, #acos#, #atan#, #sinh#, #cosh#, #tanh#, #asinh#,
-   #acosh#, #atanh#.
+   #sin#, #cos#, #tan#, #asin#, #acos#, #atan#, #sinh#, #cosh#, #tanh#,
+   #asinh#, #acosh#, #atanh#.
 
 *logarithmic\/exponential functions*::
    #exp#, #exp2#, #expm1#, #log#, #log10#, #log1p#, #log2#, #logb#, #modf#,
@@ -5542,48 +5654,6 @@ Below is a simple example:
     y = sin(30.0 / 180 * PI) * len;
 }}
 
-Bindings
---------
-
-The #crack.exp.bindings# library provides some facilities to ease integration
-with C libraries.  It is often possible to model C types and functions using
-Crack classes and functions providing that you can remove some of the crack
-facilities (such as garbage collection and vtables).  #bindings# is deprecated
-in favor of extensions (see \X(The Extension Generator)).
-
-Opaque
-''''''
-
-The #Opaque# class is used as the base class for types that where the crack
-code does not need to access instance variables.  In these cases, the C code
-must define functions to obtain and manipulate the object.  More information
-on #Opaque# can be found in \X(Primitive Bindings).
-
-Wrapper
-'''''''
-
-#Wrapper# is the base class for types where C code requires the address of a
-primitive value (typically for an output parameter).
-
-The #crack.exp.bindings# module currently defines two wrappers:
-
-#IntWrapper#::
-    Used when C code calls for a pointer to a single integer.
-#ByteptrWrapper#::
-    Used when C code calls for the address of a #char \*# (or #byteptr# in
-    Crack).
-
-You can also derive from Wrapper directly to implement your own pointer
-functionality.
-
-It is important to note that #Wrapper# and #Opaque# are not derived from
-#Object#, and as such they have no garbage collection.  #Opaque# objects
-should be associated with real objects that know how to clean them up using
-their low-level functions.  #Wrapper# objects must not be assigned to other
-variables, otherwise they will be garbage collected twice.  Values referenced
-by wrappers conform to whatever lifecycle arrangements are provided by the
-low-level APIs that they are obtained from.
-
 Networking
 ----------
 
@@ -5593,12 +5663,12 @@ A socket is a communication endpoint for TCP\/IP communications.  Sockets can
 either be connection channels, allowing you to send data to a matching socket
 elsewhere on the network, or listeners which wait for new connections.
 
-We create a socket as an instance of the #Socket# class:
+We create a socket with the #makeSocket()# function:
 
 {{
-    import crack.net Socket, AF_INET, SOCK_STREAM;
+    import crack.net makeSocket, AF_INET, SOCK_STREAM;
 
-    s := Socket(AF_INET, SOCK_STREAM, 0);
+    s := makeSocket(AF_INET, SOCK_STREAM, 0);
 }}
 
 This creates a "stream" (TCP) socket for a reliable connection over the INET
@@ -5608,10 +5678,10 @@ With a little more code, we can create a very basic server program:
 
 {{
 
-    import crack.net Socket, InetAddress, AF_INET, INADDR_ANY, SOCK_STREAM;
+    import crack.net makeSocket, InetAddress, AF_INET, INADDR_ANY, SOCK_STREAM;
     import crack.exp.error err;
 
-    Socket srv = {AF_INET, SOCK_STREAM, 0};
+    srv := makeSocket(AF_INET, SOCK_STREAM, 0);
 
     # allow the socket's port to be immediately reused after the program
     # terminates (useful for debugging and server restarts)
@@ -5649,11 +5719,11 @@ A client script might look like this:
 
 {{
     import crack.sys exit, strerror;
-    import crack.net InetAddress, Socket, AF_INET, SOCK_STREAM;
+    import crack.net InetAddress, makeSocket, AF_INET, SOCK_STREAM;
     import crack.lang ManagedBuffer;
     import crack.io cout, cerr;
 
-    Socket s = {AF_INET, SOCK_STREAM, 0};
+    s := makeSocket(AF_INET, SOCK_STREAM, 0);
 
     # connect to localhost (127.0.0.1)
     if (!s.connect(InetAddress(127, 0, 0, 1, 1900))) {
@@ -5679,8 +5749,10 @@ A client script might look like this:
 
 When writing a server, you usually want to manage multiple connections.  You
 can use the #Poller# class for this.  #Poller# wraps the POSIX poll interface,
-which allows you to wait for an event on a set of #Pollable# objects (#Socket#
-is derived from #Pollable#, so you can use this to manage sockets).
+which allows you to wait for an event on a set of #Pollable# objects. (#Socket#
+is derived from #Pollable#, so you can use this to manage sockets.  We'll use
+#SocketApd# below, an appendage on #Socket# which adds some extra
+functionality.)
 
 #Poller# allows you to add any number of #Pollable#s and the events you care
 about on them.  You can then wait for an event (or a timeout) using the
@@ -5688,17 +5760,18 @@ about on them.  You can then wait for an event (or a timeout) using the
 back whatever it reads from a client) written using #Poller#:
 
 {{
-    import crack.net InetAddress, Poller, PollEvent, PollEventCallback,
-        Socket, AF_INET, INADDR_ANY, POLLIN, POLLOUT, POLLERR, SOCK_STREAM;
+    import crack.net makeSocket, InetAddress, Poller, PollEvent,
+        PollEventCallback, SocketApd, AF_INET, INADDR_ANY, POLLIN, POLLOUT,
+        POLLERR, SOCK_STREAM;
     import crack.logger error;
     import crack.sys exit;
 
     @import crack.ann impl;
 
     class ClientHandler @impl PollEventCallback {
-        Socket sock;
+        SocketApd sock;
 
-        oper init(Socket sock) : sock = sock {}
+        oper init(SocketApd sock) : sock = sock {}
 
         int oper call(Poller poller, PollEvent event) {
             if (event.revents & POLLIN) {
@@ -5726,8 +5799,8 @@ back whatever it reads from a client) written using #Poller#:
     }
 
     class ServerHandler @impl PollEventCallback {
-        Socket sock;
-        oper init(Socket sock) : sock = sock {}
+        SocketApd sock;
+        oper init(SocketApd sock) : sock = sock {}
         int oper call(Poller poller, PollEvent event) {
             if (event.revents & POLLIN) {
                 accepted := sock.accept();
@@ -5739,7 +5812,7 @@ back whatever it reads from a client) written using #Poller#:
         }
     }
 
-    Socket srv = {AF_INET, SOCK_STREAM, 0};
+    srv := makeSocket(AF_INET, SOCK_STREAM, 0);
 
     # allow the socket's port to be immediately reused after the program
     # terminates (useful for debugging and server restarts)
@@ -5780,7 +5853,7 @@ The HTTP serving system is designed around handler chains.  A handler chain is
 a sequence of handlers of type #Functor1[bool, Request]# that are
 called in sequence, and provided with the current #Request# object, until one
 of them returns true (or until the end of the chain).  This approach is
-useful for defining default behavior and composing functionality.  #Request#
+useful for defining default behavior and composing functionality.  #Request#a
 is a #FieldSet#, allowing handlers to attach arbitrary data to it.  These
 concepts can be used to build sites and web applications out of
 loosely-coupled subsystems.
@@ -5798,7 +5871,8 @@ authentication. (Note that this code can be found in the source tree as
 
 
 {{
-    import crack.http.auth AuthHandler, AuthInfoImpl, LoginHandler, StupidRNG, User;
+    import crack.http.auth AuthHandler, AuthInfoImpl, LoginHandler, StupidRNG,
+        User;
     import crack.http.core HandlerFunc, Request;
     import crack.http.server Server;
     import crack.http.util Chain, MethodHandler, PathDispatcher, NOT_FOUND;
@@ -5861,7 +5935,7 @@ authentication. (Note that this code can be found in the source tree as
 
 This illustrates a simple HTTP server with basic authentication and provides a
 rough layout as to how the library is distributed across the #core#, #server#,
-#util# and #auth# modules.  There's a xx
+#util# and #auth# modules.
 
 Please note that that HTTP interfaces in Crack are very immature.  While the
 memory management features in Crack's lower level code ensure some degree of
@@ -5871,15 +5945,38 @@ be sure to put them behind some form of trustworthy reverse proxy.
 
 Logging
 -------
-The #crack.logger# module provides classes for logging messages with configurable
-formatting, severity level and output destination.
+
+The #crack.logger# module provides classes for logging messages with
+configurable formatting, severity level and output destination.
+
+Basic Use
+'''''''''
+
+In many cases, it is adequate to simply log to standard error.  The easiest
+way to do this is to simply import log-level formatters from the logger module
+and format to the default logger:
+
+{{
+    import crack.logger debug, error, fatal, info, setLogLevel, warn, DEBUG;
+
+    setLogLevel(DEBUG);  # Log debug messages and above.
+    info `This is an info message.`;
+    error `Something bad happened!`;
+}}
+
+In this example, we set the "log level" to DEBUG so that debug messages will
+be written.  The default log level is ERROR, so without this statement we
+would have only seen the error message, not the info message.
+
+Be aware that the default logger is not thread-safe.
 
 Core functionality
 ''''''''''''''''''
 
-The core of the module is the #Logger# class which implements 5 logging severity
-levels: #FATAL#, #ERROR#, #WARN#, #INFO#, #DEBUG#. Only messages with a severity
-level higher than the minimum for the #Logger# object will output.
+The core of the module is the #Logger# class which implements 5 logging
+severity levels: #FATAL#, #ERROR#, #WARN#, #INFO#, #DEBUG#. Only messages
+with a severity level higher than the minimum for the #Logger# object will
+output.
 
 An example looks like this:
 
@@ -5903,7 +6000,6 @@ convenient constructors are:
 
 {{
     Logger(String filename, uint level);
-    Logger(File file, uint level);
     Logger(Writer w, uint level);
 }}
 
@@ -5918,8 +6014,9 @@ The #Logger# class defines convenience methods #fatal#, #error#, #warn#, #info#,
 Formatter protocol
 ''''''''''''''''''
 
-The #logger# module also provides a #LogFormatter# class that implements the #Formatter#
-protocol. Extending the example above to use a #LogFormatter# instead, we get:
+The #logger# module also provides a #LogFormatter# class that implements the
+#Formatter# protocol. Extending the example above to use a #LogFormatter#
+instead, we get:
 
 {{
     import crack.logger LogFormatter;
@@ -5944,12 +6041,19 @@ undelying #Logger# instance, the method #setLoggerLevel(uint level)# can be used
 The severity level of a #LogFormatter# instance can be changed using the
 #setLevel(uint level)# method.
 
+The #crack.logger# module provides a set of #LogFormatter# global variables
+for the default logger to simplify logging at different severities.  As you
+might expect, they are "debug", "info", "warn", "error" and "fatal".
+
 Message formatting
 ''''''''''''''''''
 
 The #Logger# class implements log message fields, named #msg#, #datetime#,
-#progname#, #escapemsg#, and #severity#. The default fields used are
-#datetime#, #severity#, #msg#, leading to the output shown in the example above.
+#progname#, #escapemsg#, and #severity# that allow you to specify the format
+of a message written to the logfile. Every logger has a sequence of message
+fields defining the format used for the logger. The default fields are
+#datetime#, #severity#, #msg#, leading to the output shown in the example
+above.
 
 The fields can be specified using the constructors
 #Logger(Formatter fmt, uint level, Array[String] fieldNames)# or using a space
@@ -5979,11 +6083,10 @@ type of message field, define a class as follows:
     import crack.runtime usecs;
 
     MilliSecField : MessageField {
-        oper init(LoggerOptions options): MessageField(options) {
-        }
+        oper init(LoggerOptions options): MessageField(options) {}
 
-        void format(uint level, String msg){
-            options.fmt.format(usecs()/1000);
+        void format(uint level, String msg) {
+            options.fmt.format(usecs() / 1000);
         }
     }
 }}
@@ -6013,6 +6116,8 @@ with members, defined as:
     }
 }}
 
+These are typically passed to a MessageField object during construction and
+can be used to vary the formatting of the message field.
 
 GTK
 ---
@@ -6135,38 +6240,29 @@ itself and the test script for details.
 Appendix 2 - Migration
 ======================
 
-Crack guarantees backwards compatibility between ternary release numbers (so
-0.2.1 should be compatible with 0.2).  We will adhere to this policy until we
-release 1.0, at which point we will begin guaranteeing backwards
-compatibility until the next major version number (2.0).  See
+Crack follows Semantic Versioning (see \ref(`http://semver.org` semver.org)).
+This means that all versions of Crack with a major version number of "1" will
+be backwards compatible until the major version number changes.  See
 \X(Compatibility) for caveats and details.
-
-Until this time, the language and all of its libraries are considered to be
-"in flux:" anything can change between minor version numbers.
-
-That said, we want to make the prospect of early adoption to be tolerable.  If
-you want to avoid code breakage when upgrading, we recommend two strategies:
-
--   Bind your toplevel scripts to a specific version of crack.  You can do
-    this by adding the version number to the binary in your '`#!`' line:
-
-    {{
-        #!/usr/local/bin/crack-0.5
-    }}
-
-    You will want to install your own modules under the module tree for the
-    version that they were developed for.  For example, if you create module
-    "foo.bar", you would typically install it somewhere like
-    #`/usr/local/lib/crack-0.5/foo/bar`#.
-
--   Read the migration section of the manual for the changes involved in
-    upgrading to the new version.
-
-    We will attempt to provide migration facilities, both in the form of
-    documentation and migration warnings.
 
 The remainder of this appendix describes the things you need to know when
 upgrading between versions.
+
+From 1.0 to 1.1
+---------------
+
+-   Though intended to be backwards compatible, we did introduce a fairly minor
+    incompatibility: the #crack.compiler.Location# class adds the
+    #getStartCol()# and #getEndCol()# methods.  This was judged to be
+    acceptable because, even though user code could conceivably derive from
+    #Location# and implement conflicting methods, there is no purpose in doing
+    so because instances of the class can not be constructed by the user.
+
+From 0.13 to 1.0
+----------------
+
+-   Reference counts are now incremented for function arguments and method
+    receivers borrowed from global or instance variables.
 
 From 0.12 to 0.13
 -----------------
@@ -6394,3 +6490,29 @@ The following rules apply to method and function names (we use the word
     These may also be used for access of parameterized values, as in
     "#getRelative(COUSIN)#" or simply #get(Key key)# as in the case of Map
     containers.
+
+Appendix 4 - Notes on Caching
+=============================
+
+The Crack JIT stores meta-data and compiled LLVM bitcode in a cache in the
+user's home directory.  Keeping this information cached significantly improves
+the load time of Crack programs. While this feature has been in use for quite
+a while and has no known bugs, a bug in the caching mechanism can produce
+some very confusing results.  Different behavior can manifest depending on
+whether code is actually being compiled (for the first time or due to a
+change in the source code) or simply loaded from the cache.
+
+Cached files are stored in the user's `$HOME/.crack/cache` directory and
+caching is controlled by the -C, -K, and --allow-sourceless options, the
+"cachePath" builder option and the `CRACK_CACHING` environment variable.
+
+Caching can be disabled entirely by providing the -K command line option or
+by setting the "`CRACK_CACHING`" environment variable to false.  An alternate
+cache path can be specified by adding a builder option "-b cachePath=/path/"
+in JIT mode (caching is not used in AOT mode).
+
+If you suspect that you have discovered a bug in caching, try moving
+`$HOME/.crack/cache` to `$HOME/.crack/cache.org` and run your program again.
+If it succeeds the second time, then you have most likely discovered a
+caching bug and we'd greatly appreciate it if you'd report this, ideally
+including the cache files and source files that manifested it.

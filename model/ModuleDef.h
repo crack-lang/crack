@@ -73,13 +73,12 @@ class ModuleDef : public VarDef, public Namespace {
         void serializeAsCTDep(Serializer &serializer) const;
 
         // Deserialize a compile-time dependency.
-        // @param info This is a pair of the header digest (in hex) of the
-        //     dependency module and the canonical name of the module for
-        //     purposes of error reporting.  The module itself is not needed
-        //     during evaluation of a compile-time dependency.
-        static bool deserializeCTDep(Deserializer &deser,
-                                     std::pair<std::string, ModuleDefPtr> &info
-                                     );
+        // Returns a pair of the header digest (in hex) of the dependency
+        // module and the canonical name of the module for purposes of error
+        // reporting.  The module itself is not needed during evaluation of a
+        // compile-time dependency.
+        static std::pair<std::string, std::string>
+            deserializeCTDep(Deserializer &deser);
     public:
         typedef std::vector<std::string> StringVec;
 

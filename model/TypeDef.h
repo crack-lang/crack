@@ -151,9 +151,20 @@ class TypeDef : public VarDef, public Namespace {
         // if true, this is an abstract class (contains abstract methods)
         bool abstract;
 
+        // if true, this is a final class (can not be derived from)
+        bool final;
+
+        // True if the class is an appendage.  This implies that the base
+        // classes are either:
+        // -   exactly one non-appendage anchor class
+        // -   one or more appendage base classes.
+        bool appendage;
+
         enum Flags {
             noFlags = 0,
             abstractClass = 1,
+            finalClass = 2,
+            appendageFlag = 3,
             explicitFlags = 256  // these flags were set by an annotation
         };
 
@@ -173,7 +184,8 @@ class TypeDef : public VarDef, public Namespace {
         parser::Location noBindInferred, noReleaseInferred;
 
         TypeDef(TypeDef *metaType, const std::string &name,
-                bool pointer = false
+                bool pointer = false,
+                Flags flags = noFlags
                 ) :
             VarDef(metaType, name),
             Namespace(name),
@@ -189,6 +201,8 @@ class TypeDef : public VarDef, public Namespace {
             forward(false),
             initializersEmitted(false),
             abstract(false),
+            final(false),
+            appendage(flags & appendageFlag),
             gotExplicitOperNew(false),
             fieldCount(0) {
         }
@@ -275,6 +289,9 @@ class TypeDef : public VarDef, public Namespace {
          */
         FuncDefPtr createOperInit(Context &classContext, const ArgVec &args);
 
+        /** Create a no-op oper new method (for appendages). */
+        void createNopOperNew(Context &classContext);
+
         /**
          * Create the default initializer.
          */
@@ -333,6 +350,19 @@ class TypeDef : public VarDef, public Namespace {
         bool gotAbstractFuncs(std::vector<FuncDefPtr> *abstractFuncs = 0,
                               TypeDef *ancestor = 0
                               );
+
+        /**
+         * Returns the "anchor type" of an appendage (or the type itself, for
+         * a non-appendage).  The anchor type is the non-appendage ancestor
+         * class that the appendage and all intermediate ancestor appendages
+         * are derived from.
+         *
+         * Returns a borrowed reference to the ancestor type.
+         */
+        TypeDef *getAnchorType();
+        const TypeDef *getAnchorType() const {
+            return const_cast<TypeDef *>(this)->getAnchorType();
+        }
 
         /**
          * Alias definitions in all of the base meta-types in our meta-type.

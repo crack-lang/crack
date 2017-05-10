@@ -28,6 +28,8 @@ class Location : public crack::ext::RCObj {
 
         static const char *_getName(Location *inst);
         static int _getLineNumber(Location *inst);
+        static int _getStartCol(Location *inst);
+        static int _getEndCol(Location *inst);
         static void _bind(Location *inst);
         static void _release(Location *inst);
 

@@ -1,0 +1,8 @@
+%%TEST%%
+test of annotations example
+%%ARGS%%
+%%FILE%%
+import test.test_struct_example;
+%%EXPECT%%
+ok
+%%STDIN%%

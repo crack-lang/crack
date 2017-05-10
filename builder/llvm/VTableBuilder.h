@@ -102,6 +102,12 @@ public:
     void emit(BTypeDef *type);
 
     /**
+     * Emit the vtable for an appendage, which is just a copy of the vtable of
+     * its anchor type.
+     */
+    static void emitAppendageVTable(LLVMBuilder *builder, BTypeDef *type);
+
+    /**
      * Materialize the vtable structures in the type by extracting them from
      * the module.
      */

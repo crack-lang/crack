@@ -94,6 +94,7 @@ int connect(int s, SockAddr *addr);
 int bind(int s, SockAddr *addr);
 int accept(int s, SockAddr *addr);
 int setsockopt_int(int fd, int level, int optname, int val);
+int getSockName(int fd, SockAddr *addr);
 
 sigset_t *SigSet_create();
 void SigSet_destroy(sigset_t *sigmask);

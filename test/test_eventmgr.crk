@@ -1,0 +1,55 @@
+
+import crack.cont.array Array;
+import crack.eventmgr EventCallbackFunc, EventManager;
+import crack.functor Function2, Functor0;
+import crack.io cerr;
+import crack.net Pipe, Poller, PollEvent, POLLIN;
+import crack.time add, Time, TimeDelta;
+
+@import crack.ann assert, impl;
+
+em := EventManager();
+Array[String] calls = {};
+
+int pipePollFunc(Poller poller, PollEvent event) {
+    if (event.revents & POLLIN) {
+        calls.append('pipePollFunc');
+        em.terminate();
+    }
+    return POLLIN;
+}
+
+class Event @impl Functor0[void] {
+    String __mark;
+    oper init(String mark) : __mark = mark {}
+    void oper call() { calls.append(__mark) }
+}
+
+pipe := Pipe();
+em.poller.add(pipe, Function2[int, Poller, PollEvent](pipePollFunc));
+
+# The loop terminator.  Writes data to the pipe, ensuring that a) we get pipe
+# communication and b) we can shut down.
+void ahnold() {
+    pipe.write('x');
+}
+
+# 1/10th of s second
+const TENTHS := 100000000;
+
+# Schedule a later event and two earlier events at the same time.
+now := Time.now();
+em.scheduleEvent(add(now, TimeDelta(0, 3 * TENTHS)), Event('third'));
+t := add(now, TimeDelta(0, 2 * TENTHS));
+em.scheduleEvent(t, Event('first'));
+em.scheduleEvent(t, Event('second'));
+
+# Schedule the terminator after everything else.
+em.scheduleEvent(add(now, TimeDelta(0, 4 * TENTHS)),
+                 EventCallbackFunc(ahnold)
+                 );
+
+em.run();
+@assert(calls == Array[String]!['first', 'second', 'third', 'pipePollFunc']);
+cerr `ok\n`;
+

@@ -923,6 +923,10 @@ void Context::expandIteration(const std::string &name, bool defineVar,
                 emitVarDef(this, iterCall->type.get(), name, iterCall.get());
         } else {
             iterVar = ns->lookUp(name);
+            if (!iterVar)
+                error("Undefined variable used in loop iteration "
+                       "(use 'for (var :on seq)' instead?)"
+                      );
             if (iterVar->isConstant())
                 error("Cannot use a constant as a loop iterator");
             if (!iterVar->type->matches(*iterCall->type))
@@ -970,6 +974,10 @@ void Context::expandIteration(const std::string &name, bool defineVar,
                              );
         } else {
             var = ns->lookUp(name);
+            if (!var)
+                error("Undefined variable used in loop iteration "
+                       "(use 'for (var :in seq)' instead?)"
+                      );
             if (var->isConstant())
                 error("Cannot use a constant as a loop variable");
             if (!var->type->matches(*elemFunc->returnType))

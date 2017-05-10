@@ -292,6 +292,7 @@ class Schema {
     bool debug;
 
     oper init() {
+        types['bool'] = BuiltinType('bool', null, 'field.getUInt()');
         types['int32'] = BuiltinType('int32', null, 'int32(field.getUInt())');
         types['uint32'] = BuiltinType('uint32', null, 'uint32(field.getUInt())');
         types['int64'] = BuiltinType('int64', null, 'int64(field.getUInt())');

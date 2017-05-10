@@ -1,0 +1,11 @@
+%%TEST%%
+undefined variable in "for on" loop
+%%ARGS%%
+%%FILE%%
+# Exercises a bug (weren't checking for undefined variable before checking it
+# against a constant)
+import crack.cont.array Array;
+for (x on Array[int]());
+%%EXPECT%%
+ParseError: %SCRIPTNAME%:4:17: Undefined variable used in loop iteration (use 'for (var :on seq)' instead?)
+%%STDIN%%

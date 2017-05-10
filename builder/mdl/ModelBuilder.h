@@ -231,7 +231,8 @@ class ModelBuilder : public builder::Builder {
             model::Context &context,
             const std::string &name,
             const std::vector<model::TypeDefPtr> &bases,
-            model::TypeDef *forwardDef
+            model::TypeDef *forwardDef,
+            model::TypeDef::Flags flags
         );
 
         virtual void emitEndClass(model::Context &context) {
