@@ -6,6 +6,7 @@
 
     @inject '#include <openssl/ssl.h>\n'
     @inject '#include <openssl/evp.h>\n'
+    @inject '#include <openssl/cmac.h>\n'
     @inject '
 
 #include <iostream>
@@ -51,6 +52,9 @@ int my_EVP_CIPHER_flags(EVP_CIPHER *cipher) {
 
 // Definining this here.
 struct engine_st {};
+
+// Undefined type for CRACK_CTX.
+struct Undef {};
 ';
 
     const int SSL_FILETYPE_PEM,
@@ -184,16 +188,19 @@ struct engine_st {};
     EVPCipher EVP_aes_128_ecb();
     EVPCipher EVP_aes_128_cfb();
     EVPCipher EVP_aes_128_ofb();
+    EVPCipher EVP_aes_128_ctr();
 
     EVPCipher EVP_aes_192_cbc();
     EVPCipher EVP_aes_192_ecb();
     EVPCipher EVP_aes_192_cfb();
     EVPCipher EVP_aes_192_ofb();
+    EVPCipher EVP_aes_192_ctr();
 
     EVPCipher EVP_aes_256_cbc();
     EVPCipher EVP_aes_256_ecb();
     EVPCipher EVP_aes_256_cfb();
     EVPCipher EVP_aes_256_ofb();
+    EVPCipher EVP_aes_256_ctr();
 
     EVPCipher EVP_des_cbc();
     EVPCipher EVP_des_ecb();
@@ -338,4 +345,24 @@ struct engine_st {};
         int decryptFinal(byteptr out, array[int] out1);
     }
 
+    // CMAC.
+
+    @cname Undef
+    class CMACContext {
+
+        @cname CMAC_CTX_new
+        oper new();
+
+        @cname CMAC_Init
+        int init(byteptr key, uintz keylen, EVPCipher cipher, Engine impl);
+
+        @cname CMAC_Update
+        int update(byteptr data, uintz len);
+
+        @cname CMAC_Final
+        int final(byteptr out, array[int] outLen);
+
+        @cname CMAC_CTX_free
+        void free();
+    }
 }

@@ -1,5 +1,6 @@
 #include <openssl/ssl.h>
 #include <openssl/evp.h>
+#include <openssl/cmac.h>
 
 
 #include <iostream>
@@ -45,6 +46,9 @@ int my_EVP_CIPHER_flags(EVP_CIPHER *cipher) {
 
 // Definining this here.
 struct engine_st {};
+
+// Undefined type for CRACK_CTX.
+struct Undef {};
 
 
 #include "ext/Module.h"
@@ -444,6 +448,68 @@ void crack_ext__ssl_cinit(crack::ext::Module *mod) {
 
     type_EVPCipherContext->finish();
 
+
+    crack::ext::Type *type_CMACContext = mod->addType("CMACContext", sizeof(Undef));
+f = type_CMACContext->addStaticMethod(
+    type_CMACContext,
+    "oper new",
+    (void *)CMAC_CTX_new
+);
+
+
+    f = type_CMACContext->addMethod(
+        type_int,
+        "init",
+        (void *)CMAC_Init
+    );
+    f->addArg(type_byteptr,
+              "key"
+              );
+    f->addArg(type_uintz,
+              "keylen"
+              );
+    f->addArg(type_EVPCipher,
+              "cipher"
+              );
+    f->addArg(type_Engine,
+              "impl"
+              );
+
+
+    f = type_CMACContext->addMethod(
+        type_int,
+        "update",
+        (void *)CMAC_Update
+    );
+    f->addArg(type_byteptr,
+              "data"
+              );
+    f->addArg(type_uintz,
+              "len"
+              );
+
+
+    f = type_CMACContext->addMethod(
+        type_int,
+        "final",
+        (void *)CMAC_Final
+    );
+    f->addArg(type_byteptr,
+              "out"
+              );
+    f->addArg(array_pint_q,
+              "outLen"
+              );
+
+
+    f = type_CMACContext->addMethod(
+        type_void,
+        "free",
+        (void *)CMAC_CTX_free
+    );
+
+    type_CMACContext->finish();
+
     f = mod->addFunc(type_BIO_METHOD, "BIO_s_mem",
                      (void *)BIO_s_mem
                      );
@@ -491,6 +557,10 @@ void crack_ext__ssl_cinit(crack::ext::Module *mod) {
                      (void *)EVP_aes_128_ofb
                      );
 
+    f = mod->addFunc(type_EVPCipher, "EVP_aes_128_ctr",
+                     (void *)EVP_aes_128_ctr
+                     );
+
     f = mod->addFunc(type_EVPCipher, "EVP_aes_192_cbc",
                      (void *)EVP_aes_192_cbc
                      );
@@ -507,6 +577,10 @@ void crack_ext__ssl_cinit(crack::ext::Module *mod) {
                      (void *)EVP_aes_192_ofb
                      );
 
+    f = mod->addFunc(type_EVPCipher, "EVP_aes_192_ctr",
+                     (void *)EVP_aes_192_ctr
+                     );
+
     f = mod->addFunc(type_EVPCipher, "EVP_aes_256_cbc",
                      (void *)EVP_aes_256_cbc
                      );
@@ -521,6 +595,10 @@ void crack_ext__ssl_cinit(crack::ext::Module *mod) {
 
     f = mod->addFunc(type_EVPCipher, "EVP_aes_256_ofb",
                      (void *)EVP_aes_256_ofb
+                     );
+
+    f = mod->addFunc(type_EVPCipher, "EVP_aes_256_ctr",
+                     (void *)EVP_aes_256_ctr
                      );
 
     f = mod->addFunc(type_EVPCipher, "EVP_des_cbc",
