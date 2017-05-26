@@ -1453,18 +1453,25 @@ void LLVMBuilder::emitEndTry(model::Context &context,
 void LLVMBuilder::emitThrow(Context &context, Expr *expr) {
     Function *throwFunc = module->getFunction("__CrackThrow");
     context.createCleanupFrame();
-    expr->emit(context);
+
+    // We do a "handleAssignment()" in this case because the expression in a
+    // throw is like the expression in an assignment: we want to ensure that
+    // it is productive.
+    ResultExprPtr result = expr->emit(context);
     narrow(expr->type.get(), context.construct->vtableBaseType.get());
+    // save lastValue (handleAssignment() and getUnwindBlock() can trash it)
+    Value *thrown = lastValue;
+    result->handleAssignment(context);
+    context.closeCleanupFrame();
+
     BasicBlock *unwindBlock = getUnwindBlock(context),
                *unreachableBlock = BasicBlock::Create(getGlobalContext(),
                                                       "unreachable",
                                                       func
                                                       );
-    builder.CreateInvoke(throwFunc, unreachableBlock, unwindBlock, lastValue);
+    builder.CreateInvoke(throwFunc, unreachableBlock, unwindBlock, thrown);
     builder.SetInsertPoint(unreachableBlock);
     builder.CreateUnreachable();
-    // XXX think I actually want to discard the cleanup frame
-    context.closeCleanupFrame();
 }
 
 FuncDefPtr LLVMBuilder::createFuncForward(Context &context,

@@ -115,5 +115,32 @@ if (1) {
 
 }
 
+if (1) {
+    int cleanups;
+    class MyException : Exception {
+        oper init(String msg) : Exception(msg) {}
+        oper del() {
+            ++cleanups;
+        }
+    }
+
+    try {
+        try {
+            throw MyException('my exception text');
+        } catch (MyException ex) {
+            throw ex;
+        }
+    } catch (MyException ex) {
+        if (cleanups)
+            cout `FAILED rethrown exception deleted prematurely\n`;
+        if (ex.text != 'my exception text')
+            cout `FAILED bad exception thrown in rethrow cleanup test\n`;
+    }
+
+    if (cleanups != 1)
+        cout I`FAILED Re-thrown exception not deleted exactly once,  Delete \
+               count = $cleanups\n`;
+}
+
 cout `ok\n`;
 
