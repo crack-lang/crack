@@ -4,7 +4,7 @@
 import crack.ascii parseInt, wsplit, strip;
 import crack.cont.array Array;
 import crack.fs makePath;
-import crack.io cin, cout, FDReader, FDWriter, Formatter, FStr, Writer;
+import crack.io cin, cerr, cout, FDReader, FDWriter, Formatter, FStr, Writer;
 import crack.lang AppendBuffer, Buffer;
 import crack.process Process, ProcessHandlerImpl, CRK_PIPE_STDOUT,
     CRK_PIPE_STDERR;
@@ -143,7 +143,18 @@ class ANSITermUI : SimpleTermUI {
     }
 
     void setAttr(int i) {
-        __dst.write(FStr() `\033[4$(i >> 4);3$(i & 0x7)m`);
+        # 1 is bold, 4 is underline.
+        int extra;
+        if (i & 0x8)
+            extra = 1;
+        if (i & 0x80)
+            extra |= 4;
+
+        # We do this in two separate escape sequences, unfortunately CSI 0m
+        # clears the background color as well as the text attribute
+        __dst.write(
+            FStr() `\033[$(extra)m\033[4$((i >> 4) & 0x7);3$(i & 0x7)m`
+        );
     }
 
     void write(Buffer text) {
@@ -183,8 +194,8 @@ class ANSITermUI : SimpleTermUI {
 
     void saveScreen() {
         # The "ti" sequence for the termcap entry, preceded by Esc-7 to save
-        # the cursor position.
-        __dst.write('\0337\033[?1048h\033[?1047h');
+        # the cursor position and followed by "clear screen."
+        __dst.write('\0337\033[?1048h\033[?1047h\033[2J');
     }
 
     void restoreScreen() {
@@ -272,6 +283,7 @@ Array[uint16] _makeArray(Coord size) {
     @abstract void paint();
     @abstract bool onEvent(Event event);
     @abstract void onResize(uint width, uint height);
+    @abstract void setFocus(bool focus);
 }
 
 ## Returns the TermUI object for a given named terminal device.
@@ -514,6 +526,14 @@ class TermApp {
         if (!__focus)
             __focus = toplevel;
     }
+
+    ## Sets the focused window.  DON'T USE THIS DIRECTLY.
+    void _setFocused(BaseWindow window) {
+        if (!(__focus is window)) {
+            if (__focus) __focus.setFocus(false);
+            __focus = window;
+        }
+    }
 }
 
 class GraphicsContext {
@@ -581,6 +601,7 @@ class GraphicsContext {
 class Window : BaseWindow {
     Window __parent;
     TermApp __app;
+    bool __focus;
 
     # Coordinates relative to parent and size.
     uint x, y, width, height;
@@ -649,6 +670,19 @@ class Window : BaseWindow {
     ## not necessarily respect this.
     Coord getMinSize() {
         return Coord(1, 1);
+    }
+
+    void setFocus(bool focus) {
+        # TODO: rewrite focus code, we probably want a protected _setFocus()
+        # function to toggle the variable and make _setFocused() the driver
+        # for everything.
+        if (focus) getApp()._setFocused(this);
+        __focus = focus;
+    }
+
+    ## Returns true if the window has the focus.
+    @final bool getFocus() {
+        return __focus;
     }
 }
 
