@@ -1,0 +1,807 @@
+## High-level communication module.
+##
+## This provides commonly used functionality for buffer handling, connection
+## listening and logging.
+##
+## Example client:
+##
+##     class MyHandler @impl UserHandler {
+##         void process(CommHandler comm) {
+##             cout `got data: $(comm.inBuf)\n`;
+##             comm.inBuf.compact(comm.inBuf.size);
+##         }
+##
+##         void terminate(CommHandler comm) {
+##             # Use this to do any special processing when the connection has
+##             # been closed
+##             cout `terminated\n`;
+##         }
+##
+##         void addResponder(Object responder) {
+##             # Use this to add a callback or waiter, e.g.
+##             # waiter = WaiterFor[int, String](responder);
+##         }
+##     }
+##
+##     comm := Comm();
+##     comm.start();
+##     proxy := comm.getProxy(InetAddress(127, 0, 0, 1, 1234), MyHandler());
+##     # You can also call getSyncProxy() and sendSync() on it, if you've
+##     # implemented addResponder() with a Waiter.
+##     proxy.send('message to server!');
+##
+## Example server:
+##
+##    class MyHandler @impl UserHandler {
+##        void process(CommHandler comm) {
+##            cout `got data from client: $(comm.inBuf)\n`;
+##
+##            # send it back.
+##            comm.outBuf.extend(comm.inBuf);
+##
+##            # Consume it.
+##            comm.inBuf.compact(comm.inBuf.size);
+##        }
+##
+##        void terminate(CommHandler comm) {
+##            cout `terminated\n`;
+##        }
+##
+##        void addResponder(Object responder) {
+##            # Use this to add a callback or waiter, e.g.
+##            # waiter = WaiterFor[int, String](responder);
+##            # This is less useful on the server side.
+##        }
+##    }
+##
+##    class MyHandlerFactory @impl CommHandlerFactory {
+##        CommHandler makeCommHandler(NewConnection conn) {
+##            return CommHandler(conn.log, MyHandler());
+##        }
+##    }
+##
+##    comm := Comm();
+##    comm.start();
+##    comm.startServer(InetAddress(127, 0, 0, 1, 1234), MyHandlerFactory(),
+##                     /* reuse address: */ true
+##                     );
+##
+##
+##     UserHandler uh = makeUserHandler()
+##
+## These examples both use the Comm object to use proxies and to start a
+## background poller thread.  For more control, you can create the underlying
+## objects directly, though the basic mechanism of defining a UserHandler for
+## processing incoming data and a CommHandlerFactory on the server side for
+## responding to new connections remains the same.
+##
+## It is important to note that the CommHandler and CommDispatcher classes are
+## not thread-safe.  To interact with them from another thread, you'll need to
+## provide some sort of messaging system to the poller thread, possibly along
+## with some synchronization mechanisms (this is part of what Comm buys you).
+
+import crack.eventmgr EventCallback, EventManager, EventManagerBackRef;
+import crack.io cerr, Formatter, FStr, StandardFormatter, Writer;
+import crack.lang AppendBuffer, Exception;
+import crack.net Address, Pipe, Poller, PollEvent, PollEventCallback, Socket,
+    AF_INET, POLLIN, POLLOUT, POLLERR, POLLHUP, SOCK_STREAM;
+import crack.threads Condition, Event, Mutex, MutexLock, Thread, Queue;
+import crack.time Time;
+
+@import crack.ann impl, interface;
+
+uint defaultBlockSize = 4096;
+
+@final class Fmt : StandardFormatter {
+    String __prefix;
+    String __id;
+    oper init(String prefix, Object id, Writer out) :
+        __prefix = prefix,
+        __id = id ? FStr() `$id: ` : '',
+        StandardFormatter(out) {
+    }
+
+    void enter() {
+        rep.write(__prefix);
+        rep.write(__id);
+    }
+
+    void leave() {
+        rep.write('\n');
+    }
+}
+
+Fmt makeFmt(String prefix, Object id, Formatter fmt) {
+    if (uintz(fmt) < 1024)
+        return null;
+    else
+        return Fmt(prefix, id, fmt);
+}
+
+StandardFormatter extractRep(Fmt fmt) {
+    return fmt ? StandardFormatter.cast(fmt.rep) : null;
+}
+
+## Encapsulates logging data.  Provides a set of
+@final class Log {
+
+    # Log formatters for different logging levels.
+    Fmt debug, info, warn, error, fatal;
+
+    oper init(Formatter debug, Formatter info, Formatter warn, Formatter error,
+              Formatter fatal,
+              Object identifier
+              ) :
+        debug = makeFmt('Debug: ', identifier, debug),
+        info = makeFmt('Info: ', identifier, info),
+        warn = makeFmt('Warn: ', identifier, warn),
+        error = makeFmt('Error: ', identifier, error),
+        fatal = makeFmt('Fatal: ', identifier, fatal) {
+    }
+
+    ## Constructs a clone of 'other' with a different identifier.
+    oper init(Log other, Object identifier) :
+        debug = makeFmt('Debug: ', identifier, extractRep(other.debug)),
+        info = makeFmt('Info: ', identifier, extractRep(other.info)),
+        warn = makeFmt('Warn: ', identifier, extractRep(other.warn)),
+        error = makeFmt('Error: ', identifier, extractRep(other.error)),
+        fatal = makeFmt('Fatal: ', identifier, extractRep(other.fatal)) {
+    }
+}
+
+class CommHandler;
+
+@interface UserHandler {
+
+    ## Called when a message is received.
+    @abstract void process(CommHandler handler);
+
+    ## Called when a connection is terminated.
+    @abstract void terminate(CommHandler handler);
+
+    ## Adds a "responder" object.  Responders are objects that are activated
+    ## after processing a complete response message.  They are typically
+    ## either "callbacks", which are executed in the poller thread, or
+    ## "waiters" (see the Waiter class) which can be used to communicate the
+    ## response back to an invocation in another thread.
+    ##
+    ## There is no compile-time interface for dealing with these kinds of
+    ## objects, as they typically require some data from the response to be
+    ## passed in as an argument, so we define the responder to be of type
+    ## Object.
+    @abstract void addResponder(Object responder);
+}
+
+## A communication endpoint handler.  Can be used for both server and client
+## side connection handling.
+##
+##
+@final class CommHandler @impl PollEventCallback {
+
+    uint blockSize = defaultBlockSize;
+    Socket __sock;
+    bool __close;
+    Log log;
+
+    ## If true, The user handler's process() method is called for all events,
+    ## not just data input.
+    bool processAllEvents;
+
+    AppendBuffer
+        ## The input buffer.  Data received from the connection is appended to
+        ## this.  User handlers should read from the buffer and "compact()"
+        ## it when the data has been fully consumed.
+        inBuf,
+
+        ## The output buffer.  Send data through the connection by appending
+        ## to this.
+        outBuf;
+
+    ## The user data handler.
+    UserHandler userHandler;
+
+    ## Alternate constructor to allow us to create a handler without a socket.
+    ## XXX should probably always use this.
+    oper init(Log log, UserHandler handler) :
+        inBuf(blockSize),
+        outBuf(blockSize),
+        log = log,
+        userHandler = handler {
+    }
+
+    ## Close the socket and remove the handler's socket from the poller.
+    @final void removeFrom(Poller poller) {
+        if (__sock)
+            __sock.close();
+        poller.remove(__sock);
+        __sock = null;
+        userHandler.terminate(this);
+    }
+
+    ## Close the socket and remove it from the poller the next time our event
+    ## processor is called.
+    @final void close() {
+        __close = true;
+    }
+
+    @final void addResponder(Object responder) {
+        userHandler.addResponder(responder);
+    }
+
+    int oper call(Poller poller, PollEvent event) {
+        if (__sock is null)
+            # XXX there may be a race condition here and below, if we try to
+            # remove the socket before this gets called there's going to be
+            # trouble.  I'm not sure it can manifest, though, because since
+            # the handling is done in the poll loop we will have pretty much
+            # done this by the time we get the "stop" message.
+            __sock = Socket.cast(event.pollable);
+
+        # See if we're marked for close.
+        if (__close) {
+            log.info `Closing connection.`;
+            removeFrom(poller);
+            return 0;
+        }
+
+        log.debug `got events = $(event.revents)`;
+        if (event.revents & POLLIN) {
+            data := __sock.read(1024);
+            if (!data) {
+                log.info `Connection closed`;
+                removeFrom(poller);
+                return 0;
+            }
+
+            inBuf.extend(data);
+        }
+
+        if (event.revents & POLLOUT) {
+            rc := __sock.send(outBuf, 0);
+            log.debug `Sent $rc/$(outBuf.size) bytes`;
+            if (rc >= 0)
+                outBuf.compact(rc);
+        }
+
+        if (event.revents & POLLERR) {
+            log.error `got error on`;
+            __sock.close();
+            poller.remove(__sock);
+            return 0;
+        }
+
+        if (event.revents & POLLHUP) {
+            log.info `got HUP`;
+            __sock.close();
+            poller.remove(__sock);
+            return 0;
+        }
+
+        if (event.revents & POLLIN || processAllEvents) {
+            userHandler.process(this);
+
+            # Check again to see if we're marked for close, since the user
+            # handler might have closed us.
+            if (__close) {
+                log.info `Closing connection (after user handler)`;
+                removeFrom(poller);
+                return 0;
+            }
+        }
+
+        return POLLIN | POLLERR | POLLHUP | (outBuf ? POLLOUT : 0);
+    }
+}
+
+@final class NewConnection {
+    ## The listeners Log object.
+    Log log;
+
+    ## The accested connection info.
+    Socket.Accepted accepted;
+
+    oper init(Log log, Socket.Accepted accepted) :
+        log = log,
+        accepted = accepted {
+    }
+}
+
+## Interface for classes used to construct the CommHandler on a new connection.
+@interface CommHandlerFactory {
+    @abstract CommHandler makeCommHandler(NewConnection conn);
+}
+
+## A listener that listens on a socket and creates communication handlers to
+## service new connections.
+@final class CommListener @impl PollEventCallback {
+
+    Socket __sock;
+    Log log;
+    CommHandlerFactory commHandlerFactory;
+
+    oper init(Log log, CommHandlerFactory commHandlerFactory) :
+        log = log,
+        commHandlerFactory = commHandlerFactory {
+    }
+
+    ## Close the connection and remove it from the poller.
+    @final void removeFrom(Poller poller) {
+        __sock.close();
+        poller.remove(__sock);
+    }
+
+    int oper call(Poller poller, PollEvent event) {
+        if (__sock is null)
+            __sock = Socket.cast(event.pollable);
+        log.debug `got events = $(event.revents)`;
+        if (event.revents & POLLIN) {
+            accepted := __sock.accept();
+            log.info `New connection received from $(accepted.addr)`;
+            poller.add(accepted.sock,
+                       commHandlerFactory.makeCommHandler(
+                           NewConnection(log, accepted)
+                       ));
+        } else if (event.revents & POLLERR) {
+            log.error `got error`;
+            __sock.close();
+            poller.remove(__sock);
+            return 0;
+        } else if (event.revents & POLLHUP) {
+            log.info `got HUP`;
+            __sock.close();
+            poller.remove(__sock);
+            return 0;
+        }
+        return POLLIN | POLLERR | POLLHUP;
+    }
+}
+
+## Base class for all messages sent to the poller thread.
+@abstract class _Message {
+    @abstract void run(EventManager eventMan, Log log);
+}
+
+## A message with a response that you can wait on.
+##
+## Derived classes should lock the mutex prior to modifying any internal state
+## to be shared between threads.
+@abstract class _WaitableMessage : _Message {
+    Event _event = {};
+
+    ## Trigger the condition.
+    @final void trigger() {
+        _event.signal();
+    }
+
+    @final void wait() {
+        MutexLock lock = {_event.getMutex()};
+        _event.wait();
+    }
+}
+
+const int
+    SUCCESS = 0,
+    ERR_BIND_FAILURE = 1,
+    ERR_LISTEN_FAILURE = 2,
+    ERR_REUSE_FAILURE = 3,
+
+    ## Internal error, you should only get this when something in the system
+    ## has gone wrong.
+    ERR_INTERNAL = 4,
+
+    ERR_CONNECT_FAILURE = 5;
+
+const array[String] ERROR_TEXT = [
+    'Success',
+    'Bind failure',
+    'Listen failure',
+    'Failure setting reusable address',
+    'Connect failure',
+];
+
+## Message to create a new server socket.
+class _NewServer : _WaitableMessage {
+
+    Address __addr;
+    PollEventCallback __handler;
+    bool __reuseAddr;
+
+    int errCode;
+
+    oper init(Address addr, PollEventCallback handler,
+              bool reuseAddr
+              ) :
+        __addr = addr,
+        __handler = handler,
+        __reuseAddr = reuseAddr {
+    }
+
+    @final int __run(Poller poller, Log log) {
+        try {
+            sock := Socket(AF_INET, SOCK_STREAM, 0);
+            if (__reuseAddr && !sock.setReuseAddr(__reuseAddr))
+                return ERR_REUSE_FAILURE;
+            if (!sock.bind(__addr))
+                return ERR_BIND_FAILURE;
+            if (!sock.listen(5))
+                return ERR_LISTEN_FAILURE;
+            poller.add(sock, __handler);
+            return SUCCESS;
+        } catch (Exception ex) {
+            log.error `Exception in message handling: $ex`;
+            return ERR_INTERNAL;
+        }
+    }
+
+    void run(EventManager eventMan, Log log) {
+        MutexLock lock = {_event.getMutex()};
+        errCode = __run(eventMan.poller, log);
+        trigger();
+    }
+}
+
+## Message to create a new client connection.
+class _NewClient : _WaitableMessage {
+
+    Address __addr;
+    PollEventCallback __handler;
+
+    int errCode;
+
+    oper init(Address addr, PollEventCallback handler) :
+        __addr = addr,
+        __handler = handler {
+    }
+
+    @final int __run(Poller poller, Log log) {
+        try {
+            sock := Socket(AF_INET, SOCK_STREAM, 0);
+            if (!sock.connect(__addr))
+                return ERR_CONNECT_FAILURE;
+            poller.add(sock, __handler);
+            return SUCCESS;
+        } catch (Exception ex) {
+            log.error `Exception creating a client: $ex`;
+            return ERR_INTERNAL;
+        }
+    }
+
+    void run(EventManager eventMan, Log log) {
+        MutexLock lock = {_event.getMutex()};
+        errCode = __run(eventMan.poller, log);
+        trigger();
+    }
+}
+
+class _StopClient : _WaitableMessage {
+    CommHandler __handler;
+
+    oper init(CommHandler handler) : __handler = handler {}
+
+    void run(EventManager eventMan, Log log) {
+        __handler.removeFrom(eventMan.poller);
+        trigger();
+    }
+}
+
+class _SendData : _Message {
+    CommHandler __handler;
+    String __data;
+
+    oper init(CommHandler handler, String data) :
+        __handler = handler,
+        __data = data {
+    }
+
+    void run(EventManager eventMan, Log log) {
+        log.debug `Sending $(__data.size) bytes to $__handler`;
+        __handler.outBuf.extend(__data);
+    }
+}
+
+## A communication mechanism for waiting on a result from a message/response
+## communication in the poller thread.
+class Waiter {
+    Event _event = {};
+
+    ## Signal the condition.
+    @final void _signal() { _event.signal() }
+
+    ## Wait on the condition.  Caller should be holding the mutex.
+    @final void _wait() { _event.wait() }
+}
+
+class _SendSync : _Message {
+    CommHandler __handler;
+    String __data;
+    Waiter __waiter;
+
+    oper init(CommHandler handler, String data, Waiter waiter) :
+        __handler = handler,
+        __data = data,
+        __waiter = waiter {
+    }
+
+    void run(EventManager eventMan, Log log) {
+        __handler.addResponder(__waiter);
+        __handler.outBuf.extend(__data);
+    }
+}
+
+class _ScheduleEvent : _Message {
+    Time __time;
+    EventCallback __event;
+
+    oper init(Time time, EventCallback event) :
+        __time = time,
+        __event = event {
+    }
+
+    void run(EventManager eventMan, Log log) {
+        eventMan.scheduleEvent(__time, __event);
+    }
+}
+
+## Specialization of a Waiter that contains a result value and additional info
+## for the handler (typically used to store a key).
+@final class WaiterFor[Result, Info] : Waiter {
+    Result __result;
+    Exception __exception;
+    Info info;
+
+    oper init(Info info) : info = info {}
+
+    ## Set the result and trigger the waiter, allowing the waiting thread to
+    ## retrieve the response.
+    void setResult(Result result) {
+        MutexLock lock = {_event.getMutex()};
+        __result = result;
+        _signal();
+    }
+
+    ## Set an exception and trigger the waiter, causing the waiting thread to
+    ## throw an exception.
+    void setError(Exception ex) {
+        MutexLock lock = {_event.getMutex()};
+        __exception = ex;
+        _signal();
+    }
+
+    ## Wait for a result or an error.  If an error is obtained, it will be
+    ## thrown.
+    Result getResult() {
+        MutexLock lock = {_event.getMutex()};
+        _event.wait();
+        if (__exception)
+            throw __exception;
+        return __result;
+    }
+}
+
+class _CommPipeHandler @impl PollEventCallback {
+
+    class __Message {
+        CommHandler target;
+        String data;
+        oper init(CommHandler target, String data) :
+            target = target,
+            data = data {
+        }
+    }
+
+    Pipe __pipe;
+    Log __log;
+    Queue[_Message] __queue = {};
+
+    # The event manager that owns the pipe.
+    EventManagerBackRef __eventMan;
+
+    bool done;
+
+    oper init(Pipe pipe, Log log, EventManagerBackRef eventMan) :
+        __pipe = pipe,
+        __log = log,
+        __eventMan = eventMan {
+    }
+
+    int oper call(Poller poller, PollEvent event) {
+        if (event.revents & POLLIN) {
+            __pipe.read(1024);
+            message := __queue.get();
+            if (message is null)
+                __eventMan.oper from EventManager().terminate();
+            else
+                message.run(__eventMan.oper from EventManager(), __log);
+        } else if (event.revents & POLLERR) {
+            __log.error `got error on control pipe handler`;
+            __pipe.close();
+            poller.remove(__pipe);
+            return 0;
+        } else if (event.revents & POLLHUP) {
+            __log.info `got HUP on control pipe handler`;
+            __pipe.close();
+            poller.remove(__pipe);
+            return 0;
+        }
+        return POLLIN | POLLERR | POLLHUP;
+    }
+
+    void send(_Message message) {
+        __queue.add(message);
+        __pipe.write('x');
+    }
+}
+
+class _PollerThread : Thread {
+
+    # Our control pipe. Safely send messages from other threads.
+    _CommPipeHandler control;
+    EventManager __sched = {};
+
+    oper init(Log log) {
+        pipe := Pipe();
+        control = _CommPipeHandler(pipe, log, __sched);
+        __sched.poller.add(pipe, control);
+    }
+
+    void run() {
+        __sched.run();
+    }
+}
+
+## Serves as a proxy for a remote connection managed from a background thread
+## created by Comm.
+## Allows you to send data to the remote peer safely from a non-poller thread.
+@final class CommProxy {
+
+    _CommPipeHandler __control;
+    CommHandler __handler;
+
+    oper init(_CommPipeHandler control, CommHandler handler) :
+        __control = control,
+        __handler = handler {
+    }
+
+    ## Sends 'data' asynchronously to the other communication endpoint.
+    void send(String data) {
+        __control.send(_SendData(__handler, data));
+    }
+
+    ## Close the connection.
+    void close() {
+        __control.send(_StopClient(__handler));
+    }
+}
+
+@final class SyncCommProxy {
+
+    _CommPipeHandler __control;
+    CommHandler __handler;
+
+    oper init(_CommPipeHandler control, CommHandler handler) :
+        __control = control,
+        __handler = handler {
+    }
+
+    ## Sends 'data' asynchronously to the other communication endpoint.
+    void send(String data) {
+        __control.send(_SendData(__handler, data));
+    }
+
+    ## Close the connection.
+    void close() {
+        __control.send(_StopClient(__handler));
+    }
+
+    ## Send a synchronous message.  Wait for the result with
+    ## 'waiter.getResponse()'.
+    void sendSync(String data, Waiter waiter) {
+        __control.send(_SendSync(__handler, data, waiter));
+    }
+}
+
+## Manages a poller in a background thread, providing a set of methods to
+## control it and interact with its connections.
+@final class Comm {
+    _PollerThread __thread;
+    Log __log;
+
+    oper init(Log log) : __log = log {}
+
+    void start() {
+        __thread = _PollerThread(__log);
+        __thread.start();
+    }
+
+    void stop() {
+        __thread.control.send(null);
+        __thread.join();
+        __thread = null;
+    }
+
+    ## Create a connection to a remote server in the poller thread and return
+    ## a proxy for the connection.
+    ##
+    ## Unless you need to create the CommHandler to customize logging, use the
+    ## version that accepts a UserHandler instead.
+    ##
+    ## Do not interact with 'handler' directly after calling this unless it
+    ## is mutex protected: the contents of the handler will be subject to
+    ## manipulation from the poller thread.
+    @final CommProxy getProxy(Address server, CommHandler handler) {
+        message := _NewClient(server, handler);
+        __thread.control.send(message);
+        message.wait();
+        return CommProxy(__thread.control, handler);
+    }
+
+    ## Create a connection to a remote server in the poller thread and return
+    ## a proxy for the connection.
+    ## Do not interact with 'handler' directly after calling this unless it
+    ## is mutex protected: the contents of the handler will be subject to
+    ## manipulation from the poller thread.
+    @final CommProxy getProxy(Address server, UserHandler handler) {
+        return getProxy(server, CommHandler(__log, handler));
+    }
+
+    ## Same as getProxy(), only returns a synchronous proxy.
+    ##
+    ## Unless you need to create the CommHandler to customize logging, use the
+    ## version that accepts a UserHandler instead.
+    @final SyncCommProxy getSyncProxy(Address server, CommHandler handler) {
+        message := _NewClient(server, handler);
+        __thread.control.send(message);
+        message.wait();
+        return SyncCommProxy(__thread.control, handler);
+    }
+
+    ## Same as getProxy(), only returns a synchronous proxy.
+    @final SyncCommProxy getSyncProxy(Address server, UserHandler handler) {
+        return getSyncProxy(server, CommHandler(__log, handler));
+    }
+
+    ## Start a new server in the poller thread, listening on the given
+    ## address.  'listener' is the handler that will be invoked on new
+    ## connections.  reuseAddr should be true if you want to set the
+    ## "REUSEADDR" option on the socket.
+    ##
+    ## Unless you want to create the CommListener to customize logging, use
+    ## the version that accepts a CommHandlerFactory instead.
+    ##
+    ## Do not interact with 'listener' directly after calling this unless it
+    ## is mutex protected, as it will be subject to manipulation from the
+    ## poller thread.
+    @final void startServer(Address addr, CommListener listener,
+                            bool resuseAddr
+                            ) {
+        message := _NewServer(addr, listener, true);
+        __thread.control.send(message);
+        message.wait();
+    }
+
+    ## Start a new server in the poller thread, listening on the given
+    ## address.  'listener' is the handler that will be invoked on new
+    ## connections.  reuseAddr should be true if you want to set the
+    ## "REUSEADDR" option on the socket.
+    ##
+    ## Do not interact with 'handlerFactory' directly after calling this
+    ## unless it is mutex protected, as it will be subject to manipulation
+    ## from the poller thread.
+    @final void startServer(Address addr, CommHandlerFactory handlerFactory,
+                            bool reuseAddr
+                            ) {
+        startServer(addr, CommListener(__log, handlerFactory), reuseAddr);
+    }
+
+    ## Schedule an event to be executed at the given time (or immediately, if
+    ## the time is in the past).  The vevent will always be run from the
+    ## event manager thread.
+    @final void scheduleEvent(Time time, EventCallback event) {
+        __thread.control.send(_ScheduleEvent(time, event));
+    }
+
+    oper del() {
+        if (__thread)
+            stop();
+    }
+}
