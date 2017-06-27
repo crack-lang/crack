@@ -587,9 +587,6 @@ class Poller {
     ## used when all pollables have event handlers.
     ## 'timeout' may be null, in which case we wait indefinitely.
     void waitAndProcess(TimeDelta timeout) {
-        wait(timeout);
-        while (nx()) ;
-
         ## Invoke callbacks with no event just so we can get their next events.
         PollEvent temp = {};
         for (int i = 0; i < __nextIndex; ++i) {
@@ -598,6 +595,9 @@ class Poller {
             temp.revents = 0;
             __callCallback(i, temp);
         }
+
+        wait(timeout);
+        while (nx()) ;
     }
 
     ## A poller is true if it contains pollables.
