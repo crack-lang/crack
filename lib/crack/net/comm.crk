@@ -1,5 +1,7 @@
 ## High-level communication module.
 ##
+## DEPRECATED.  Use crack.net.comm2 instead.
+##
 ## This provides commonly used functionality for buffer handling, connection
 ## listening and logging.
 ##
