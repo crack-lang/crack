@@ -276,7 +276,7 @@ class Socket : FileHandle @implements Reader, Writer {
             // don't error on non blocking
             if (errno() == EAGAIN || errno() == EWOULDBLOCK)
                 return 0;
-            throw Exception(FStr() `Error reading from socket: $rc $(strerror())`);
+            throw SystemError(FStr() `Error reading from socket`);
         }
         return uint(rc);
     }
@@ -286,7 +286,7 @@ class Socket : FileHandle @implements Reader, Writer {
     void _write(byteptr cstr, uint len){
         rc := send(fd, cstr, len, 0);
         if (rc < 0)
-            throw Exception(FStr() `Error writing to socket: $(strerror())`);
+            throw SystemError(FStr() `Error writing to socket`);
         if (rc != len)
             throw Exception('Incomplete write to socket');
     }
