@@ -1,0 +1,161 @@
+%%TEST%%
+comm2 test
+%%ARGS%%
+%%FILE%%
+import crack.eventmgr EventCallbackFunc;
+import crack.io cerr, Formatter, FStr, StandardFormatter, Writer;
+import crack.lang Buffer;
+import crack.net InetAddress, Poller, Socket, SocketApd, AF_INET,
+    SOCK_STREAM;
+import crack.net.comm2 Comm, CommHandler, CommHandlerFactory, CommListener,
+    UserHandler, Log, NewConnection, Waiter, WaiterFor;
+import crack.threads Event;
+import crack.time add, Time, TimeDelta;
+
+@import crack.ann assert, impl;
+
+# Change to cerr for verbose logging output.
+log := Formatter.unsafeCast(null);
+#log := cerr;
+
+import crack.threads Condition, Mutex, MutexLock;
+
+class EchoHandler @impl UserHandler {
+    Log log;
+    bool server;
+    bool terminated;
+    WaiterFor[String, int] waiter;
+
+    oper init(Log log, bool server) :
+        log = log,
+        server = server {
+    }
+
+    void process(CommHandler comm) {
+        log.info `in $(server ? 'server' : 'client') process`;
+        if (!comm.inBuf.size)
+            return;
+
+        # Quit if we don't have a complete message.
+        size := comm.inBuf[0];
+        if (comm.inBuf.size < size + 1)
+            return;
+
+        if (server) {
+            comm.outBuf.extend(Buffer(comm.inBuf.buffer, size + 1));
+            comm.inBuf.compact(size + 1);
+        } else if (waiter) {
+            log.info `sending response back to waiter\n`;
+            waiter.setResult(String(comm.inBuf.buffer, size + 1, false));
+            comm.inBuf.compact(size + 1);
+        } else {
+            log.info `client has no waiter!!!\n`;
+        }
+    }
+
+    void terminate(CommHandler comm) {
+        terminated = true;
+    }
+
+    void addResponder(Object responder) {
+        waiter = WaiterFor[String, int].cast(responder);
+    }
+}
+
+class EchoHandlerFactory @impl CommHandlerFactory {
+    CommHandler makeCommHandler(NewConnection conn) {
+        return CommHandler(conn.log, EchoHandler(conn.log, true));
+    }
+}
+
+poller := Poller();
+
+# Set port number to zero, allow the system to assign it.
+const ADDR := InetAddress(127, 0, 0, 1, 0);
+
+server := Socket(AF_INET, SOCK_STREAM, 0);
+server.setReuseAddr(true);
+server.bind(ADDR);
+server.listen(5);
+SocketApd(server).getSocketAddress(ADDR);  # Fill in the port number.
+poller.add(server, CommListener(Log(log, log, log, log, log, 'server'),
+                                EchoHandlerFactory()
+                                )
+           );
+
+clientSock := Socket(AF_INET, SOCK_STREAM, 0);
+@assert(clientSock.connect(ADDR));
+clientLog := Log(log, log, log, log, log, 'client');
+client := CommHandler(clientLog,
+                      EchoHandler(Log(log, log, log, log, log, 'client'),
+                                  false
+                                  )
+                      );
+poller.add(clientSock, client);
+
+client.outBuf.extend('\x0Bhello world');
+int i;
+for (i = 0; i < 100; ++i) {
+    poller.waitAndProcess(null);
+    if (client.inBuf == '\013hello world')
+        break;
+}
+
+if (i == 100)
+    cerr `FAILED round trip communication test\n`;
+
+client.removeFrom(poller);
+for (i = 0; i < 100; ++i) {
+    poller.waitAndProcess(null);
+    if (poller.count() == 1)
+        break;
+}
+
+if (i == 100)
+    cerr `FAILED client close\n`;
+
+poller.remove(server);
+server.close();
+poller = null;
+
+serverLog := Log(log, log, log, log, log, 'server');
+comm := Comm(serverLog);
+comm.start();
+comm.startServer(ADDR, CommListener(serverLog, EchoHandlerFactory()), true);
+proxy := comm.getSyncProxy(ADDR,
+                           client = CommHandler(
+                               clientLog,
+                               EchoHandler(clientLog, false)
+                           ));
+waiter := WaiterFor[String, int](0);
+const TEST_MESSAGE := '\x0Ctest message';
+proxy.sendSync(TEST_MESSAGE, waiter);
+@assert(waiter.getResult() == TEST_MESSAGE);
+
+if (true) {
+    # Schedule an event, make sure that we get it within 3/10ths of a second
+    # (hopefully this won't be too flakey).
+    Event myEventWaiter = {};
+    void myEvent() {
+        myEventWaiter.signal();
+    }
+    schedTime := Time.now();
+    comm.scheduleEvent(add(schedTime, TimeDelta(0, 100000000)),
+                       EventCallbackFunc(myEvent)
+                       );
+    myEventWaiter.wait();
+    endTime := Time.now();
+    diff := endTime - schedTime;
+    @assert(diff.secs == 0 && diff.nsecs >= 100000000);
+    # This check is likely to be flakey.
+    @assert(diff.nsecs < 300000000);
+}
+
+proxy.close();
+comm.stop();
+
+cerr `ok\n`;
+
+%%EXPECT%%
+ok
+%%STDIN%%
