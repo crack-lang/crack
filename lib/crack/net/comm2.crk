@@ -82,9 +82,10 @@
 
 import crack.eventmgr EventCallback, EventManager, EventManagerBackRef;
 import crack.io cerr, Formatter, FStr, StandardFormatter, Writer;
-import crack.lang AppendBuffer, Exception;
+import crack.lang AppendBuffer, Exception, InvalidArgumentError, SystemError;
 import crack.net Address, Pipe, Poller, PollEvent, PollEventCallback, Socket,
     AF_INET, POLLIN, POLLOUT, POLLERR, POLLHUP, SOCK_STREAM;
+import crack.runtime c_strerror;
 import crack.threads Condition, Event, Mutex, MutexLock, Thread, Queue;
 import crack.time Time;
 
@@ -211,9 +212,21 @@ class CommHandler;
 
     ## Close the socket and remove the handler's socket from the poller.
     @final void removeFrom(Poller poller) {
+        # Set the __close flag this so isClosed() returns true, even if the
+        # socket wasn't closed explicitly.
+        __close = true;
+
         if (__sock)
             __sock.close();
-        poller.remove(__sock);
+        else
+            # should we still terminate?
+            return;
+
+        try {
+            poller.remove(__sock);
+        } catch (InvalidArgumentError ex) {
+            log.debug `Removing connection not in poller.`;
+        }
         __sock = null;
         userHandler.terminate(this);
     }
@@ -223,6 +236,9 @@ class CommHandler;
     @final void close() {
         __close = true;
     }
+
+    ## Returns true if the socket is closed.
+    @final bool isClosed() { return __close && __sock is null }
 
     @final void addResponder(Object responder) {
         userHandler.addResponder(responder);
@@ -246,21 +262,33 @@ class CommHandler;
 
         log.debug `got events = $(event.revents)`;
         if (event.revents & POLLIN) {
-            data := __sock.read(1024);
-            if (!data) {
-                log.info `Connection closed`;
+            try {
+                data := __sock.read(1024);
+                if (!data) {
+                    log.info `Connection closed`;
+                    removeFrom(poller);
+                    return 0;
+                }
+
+                inBuf.extend(data);
+            } catch (SystemError ex) {
+                log.error `Error reading from socket: $(ex.text).  Closing`;
                 removeFrom(poller);
                 return 0;
             }
-
-            inBuf.extend(data);
         }
 
         if (event.revents & POLLOUT) {
             rc := __sock.send(outBuf, 0);
             log.debug `Sent $rc/$(outBuf.size) bytes`;
-            if (rc >= 0)
+            if (rc >= 0) {
                 outBuf.compact(rc);
+            } else {
+                log.error I`Error reading from socket: $(c_strerror()). \
+                            Closing`;
+                removeFrom(poller);
+                return 0;
+            }
         }
 
         if (event.revents & POLLERR) {
@@ -337,10 +365,11 @@ class CommHandler;
         if (event.revents & POLLIN) {
             accepted := __sock.accept();
             log.info `New connection received from $(accepted.addr)`;
-            poller.add(accepted.sock,
-                       commHandlerFactory.makeCommHandler(
-                           NewConnection(log, accepted)
-                       ));
+            comm := commHandlerFactory.makeCommHandler(
+                NewConnection(log, accepted)
+            );
+            if (!comm.isClosed())
+                poller.add(accepted.sock, comm);
         } else if (event.revents & POLLERR) {
             log.error `got error`;
             __sock.close();
