@@ -10,63 +10,97 @@
 
 @interface Functor0[RetT] {
     @abstract RetT oper call();
+
+    class Wrap @impl Functor0 {
+        function[RetT] func;
+        oper init(function[RetT] func) : func = func {}
+        RetT oper call() { return func() }
+    }
 }
 
 @interface Functor1[RetT, T1] {
     @abstract RetT oper call(T1 p1);
+
+    class Wrap @impl Functor1 {
+        function[RetT, T1] func;
+        oper init(function[RetT, T1] func) : func = func {}
+        RetT oper call(T1 p1) { return func(p1) }
+    }
 }
 
 @interface Functor2[RetT, T1, T2] {
     @abstract RetT oper call(T1 p1, T2 p2);
+
+    class Wrap @impl Functor2 {
+        function[RetT, T1, T2] func;
+        oper init(function[RetT, T1, T2] func) : func = func {}
+        RetT oper call(T1 p1, T2 p2) { return func(p1, p2) }
+    }
 }
 
 @interface Functor3[RetT, T1, T2, T3] {
     @abstract RetT oper call(T1 p1, T2 p2, T3 p3);
+
+    class Wrap @impl Functor3 {
+        function[RetT, T1, T2, T3] func;
+        oper init(function[RetT, T1, T2, T3] func) : func = func {}
+        RetT oper call(T1 p1, T2 p2, T3 p3) { return func(p1, p2, p3) }
+    }
 }
 
 @interface Functor4[RetT, T1, T2, T3, T4] {
     @abstract RetT oper call(T1 p1, T2 p2, T3 p3, T4 p4);
+
+    class Wrap @impl Functor4 {
+        function[RetT, T1, T2, T3, T4] func;
+        oper init(function[RetT, T1, T2, T3, T4] func) : func = func {}
+        RetT oper call(T1 p1, T2 p2, T3 p3, T4 p4) {
+            return func(p1, p2, p3, p4);
+        }
+    }
 }
 
 @interface Functor5[RetT, T1, T2, T3, T4, T5] {
     @abstract RetT oper call(T1 p1, T2 p2, T3 p3, T4 p4, T5 p5);
+
+    class Wrap @impl Functor5 {
+        function[RetT, T1, T2, T3, T4, T5] func;
+        oper init(function[RetT, T1, T2, T3, T4, T5] func) : func = func {}
+        RetT oper call(T1 p1, T2 p2, T3 p3, T4 p4, T5 p5) {
+            return func(p1, p2, p3, p4, p5);
+        }
+    }
 }
 
-class Function0[RetT] @impl Functor0[RetT] {
-    function[RetT] func;
-    oper init(function[RetT] func) : func = func {}
-    RetT oper call() { return func(); }
+class Function0[RetT] : Functor0[RetT].Wrap {
+    oper init(function[RetT] func) : Functor0[RetT].Wrap(func) {}
 }
 
-class Function1[RetT, T1] @impl Functor1[RetT, T1] {
-    function[RetT, T1] func;
-    oper init(function[RetT, T1] func) : func = func {}
-    RetT oper call(T1 p1) { return func(p1); }
+class Function1[RetT, T1] : Functor1[RetT, T1].Wrap {
+    oper init(function[RetT, T1] func) : Functor1[RetT, T1].Wrap(func) {}
 }
 
-class Function2[RetT, T1, T2] @impl Functor2[RetT, T1, T2] {
-    function[RetT, T1, T2] func;
-    oper init(function[RetT, T1, T2] func) : func = func {}
-    RetT oper call(T1 p1, T2 p2) { return func(p1, p2); }
+class Function2[RetT, T1, T2] : Functor2[RetT, T1, T2].Wrap {
+    oper init(function[RetT, T1, T2] func) :
+        Functor2[RetT, T1, T2].Wrap(func) {
+    }
 }
 
-class Function3[RetT, T1, T2, T3] @impl Functor3[RetT, T1, T2, T3] {
-    function[RetT, T1, T2, T3] func;
-    oper init(function[RetT, T1, T2, T3] func) : func = func {}
-    RetT oper call(T1 p1, T2 p2, T3 p3) { return func(p1, p2, p3); }
+class Function3[RetT, T1, T2, T3] : Functor3[RetT, T1, T2, T3].Wrap {
+    oper init(function[RetT, T1, T2, T3] func) :
+        Functor3[RetT, T1, T2, T3].Wrap(func) {
+    }
 }
 
-class Function4[RetT, T1, T2, T3, T4] @impl Functor4[RetT, T1, T2, T3, T4] {
-    function[RetT, T1, T2, T3, T4] func;
-    oper init(function[RetT, T1, T2, T3, T4] func) : func = func {}
-    RetT oper call(T1 p1, T2 p2, T3 p3, T4 p4) { return func(p1, p2, p3, p4); }
+class Function4[RetT, T1, T2, T3, T4] : Functor4[RetT, T1, T2, T3, T4].Wrap {
+    oper init(function[RetT, T1, T2, T3, T4] func) :
+        Functor4[RetT, T1, T2, T3, T4].Wrap(func) {
+    }
 }
 
-class Function5[RetT, T1, T2, T3, T4, T5] @impl
-        Functor5[RetT, T1, T2, T3, T4, T5] {
-    function[RetT, T1, T2, T3, T4, T5] func;
-    oper init(function[RetT, T1, T2, T3, T4, T5] func) : func = func {}
-    RetT oper call(T1 p1, T2 p2, T3 p3, T4 p4, T5 p5) {
-        return func(p1, p2, p3, p4, p5);
+class Function5[RetT, T1, T2, T3, T4, T5] :
+        Functor5[RetT, T1, T2, T3, T4, T5].Wrap {
+    oper init(function[RetT, T1, T2, T3, T4, T5] func) :
+        Functor5[RetT, T1, T2, T3, T4, T5].Wrap(func) {
     }
 }
