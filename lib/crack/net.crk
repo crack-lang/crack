@@ -404,13 +404,21 @@ alias PollEventCallback = Functor2[int, Poller, PollEvent];
 ## event on any of the pollables and then iterate over the set of events that
 ## occurred.
 class Poller {
+
+    # The array of pollables and the file-descriptor set, which is also an
+    # array that corresponds 1:1 with the set of pollables.
+    # The order of these arrays are significant.  The only legal mutations are
+    # append and delete.  A callback can indirectly delete any number of
+    # pollables, but it can only insert at the end.  This is a fundamental
+    # assumption in the callback processing code.
     Array[FileHandle] __pollables;
+    PollSet __fds;
+
     class CallbackWrapper {
         PollEventCallback callback;
         oper init(PollEventCallback callback) : callback = callback {}
     }
     HashMap[FileHandle, CallbackWrapper] __callbacks;
-    PollSet __fds;
     TimeVal __pollTimeout;
     uint __nextIndex;
     uint __capacity;
@@ -497,6 +505,11 @@ class Poller {
         if (__callbacks && __callbacks.get(p))
             __callbacks.delete(p);
         --__nextIndex;
+
+        # Adjust the iterator so if anything in the callstack is iterating
+        # over the set it will remain inteact.
+        if (__iter >= i)
+            --__iter;
     }
 
     ## Sets the events that we will wait on from the pollable.  Note that you
@@ -554,9 +567,26 @@ class Poller {
     }
 
     @final void __callCallback(int descriptorIndex, PollEvent pollEvent) {
+
+        # Save the iterator and restore it when the context completes.
+        # "finally" or "defer" would be nice here.
+        class RestoreIter {
+            Poller p;
+            int oldVal;
+            oper init(Poller p) : p = p, oldVal = p.__iter {}
+            oper del() { p.__iter = oldVal }
+        }
+        restore := RestoreIter(this);
+        __iter = descriptorIndex;
+
         if (__callbacks && (cbw := __callbacks.get(pollEvent.pollable))) {
             events := cbw.callback(this, pollEvent);
-            if (events != pollEvent.events)
+
+            # Change the event mask, taking care to ensure that the pollable
+            # wasn't removed by the callback.
+            if (events != pollEvent.events && __iter >= 0 &&
+                pollEvent.pollable is __pollables[__iter]
+                )
                 __fds.set(descriptorIndex, pollEvent.pollable.fd, events, 0);
         }
     }
@@ -589,11 +619,12 @@ class Poller {
     void waitAndProcess(TimeDelta timeout) {
         ## Invoke callbacks with no event just so we can get their next events.
         PollEvent temp = {};
-        for (int i = 0; i < __nextIndex; ++i) {
-            __fds.get(i, temp);
-            temp.pollable = __pollables[i];
+        for (__iter = 0; __iter < __nextIndex; ++__iter) {
+            __fds.get(__iter, temp);
+            temp.pollable = __pollables[__iter];
             temp.revents = 0;
-            __callCallback(i, temp);
+            lastSize := __nextIndex;
+            __callCallback(__iter, temp);
         }
 
         wait(timeout);
