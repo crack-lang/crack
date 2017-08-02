@@ -1588,9 +1588,23 @@ TypeDefPtr TypeDef::deserializeTypeDef(Deserializer &deser, const char *name) {
     return type;
 }
 
+TypeDef::TypeVec TypeDef::getInstanceBases() {
+    if (appendage) {
+        TypeVec result;
+        result.push_back(getAnchorType());
+        return result;
+    }
+
+    return parents;
+}
+
 int TypeDef::countRootAncestors(bool skipFirst) const {
     bool skip = skipFirst;
     int result = 0;
+
+    if (appendage)
+        return getAnchorType()->countRootAncestors(skipFirst);
+
     SPUG_FOR(TypeVec, iter, parents) {
 
         if (skip) {

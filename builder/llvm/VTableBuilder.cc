@@ -70,10 +70,11 @@ int VTableBuilder::fillVTablesVar(vector<Constant *> &vtablesArrayInit,
     Constant *zero = ConstantInt::get(builder->intzLLVM, 0);
 
     // Store the calculated offsets for the base classes here.
-    vector<Constant *> baseOffsets(type->parents.size());
+    TypeDef::TypeVec bases = type->getInstanceBases();
+    vector<Constant *> baseOffsets(bases.size());
 
-    for (int i = start; i < type->parents.size(); ++i, ++outputStart) {
-        BTypeDef *base = BTypeDefPtr::arcast(type->parents[i]);
+    for (int i = start; i < bases.size(); ++i, ++outputStart) {
+        BTypeDef *base = BTypeDefPtr::arcast(bases[i]);
         if (base == vtableBaseType) {
             // If the class is directly derived from VTableBase, VTableBase
             // must be the first parent and we want to use the vtable defined
@@ -116,9 +117,9 @@ int VTableBuilder::fillVTablesVar(vector<Constant *> &vtablesArrayInit,
         baseOffsets[i] = offset;
     }
 
-    // Fill the rest of the array with the vtable pointers of the parents.
-    for (int i = start; i < type->parents.size(); ++i) {
-        BTypeDef *base = BTypeDefPtr::arcast(type->parents[i]);
+    // Fill the rest of the array with the vtable pointers of the bases.
+    for (int i = start; i < bases.size(); ++i) {
+        BTypeDef *base = BTypeDefPtr::arcast(bases[i]);
         if (base != vtableBaseType)
             outputStart = fillVTablesVar(vtablesArrayInit,
                                          outputStart,
@@ -293,21 +294,6 @@ void VTableBuilder::emit(BTypeDef *type) {
     vtablesGVar->setInitializer(vtablesArrayConst);
 
     assert(type->firstVTableType);
-}
-
-void VTableBuilder::emitAppendageVTable(LLVMBuilder *builder,
-                                        BTypeDef *type
-                                        ) {
-    // Get the vtables array of the anchor class.
-    BTypeDefPtr anchor = BTypeDefPtr::acast(type->getAnchorType());
-    GlobalVariable *anchorGVar =
-        builder->module->getGlobalVariable(anchor->getFullName() + ":vtables");
-    Constant *vtablesArrayConst = anchorGVar->getInitializer();
-
-    // Use it to initialize our :vtables variable..
-    GlobalVariable *vtablesGVar =
-        builder->module->getGlobalVariable(type->getFullName() + ":vtables");
-    vtablesGVar->setInitializer(vtablesArrayConst);
 }
 
 void VTableBuilder::materialize(BTypeDef *type) {

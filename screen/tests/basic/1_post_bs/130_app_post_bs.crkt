@@ -42,6 +42,14 @@ d1 := D(AA(200));
 d1.b();
 d1.c();
 
+# Verify that we can create appendages across modules.
+class ObjApp = Object {
+    Object f() { return this }
+}
+@import crack.ann assert;
+o := Object();
+@assert(ObjApp(o).f() is o);
+
 %%EXPECT%%
 called b, A.a(100)
 called c, A.a(100)

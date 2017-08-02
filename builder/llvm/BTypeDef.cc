@@ -88,10 +88,12 @@ void BTypeDef::createAllVTables(VTableBuilder &vtb, const string &name,
     if (this == vtb.vtableBaseType)
         vtb.createVTable(this, name, true);
 
-    // iterate over the base classes, construct VTables for all
+    // iterate over the instance bases, construct VTables for all
     // ancestors that require them.
-    for (TypeVec::iterator baseIter = parents.begin();
-         baseIter != parents.end();
+    TypeVec bases = getInstanceBases();
+
+    for (TypeVec::iterator baseIter = bases.begin();
+         baseIter != bases.end();
          ++baseIter
          ) {
         BTypeDef *base = BTypeDefPtr::arcast(*baseIter);
@@ -296,22 +298,15 @@ void BTypeDef::createBaseOffsets(Context &context) const {
 void BTypeDef::fixIncompletes(Context &context) {
     // construct the vtable if necessary
     if (hasVTable) {
-        if (appendage) {
-            VTableBuilder::emitAppendageVTable(
-                dynamic_cast<LLVMBuilder*>(&context.builder),
-                this
-            );
-        } else {
-            VTableBuilder vtableBuilder(
-                dynamic_cast<LLVMBuilder*>(&context.builder),
-                BTypeDefPtr::arcast(context.construct->vtableBaseType)
-            );
-            createAllVTables(
-                vtableBuilder,
-                ".vtable." + context.parent->ns->getNamespaceName() + "." + name
-            );
-            vtableBuilder.emit(this);
-        }
+        VTableBuilder vtableBuilder(
+            dynamic_cast<LLVMBuilder*>(&context.builder),
+            BTypeDefPtr::arcast(context.construct->vtableBaseType)
+        );
+        createAllVTables(
+            vtableBuilder,
+            ".vtable." + context.parent->ns->getNamespaceName() + "." + name
+        );
+        vtableBuilder.emit(this);
     }
 
     createBaseOffsets(context);

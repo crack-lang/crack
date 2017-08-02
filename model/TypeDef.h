@@ -492,6 +492,13 @@ class TypeDef : public VarDef, public Namespace {
         virtual void materializeVTable(Context &context) {}
 
         /**
+         * Returns the list of classes that form the schema for a class
+         * instance.  For normal classes, this is the same as "parents".  But
+         * for appendages, it is a list containing only the anchor type.
+         */
+        TypeVec getInstanceBases();
+
+        /**
          * Returns the number of "root ancestors" of a type.  These are the
          * ancestors that might possibly have a VTable for the type.  This is a
          * weird calculation best described by example.  If this is our inheritence
@@ -504,6 +511,9 @@ class TypeDef : public VarDef, public Namespace {
          *            B
          * The count of F is 3 (E, C, and B).  We ignore the primary classes below
          * the first level (D and A).
+         *
+         * Note that for an appendage, we calculate this based on the anchor
+         * type, not all ancestors (which may themselves be appendages).
          */
         int countRootAncestors(bool skipFirst = false) const;
 };
