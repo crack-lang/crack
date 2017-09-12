@@ -1,0 +1,53 @@
+%%TEST%%
+annnotation imports do module initialization
+%%ARGS%%
+%%FILE%%
+# Verify that annotation imports from generic instantiations do module
+# initialization.
+# This is a different code path from normal annoation imports.
+
+import crack.io cout, FStr;
+import systest test;
+
+test.mod('ann', I"
+    import crack.io cout;
+    import crack.compiler CrackContext;
+    @import crack.ann assert;
+
+    void func(CrackContext ctx) {
+        @assert(!(cout is null));
+        cout `func annotation called\n`;
+    }
+    ");
+
+test.mod('gen', I"
+    @import ann func;
+
+    class G[T] = T {
+        @func
+    }
+    ");
+
+test.main(I"
+    import gen G;
+
+    class A {}
+    G[A] g;
+    ");
+test.run();
+
+test.main(I"
+    # force regeneration
+    import gen G;
+
+    class A {}
+    G[A] g;
+    ");
+test.run();
+
+%%EXPECT%%
+out: func annotation called
+terminated: success
+out: func annotation called
+terminated: success
+%%STDIN%%

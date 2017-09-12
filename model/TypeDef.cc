@@ -1232,6 +1232,11 @@ TypeDefPtr TypeDef::getSpecialization(Context &context,
         // specialization's compile-time dependencies.
         module->copyCompileTimeDepsFrom(getModule().get());
 
+        // Initialize the modules of any compile time deps.  We could do this
+        // when the dependency is loaded, but it may not be necessary at that
+        // time.
+        module->initializeCompileTimeDeps(context.builder);
+
         // Add the modules of the parameter types as dependents and also add
         // them to the generic params for the module.
         SPUG_FOR(TypeVecObj, typeIter, *types) {

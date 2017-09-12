@@ -202,6 +202,12 @@ class ModuleDef : public VarDef, public Namespace {
         }
 
         /**
+         * Initialize compile-time dependencies for the module by calling the
+         * dependency module's "main" function.
+         */
+        void initializeCompileTimeDeps(builder::Builder &builder) const;
+
+        /**
          * Adds the other module to this module's slaves.
          */
         void addSlave(ModuleDef *slave);

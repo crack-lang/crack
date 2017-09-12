@@ -139,6 +139,11 @@ void ModuleDef::addCompileTimeDependency(ModuleDef *other) {
         compileTimeDeps[other->getNamespaceName()] = other;
 }
 
+void ModuleDef::initializeCompileTimeDeps(builder::Builder &builder) const {
+    SPUG_FOR(ModuleDefMap, elem, compileTimeDeps)
+        elem->second->runMain(builder);
+}
+
 void ModuleDef::addSlave(ModuleDef *slave) {
     SPUG_CHECK(!slave->master,
                "Module " << slave->getNamespaceName() <<
@@ -514,6 +519,7 @@ ModuleDefPtr ModuleDef::deserialize(Deserializer &deser,
     vector<string> genericName;
     vector<TypeDefPtr> genericParams;
     string genericModule;
+    ModuleDefMap compileTimeDeps;
 
     CRACK_PB_BEGIN(deser, 256, optional)
         CRACK_PB_FIELD(1, string) {
@@ -523,6 +529,7 @@ ModuleDefPtr ModuleDef::deserialize(Deserializer &deser,
 
             ModuleDefPtr depMod =
                 deser.context->construct->getModule(depInfo.second);
+            compileTimeDeps[depInfo.second] = depMod.get();
             bool upToDate = depMod && depMod->finished &&
                             depMod->headerDigest.asHex() == depInfo.first;
             if (!upToDate) {
@@ -597,6 +604,8 @@ ModuleDefPtr ModuleDef::deserialize(Deserializer &deser,
     mod->genericName = genericName;
     mod->genericParams = genericParams;
     mod->genericModule = genericModule;
+
+    mod->compileTimeDeps = compileTimeDeps;
 
     // storing the module in the construct cache - this is actually also done
     // later within construct, but we need the module to be present while
