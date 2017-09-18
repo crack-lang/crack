@@ -486,7 +486,7 @@ class TermApp {
         if (y1 > __height)
             y1 = __height;
 
-        uint16 word = uint16((attr << 8) | char);
+        uint16 word = (uint16(attr) << 8) | uint16(char);
         orgx := x;
         for (; y < y1; ++y) {
             for (x = orgx; x < x1; ++x)
@@ -684,6 +684,10 @@ class Window : BaseWindow {
     @final bool getFocus() {
         return __focus;
     }
+
+    # Returns true if the window can accept input focus.  Static windows (such
+    # as labels) should override this to return false.
+    bool canFocus() { return true }
 }
 
 if (0) {
