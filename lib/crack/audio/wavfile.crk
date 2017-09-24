@@ -188,6 +188,7 @@ WaveDef readWave(Reader src) {
     byteRate := _read32LE(header.buffer + 28);
     blockAlign := _read16LE(header.buffer + 32);
     bitsPerSample := _read16LE(header.buffer + 34);
+    dataSize := _read32LE(header.buffer + 40);
 
     if (byteRate != rate * channels * bitsPerSample / 8)
         throw FormatError(FStr() I`Expected a byte rate of \
@@ -200,7 +201,9 @@ WaveDef readWave(Reader src) {
                                    got $blockAlign`
                           );
 
-    return WaveDef(channels, rate, bitsPerSample);
+    def := WaveDef(channels, rate, bitsPerSample);
+    def.frameCount = dataSize / (channels * bitsPerSample / 8);
+    return def;
 }
 
 
