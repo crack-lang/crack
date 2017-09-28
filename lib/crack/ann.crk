@@ -976,7 +976,7 @@ class _InjectionNode : Node {
         ctx.inject(__loc.getName(), __loc.getLineNumber(), __code.buffer);
     }
 
-    String toString(Array[NodeList] args) { return null; }
+    String toString(Array[NodeList] args) { return __code; }
     Location getLocation() {
         return __loc;
     }
@@ -1073,6 +1073,87 @@ class Field {
     }
 }
 
+Array[Field] _parseStructFields(NodeList nodes, CrackContext ctx) {
+    Array[Field] fields = {};
+
+    # parse fields
+    while (true) {
+
+        tok := ctx.getToken();
+
+        # Stuff doc-comments into the node list.
+        if (tok.isDoc()) {
+            nodes.pushHead(Tok(tok));
+            tok = ctx.getToken();
+        }
+
+        if (tok.isRCurly()) {
+            ctx.putBack(tok);
+            break;
+        }
+
+        # put it back and parse a field
+        ctx.putBack(tok);
+        Field.parse(ctx, fields, nodes);
+    }
+
+    return fields;
+}
+
+void _emitStructContents(CrackContext ctx, NodeListImpl nodes,
+                         Array[Field] fields
+                         ) {
+    # create the constructor.
+
+    nodes.pushHead(_InjectionNode(ctx.getLocation(@FILE.buffer,
+                                                  @LINE),
+                                  'oper init('
+                                  )
+                   );
+
+    # arg list
+    first := true;
+    pfx := '';
+    for (field :in fields) {
+        nodes.pushHead(_InjectionNode(ctx.getLocation(@FILE.buffer,
+                                                      @LINE),
+                                      FStr() I`$pfx$(field.type) \
+                                               $(field.name) \0`
+                                      )
+                       );
+        if (first) {
+            pfx = ', ';
+            first = false;
+        }
+    }
+
+    nodes.pushHead(_InjectionNode(ctx.getLocation(@FILE.buffer,
+                                                  @LINE),
+                                  ') : '
+                                  )
+                   );
+
+    # initializers
+    first = true;
+    pfx = '';
+    for (field :in fields) {
+
+        nodes.pushHead(_InjectionNode(ctx.getLocation(@FILE.buffer,
+                                                      @LINE),
+                                      FStr() I`$pfx$(field.name) =
+                                               $(field.name) \0`
+                                      )
+                       );
+
+        if (first) {
+            pfx = ', ';
+            first = false;
+        }
+    }
+
+    nodes.pushHead(_InjectionNode(ctx.getLocation(@FILE.buffer, @LINE), '{}'));
+}
+
 void struct(CrackContext ctx) {
     tok := ctx.getToken();
     if (!tok.isIdent())
@@ -1095,82 +1176,29 @@ void struct(CrackContext ctx) {
         ctx.error(tok, 'Curly brace expected after struct name.'.buffer);
     result.pushHead(Tok(tok));
 
-    Array[Field] fields = {};
-
-    # parse fields
-    while (true) {
-
-        tok = ctx.getToken();
-
-        # Stuff doc-comments into the result.
-        if (tok.isDoc()) {
-            result.pushHead(Tok(tok));
-            tok = ctx.getToken();
-        }
-
-        if (tok.isRCurly()) {
-            break;
-        }
-
-        # put it back and parse a field
-        ctx.putBack(tok);
-        Field.parse(ctx, fields, result);
-    }
-
-    # create the constructor.
-
-    result.pushHead(_InjectionNode(ctx.getLocation(@FILE.buffer,
-                                                   @LINE),
-                                   'oper init('
-                                   )
-                    );
-
-    # arg list
-    first := true;
-    pfx := '';
-    for (field :in fields) {
-        result.pushHead(_InjectionNode(ctx.getLocation(@FILE.buffer,
-                                                       @LINE),
-                                       FStr() I`$pfx$(field.type) \
-                                                $(field.name) \0`
-                                       )
-                        );
-        if (first) {
-            pfx = ', ';
-            first = false;
-        }
-    }
-
-    result.pushHead(_InjectionNode(ctx.getLocation(@FILE.buffer,
-                                                   @LINE),
-                                   ') : '
-                                   )
-                    );
-
-    # initializers
-    first = true;
-    pfx = '';
-    for (field :in fields) {
-
-        result.pushHead(_InjectionNode(ctx.getLocation(@FILE.buffer,
-                                                       @LINE),
-                                       FStr() I`$pfx$(field.name) =
-                                                $(field.name) \0`
-                                       )
-                        );
-
-        if (first) {
-            pfx = ', ';
-            first = false;
-        }
-    }
-
-    result.pushHead(_InjectionNode(ctx.getLocation(@FILE.buffer, @LINE), '{}'));
+    fields := _parseStructFields(result, ctx);
+    _emitStructContents(ctx, result, fields);
 
     # push the closing bracket for the class
-    result.pushHead(Tok(tok));
+    result.pushHead(Tok(ctx.getToken()));
 
     # finally, expand the result
+    for (node :in result)
+        node.expand(ctx, null);
+}
+
+## Constructed variables.  Expands a block containing field definitions to a
+## list of variable definitions and a constructor that initiallizes them.
+void cvars(CrackContext ctx) {
+    tok := ctx.getToken();
+    if (!tok.isLCurly())
+        ctx.error(tok, 'Curly brace expected.'.buffer);
+
+    NodeListImpl result = {};
+    fields := _parseStructFields(result, ctx);
+    ctx.getToken();
+    _emitStructContents(ctx, result, fields);
+
     for (node :in result)
         node.expand(ctx, null);
 }

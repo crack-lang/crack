@@ -4,7 +4,7 @@ the struct annotation
 %%FILE%%
 import crack.io cerr;
 import crack.cont.list List;
-@import crack.ann struct;
+@import crack.ann struct, cvars;
 
 @struct Foo { String a; int b, c; List[int] list; }
 
@@ -19,6 +19,25 @@ if (f.c != 200)
     cerr `FAILED int field c\n`;
 if (f.list != list)
     cerr `FAILED int field list\n`;
+
+# Try cvars.
+class Bar {
+    @cvars {
+        String a;
+        int b;
+    }
+
+    String getA() { return a }
+}
+
+b := Bar('test', 100);
+if (b.a != 'test')
+    cerr `FAILED cvars string field\n`;
+if (b.b != 100)
+    cerr `FAILED cvars int field\n`;
+if (b.getA() != 'test')
+    cerr `FAILED cvars methods\n`;
+
 cerr `ok\n`;
 %%EXPECT%%
 ok

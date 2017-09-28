@@ -4121,6 +4121,32 @@ Structs are very limited as of Crack 1.1.  In particular:
 -   Instance variables definitions must be strictly of the form "/type/
     /name/;"  (we couldn't have written "int x, y;" above).
 
+#crack.ann# also includes a more limited macro called #cvars# ("constructed
+variables").  #cvars# is followed by a block of variable definitions which
+are expanded to the variable definition list and the constructor:
+
+{{
+    @import crack.ann cvars;
+
+    class Foo {
+        @cvars {
+            String a;
+            int b;
+        }
+    }
+
+    # Equivalent to:
+
+    class Foo {
+        String a;
+        int b;
+
+        oper init(String a, int b) : a = a, b = b {}
+    }
+}}
+
+This form allows inheritence and the definition of other methods.
+
 Annotations in Generics
 '''''''''''''''''''''''
 
