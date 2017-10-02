@@ -1,0 +1,4 @@
+
+void rel2f() {
+    puts('rel2');
+}

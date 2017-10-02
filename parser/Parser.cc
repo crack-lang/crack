@@ -2732,6 +2732,22 @@ ModuleDefPtr Parser::parseImportStmt(Namespace *ns, bool annotation) {
    } else if (tok.isString()) {
       moduleName.push_back(tok.getData());
       rawSharedLib = true;
+   } else if (tok.isDot()) {
+      
+      // Package-relative module name, initialize with the name of the parent.
+      moduleName = ModuleDef::parseCanonicalName(
+         context->ns->getModule()->getNamespaceName()
+      );
+
+      // If this is a script, we want to import from the root.  Otherwise just 
+      // remove the last component (the current module name).
+      if (moduleName[0] == "" && moduleName[1] == "main")
+         moduleName.clear();
+      else
+         moduleName.pop_back();
+      
+      parseModuleName(moduleName);
+      rawSharedLib = false;
    } else {
       unexpected(tok, "expected string constant");
    }

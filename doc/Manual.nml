@@ -3049,6 +3049,44 @@ We can now import #MyMap# and #XInt# from other modules, providing them with
 a more abbreviated name for the type and insulating them from implementation
 changes.
 
+Relative Imports
+''''''''''''''''
+
+Crack allows you to elide the package name (all but the last segment of the
+module name) to import sibling modules or their children.  For example, in
+module foo.bar:
+
+{{
+    # This is module foo.bar in "foo/bar.crk"
+
+    import .baz A;     # Imports from foo.baz
+    import .bot.bog B; # Imports from foo.bot.bog.
+}}
+
+The leading period triggers these semantics.
+
+Doing this consistently thorughout a module tree effectively makes the tree
+"portable."  You can move it to anywhere in the import tree of a program that
+is using it and still be able to import it.
+
+There are several advantages to this over absolute names:
+
+-   Easier refactoring.  A subsystem organized in this way can be easily moved
+    in its entirety to another location in the source tree.
+-   Namespace hygiene.  For example, if you depend on two packages both
+    rooted at "parser" you could simply relocate one (or both) of them to
+    more specificly named directories.  More generally, you can organize an
+    import tree any way you see fit.
+-   Dealing with multiple versions of the same package.  For example, if you
+    have two components that depend on a different version of the same
+    dependency (the "diamond dependency" problem) you might be able to install
+    both versions in your tree under separate, versioned directories.
+
+Because of relative imports, it's possible to deploy a package consisting as a
+set of interdependent modules as a set of modules in the top-level directory:
+the user can simply unpack this directory into any location in their module
+path.
+
 Protocols
 ---------
 
@@ -4190,7 +4228,7 @@ Token Sequence Literals
 '''''''''''''''''''''''
 
 When using annotations for code generation, it's often necessary to emit
-boilerplate code and inject it into the tokenizer.  We've demonstracted how
+boilerplate code and inject it into the tokenizer.  We've demonstrated how
 this can be done using the #inject()# and #putBack()# methods of
 #CrackContext#, a better approach is through the token sequence literal
 annotations - #@tokens# and #@xtokens#.

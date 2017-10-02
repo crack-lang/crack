@@ -1,0 +1,9 @@
+
+import .rel2 rel2f;
+import .pkg.rel3 rel3f;
+
+void funcs() {
+    rel2f();
+    rel3f();
+}
+

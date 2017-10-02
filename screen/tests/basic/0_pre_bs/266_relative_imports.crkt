@@ -1,0 +1,10 @@
+%%TEST%%
+relative imports
+%%ARGS%%
+%%FILE%%
+import test.relmod funcs;
+funcs();
+%%EXPECT%%
+rel2
+rel3
+%%STDIN%%
