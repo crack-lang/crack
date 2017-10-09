@@ -19,11 +19,11 @@
 ##
 ##         void addResponder(Object responder) {
 ##             # Use this to add a callback or waiter, e.g.
-##             # waiter = WaiterFor[int, String](responder);
+##             # waiter = WaiterFor[int, String].cast(responder);
 ##         }
 ##     }
 ##
-##     comm := Comm();
+##     comm := Comm(Log(null, null, cerr, cerr, cerr, 'client'));
 ##     comm.start();
 ##     proxy := comm.getProxy(InetAddress(127, 0, 0, 1, 1234), MyHandler());
 ##     # You can also call getSyncProxy() and sendSync() on it, if you've
@@ -49,7 +49,7 @@
 ##
 ##        void addResponder(Object responder) {
 ##            # Use this to add a callback or waiter, e.g.
-##            # waiter = WaiterFor[int, String](responder);
+##            # waiter = WaiterFor[int, String].cast(responder);
 ##            # This is less useful on the server side.
 ##        }
 ##    }
@@ -60,7 +60,7 @@
 ##        }
 ##    }
 ##
-##    comm := Comm();
+##    comm := Comm(Log(null, null, cerr, cerr, cerr, 'client'));
 ##    comm.start();
 ##    comm.startServer(InetAddress(127, 0, 0, 1, 1234), MyHandlerFactory(),
 ##                     /* reuse address: */ true
@@ -81,74 +81,20 @@
 ## with some synchronization mechanisms (this is part of what Comm buys you).
 
 import crack.eventmgr EventCallback, EventManager, EventManagerBackRef;
-import crack.io cerr, Formatter, FStr, StandardFormatter, Writer;
+import crack.functor Functor1;
+import crack.io cerr, Formatter, FStr, Writer;
 import crack.lang AppendBuffer, Exception, InvalidArgumentError, SystemError;
+import crack.logger LogFormatter, Logger;
+import crack.logger.ctx Log;
 import crack.net Address, Pipe, Poller, PollEvent, PollEventCallback, Socket,
     AF_INET, POLLIN, POLLOUT, POLLERR, POLLHUP, SOCK_STREAM;
 import crack.runtime c_strerror;
 import crack.threads Condition, Event, Mutex, MutexLock, Thread, Queue;
 import crack.time Time;
 
-@import crack.ann impl, interface;
+@import crack.ann assert, impl, implements, interface;
 
 uint defaultBlockSize = 4096;
-
-@final class Fmt : StandardFormatter {
-    String __prefix;
-    String __id;
-    oper init(String prefix, Object id, Writer out) :
-        __prefix = prefix,
-        __id = id ? FStr() `$id: ` : '',
-        StandardFormatter(out) {
-    }
-
-    void enter() {
-        rep.write(__prefix);
-        rep.write(__id);
-    }
-
-    void leave() {
-        rep.write('\n');
-    }
-}
-
-Fmt makeFmt(String prefix, Object id, Formatter fmt) {
-    if (uintz(fmt) < 1024)
-        return null;
-    else
-        return Fmt(prefix, id, fmt);
-}
-
-StandardFormatter extractRep(Fmt fmt) {
-    return fmt ? StandardFormatter.cast(fmt.rep) : null;
-}
-
-## Encapsulates logging data.  Provides a set of
-@final class Log {
-
-    # Log formatters for different logging levels.
-    Fmt debug, info, warn, error, fatal;
-
-    oper init(Formatter debug, Formatter info, Formatter warn, Formatter error,
-              Formatter fatal,
-              Object identifier
-              ) :
-        debug = makeFmt('Debug: ', identifier, debug),
-        info = makeFmt('Info: ', identifier, info),
-        warn = makeFmt('Warn: ', identifier, warn),
-        error = makeFmt('Error: ', identifier, error),
-        fatal = makeFmt('Fatal: ', identifier, fatal) {
-    }
-
-    ## Constructs a clone of 'other' with a different identifier.
-    oper init(Log other, Object identifier) :
-        debug = makeFmt('Debug: ', identifier, extractRep(other.debug)),
-        info = makeFmt('Info: ', identifier, extractRep(other.info)),
-        warn = makeFmt('Warn: ', identifier, extractRep(other.warn)),
-        error = makeFmt('Error: ', identifier, extractRep(other.error)),
-        fatal = makeFmt('Fatal: ', identifier, extractRep(other.fatal)) {
-    }
-}
 
 class CommHandler;
 
@@ -170,6 +116,9 @@ class CommHandler;
     ## objects, as they typically require some data from the response to be
     ## passed in as an argument, so we define the responder to be of type
     ## Object.
+    ##
+    ## Users should not call this directly, at least not on a handler that has
+    ## already been associated with a proxy.  Use SyncProxy.sendSync() instead.
     @abstract void addResponder(Object responder);
 }
 
@@ -344,6 +293,7 @@ class CommHandler;
 @final class CommListener @impl PollEventCallback {
 
     Socket __sock;
+    Functor1[void, Socket] __onSocketInit;
     Log log;
     CommHandlerFactory commHandlerFactory;
 
@@ -359,8 +309,11 @@ class CommHandler;
     }
 
     int oper call(Poller poller, PollEvent event) {
-        if (__sock is null)
+        if (__sock is null) {
             __sock = Socket.cast(event.pollable);
+            if (__onSocketInit)
+                __onSocketInit(__sock);
+        }
         log.debug `got events = $(event.revents)`;
         if (event.revents & POLLIN) {
             accepted := __sock.accept();
@@ -382,6 +335,12 @@ class CommHandler;
             return 0;
         }
         return POLLIN | POLLERR | POLLHUP;
+    }
+
+    ## Adds a callback to be called when the listener is first introduced to
+    ## its socket.
+    void addSocketInitCallback(Functor1[void, Socket] onSocketInit) {
+        __onSocketInit = onSocketInit;
     }
 }
 
@@ -723,7 +682,7 @@ class _PollerThread : Thread {
     }
 
     ## Send a synchronous message.  Wait for the result with
-    ## 'waiter.getResponse()'.
+    ## 'waiter.getResult()'.
     void sendSync(String data, Waiter waiter) {
         __control.send(_SendSync(__handler, data, waiter));
     }
@@ -738,6 +697,7 @@ class _PollerThread : Thread {
     oper init(Log log) : __log = log {}
 
     void start() {
+        @assert(!__thread);
         __thread = _PollerThread(__log);
         __thread.start();
     }

@@ -5,10 +5,11 @@ comm2 test
 import crack.eventmgr EventCallbackFunc;
 import crack.io cerr, Formatter, FStr, StandardFormatter, Writer;
 import crack.lang Buffer;
+import crack.logger.ctx Log;
 import crack.net InetAddress, Poller, Socket, SocketApd, AF_INET,
     SOCK_STREAM;
 import crack.net.comm2 Comm, CommHandler, CommHandlerFactory, CommListener,
-    UserHandler, Log, NewConnection, Waiter, WaiterFor;
+    UserHandler, NewConnection, Waiter, WaiterFor;
 import crack.threads Event;
 import crack.time add, Time, TimeDelta;
 
@@ -148,7 +149,7 @@ if (true) {
     diff := endTime - schedTime;
     @assert(diff.secs == 0 && diff.nsecs >= 100000000);
     # This check is likely to be flakey.
-    @assert(diff.nsecs < 300000000);
+    @assert(diff.nsecs < 600000000);
 }
 
 proxy.close();

@@ -1,0 +1,109 @@
+%%TEST%%
+context log objects.
+%%ARGS%%
+%%FILE%%
+
+import crack.io cerr, StringFormatter;
+import crack.logger Logger, DEBUG;
+import crack.logger.ctx Log, Fmt, FmtEntrypoint;
+
+@import crack.ann assert, impl;
+
+class TestFmtEntrypoint @impl FmtEntrypoint {
+    StringFormatter out = {};
+    Object identifier;
+
+    oper init(Object identifier) : identifier = identifier {}
+
+    Fmt enter() {
+        out `$identifier: `;
+        return Fmt(out);
+    }
+
+    FmtEntrypoint clone(Object identifier) {
+        return TestFmtEntrypoint(identifier);
+    }
+}
+
+# The simplest form (where the user provides their own FmtEntrypoint)
+if (true) {
+    debug := TestFmtEntrypoint('ident');
+    info := TestFmtEntrypoint('ident');
+    warn := TestFmtEntrypoint('ident');
+    error := TestFmtEntrypoint('ident');
+    fatal := TestFmtEntrypoint('ident');
+    log := Log(debug, info, warn, error, fatal);
+    log.debug `for debug`;
+    @assert(debug.out.string() == 'ident: for debug');
+    log.info `for info`;
+    @assert(info.out.string() == 'ident: for info');
+    log.warn `for warn`;
+    @assert(warn.out.string() == 'ident: for warn');
+    log.error `for error`;
+    @assert(error.out.string() == 'ident: for error');
+    log.fatal `for fatal`;
+    @assert(fatal.out.string() == 'ident: for fatal');
+
+    # Test a copy.
+    log = Log(log, 'other');
+    log.debug `for debug`;
+    @assert(TestFmtEntrypoint.cast(log.debug).out.string() == 'other: for debug');
+    log.info `for info`;
+    @assert(TestFmtEntrypoint.cast(log.info).out.string() == 'other: for info');
+    log.warn `for warn`;
+    @assert(TestFmtEntrypoint.cast(log.warn).out.string() == 'other: for warn');
+    log.error `for error`;
+    @assert(TestFmtEntrypoint.cast(log.error).out.string() == 'other: for error');
+    log.fatal `for fatal`;
+    @assert(TestFmtEntrypoint.cast(log.fatal).out.string() == 'other: for fatal');
+}
+
+# Formatters.
+if (true) {
+    debug := StringFormatter();
+    info := StringFormatter();
+    warn := StringFormatter();
+    error := StringFormatter();
+    fatal := StringFormatter();
+    log := Log(debug, info, warn, error, fatal, 'ident2');
+    log.debug `for debug`;
+    @assert(debug.string() == 'Debug: ident2: for debug\n');
+    log.info `for info`;
+    @assert(info.string() == 'Info: ident2: for info\n');
+    log.warn `for warn`;
+    @assert(warn.string() == 'Warn: ident2: for warn\n');
+    log.error `for error`;
+    @assert(error.string() == 'Error: ident2: for error\n');
+    log.fatal `for fatal`;
+    @assert(fatal.string() == 'Fatal: ident2: for fatal\n');
+}
+
+# Null formatters.
+if (true) {
+    log := Log(null, null, null, null, null, 'ident');
+    log.debug `go nowhere`;
+}
+
+# A Logger.
+if (true) {
+    out := StringFormatter();
+    log := Log(Logger(out, DEBUG, 'severity msg'), 'ident3');
+    log.debug `for debug`;
+    log.info `for info`;
+    log.warn `for warn`;
+    log.error `for error`;
+    log.fatal `for fatal`;
+    @assert(out.string() ==
+            I'[DEBUG] ident3: for debug
+              [INFO] ident3: for info
+              [WARN] ident3: for warn
+              [ERROR] ident3: for error
+              [FATAL] ident3: for fatal
+              '
+            );
+}
+
+cerr `ok\n`;
+%%EXPECT%%
+ok
+%%STDIN%%

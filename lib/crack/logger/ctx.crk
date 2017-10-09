@@ -1,0 +1,162 @@
+## The "Context Logging" module.
+##
+## The Log class bundles together a set of Formatters for doing logging
+## against any kind of output object, including built-in support for normal
+## Formatters (including cout, cerr...) and crack.logger.Logger.
+##
+## It also allows you to specify an identifier which is written with every log
+## message and Log instances can be cloned to create an instances with a
+## different identifier, allowing Log objects to be passed through systems and
+## specialized to indicate different contexts within the subsystems.
+
+import crack.io Formatter, FStr, StandardFormatter, Writer;
+import crack.logger LogFormatter, Logger, DEBUG, INFO, WARN, ERROR, FATAL;
+
+@import crack.ann impl, implements, interface;
+
+## Base class and default implementation for log formatters.
+##
+## This is derived from StandardFormatter so users can leverage its
+## implementation without having to do any explicit delegation.  In the
+## uncommon case where you want to specialize formatting, you can just
+## implement all of the methods, optionally circumventing StandardFormatter's
+## delegation to "rep" entirely.
+class Fmt : StandardFormatter {
+    oper init(Writer rep) : StandardFormatter(rep) {}
+    void leave() {}
+}
+
+## Interface for objects that wrap logging destinations.
+##
+## This interface provides the formatter protocol's enter() method and also a
+## clone method to create another instance with a different identifier.
+@interface FmtEntrypoint {
+    @abstract Fmt enter();
+
+    ## Returns a clone of the object, replacing the identifier.
+    @abstract FmtEntrypoint clone(Object identifier);
+}
+
+class _Fmt : Fmt @implements FmtEntrypoint {
+    String __prefix;
+    String __id;
+    Formatter __formatter;
+
+    oper init(String prefix, Object id, Writer out) :
+        __prefix = prefix,
+        __id = id ? FStr() `$id: ` : '',
+        Fmt(out) {
+    }
+
+    Fmt enter() {
+        rep.write(__prefix);
+        rep.write(__id);
+        return this;
+    }
+
+    void leave() {
+        rep.write('\n');
+    }
+
+    FmtEntrypoint clone(Object identifier) {
+        return _Fmt(__prefix, identifier, rep);
+    }
+}
+
+alias LogEntryFormatter = typeof(LogFormatter.cast(null).enter());
+
+class LogFmt : Fmt {
+    LogEntryFormatter __fmt;
+
+    oper init(LogEntryFormatter fmt) : Fmt(fmt), __fmt = fmt {}
+
+    void leave() { __fmt.leave() }
+}
+
+class LogFmtEntrypoint @impl FmtEntrypoint {
+
+    LogFormatter __formatter;
+    String __identifier;
+
+    oper init(LogFormatter formatter, Object identifier) :
+        __identifier = FStr() `$identifier: `,
+        __formatter = formatter {
+    }
+
+    Fmt enter() {
+        fmt := __formatter.enter();
+        fmt.write(__identifier);
+        return LogFmt(fmt);
+    }
+
+    FmtEntrypoint clone(Object identifier) {
+        return LogFmtEntrypoint(__formatter, identifier);
+    }
+}
+
+# This was attempted using a ternary operator, but Crack's ternary operator is
+# flawed in that if one of the values is null and the other is a non-primary
+# derived class of the type required by the context, we end up casting the
+# null to a non-null value.  Using an "if" statement instead is a suitable
+# work-around.
+FmtEntrypoint _makeFmt(String prefix, Object identifier, Formatter out) {
+    if (out)
+        return _Fmt(prefix, identifier, out);
+    else
+        return null;
+}
+
+## Encapsulates logging data.  Aggregates a set of log formatters for each
+## log level and will automatically wrap them to display an identifier in each
+## log message.
+@final class Log {
+
+    # Log formatters for different logging levels.
+    FmtEntrypoint debug, info, warn, error, fatal;
+
+    ## Constructs a logger that weraps a set of normal formatters.  This adds
+    ## log level prefixes to every message string, and should only be used as
+    ## a bare-bones logging system for wrapping a simple output stream.
+    oper init(Formatter debug, Formatter info, Formatter warn, Formatter error,
+              Formatter fatal,
+              Object identifier
+              ) :
+        #
+        debug = _makeFmt('Debug: ', identifier, debug),
+        info = _makeFmt('Info: ', identifier, info),
+        warn = _makeFmt('Warn: ', identifier, warn),
+        error =_makeFmt('Error: ', identifier, error),
+        fatal =_makeFmt('Fatal: ', identifier, fatal) {
+    }
+
+    ## Constructs a clone of 'other' with a different identifier.
+    oper init(Log other, Object identifier) :
+        debug = other.debug ? other.debug.clone(identifier) : null,
+        info = other.info ? other.info.clone(identifier) : null,
+        warn = other.warn ? other.warn.clone(identifier) : null,
+        error = other.error ? other.error.clone(identifier) : null,
+        fatal = other.fatal ? other.fatal.clone(identifier) : null {
+    }
+
+    ## Wraps a crack.logger.Logger.
+    oper init(Logger logger, Object id) {
+        debug = LogFmtEntrypoint(LogFormatter(logger, DEBUG), id);
+        info = LogFmtEntrypoint(LogFormatter(logger, INFO), id);
+        warn = LogFmtEntrypoint(LogFormatter(logger, WARN), id);
+        error = LogFmtEntrypoint(LogFormatter(logger, ERROR), id);
+        fatal = LogFmtEntrypoint(LogFormatter(logger, FATAL), id);
+    }
+
+    ## Wraps a set of FmtEntrypoint's.  Use this for creating your own
+    ## logging destinations or wrappers.
+    oper init(FmtEntrypoint debug, FmtEntrypoint info, FmtEntrypoint warn,
+              FmtEntrypoint error,
+              FmtEntrypoint fatal
+              ) :
+        debug = debug,
+        info = info,
+        warn = warn,
+        error = error,
+        fatal = fatal {
+    }
+}
