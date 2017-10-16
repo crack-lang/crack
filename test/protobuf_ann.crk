@@ -7,7 +7,7 @@
 # @import crack.ann impl;
 
 import crack.cont.array Array;
-import crack.io cerr, StringReader, StringWriter;
+import crack.io cerr, Formatter, StringFormatter, StringReader, StringWriter;
 import crack.lang cmp, makeHashVal;
 import crack.protobuf Field, Message, ProtoReader, ProtoWriter;
 import crack.strutil StringArray;
@@ -19,6 +19,9 @@ import crack.strutil StringArray;
     # Uncomment "debug" to emit the generated code to standard output with
     # line numbers.
     #debug
+
+    # Generate formatting methods.
+    version = 1
 
     ## The Bar message.
     message Bar {
@@ -34,6 +37,9 @@ import crack.strutil StringArray;
         optional uint64 uint64Field = 3;
         optional int64 int64Field = 4;
         optional bool boolField = 5;
+
+        optional string strField = 6;
+        optional bytes bytesField = 7;
     }
 }
 
@@ -108,6 +114,88 @@ if (true) {
     fooTest.old.int64Field = 300;
     fooTest.old.boolField = true;
     fooTest.test();
+}
+
+# Null versus empty field tests.
+if (true) {
+    fooTest := RoundTripTest[Foo]();
+
+    fooTest.old.strField = '';
+    fooTest.old.bytesField = '';
+    fooTest.old.bar = Bar();
+    fooTest.test();
+
+    @assert(!(fooTest.new.strField is null));
+    @assert(!(fooTest.new.bytesField is null));
+    @assert(!(fooTest.new.bar is null));
+}
+
+# Test formatting.
+if (true) {
+    foo := Foo();
+    foo.bar = Bar();
+    foo.bar.name = StringArray!['name1', 'name2'];
+    foo.strField = 'string field';
+    # leave bytesField null.
+    foo.field = 100;
+    foo.boolField = true;
+
+    StringFormatter out = {};
+    out `$foo`;
+    @assert(out.string() ==
+            I"{
+                  bar: {
+                      name: [
+                          'name1',
+                          'name2',
+                      ]
+                  }
+                  field: 100
+                  uint32Field: 0
+                  uint64Field: 0
+                  int64Field: 0
+                  boolField: true
+                  strField: 'string field'
+                  bytesField: null
+              }"
+            );
+
+    # Verify an empty list.
+    foo = Foo();
+    foo.bar = Bar();
+    out = StringFormatter();
+    out `$foo`;
+    @assert(out.string() ==
+            I'{
+                  bar: {
+                      name: []
+                  }
+                  field: 0
+                  uint32Field: 0
+                  uint64Field: 0
+                  int64Field: 0
+                  boolField: false
+                  strField: null
+                  bytesField: null
+              }'
+            );
+
+    # Verify a null nested message.
+    foo = Foo();
+    out = StringFormatter();
+    out `$foo`;
+    @assert(out.string() ==
+            I'{
+                  bar: null
+                  field: 0
+                  uint32Field: 0
+                  uint64Field: 0
+                  int64Field: 0
+                  boolField: false
+                  strField: null
+                  bytesField: null
+              }'
+            );
 }
 
 cerr `ok\n`;

@@ -4,6 +4,7 @@
 ##
 ##   # These imports are all necessary for the generated code.
 ##   import crack.cont.array Array;
+##   import crack.io Formatter;
 ##   import crack.lang cmp, makeHashVal;
 ##   import crack.protobuf Field, Message, ProtoWriter;
 ##
@@ -14,6 +15,13 @@
 ##       # code with line numbers to standard error, which is essential for
 ##       # identifying errors in the generated code.
 ##       debug
+##
+##       # Output version.  0 is the default, version 1 enables emitting the
+##       # "formatTo()" method, which requires the import of
+##       # crack.io.Formatter.  Note that the output of formatTo() is not
+##       # necessarily stable between versions of crack: it currently prints
+##       # undefined fields.
+##       version = 1
 ##
 ##       message Bar {
 ##           repeated string name = 1;
@@ -92,10 +100,19 @@ class Indenter @impl Writer {
     void flush() { dst.flush(); }
 }
 
+class Field;
+void _defaultFormat(Formatter out, Field field);
+
 @abstract class Type {
     String name;
+    alias ValueFormatter = function[void, Formatter, Field];
+    ValueFormatter _formatter;
 
-    oper init(String name) : name = name {}
+    oper init(String name) : name = name, _formatter = _defaultFormat {}
+    oper init(String name, ValueFormatter formatter) :
+        name = name,
+        _formatter = formatter {
+    }
 
     ## Returns the reader for the type.  This should be an expression that
     ## returns an instance of the type suitable for assignment to the field
@@ -112,6 +129,14 @@ class BuiltinType : Type {
 
     oper init(String name, String genName, String reader) :
         Type(name),
+        genName = genName,
+        reader = reader {
+    }
+
+    oper init(String name, String genName, String reader,
+              ValueFormatter formatter
+              ) :
+        Type(name, formatter),
         genName = genName,
         reader = reader {
     }
@@ -171,11 +196,20 @@ class Field {
     }
 }
 
+void _defaultFormat(Formatter out, Field field) {
+    # Default formatting of a field should just expand to "$fieldname".
+    out `\$$(field.name)`;
+}
+
+String getFieldDefined(Field field, String fieldRef);
+
 class Message : Type {
     HashMap[String, Field] fields = {};
     Array[Field] ordered = {};
+    int version;
 
     oper init(String name) : Type(name) {}
+    oper init(String name, int version) : Type(name), version = version {}
 
     void addField(Field field) {
         fields[field.name] = field;
@@ -207,7 +241,8 @@ class Message : Type {
         out `void serialize(ProtoWriter dst) {\n\t`;
         for (field :in ordered) {
             if (field.cardinality == OPTIONAL) {
-                out `if (this.$(field.name))\n\t`;
+                definedTest := getFieldDefined(field, FStr() `this.$(field.name)`);
+                out `if ($definedTest)\n\t`;
                 out `dst.write($(field.tag), this.$(field.name));\b\n`;
             } else if (field.cardinality == REPEATED) {
                 # XXX need a test for this case.
@@ -255,7 +290,7 @@ class Message : Type {
         out `\n );\nreturn rc;\b\n}\n`;
         out I`\
             int cmp(Object other) {
-                if (o := $name.cast(other))
+                if (o := $name.cast(other, null))
                     return cmp(o);
                 else
                     return Object.cmp(other);
@@ -278,6 +313,43 @@ class Message : Type {
         out     `return inst;\b\n`;
         out `}\n`;
 
+        # Emit the formatter.
+        if (version >= 1) {
+            out `void formatTo(Formatter out) {\n`;
+            out `    import crack.io.fmtutil Indenter;\n`;
+            out `    indent := Indenter.wrap(out);\n`;
+            out `    indent \`{\\n\`;`;
+            out `    ++indent;\n`;
+            for (field :in ordered) {
+                out I`indent \`$(field.name): `; //`
+                if (field.cardinality == REPEATED) {
+                    out `\`;\nif ($(field.name)) {\n`;
+                    out I`++indent;
+                          indent \`[\\n\`;
+                          for (item :in $(field.name)) {
+                          `;
+                    out `indent \``;
+                    tmpField := Field();
+                    tmpField.name = 'item';
+                    field.type._formatter(out, tmpField);
+                    out `,\\n\`;\n`; //`
+                    out I`}
+                          --indent;
+                          out \`]\\n\`;
+                          } else {
+                            indent \`[]\\n\`;
+                          }
+                          `;
+                } else {
+                    field.type._formatter(out, field);
+                    out `\\n\`;\n`; //`
+                }
+            }
+            out `    --indent;\n`;
+            out `    indent \`}\`;`;
+            out `}\n`;
+        }
+
         out `\b\n}\n`;
     }
 
@@ -286,10 +358,35 @@ class Message : Type {
     }
 }
 
+## Returns a string containing an expression that evaluates to true if the
+## field is defined.
+String getFieldDefined(Field field, String fieldRef) {
+    if (field.type.class is BuiltinType) {
+        if (field.type.name == 'string' || field.type.name == 'bytes')
+            return FStr() `!($fieldRef is null)`;
+        else
+            # This covers all other Builtin cases and preserves existing
+            # functionality for any users who may have (for whatever reason)
+            # created their own Builtin types.
+            return fieldRef;
+    } else if (field.type.class is Message) {
+        return FStr() `!($fieldRef is null)`;
+    } else {
+        # Add this to cover any weird case where the user derives from 'Type'.
+        return fieldRef;
+    }
+
+}
+
+void _stringFormat(Formatter out, Field field) {
+    out `\$(($(field.name) is null) ? 'null' : $(field.name).getRepr())`;
+}
+
 class Schema {
     Array[Message] messages = {};
     HashMap[String, Type] types = {};
     bool debug;
+    int version;
 
     oper init() {
         types['bool'] = BuiltinType('bool', null, 'field.getUInt()');
@@ -297,8 +394,10 @@ class Schema {
         types['uint32'] = BuiltinType('uint32', null, 'uint32(field.getUInt())');
         types['int64'] = BuiltinType('int64', null, 'int64(field.getUInt())');
         types['uint64'] = BuiltinType('uint64', null, 'uint64(field.getUInt())');
-        types['string'] = BuiltinType('string', 'String', 'field.getString()');
-        types['bytes'] = BuiltinType('bytes', 'String', 'field.getString()');
+        types['string'] = BuiltinType('string', 'String', 'field.getString()',
+                                      _stringFormat);
+        types['bytes'] = BuiltinType('bytes', 'String', 'field.getString()',
+                                     _stringFormat);
     }
 
     Token getToken(CrackContext ctx) {
@@ -365,7 +464,7 @@ class Schema {
 
         if (!tok.isIdent())
             ctx.error(tok, 'Message name expceted.'.buffer);
-        Message msg = {String(tok.getText())};
+        Message msg = {String(tok.getText()), version};
         types[msg.name] = msg;
 
         tok = getToken(ctx);
@@ -417,6 +516,16 @@ class Schema {
                 break;
             } else if (tok.isIdent() && tok.getText() == 'debug') {
                 debug = true;
+            } else if (tok.isIdent() && tok.getText() == 'version') {
+                tok = getToken(ctx);
+                if (!tok.isAssign())
+                    ctx.error('Equal sign expected after "version"'.buffer);
+
+                tok = getToken(ctx);
+                if (!tok.isInteger())
+                    ctx.error('Integer expected as version.'.buffer);
+
+                version = parseInt(String(tok.getText()));
             } else {
                 ctx.error(tok,
                           'message definition or right curly bracket '
