@@ -3,6 +3,8 @@ basic docs functionality
 %%ARGS%%
 %%FILE%%
 
+@import crack.ann struct;
+
 # This is a function.
 ## Isn't it great?
 void foo(int val) {
@@ -36,12 +38,19 @@ class XXX : Object {
 ## Variable.
 int x;
 
+## A documented structure.
+@struct Foo {
+    ## A documented field.
+    ## With multiple lines of docs.
+    int a;
+}
+
 %%REXPECT%%
 /\*\*
  Abstract class.
 
 \*/
-class Abstract : crack.lang.Object, {
+@abstract class Abstract : crack.lang.Object, {
 /\*\*
  Abstract method.
 
@@ -52,11 +61,23 @@ class Abstract : crack.lang.Object, {
 @final .builtin.void oper init\(\)
 @final .builtin.voidptr oper to .builtin.voidptr\(\)
 }
-class Abstract:meta : .builtin.Class, {
-@static .main.*.Abstract cast\(.builtin.VTableBase val, \)
-@static .main.*.Abstract cast\(.builtin.VTableBase val, .main.*.Abstract defaultValue, \)
-@static .main.*.Abstract unsafeCast\(.builtin.voidptr val, \)
-}
+/\*\*
+ A documented structure.
+
+\*/
+class Foo : crack.lang.Object, \{
+/\*\*
+ A documented field.
+ With multiple lines of docs.
+
+\*/
+.builtin.int a
+.builtin.Class oper class\(\)
+.builtin.void oper del\(\)
+@final .builtin.void oper init\(.builtin.int a, \)
+@static .main.*_5fbasic_5ffunctionality_2ecrk.Foo oper new\(.builtin.int a, \)
+@final .builtin.voidptr oper to .builtin.voidptr\(\)
+\}
 /\*\*
  Documented class.
 
@@ -75,12 +96,9 @@ class XXX : crack.lang.Object, \{
 @final .builtin.voidptr oper to .builtin.voidptr\(\)
 @static .builtin.void staticMethod\(\)
 \}
-class XXX:meta : .builtin.Class, \{
-@static .main.*.XXX cast\(.builtin.VTableBase val, \)
-@static .main.*.XXX cast\(.builtin.VTableBase val, .main.*.XXX defaultValue, \)
-@static .main.*.XXX unsafeCast\(.builtin.voidptr val, \)
-\}
 .builtin.void __CrackBadCast\(.builtin.Class curType, .builtin.Class newType, \)
+.builtin.int __getArgc\(\)
+.builtin.array\[.builtin.byteptr\] __getArgv\(\)
 /\*\*
 
  \* Another great function, brought to you by the letter C.

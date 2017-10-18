@@ -6,7 +6,14 @@ import crack.io cerr;
 import crack.cont.list List;
 @import crack.ann struct, cvars;
 
-@struct Foo { String a; int b, c; List[int] list; }
+@struct Foo {
+    ## This is a comment.
+    ## In fact, it is a multi-line comment.
+    String a;
+
+    int b, c;
+    List[int] list;
+}
 
 list := List[int]![1, 2, 3];
 

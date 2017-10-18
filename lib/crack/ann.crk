@@ -1082,7 +1082,7 @@ Array[Field] _parseStructFields(NodeList nodes, CrackContext ctx) {
         tok := ctx.getToken();
 
         # Stuff doc-comments into the node list.
-        if (tok.isDoc()) {
+        while (tok.isDoc()) {
             nodes.pushHead(Tok(tok));
             tok = ctx.getToken();
         }
