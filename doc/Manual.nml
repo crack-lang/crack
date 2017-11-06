@@ -4315,7 +4315,7 @@ like this:
     void exception(CrackContext ctx) {
         className := ctx.getToken();
 
-        @xmac {
+        @xmac* {
             class $className {
                 int i;
             }
