@@ -27,6 +27,7 @@ namespace model {
 namespace compiler {
 
 class Annotation;
+class Def;
 class Location;
 class Token;
 
@@ -107,6 +108,7 @@ class CrackContext {
                                       );
         static Location *_getLocation(CrackContext *inst);
         static void _continueIString(CrackContext *inst);
+        static const Def *_getLocalDefs(CrackContext *inst);
 
     public:
         enum Event { funcEnter, funcLeave };
@@ -255,6 +257,15 @@ class CrackContext {
 
         /** Tells the tokenizer to resume parsing an i-string. */
         void continueIString();
+
+        /**
+         * Returns the linked list of all definitions so far in the
+         * context.  Note that this does not contain definitions in enclosing
+         * contexts or inherited contexts.
+         *
+         * No order is guaranteed.
+         */
+        const Def* getLocalDefs() const;
 
         /**
          * This is a back-door for things like the compiler-defined "export"

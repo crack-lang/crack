@@ -325,6 +325,7 @@ compilerincdir = $(includedir)/crack-$(VERSION)/crack/compiler
 compilerinc_HEADERS = \
     compiler/Annotation.h \
     compiler/CrackContext.h \
+    compiler/Def.h \
     compiler/Location.h \
     compiler/Token.h \
     compiler/TokSerializer.h

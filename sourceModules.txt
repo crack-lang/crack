@@ -84,6 +84,7 @@ builder/llvm/StructResolver.cc
 compiler/init.cc
 compiler/Annotation2.cc
 compiler/CrackContext.cc
+compiler/Def.cc
 compiler/Token2.cc
 compiler/TokSerializer.cc
 compiler/Location2.cc

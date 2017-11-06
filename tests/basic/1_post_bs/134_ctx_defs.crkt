@@ -1,0 +1,21 @@
+%%TEST%%
+context definition access
+%%ARGS%%
+%%FILE%%
+import crack.io cerr;
+import crack.strutil StringArray;
+@import crack.ann assert;
+@import test.defs_ann def_names;
+
+void foo() {}
+void bar() {}
+int x;
+
+arr := StringArray![@def_names];
+arr.sort();
+@assert(arr == StringArray!['StringArray', 'bar', 'cerr', 'foo', 'x']);
+cerr `ok\n`;
+
+%%EXPECT%%
+ok
+%%STDIN%%

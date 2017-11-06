@@ -18,6 +18,7 @@
 #include "Token.h"
 #include "Location.h"
 #include "TokSerializer.h"
+#include "Def.h"
 
 using namespace std;
 using namespace crack::ext;
@@ -404,6 +405,25 @@ void init(Module *mod) {
                               );
     annotationType->finish();
 
+    Type *defType = mod->addType("Def", sizeof(Def));
+    defType->addMethod(mod->getByteptrType(), "getName",
+                       (void *)Def::_getName
+                       );
+    defType->addMethod(mod->getByteptrType(), "getFullName",
+                       (void *)Def::_getFullName
+                       );
+    defType->addMethod(mod->getByteptrType(), "getLocalName",
+                       (void *)Def::_getLocalName
+                       );
+    defType->addMethod(defType, "getNext",
+                       (void *)Def::_getNext
+                       );
+    defType->addMethod(mod->getVoidType(), "oper bind", (void *)Def::_bind);
+    defType->addMethod(mod->getVoidType(), "oper release",
+                       (void *)Def::_release
+                       );
+    defType->finish();
+
     Type *cc = mod->addType("CrackContext", sizeof(CrackContext));
     f = cc->addMethod(mod->getVoidType(), "inject",
                       (void *)CrackContext::_inject
@@ -519,6 +539,9 @@ void init(Module *mod) {
 
     cc->addMethod(mod->getVoidType(), "continueIString",
                   (void *)CrackContext::_continueIString
+                  );
+    cc->addMethod(defType, "getLocalDefs",
+                  (void *)CrackContext::_getLocalDefs
                   );
 
     cc->finish();

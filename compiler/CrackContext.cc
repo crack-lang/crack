@@ -17,6 +17,7 @@
 #include "model/Context.h"
 #include "model/Namespace.h"
 #include "model/PrimFuncAnnotation.h"
+#include "Def.h"
 #include "Token.h"
 #include "Annotation.h"
 #include "Location.h"
@@ -245,6 +246,17 @@ void CrackContext::continueIString() {
     toker->continueIString();
 }
 
+const Def *CrackContext::getLocalDefs() const {
+    vector<Def *> temp;
+    Def *result = 0;
+    for (Namespace::VarDefMap::iterator iter = context->ns->beginDefs();
+         iter != context->ns->endDefs();
+         ++iter
+         )
+        result = new Def(iter->first, iter->second.get(), result);
+    return result;
+}
+
 void CrackContext::_inject(CrackContext *inst, char *sourceName, int lineNumber,
                            char *code
                            ) {
@@ -366,4 +378,8 @@ Location *CrackContext::_getLocation(CrackContext *inst) {
 
 void CrackContext::_continueIString(CrackContext *inst) {
     inst->toker->continueIString();
+}
+
+const Def *CrackContext::_getLocalDefs(CrackContext *inst) {
+    return inst->getLocalDefs();
 }
