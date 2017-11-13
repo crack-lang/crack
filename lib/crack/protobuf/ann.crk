@@ -348,6 +348,18 @@ class Message : Type {
             out `    --indent;\n`;
             out `    indent \`}\`;`;
             out `}\n`;
+            # Emit clone method.
+            out I`$name clone() {
+                      $name result = {};
+                `;
+            for (field :in ordered) {
+                if (field.type.isa(BuiltinType))
+                    out `    result.$(field.name) = $(field.name);\n`;
+                else
+                    out `    result.$(field.name) = $(field.name).clone();\n`;
+            }
+            out I`   return result;
+                  }\n`;
         }
 
         out `\b\n}\n`;

@@ -198,4 +198,17 @@ if (true) {
             );
 }
 
+# Test cloning.
+if (true) {
+    foo := Foo();
+    foo.bar = Bar();
+    foo.bar.name = StringArray!['name1', 'name2'];
+    foo.strField = 'string field';
+    foo.field = 100;
+    foo.boolField = true;
+
+    foo2 := foo.clone();
+    @assert(foo == foo2);
+}
+
 cerr `ok\n`;
