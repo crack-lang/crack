@@ -348,17 +348,39 @@ class Message : Type {
             out `    --indent;\n`;
             out `    indent \`}\`;`;
             out `}\n`;
+
+            # Emit cloneList() method.
+            out I`$name clone();
+                  @static Array[$name] cloneList(Array[$name] list) {
+                      Array[$name] result = {};
+                      for (item :in list)
+                          result.append(item.clone());
+                      return result;
+                  }\n`;
+
             # Emit clone method.
             out I`$name clone() {
                       $name result = {};
                 `;
             for (field :in ordered) {
-                if (field.type.isa(BuiltinType))
-                    out `    result.$(field.name) = $(field.name);\n`;
-                else
-                    out I`    result.$(field.name) = $(field.name) ? \
-                                                     $(field.name).clone() : \
-                                                     null;\n`;
+                if (field.type.isa(BuiltinType)) {
+                    if (field.cardinality == REPEATED)
+                        out I`    result.$(field.name) = $(field.name) ? \
+                                                        $(field.name).clone() : \
+                                                        null;\n`;
+                    else
+                        out `    result.$(field.name) = $(field.name);\n`;
+                } else {
+                    typeName := field.type.name;
+                    if (field.cardinality == REPEATED)
+                        out I`    result.$(field.name) = $(field.name) ? \
+                                      $typeName.cloneList($(field.name)) : \
+                                      null;\n`;
+                    else
+                        out I`    result.$(field.name) = $(field.name) ? \
+                                                        $(field.name).clone() : \
+                                                        null;\n`;
+                }
             }
             out I`   return result;
                   }\n`;
