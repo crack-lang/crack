@@ -356,7 +356,9 @@ class Message : Type {
                 if (field.type.isa(BuiltinType))
                     out `    result.$(field.name) = $(field.name);\n`;
                 else
-                    out `    result.$(field.name) = $(field.name).clone();\n`;
+                    out I`    result.$(field.name) = $(field.name) ? \
+                                                     $(field.name).clone() : \
+                                                     null;\n`;
             }
             out I`   return result;
                   }\n`;

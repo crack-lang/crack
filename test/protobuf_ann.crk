@@ -209,6 +209,10 @@ if (true) {
 
     foo2 := foo.clone();
     @assert(foo == foo2);
+
+    # Test that it works with null messages.
+    foo = Foo();
+    @assert(foo == foo.clone());
 }
 
 cerr `ok\n`;
