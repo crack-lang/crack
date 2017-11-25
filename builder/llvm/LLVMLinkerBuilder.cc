@@ -276,10 +276,10 @@ void LLVMLinkerBuilder::closeModule(Context &context, ModuleDef *moduleDef) {
 
 void *LLVMLinkerBuilder::loadSharedLibrary(const string &name) {
     if (rootBuilder) {
-        rootBuilder->loadSharedLibrary(name);
+        return rootBuilder->loadSharedLibrary(name);
     } else {
         sharedLibs.push_back(name);
-        LLVMBuilder::loadSharedLibrary(name);
+        return LLVMBuilder::loadSharedLibrary(name);
     }
 }
 

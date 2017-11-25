@@ -60,7 +60,7 @@ ModuleDefPtr LLVMJitBuilder::registerPrimFuncs(model::Context &context) {
     if (!context.construct->cacheMode)
         return mod;
 
-    BModuleDefPtr bMod = BModuleDefPtr::rcast(mod);
+    return BModuleDefPtr::rcast(mod);
 }
 
 void LLVMJitBuilder::initialize(model::Context &context) {

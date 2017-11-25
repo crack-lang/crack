@@ -47,9 +47,10 @@ DirEntry* getDirEntry(Dir* d) {
 
 int closedir(Dir* d) {
     assert(d && "null dir pointer");
-    ::closedir(d->stream);
+    int rc = ::closedir(d->stream);
     free(d->lowLevelEntry);
     free(d);
+    return rc;
 }
 
 int readdir(Dir* d) {
