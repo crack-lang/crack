@@ -46,7 +46,7 @@ private:
 public:
     llvm::Type *rep;
     llvm::DIType debugInfo; // debug info (wrapper for MDNode*)
-    unsigned nextVTableSlot;
+    unsigned nextVTableSlot, firstVTableSlot;
     std::vector<PlaceholderInstruction *> placeholders;
     typedef std::vector< std::pair<BTypeDefPtr, model::ContextPtr> >
         IncompleteChildVec;
@@ -74,6 +74,7 @@ public:
         classInstModuleId(-1),
         rep(rep),
         nextVTableSlot(nextVTableSlot),
+        firstVTableSlot(nextVTableSlot),
         weak(false),
         firstVTableType(0) {
     }
@@ -149,6 +150,16 @@ public:
      * classes where createBaseOffsets() won't work).
      */
     void createEmptyOffsetsInitializer(model::Context &context);
+
+    /**
+     * Add 'offset' to the vtable slot of all virtual functions in the class
+     * whose slot is >= the first vtable offset in the class.
+     *
+     * This is called by fixIncompletes to fixup any virtual functions in a
+     * nested derived class that were defined before virtual functions in the
+     * enclosing class.
+     */
+    void fixVTableSlots(int offset);
 
     /**
      * Fix all incomplete instructions and incomplete children and set the

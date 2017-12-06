@@ -1841,6 +1841,7 @@ TypeDefPtr LLVMBuilder::emitBeginClass(Context &context,
         type = BTypeDefPtr::acast(forwardDef);
         type->nextVTableSlot =
             baseWithVTable ? baseWithVTable->nextVTableSlot : 0;
+        type->firstVTableSlot = type->nextVTableSlot;
         type->forward = false;
     }
 
