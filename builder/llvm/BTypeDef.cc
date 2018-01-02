@@ -295,9 +295,42 @@ void BTypeDef::createBaseOffsets(Context &context) const {
     offsetsVar->setInitializer(offsetsArrayInit);
 }
 
+void BTypeDef::fixVTableSlots(int offset) {
+    SPUG_FOR(VarDefMap, iter, defs) {
+        OverloadDef *ovld = OverloadDefPtr::rcast(iter->second);
+        if (ovld) {
+            for (OverloadDef::FuncList::iterator fiter = ovld->beginTopFuncs();
+                 fiter != ovld->endTopFuncs();
+                 ++fiter
+                 ) {
+                if ((*fiter)->flags & FuncDef::virtualized &&
+                    (*fiter)->vtableSlot >= firstVTableSlot
+                    )
+                    (*fiter)->vtableSlot += offset;
+            }
+        }
+    }
+}
+
 void BTypeDef::fixIncompletes(Context &context) {
     // construct the vtable if necessary
     if (hasVTable) {
+        if (parents.size()) {
+            int lastBaseVTableSlot =
+                BTypeDefPtr::rcast(parents[0])->nextVTableSlot;
+
+            // There can't be a gap between the last base class vtable slot and
+            // the derived class slot.
+            SPUG_CHECK(lastBaseVTableSlot >= firstVTableSlot,
+                       "First vtable slot of " << name << " is " <<
+                        firstVTableSlot << " which is greater than the last "
+                        "vtable slot of base class (" << lastBaseVTableSlot << ")"
+                       );
+
+            if (firstVTableSlot < lastBaseVTableSlot)
+                fixVTableSlots(lastBaseVTableSlot - firstVTableSlot);
+        }
+
         VTableBuilder vtableBuilder(
             dynamic_cast<LLVMBuilder*>(&context.builder),
             BTypeDefPtr::arcast(context.construct->vtableBaseType)

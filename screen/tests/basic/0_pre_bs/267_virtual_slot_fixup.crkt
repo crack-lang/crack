@@ -1,0 +1,30 @@
+%%TEST%%
+virtual slot fixup
+%%ARGS%%
+%%FILE%%
+# Verifies that nested derived classes get the correct vtable slots for
+# virtual functions when the enclosing base class defines virtual functions
+# after the derived class.
+
+class A : VTableBase {
+    oper init() {}
+    class B : A {
+        void f() { puts('called B::f()') }
+        void g() { puts('called B::g()') }
+    }
+
+    void h() { puts('called A::h()') }
+    void i() { puts('called A::i()') }
+}
+
+A.B b = {};
+b.f();
+b.g();
+b.h();
+b.i();
+%%EXPECT%%
+called B::f()
+called B::g()
+called A::h()
+called A::i()
+%%STDIN%%
