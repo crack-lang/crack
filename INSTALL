@@ -88,6 +88,7 @@ Special requirements for extensions (this list is probably incomplete):
     fluidsynth: libfluidsynth-dev
     gtk: ??? tbd libgtk2.0-dev
     ssl: libssl-dev
+    opengl: mesa-common-dev
     fuse: libfuse-dev
 
 =========================================================================
