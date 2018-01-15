@@ -1,4 +1,33 @@
 
+1.2
+    -   Added @cvars annotation (like @struct, but just generates a
+        constructor based on a list of instance variable definitions).
+    -   Added Functor.Wrap.
+    -   Enhancements to crack.net.comm2
+    -   Added AES-SIV cipher and CMAC
+    -   Added support for relative imports
+    -   protobuf enhancements
+        -   text formatting
+        -   treat empty different from undefined for string and bytes types
+        -   Added "clone()" method
+    -   Made stack trace functionality generally available.
+    -   Allow annotations to obtain an array of local definitions.
+    -   lots of bug fixes.
+        -   add zero "content-length" header to redirects in httpsrv.
+        -   Fixed "oper new" in extension generation.
+        -   Memory management of rethrown exceptions.
+        -   termui fixes, bold and underline, previous background leakage,
+            focus changes, attribute rendering
+        -   Invoke poller callbacks with a null event before waiting
+        -   vtable generation for appendages anchored on classes from foreign
+            modules.
+        -   vtable generation for nested/derived classes.
+        -   initialize compile time dependency modules when instantiating a
+            generic from the cache.
+        -   use compile-time builder for initializing annotation modules.
+        -   Fixed WaveDef framecount on read.
+        -   multi-line doc comments in structs.
+
 1.1
     -   Implemented Appendages.
     -   Implemented the @xtokens and @xmac annotations.
