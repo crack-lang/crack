@@ -1,6 +1,7 @@
 
 import crack.cont.array Array;
 import crack.hash Hash;
+import crack.io cerr;
 import crack.lang AppendBuffer, Buffer, InvalidStateError;
 import crack.runtime free;
 
@@ -148,7 +149,7 @@ class SHA256 : Hash {
         __accum.append(0x80);
 
         # Zero bytes until we have just enough space for the size.
-        while ((__accum.size % 64) < 56)
+        while ((__accum.size % 64) != 56)
             __accum.append(0);
 
         # The size in bytes.
@@ -168,7 +169,7 @@ class SHA256 : Hash {
         # bound by that assumption.
         while (__accum.size) {
             Buffer buf = {__accum.buffer, 64};
-            __processChunk(__accum);
+            __processChunk(buf);
             __accum.compact(64);
         }
 
