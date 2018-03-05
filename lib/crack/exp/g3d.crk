@@ -49,8 +49,8 @@ import crack.ext._gl glBegin, glBindTexture, glBlendFunc, glClear, glClearColor,
     GL_RGBA, GL_RGB8, GL_RGBA8, GL_SMOOTH, GL_UNSIGNED_BYTE;
 import crack.ext._png png_get_io_ptr, png_get_IHDR, png_get_rows,
     png_set_read_fn, png_struct, png_create_read_struct,
-    png_create_info_struct, png_read_png, PNG_COLOR_TYPE_RGB,
-    PNG_COLOR_TYPE_RGBA;
+    png_create_info_struct, png_libpng_ver_string, png_read_png,
+    PNG_COLOR_TYPE_RGB, PNG_COLOR_TYPE_RGBA;
 
 @define set(row, col, val) { matrix[col * 4 + row] = float32(val) }
 @define arr(row, col) { matrix[col * 4 + row] }
@@ -430,7 +430,7 @@ void _pngRead(png_struct png, byteptr buffer, uint size) {
 
 ## Loads a material and returns the texture id.
 uint loadPNGMaterial(Reader src) {
-    png := png_create_read_struct('1.2.42'.buffer, null, _pngHandleError,
+    png := png_create_read_struct(png_libpng_ver_string(), null, _pngHandleError,
                                   _pngHandleWarning
                                   );
     if (png is null)

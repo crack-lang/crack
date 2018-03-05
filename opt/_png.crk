@@ -7,14 +7,14 @@
 
     @inject '#include <png.h>\n'
     @inject 'typedef int Undef;\n';
+    @inject 'const char *png_libpng_ver_string() { return PNG_LIBPNG_VER_STRING; }\n'
 
     class png_structp;
-
-    # PNG version is "1.2.42"
 
     @cname Undef
     class png_struct;
 
+    byteptr png_libpng_ver_string();
     png_struct png_create_read_struct(byteptr user_png_ver,
                                       voidptr error_ptr,
                                       voidptr error_fn,

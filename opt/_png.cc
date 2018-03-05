@@ -1,5 +1,6 @@
 #include <png.h>
 typedef int Undef;
+const char *png_libpng_ver_string() { return PNG_LIBPNG_VER_STRING; }
 
 
 #include "ext/Module.h"
@@ -75,6 +76,10 @@ void crack_ext__png_cinit(crack::ext::Module *mod) {
         params[0] = type_png_info;
         array_ppng__info_q = array->getSpecialization(params);
     }
+    f = mod->addFunc(type_byteptr, "png_libpng_ver_string",
+                     (void *)png_libpng_ver_string
+                     );
+
     f = mod->addFunc(type_png_struct, "png_create_read_struct",
                      (void *)png_create_read_struct
                      );
