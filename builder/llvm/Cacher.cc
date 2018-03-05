@@ -143,7 +143,7 @@ bool Cacher::getCacheFile(const string &canonicalName,
     VLOG(2) << "[" << canonicalName << "] cache: maybeLoad "
         << cacheFile << endl;
 
-    if (error_code ec = MemoryBuffer::getFile(cacheFile.c_str(), fileBuf)) {
+    if (llvm::error_code ec = MemoryBuffer::getFile(cacheFile.c_str(), fileBuf)) {
         VLOG(2) << "[" << canonicalName <<
             "] cache: not cached or inaccessible" << endl;
         return false;
