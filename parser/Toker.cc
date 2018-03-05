@@ -36,7 +36,7 @@ bool Toker::getChar(char &ch) {
         ch = putbackBuf[putbackIndex++];
         result = true;
     } else {
-        result = src.read(&ch, 1);
+        result = src.read(&ch, 1) ? true : false;
     }
     currentEndCol++;
     if (result && ch == '\n') {
