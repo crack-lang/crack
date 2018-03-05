@@ -6,6 +6,10 @@
 #include <iostream>
 using namespace std;
 
+void my_SSL_library_init() {
+    SSL_library_init();
+}
+
 SSL *my_SSL_new(SSL_CTX *ctx) {
     SSL *result = SSL_new(ctx);
     if (!result)
@@ -42,6 +46,69 @@ int my_EVP_CIPHER_mode(EVP_CIPHER *cipher) {
 
 int my_EVP_CIPHER_flags(EVP_CIPHER *cipher) {
     return EVP_CIPHER_flags(cipher);
+}
+
+// We have to create a class for this.  EVP_CIPHER_CTX used to be defined in
+// the openssl headers, but now it is merely declared, which breaks
+// inheritance.
+struct EVPCipherContext {
+    EVP_CIPHER_CTX *ctx;
+};
+
+void EVPCipherContext_init(EVPCipherContext *ctx) {
+    ctx->ctx = EVP_CIPHER_CTX_new();
+}
+
+void EVPCipherContext_del(EVPCipherContext *ctx) {
+    EVP_CIPHER_CTX_free(ctx->ctx);
+}
+
+void EVPCipherContext_cleanup(EVPCipherContext *ctx) {
+    EVP_CIPHER_CTX_cleanup(ctx->ctx);
+}
+
+int EVPCipherContext_encryptInit(EVPCipherContext *ctx, EVP_CIPHER *type,
+                                 ENGINE *impl,
+                                 const unsigned char *key,
+                                 const unsigned char *iv
+                                 ) {
+    return EVP_EncryptInit_ex(ctx->ctx, type, impl, key, iv);
+}
+
+int EVPCipherContext_encryptUpdate(EVPCipherContext *ctx, unsigned char *out,
+                                   int *out1,
+                                   const unsigned char *inp,
+                                   int inp1
+                                   ) {
+    return EVP_EncryptUpdate(ctx->ctx, out, out1, inp, inp1);
+}
+
+int EVPCipherContext_encryptFinal(EVPCipherContext *ctx, unsigned char *out,
+                                  int *out1
+                                  ) {
+    return EVP_EncryptFinal(ctx->ctx, out, out1);
+}
+
+int EVPCipherContext_decryptInit(EVPCipherContext *ctx, EVP_CIPHER *type,
+                                 ENGINE *impl,
+                                 unsigned char *key,
+                                 const unsigned char *iv
+                                 ) {
+    return EVP_DecryptInit_ex(ctx->ctx, type, impl, key, iv);
+}
+
+int EVPCipherContext_decryptUpdate(EVPCipherContext *ctx, unsigned char *out,
+                                   int *out1,
+                                   const unsigned char *inp,
+                                   int inp1
+                                   ) {
+    return EVP_DecryptUpdate(ctx->ctx, out, out1, inp, inp1);
+}
+
+int EVPCipherContext_decryptFinal(EVPCipherContext *ctx, unsigned char *out,
+                                  int *out1
+                                  ) {
+    return EVP_DecryptFinal(ctx->ctx, out, out1);
 }
 
 // Definining this here.
@@ -83,11 +150,11 @@ void crack_ext__ssl_cinit(crack::ext::Module *mod) {
     crack::ext::Type *type_float64 = mod->getFloat64Type();
     crack::ext::Type *type_float = mod->getFloatType();
 
-    crack::ext::Type *type_BIO_METHOD = mod->addType("BIO_METHOD", sizeof(BIO_METHOD));
+    crack::ext::Type *type_BIO_METHOD = mod->addType("BIO_METHOD", sizeof(Undef));
     type_BIO_METHOD->finish();
 
 
-    crack::ext::Type *type_BIO = mod->addType("BIO", sizeof(BIO));
+    crack::ext::Type *type_BIO = mod->addType("BIO", sizeof(Undef));
 
     f = type_BIO->addMethod(
         type_int,
@@ -144,11 +211,11 @@ void crack_ext__ssl_cinit(crack::ext::Module *mod) {
     type_BIO->finish();
 
 
-    crack::ext::Type *type_SSL_METHOD = mod->addType("SSL_METHOD", sizeof(SSL_METHOD));
+    crack::ext::Type *type_SSL_METHOD = mod->addType("SSL_METHOD", sizeof(Undef));
     type_SSL_METHOD->finish();
 
 
-    crack::ext::Type *type_SSL_CTX = mod->addType("SSL_CTX", sizeof(SSL_CTX));
+    crack::ext::Type *type_SSL_CTX = mod->addType("SSL_CTX", sizeof(Undef));
 
     f = type_SSL_CTX->addMethod(
         type_void,
@@ -185,7 +252,7 @@ void crack_ext__ssl_cinit(crack::ext::Module *mod) {
     type_SSL_CTX->finish();
 
 
-    crack::ext::Type *type_SSL = mod->addType("SSL", sizeof(SSL));
+    crack::ext::Type *type_SSL = mod->addType("SSL", sizeof(Undef));
 
     f = type_SSL->addMethod(
         type_void,
@@ -280,7 +347,7 @@ void crack_ext__ssl_cinit(crack::ext::Module *mod) {
     type_SSL->finish();
 
 
-    crack::ext::Type *type_EVPCipher = mod->addType("EVPCipher", sizeof(EVP_CIPHER));
+    crack::ext::Type *type_EVPCipher = mod->addType("EVPCipher", sizeof(Undef));
 
     f = type_EVPCipher->addMethod(
         type_int,
@@ -332,23 +399,29 @@ void crack_ext__ssl_cinit(crack::ext::Module *mod) {
         array_pint_q = array->getSpecialization(params);
     }
 
-    crack::ext::Type *type_EVPCipherContext = mod->addType("EVPCipherContext", sizeof(EVP_CIPHER_CTX));
+    crack::ext::Type *type_EVPCipherContext = mod->addType("EVPCipherContext", sizeof(EVPCipherContext));
         f = type_EVPCipherContext->addConstructor("oper init",
-                            (void *)EVP_CIPHER_CTX_init
+                            (void *)EVPCipherContext_init
                         );
+
+f = type_EVPCipherContext->addMethod(
+    type_EVPCipherContext,
+    "oper del",
+    (void *)EVPCipherContext_del
+);
 
 
     f = type_EVPCipherContext->addMethod(
         type_void,
         "cleanup",
-        (void *)EVP_CIPHER_CTX_cleanup
+        (void *)EVPCipherContext_cleanup
     );
 
 
     f = type_EVPCipherContext->addMethod(
         type_int,
         "encryptInit",
-        (void *)EVP_EncryptInit_ex
+        (void *)EVPCipherContext_encryptInit
     );
     f->addArg(type_EVPCipher,
               "type"
@@ -367,7 +440,7 @@ void crack_ext__ssl_cinit(crack::ext::Module *mod) {
     f = type_EVPCipherContext->addMethod(
         type_int,
         "encryptUpdate",
-        (void *)EVP_EncryptUpdate
+        (void *)EVPCipherContext_encryptUpdate
     );
     f->addArg(type_byteptr,
               "out"
@@ -386,7 +459,7 @@ void crack_ext__ssl_cinit(crack::ext::Module *mod) {
     f = type_EVPCipherContext->addMethod(
         type_int,
         "encryptFinal",
-        (void *)EVP_EncryptFinal
+        (void *)EVPCipherContext_encryptFinal
     );
     f->addArg(type_byteptr,
               "out"
@@ -399,7 +472,7 @@ void crack_ext__ssl_cinit(crack::ext::Module *mod) {
     f = type_EVPCipherContext->addMethod(
         type_int,
         "decryptInit",
-        (void *)EVP_DecryptInit_ex
+        (void *)EVPCipherContext_decryptInit
     );
     f->addArg(type_EVPCipher,
               "type"
@@ -418,7 +491,7 @@ void crack_ext__ssl_cinit(crack::ext::Module *mod) {
     f = type_EVPCipherContext->addMethod(
         type_int,
         "decryptUpdate",
-        (void *)EVP_DecryptUpdate
+        (void *)EVPCipherContext_decryptUpdate
     );
     f->addArg(type_byteptr,
               "out"
@@ -437,7 +510,7 @@ void crack_ext__ssl_cinit(crack::ext::Module *mod) {
     f = type_EVPCipherContext->addMethod(
         type_int,
         "decryptFinal",
-        (void *)EVP_DecryptFinal
+        (void *)EVPCipherContext_decryptFinal
     );
     f->addArg(type_byteptr,
               "out"
@@ -524,7 +597,7 @@ f = type_CMACContext->addStaticMethod(
                      );
 
     f = mod->addFunc(type_void, "SSL_library_init",
-                     (void *)SSL_library_init
+                     (void *)my_SSL_library_init
                      );
 
     f = mod->addFunc(type_SSL_CTX, "SSL_CTX_new",

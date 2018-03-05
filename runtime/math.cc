@@ -67,6 +67,10 @@ FUNC2(hypot)
 FUNC2(fdim)
 FUNC2(pow)
 
+int crk_ilogb(double x) {
+    return ilogb(x);
+}
+
 int crk_fpclassify32(float x) {
     return fpclassify(x);
 }
@@ -237,7 +241,7 @@ void crack_runtime__math_cinit(crack::ext::Module *mod) {
        f->addArg(type_float32, "angle");
 
     f = mod->addFunc(type_float64, "asin",
-                     (void *)asin
+                     (void *)crk_asin
                      );
        f->addArg(type_float64, "angle");
 
@@ -247,7 +251,7 @@ void crack_runtime__math_cinit(crack::ext::Module *mod) {
        f->addArg(type_float32, "angle");
 
     f = mod->addFunc(type_float64, "acos",
-                     (void *)acos
+                     (void *)crk_acos
                      );
        f->addArg(type_float64, "angle");
 
@@ -317,7 +321,7 @@ void crack_runtime__math_cinit(crack::ext::Module *mod) {
        f->addArg(type_float32, "angle");
 
     f = mod->addFunc(type_float64, "log",
-                     (void *)log
+                     (void *)crk_log
                      );
        f->addArg(type_float64, "angle");
 
@@ -497,7 +501,7 @@ void crack_runtime__math_cinit(crack::ext::Module *mod) {
        f->addArg(type_float32, "val");
 
     f = mod->addFunc(type_int, "ilogb",
-                     (void *)ilogb
+                     (void *)crk_ilogb
                      );
        f->addArg(type_float32, "val");
 
@@ -567,7 +571,7 @@ void crack_runtime__math_cinit(crack::ext::Module *mod) {
        f->addArg(type_float64, "val");
 
     f = mod->addFunc(type_float64, "hypot",
-                     (void *)hypot
+                     (void *)crk_hypot
                      );
        f->addArg(type_float64, "x");
        f->addArg(type_float64, "y");

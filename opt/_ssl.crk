@@ -12,6 +12,10 @@
 #include <iostream>
 using namespace std;
 
+void my_SSL_library_init() {
+    SSL_library_init();
+}
+
 SSL *my_SSL_new(SSL_CTX *ctx) {
     SSL *result = SSL_new(ctx);
     if (!result)
@@ -50,6 +54,69 @@ int my_EVP_CIPHER_flags(EVP_CIPHER *cipher) {
     return EVP_CIPHER_flags(cipher);
 }
 
+// We have to create a class for this.  EVP_CIPHER_CTX used to be defined in
+// the openssl headers, but now it is merely declared, which breaks
+// inheritance.
+struct EVPCipherContext {
+    EVP_CIPHER_CTX *ctx;
+};
+
+void EVPCipherContext_init(EVPCipherContext *ctx) {
+    ctx->ctx = EVP_CIPHER_CTX_new();
+}
+
+void EVPCipherContext_del(EVPCipherContext *ctx) {
+    EVP_CIPHER_CTX_free(ctx->ctx);
+}
+
+void EVPCipherContext_cleanup(EVPCipherContext *ctx) {
+    EVP_CIPHER_CTX_cleanup(ctx->ctx);
+}
+
+int EVPCipherContext_encryptInit(EVPCipherContext *ctx, EVP_CIPHER *type,
+                                 ENGINE *impl,
+                                 const unsigned char *key,
+                                 const unsigned char *iv
+                                 ) {
+    return EVP_EncryptInit_ex(ctx->ctx, type, impl, key, iv);
+}
+
+int EVPCipherContext_encryptUpdate(EVPCipherContext *ctx, unsigned char *out,
+                                   int *out1,
+                                   const unsigned char *inp,
+                                   int inp1
+                                   ) {
+    return EVP_EncryptUpdate(ctx->ctx, out, out1, inp, inp1);
+}
+
+int EVPCipherContext_encryptFinal(EVPCipherContext *ctx, unsigned char *out,
+                                  int *out1
+                                  ) {
+    return EVP_EncryptFinal(ctx->ctx, out, out1);
+}
+
+int EVPCipherContext_decryptInit(EVPCipherContext *ctx, EVP_CIPHER *type,
+                                 ENGINE *impl,
+                                 unsigned char *key,
+                                 const unsigned char *iv
+                                 ) {
+    return EVP_DecryptInit_ex(ctx->ctx, type, impl, key, iv);
+}
+
+int EVPCipherContext_decryptUpdate(EVPCipherContext *ctx, unsigned char *out,
+                                   int *out1,
+                                   const unsigned char *inp,
+                                   int inp1
+                                   ) {
+    return EVP_DecryptUpdate(ctx->ctx, out, out1, inp, inp1);
+}
+
+int EVPCipherContext_decryptFinal(EVPCipherContext *ctx, unsigned char *out,
+                                  int *out1
+                                  ) {
+    return EVP_DecryptFinal(ctx->ctx, out, out1);
+}
+
 // Definining this here.
 struct engine_st {};
 
@@ -68,9 +135,11 @@ struct Undef {};
               SSL_ERROR_SYSCALL,
               SSL_ERROR_SSL;
 
+    @cname Undef
     class BIO_METHOD;
     BIO_METHOD BIO_s_mem();
 
+    @cname Undef
     class BIO {
 
         @cname BIO_read
@@ -95,11 +164,14 @@ struct Undef {};
 
     BIO BIO_new(BIO_METHOD method);
 
+    @cname Undef
     class SSL_METHOD;
     SSL_METHOD SSLv23_method();
 
+    @cname my_SSL_library_init
     void SSL_library_init();
 
+    @cname Undef
     class SSL_CTX {
 
 #        @cname SSL_CTX_new
@@ -117,6 +189,7 @@ struct Undef {};
 
     SSL_CTX SSL_CTX_new(SSL_METHOD method);
 
+    @cname Undef
     class SSL {
 
 #        @cname SSL_new
@@ -158,7 +231,7 @@ struct Undef {};
     # The high-level EVP functions.  These can do pretty much all of the
     # encryption/decryption that we could want.
 
-    @cname EVP_CIPHER
+    @cname Undef
     class EVPCipher {
 
         ## This appears to produce the size of the IV vector in bytes.
@@ -317,31 +390,33 @@ struct Undef {};
               EVP_CTRL_CCM_SET_MSGLEN,
               EVP_CTRL_AEAD_TLS1_AAD;
 
-    @cname EVP_CIPHER_CTX
     class EVPCipherContext {
-        @cname EVP_CIPHER_CTX_init
+        @cname EVPCipherContext_init
         oper init();
 
-        @cname EVP_CIPHER_CTX_cleanup
+        @cname EVPCipherContext_del
+        oper del();
+
+        @cname EVPCipherContext_cleanup
         void cleanup();
 
-        @cname EVP_EncryptInit_ex
+        @cname EVPCipherContext_encryptInit
         int encryptInit(EVPCipher type, Engine impl, byteptr key, byteptr iv);
 
-        @cname EVP_EncryptUpdate
+        @cname EVPCipherContext_encryptUpdate
         int encryptUpdate(byteptr out, array[int] out1, byteptr inp,
                           int inp1);
 
-        @cname EVP_EncryptFinal
+        @cname EVPCipherContext_encryptFinal
         int encryptFinal(byteptr out, array[int] out1);
 
-        @cname EVP_DecryptInit_ex
+        @cname EVPCipherContext_decryptInit
         int decryptInit(EVPCipher type, Engine impl, byteptr key, byteptr iv);
 
-        @cname EVP_DecryptUpdate
+        @cname EVPCipherContext_decryptUpdate
         int decryptUpdate(byteptr out, array[int] out1, byteptr inp, int inp1);
 
-        @cname EVP_DecryptFinal
+        @cname EVPCipherContext_decryptFinal
         int decryptFinal(byteptr out, array[int] out1);
     }
 
