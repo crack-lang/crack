@@ -95,8 +95,8 @@ Location *Token::_getLocation(Token *inst) {
     return inst->loc;
 }
 
-void Token::_bind(Token *inst) { inst->bind(); }
-void Token::_release(Token *inst) { inst->release(); }
+void Token::_bind(Token *inst) { if (inst) inst->bind(); }
+void Token::_release(Token *inst) { if (inst) inst->release(); }
 
 #define IS_FUNC(name) \
     bool Token::name() { return rep->name(); } \

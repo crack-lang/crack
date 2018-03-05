@@ -44,6 +44,6 @@ int Location::_getEndCol(Location *inst) {
     return inst->rep->getEndCol();
 }
 
-void Location::_bind(Location *inst) { inst->bind(); }
-void Location::_release(Location *inst) { inst->release(); }
+void Location::_bind(Location *inst) { if (inst) inst->bind(); }
+void Location::_release(Location *inst) { if (inst) inst->release(); }
 
