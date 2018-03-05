@@ -91,8 +91,8 @@ static int GenerateNative(const std::string &OutputFilename,
   args.push_back(gcc.c_str());
   args.push_back("-O3");
 
-  BuilderOptions::StringMap::const_iterator i = o->optionMap.find("PIE");
-  if (i != o->optionMap.end()) {
+  BuilderOptions::StringMap::const_iterator i = o->optionMap.find("noPIE");
+  if (i == o->optionMap.end()) {
       args.push_back("-fPIC");
       args.push_back("-pie");
   }
@@ -662,10 +662,10 @@ void nativeCompile(llvm::Module *module,
 
     TargetOptions options;
 
-    // position independent executables
-    i = o->optionMap.find("PIE");
+    // position independent executables, now the default.
+    i = o->optionMap.find("noPIE");
     Reloc::Model relocModel = Reloc::Default;
-    if (i != o->optionMap.end()) {
+    if (i == o->optionMap.end()) {
         options.PositionIndependentExecutable = 1;
         relocModel = Reloc::PIC_;
     }
