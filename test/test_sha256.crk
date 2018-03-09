@@ -19,11 +19,17 @@ const LONG_DATA :=
 const LONG_DATA_HASH :=
     'a173edf97b73250ce5d2dc733b84b2c310eda49a9ec283a63da8d646892ea5ec';
 
+# This exercises the condition that triggered a bug in padding.
+EXTRA_LONG_DATA := LONG_DATA * 10;
+EXTRA_LONG_DATA_HASH :=
+    '66483cfcf544372add5dd816eb645e85f94381afa83ba0e4c7003927818fdfbc';
+
 Array[D] testData = [
     D('', 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'),
     D('simple test string',
       '5968cf9a72e5ff0f0e03caad838010adc4369e29afa91b6a8a60da6c2040b51b'),
-    D(LONG_DATA, LONG_DATA_HASH)
+    D(LONG_DATA, LONG_DATA_HASH),
+    D(EXTRA_LONG_DATA, EXTRA_LONG_DATA_HASH),
 ];
 
 for (entry :in testData) {

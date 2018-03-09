@@ -12,7 +12,7 @@
 The Crack Programming Language Guide
 ====================================
 
-This is the manual for version 1.1 of the Crack Programming Language.  Crack
+This is the manual for version 1.2 of the Crack Programming Language.  Crack
 is an imperative, object-oriented language along the lines of Java, Python and
 C++.  It can be compiled in Just In Time and Ahead Of Time modes and has been
 tested on 32 and 64 bit x86 Linux Debian and Ubuntu systems.
@@ -679,7 +679,7 @@ You'll generally want to use the memory-managed #Array# collection instead
 Control Structures
 ------------------
 
-Crack 1.1 supports four control structures: the "if\/else" statement,
+Crack 1.2 supports four control structures: the "if\/else" statement,
 the "while" statement, the "for" statement and the "try\/catch" statement.
 "if" runs code blocks depending on whether a condition is true or false:
 
@@ -2637,12 +2637,12 @@ functor we would use #Functor2#:
 }}
 
 Having to derive a class every time you want to do this can be tedious, so the
-#crack.functor# module also provides a matching set of #FunctionN# generics.
-These provide a concrete implementation of #FunctorN# that wraps a plain
-function.  So we could have implemented our alarm like this:
+#crack.functor.FunctorX# classes each include a #Wrap# nested class that wraps
+a plain function with the same signature.  So we could have implemented our
+alarm like this:
 
 {{
-    import crack.functor Functor0, Function0;
+    import crack.functor Functor0;
 
     ...
 
@@ -2651,7 +2651,7 @@ function.  So we could have implemented our alarm like this:
     }
 
     Scheduler s = {};
-    s.schedule(Time('10 AM'), Function0[void](alarm));
+    s.schedule(Time('10 AM'), Functor0[void].Wrap(alarm));
 }}
 
 Alternately, we could have added a convenience overload to Scheduler to do the
@@ -2662,7 +2662,7 @@ conversion for us:
     class Scheduler {
         void schedule(Time time, Functor0[void] func) { ... }
         void schedule(Time time, function[void] func) {
-            schedule(time, Function0[void](func));
+            schedule(time, Functor0[void].Wrap(func));
         }
 
         void run() { ... }
@@ -2674,6 +2674,10 @@ conversion for us:
     Scheduler s = {};
     s.schedule(Time('10 AM'), alarm);
 }}
+
+The #FunctorX.Wrap# classes also have corresponding #FunctionX# generics
+defined in #crack.functor#.  These primarily exist for backwards
+compatibility, but are also safe to use as alternate names.
 
 Method Resolution in Classes
 ''''''''''''''''''''''''''''
@@ -3450,7 +3454,7 @@ variable is actually defined.
 When a sequence constant is defined, the compiler does the following:
 
 -   Searches for a constructor for the type that can accept an unsigned
-    integer value (as of 1.1 - we will eventually be switching to an integer
+    integer value (as of 1.2 - we will eventually be switching to an integer
     type large enough to accommodate a memory size).  This #uint# value is
     assumed to be the number of elements in the sequence.
 -   That failing, it searches for a default constructor for the type.
@@ -4152,7 +4156,7 @@ member variables.  For example:
     Coord c = {10, 20};
 }}
 
-Structs are very limited as of Crack 1.1.  In particular:
+Structs are very limited as of Crack 1.2.  In particular:
 
 -   They don't support inheritence.
 -   You can't add any other methods.
@@ -4397,7 +4401,7 @@ extension, you'll want to:
 -   build it into a shared library, linked with whatever support code it needs
     (usually the code it's wrapping)
 -   Add the include directory for crack headers to the include path (usually
-    something like #`/usr/local/include/crack-1.1`#)
+    something like #`/usr/local/include/crack-1.2`#)
 
 The Extension Generator
 '''''''''''''''''''''''
@@ -6311,6 +6315,11 @@ be backwards compatible until the major version number changes.  See
 
 The remainder of this appendix describes the things you need to know when
 upgrading between versions.
+
+From 1.1 to 1.2
+---------------
+
+No known changes affecting compatibility.
 
 From 1.0 to 1.1
 ---------------

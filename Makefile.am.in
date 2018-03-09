@@ -17,7 +17,7 @@ lib_LTLIBRARIES = libCrackDebugTools.la libCrackLang.la \
     libCrackNativeRuntime.la
 libCrackLang_la_SOURCES = %libCrackSources%
 libCrackLang_la_CPPFLAGS = $(AM_CPPFLAGS)
-libCrackLang_la_LDFLAGS = -version-info 11:0:1 @LLVM_LDFLAGS@ @LLVM_LIBS@ \
+libCrackLang_la_LDFLAGS = -version-info 12:0:0 @LLVM_LDFLAGS@ @LLVM_LIBS@ \
     $(AM_LDFLAGS)
 libCrackLang_la_LIBADD = libCrackDebugTools.la
 
@@ -339,15 +339,17 @@ extinc_HEADERS = \
     ext/util.h \
     ext/Var.h
 
-EXTRA_DIST = $(srcdir)/test/*.crk $(srcdir)/test/bad_extension.so \
-    $(srcdir)/test/screen $(srcdir)/test/test*.crt $(srcdir)/test/test*.key \
-    $(srcdir)/test/*.cc $(srcdir)/Credits $(srcdir)/tools/*.crk \
-    $(srcdir)/tools/fixlicense $(srcdir)/CMakeLists.txt $(srcdir)/opt/CMakeLists.txt \
+EXTRA_DIST = $(srcdir)/test/*.crk $(srcdir)/test/pkg/*.crk \
+    $(srcdir)/test/bad_extension.so $(srcdir)/test/screen \
+    $(srcdir)/test/test*.crt $(srcdir)/test/test*.key $(srcdir)/test/*.cc \
+    $(srcdir)/Credits $(srcdir)/tools/*.crk $(srcdir)/tools/fixlicense \
+    $(srcdir)/CMakeLists.txt $(srcdir)/opt/CMakeLists.txt \
     $(srcdir)/sourceModules.txt $(srcdir)/runtimeModules.txt $(srcdir)/cmake \
     $(srcdir)/COPYING $(srcdir)/doc/license $(srcdir)/screen/builders.crk \
-    $(srcdir)/screen/config.crk $(srcdir)/screen/screen.crk $(srcdir)/screen/stats.crk \
-    $(srcdir)/screen/testdata.crk $(srcdir)/screen/planB \
-    $(srcdir)/screen/tests $(srcdir)/screen/systest.crk $(srcdir)/opt/*.crk \
+    $(srcdir)/screen/config.crk $(srcdir)/screen/screen.crk \
+    $(srcdir)/screen/stats.crk $(srcdir)/screen/testdata.crk \
+    $(srcdir)/screen/planB $(srcdir)/screen/tests \
+    $(srcdir)/screen/systest.crk $(srcdir)/opt/*.crk \
     $(srcdir)/doc $(srcdir)/lib $(srcdir)/example/*.crk
 
 bin_PROGRAMS = crack
