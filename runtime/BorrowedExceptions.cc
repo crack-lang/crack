@@ -172,18 +172,30 @@ static uintptr_t readEncodedPointer(const uint8_t** data, uint8_t encoding) {
 }
 
 static void *getTTypePtr(void **classInfo, int index, uint8_t ttypeEncoding) {
+    void *addr;
     switch (ttypeEncoding & 0xF) {
         case DW_EH_PE_absptr:
-            return classInfo[index];
+            addr = classInfo + index;
+            break;
         case DW_EH_PE_udata4:
-            return (void *)((uint32_t *)classInfo)[index];
+            addr = (uint32_t *)classInfo + index;
+            break;
+        case DW_EH_PE_sdata4:
+            addr = (int32_t *)classInfo + index;
+            break;
         case DW_EH_PE_udata8:
-            return (void *)((uint64_t *)classInfo)[index];
+            addr = (uint64_t *)classInfo + index;
+            break;
+        case DW_EH_PE_sdata8:
+            addr = (int64_t *)classInfo + index;
+            break;
         default:
             cerr << "Unexpected type pointer encoding type: " <<
-                ttypeEncoding << endl;
+                (int)ttypeEncoding << endl;
             abort();
     }
+
+    return (void *)readEncodedPointer((const uint8_t **)&addr, ttypeEncoding);
 }
 
 /// Deals with Dwarf actions matching our type infos.
