@@ -646,3 +646,37 @@ class FStr : StringFormatter {
         return result;
     }
 }
+
+const DEFAULT_BLOCK_SIZE := 4096;
+
+## Move all contents from 'src' to 'dst' in blocks of the specified size.
+void move(Writer dst, Reader src, uintz blockSize) {
+    buf := ManagedBuffer(blockSize);
+    while (data := src.read(buf))
+        dst.write(buf);
+}
+
+## Move all contents from 'src' to 'dst' in blocks of DEFAULT_BLOCK_SIZE.
+void move(Writer dst, Reader src) { move(dst, src, DEFAULT_BLOCK_SIZE) }
+
+## Move all contents from 'src' to 'dst' in blocks of the specified size.
+void move(AppendBuffer dst, Reader src, uintz blockSize) {
+    buf := ManagedBuffer(blockSize);
+    while (data := src.read(buf))
+        dst.extend(buf);
+}
+
+## Move all contents from 'src' to 'dst' in blocks of DEFAULT_BLOCK_SIZE.
+void move(AppendBuffer dst, Reader src) { move(dst, src, DEFAULT_BLOCK_SIZE) }
+
+## Return everything read from 'src' as a string, reading in blocks of the
+## specified size.
+String readAll(Reader src, uint blockSize) {
+    buf := AppendBuffer(blockSize);
+    move(buf, src, blockSize);
+    return String(buf, true);
+}
+
+## Return everything read from 'src' as a string, reading in blocks of the
+## size DEFAULT_BLOCK_SIZE.
+String readAll(Reader src) { return readAll(src, DEFAULT_BLOCK_SIZE) }

@@ -1,0 +1,61 @@
+%%TEST%%
+io move functions
+%%ARGS%%
+%%FILE%%
+import crack.cont.array Array;
+import crack.io cerr, move, readAll, StringReader, StringWriter;
+import crack.lang AppendBuffer;
+import crack.random MersenneTwister;
+
+@import crack.ann assert;
+
+# Generate random data.
+String makeData() {
+    data := MersenneTwister(i'Seed').get(5999);
+    dataBuf := AppendBuffer(1024);
+    for (val :in data) {
+        dataBuf.append(byte(val >> 24));
+        dataBuf.append(byte(val >> 16));
+        dataBuf.append(byte(val >> 8));
+        dataBuf.append(byte(val));
+    }
+    return String(dataBuf, true);
+}
+const DATA := makeData();
+
+# Default block size.
+if (true) {
+    dst := StringWriter();
+    move(dst, StringReader(DATA));
+    @assert(dst.string() == DATA);
+}
+
+# Block size that evenly divides original size.
+if (true) {
+    dst := StringWriter();
+    move(dst, StringReader(DATA), 5999);
+    @assert(dst.string() == DATA);
+}
+
+# Same tests with AppendBuffer
+if (true) {
+    dst := AppendBuffer(1024);
+    move(dst, StringReader(DATA));
+    @assert(String(dst, true) == DATA);
+}
+if (true) {
+    dst := AppendBuffer(1024);
+    move(dst, StringReader(DATA), 5999);
+    @assert(String(dst, true) == DATA);
+}
+
+# readAll function.
+if (true) {
+    dst := AppendBuffer(1024);
+    @assert(readAll(StringReader(DATA)) == DATA);
+}
+
+cerr `ok`;
+%%EXPECT%%
+ok
+%%STDIN%%
