@@ -238,8 +238,8 @@ void PollSet_get(struct pollfd *set, unsigned int index,
                  ) {
     struct pollfd &elem = set[index];
     outputEntry->fd = elem.fd;
-    outputEntry->events = elem.fd;
-    outputEntry->revents = elem.fd;
+    outputEntry->events = elem.events;
+    outputEntry->revents = elem.revents;
 }
 
 // find the next poll entry that has an event in revents whose index is >=
