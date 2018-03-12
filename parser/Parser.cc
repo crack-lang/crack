@@ -3202,10 +3202,13 @@ void Parser::recordIStr(Generic *generic) {
 
 void Parser::recordBlock(Generic *generic) {
    int bracketCount = 1;
+   Location start;
    while (bracketCount) {
       // get the next token, use the low-level token so as not to process
       // annotations.
       Token tok = toker.getToken();
+      if (!start.getLineNumber())
+         start = tok.getLocation();
       generic->addToken(tok);
       if (tok.isLCurly())
          ++bracketCount;
@@ -3214,7 +3217,11 @@ void Parser::recordBlock(Generic *generic) {
       else if (tok.isIstrBegin())
          recordIStr(generic);
       else if (tok.isEnd())
-         error(tok, "Premature end of file");
+         error(tok, 
+               SPUG_FSTR("Premature end of file (should be in block starting "
+                          "at " << start << ")"
+                         )
+               );
    }
 }
 

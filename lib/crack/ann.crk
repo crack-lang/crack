@@ -868,8 +868,10 @@ void readDelimited(CrackContext ctx, int left, int right,
                    ) {
     # get the opening delimiter.
     Token tok;
+    Location start;
     if (storeDelimiters) {
         tok = ctx.getToken();
+        start = tok.getLocation();
         if (tok.getType() != left)
             ctx.error(tok, 'Opening delimiter expected.'.buffer);
         result.pushHead(Tok(tok));
@@ -878,8 +880,14 @@ void readDelimited(CrackContext ctx, int left, int right,
     depth := 1;
     while (depth) {
         tok = ctx.getToken();
+        if (start is null)
+            start = tok.getLocation();
         if (tok.isEnd())
-            ctx.error(tok, 'Premature end of file'.buffer);
+            ctx.error(
+                tok,
+                FStr() `Premature end of file (in block starting at $(
+                        start.getName()):$(start.getLineNumber()))`.buffer
+            );
         if (tok.getType() == left)
             ++depth;
         else if (tok.getType() == right)
