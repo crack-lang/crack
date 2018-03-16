@@ -2993,6 +2993,14 @@ void Parser::parsePostOper(TypeDef *returnType) {
                              )
                   );
 
+         // There can be only one destructor.
+         if (isDel && enclosingType->lookUp("oper del", false))
+            error(tok,
+                  SPUG_FSTR("oper del already defined in class " <<
+                            enclosingType->getDisplayName() << "."
+                            )
+                  );
+
          // the operators other than "init" require an empty args list.
          int expectedArgCount;
          if (!isInit)

@@ -1,0 +1,11 @@
+%%TEST%%
+oper del() redefined
+%%ARGS%%
+%%FILE%%
+class A {
+  oper del() {}
+  oper del() {}
+}
+%%EXPECT%%
+ParseError: %SCRIPTNAME%:3:8: oper del already defined in class A.
+%%STDIN%%
