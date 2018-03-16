@@ -1136,9 +1136,9 @@ void Context::insureOverloadPath(Context *ancestor, OverloadDef *overload) {
     // verify that we are directly derived from the namespace.
     NamespacePtr parentNs;
     for (int i = 0; parentNs = ns->getParent(i++);)
-        if (parent.get() == ancestor)
+        if (parentNs.get() == ancestor->ns.get())
             break;
-    assert(parent && "insureOverloadPath(): parent is not a direct parent.");
+    assert(parentNs && "insureOverloadPath(): parent is not a direct parent.");
 
     localOverload->addParent(overload, /* before */ true);
 }
