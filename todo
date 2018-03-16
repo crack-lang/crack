@@ -16,6 +16,8 @@ Copyright 2009 Google Inc.
 
 -   Expansions (non-heap storage types)
 -   Remove generic line information from the meta-digest
+-   Need to make Undef classes in extensions "final" so we don't try to
+    inherit from them.
 
 Unassigned
 ----------
