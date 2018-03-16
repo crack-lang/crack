@@ -1,0 +1,25 @@
+%%TEST%%
+nested destructors
+%%ARGS%%
+%%FILE%%
+# This has a similar intent to the tests in 235_method_resolution_order.crkt,
+# though this problem was discovered at a later time.  In nested classes, we
+# were clobbering the overrides of a base class as part of an incorrect
+# attempt to fix some MRO issues which apparently have since been fixed
+# correctly.
+import crack.io cerr;
+
+class A {
+    oper del() { cerr `deleting A\n` }
+    class Checker {
+        oper del() { cerr `deleting checker\n` }
+    }
+}
+
+if (1) {
+    c := A.Checker();
+}
+
+%%EXPECT%%
+deleting checker
+%%STDIN%%

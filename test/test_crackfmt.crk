@@ -1,0 +1,62 @@
+import crack.io cerr, StringFormatter, StringReader;
+import crack.lang AppendBuffer;
+import tools.crackfmt format;
+
+@import crack.ann assert;
+
+String format(String input) {
+    StringFormatter out = {};
+    format(out, StringReader(input));
+    return out.string();
+}
+
+@assert(format('import foo;\n') == 'import foo;\n');
+@assert(format('import mod name;\n') ==
+        'import mod name;\n');
+@assert(format('import mod name, extra;\n') ==
+        'import mod extra, name;\n');
+@assert(format('import full.mod a, b;\n') ==
+        'import full.mod a, b;\n');
+@assert(format('import .mod a, b;\n') ==
+        'import .mod a, b;\n');
+@assert(
+    format(
+        'import mod ccc = CONST, CONST, goo, foo = foobert, MyClass;\n'
+    ) == 'import mod foo = foobert, goo, MyClass, CONST, ccc = CONST;\n'
+);
+@assert(
+    format(
+        I'import second a;
+          import first b,x=c;
+          import first b, x = c;
+          '
+    ) ==
+    I'import first b, x = c;
+      import second a;
+      '
+);
+cerr `$(
+        format(
+        I'import
+          module
+              name1,
+              name2
+              ,name3
+              ;
+          '
+    )
+)\n`;
+
+@assert(
+    format(
+        I'import
+          module
+              name1,
+              name2
+              ,name3
+              ;
+          '
+    ) == 'import module name1, name2, name3;'
+);
+
+cerr `ok\n`;

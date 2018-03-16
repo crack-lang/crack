@@ -254,24 +254,6 @@ void OverloadDef::addParent(OverloadDef *parent, bool before) {
         return;
     }
 
-    // Replace any parents that the new parent derives from (to preserve the
-    // correct lookup order, we should be discovering those parents through
-    // the overload)
-    // Note: I'm not convinced that this code is correct.  The relationship
-    // between overloads and their namespaces is complicated, and the
-    // approaches that seemed correct while fixing the most recent problem
-    // (see 235_method_resolution_order) didn't work.  This code, however,
-    // does.
-    for(ParentVec::iterator iter = parents.begin(); iter != parents.end(); ) {
-        if (parent->hasAncestor(iter->get())) {
-            iter = parents.erase(iter);
-            parents.insert(iter, parent);
-            return;
-        } else {
-            ++iter;
-        }
-    }
-
     parents.push_back(parent);
 }
 
