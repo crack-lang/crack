@@ -37,7 +37,7 @@
 ##            cout `got data from client: $(comm.inBuf)\n`;
 ##
 ##            # send it back.
-##            comm.outBuf.extend(comm.inBuf);
+##            comm.write(comm.inBuf);
 ##
 ##            # Consume it.
 ##            comm.inBuf.compact(comm.inBuf.size);
@@ -80,10 +80,12 @@
 ## provide some sort of messaging system to the poller thread, possibly along
 ## with some synchronization mechanisms (this is part of what Comm buys you).
 
+import crack.cont.array Array;
 import crack.eventmgr EventCallback, EventManager, EventManagerBackRef;
 import crack.functor Functor1;
 import crack.io cerr, Formatter, FStr, Writer;
-import crack.lang AppendBuffer, Exception, InvalidArgumentError, SystemError;
+import crack.lang AppendBuffer, Buffer, Exception, InvalidArgumentError,
+    SystemError;
 import crack.logger LogFormatter, Logger;
 import crack.logger.ctx Log;
 import crack.net Address, Pipe, Poller, PollEvent, PollEventCallback, Socket,
@@ -122,15 +124,21 @@ class CommHandler;
     @abstract void addResponder(Object responder);
 }
 
+## Interface for sending raw data to an output channel.
+@interface __OutputChannel {
+    @abstract void sendData(CommHandler handler, String data);
+}
+
 ## A communication endpoint handler.  Can be used for both server and client
 ## side connection handling.
 ##
 ##
-@final class CommHandler @impl PollEventCallback {
+@final class CommHandler @impl PollEventCallback, Writer {
 
     uint blockSize = defaultBlockSize;
     Socket __sock;
     bool __close;
+    __OutputChannel _out;
     Log log;
 
     ## If true, The user handler's process() method is called for all events,
@@ -144,7 +152,8 @@ class CommHandler;
         inBuf,
 
         ## The output buffer.  Send data through the connection by appending
-        ## to this.
+        ## to this. DEPRECATED.  Use the write() method instead, which works
+        ## outside of the poller thread.
         outBuf;
 
     ## The user data handler.
@@ -186,6 +195,14 @@ class CommHandler;
         __close = true;
     }
 
+    oper del() {
+        # This can only ever get called if we've been released from the
+        # Poller ane everything else, so close the socket if it's not already
+        # closed.
+        if (__sock)
+            __sock.close();
+    }
+
     ## Returns true if the socket is closed.
     @final bool isClosed() { return __close && __sock is null }
 
@@ -209,7 +226,7 @@ class CommHandler;
             return 0;
         }
 
-        log.debug `got events = $(event.revents)`;
+        log.debug `handler got events = $(event.revents)`;
         if (event.revents & POLLIN) {
             try {
                 data := __sock.read(1024);
@@ -268,6 +285,12 @@ class CommHandler;
 
         return POLLIN | POLLERR | POLLHUP | (outBuf ? POLLOUT : 0);
     }
+
+    ## Write 'data' back to the output channel.  This is safe to use from any
+    ## thread.
+    void write(Buffer data) {
+        _out.sendData(this, String(data));
+    }
 }
 
 @final class NewConnection {
@@ -294,12 +317,21 @@ class CommHandler;
 
     Socket __sock;
     Functor1[void, Socket] __onSocketInit;
+    __OutputChannel _out;
     Log log;
     CommHandlerFactory commHandlerFactory;
 
     oper init(Log log, CommHandlerFactory commHandlerFactory) :
         log = log,
         commHandlerFactory = commHandlerFactory {
+    }
+
+    oper del() {
+        # This can only ever get called if we've been released from the
+        # Poller ane everything else, so close the socket if it's not already
+        # closed.
+        if (__sock)
+            __sock.close();
     }
 
     ## Close the connection and remove it from the poller.
@@ -321,6 +353,7 @@ class CommHandler;
             comm := commHandlerFactory.makeCommHandler(
                 NewConnection(log, accepted)
             );
+            comm._out = _out;
             if (!comm.isClosed())
                 poller.add(accepted.sock, comm);
         } else if (event.revents & POLLERR) {
@@ -379,11 +412,12 @@ const int
 
     ERR_CONNECT_FAILURE = 5;
 
-const array[String] ERROR_TEXT = [
+const Array[String] ERROR_TEXT = [
     'Success',
     'Bind failure',
     'Listen failure',
     'Failure setting reusable address',
+    'Internal error',
     'Connect failure',
 ];
 
@@ -391,17 +425,20 @@ const array[String] ERROR_TEXT = [
 class _NewServer : _WaitableMessage {
 
     Address __addr;
-    PollEventCallback __handler;
+    CommListener __handler;
     bool __reuseAddr;
+    __OutputChannel __out;
 
     int errCode;
 
-    oper init(Address addr, PollEventCallback handler,
-              bool reuseAddr
+    oper init(Address addr, CommListener handler,
+              bool reuseAddr,
+              __OutputChannel out
               ) :
         __addr = addr,
         __handler = handler,
-        __reuseAddr = reuseAddr {
+        __reuseAddr = reuseAddr,
+        __out = out {
     }
 
     @final int __run(Poller poller, Log log) {
@@ -413,6 +450,7 @@ class _NewServer : _WaitableMessage {
                 return ERR_BIND_FAILURE;
             if (!sock.listen(5))
                 return ERR_LISTEN_FAILURE;
+            __handler._out = __out;
             poller.add(sock, __handler);
             return SUCCESS;
         } catch (Exception ex) {
@@ -432,13 +470,16 @@ class _NewServer : _WaitableMessage {
 class _NewClient : _WaitableMessage {
 
     Address __addr;
-    PollEventCallback __handler;
+    CommHandler __handler;
+    __OutputChannel __out;
 
     int errCode;
 
-    oper init(Address addr, PollEventCallback handler) :
+    oper init(Address addr, CommHandler handler,
+              __OutputChannel out) :
         __addr = addr,
-        __handler = handler {
+        __handler = handler,
+        __out = out {
     }
 
     @final int __run(Poller poller, Log log) {
@@ -446,6 +487,7 @@ class _NewClient : _WaitableMessage {
             sock := Socket(AF_INET, SOCK_STREAM, 0);
             if (!sock.connect(__addr))
                 return ERR_CONNECT_FAILURE;
+            __handler._out = __out;
             poller.add(sock, __handler);
             return SUCCESS;
         } catch (Exception ex) {
@@ -566,7 +608,7 @@ class _ScheduleEvent : _Message {
     }
 }
 
-class _CommPipeHandler @impl PollEventCallback {
+class _CommPipeHandler @impl PollEventCallback, __OutputChannel {
 
     class __Message {
         CommHandler target;
@@ -617,6 +659,11 @@ class _CommPipeHandler @impl PollEventCallback {
     void send(_Message message) {
         __queue.add(message);
         __pipe.write('x');
+    }
+
+    ## Send data to the output channel associated with 'handler'.
+    void sendData(CommHandler handler, String data) {
+       send(_SendData(handler, data));
     }
 }
 
@@ -718,7 +765,7 @@ class _PollerThread : Thread {
     ## is mutex protected: the contents of the handler will be subject to
     ## manipulation from the poller thread.
     @final CommProxy getProxy(Address server, CommHandler handler) {
-        message := _NewClient(server, handler);
+        message := _NewClient(server, handler, __thread.control);
         __thread.control.send(message);
         message.wait();
         return CommProxy(__thread.control, handler);
@@ -738,7 +785,7 @@ class _PollerThread : Thread {
     ## Unless you need to create the CommHandler to customize logging, use the
     ## version that accepts a UserHandler instead.
     @final SyncCommProxy getSyncProxy(Address server, CommHandler handler) {
-        message := _NewClient(server, handler);
+        message := _NewClient(server, handler, __thread.control);
         __thread.control.send(message);
         message.wait();
         return SyncCommProxy(__thread.control, handler);
@@ -763,9 +810,13 @@ class _PollerThread : Thread {
     @final void startServer(Address addr, CommListener listener,
                             bool resuseAddr
                             ) {
-        message := _NewServer(addr, listener, true);
+        message := _NewServer(addr, listener, true, __thread.control);
         __thread.control.send(message);
         message.wait();
+        if (message.errCode)
+            throw Exception(
+                FStr() `Connecting to $addr: $(ERROR_TEXT[message.errCode])`
+            );
     }
 
     ## Start a new server in the poller thread, listening on the given
