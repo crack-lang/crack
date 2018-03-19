@@ -12,7 +12,7 @@
 The Crack Programming Language Guide
 ====================================
 
-This is the manual for version 1.2 of the Crack Programming Language.  Crack
+This is the manual for version 1.3 of the Crack Programming Language.  Crack
 is an imperative, object-oriented language along the lines of Java, Python and
 C++.  It can be compiled in Just In Time and Ahead Of Time modes and has been
 tested on 32 and 64 bit x86 Linux Debian and Ubuntu systems.
@@ -679,7 +679,7 @@ You'll generally want to use the memory-managed #Array# collection instead
 Control Structures
 ------------------
 
-Crack 1.2 supports four control structures: the "if\/else" statement,
+Crack 1.3 supports four control structures: the "if\/else" statement,
 the "while" statement, the "for" statement and the "try\/catch" statement.
 "if" runs code blocks depending on whether a condition is true or false:
 
@@ -3454,10 +3454,9 @@ variable is actually defined.
 When a sequence constant is defined, the compiler does the following:
 
 -   Searches for a constructor for the type that can accept an unsigned
-    integer value (as of 1.2 - we will eventually be switching to an integer
-    type large enough to accommodate a memory size).  This #uint# value is
-    assumed to be the number of elements in the sequence.
--   That failing, it searches for a default constructor for the type.
+    integer or uintz value This value is assumed to be the number of elements
+    in the sequence. -   That failing, it searches for a default constructor
+    for the type.
 
 For each element between the brackets, the compiler:
 
@@ -4156,7 +4155,7 @@ member variables.  For example:
     Coord c = {10, 20};
 }}
 
-Structs are very limited as of Crack 1.2.  In particular:
+Structs are very limited as of Crack 1.3.  In particular:
 
 -   They don't support inheritence.
 -   You can't add any other methods.
@@ -4401,7 +4400,7 @@ extension, you'll want to:
 -   build it into a shared library, linked with whatever support code it needs
     (usually the code it's wrapping)
 -   Add the include directory for crack headers to the include path (usually
-    something like #`/usr/local/include/crack-1.2`#)
+    something like #`/usr/local/include/crack-1.3`#)
 
 The Extension Generator
 '''''''''''''''''''''''
@@ -6316,8 +6315,8 @@ be backwards compatible until the major version number changes.  See
 The remainder of this appendix describes the things you need to know when
 upgrading between versions.
 
-From 1.1 to 1.2
----------------
+From 1.1 through to 1.3
+-----------------------
 
 No known changes affecting compatibility.
 

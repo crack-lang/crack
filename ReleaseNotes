@@ -1,4 +1,15 @@
 
+1.3
+    -   Fixes for problems discovered in the latest versions of Debian.  (Most
+        notably, position independent binaries are now the default for AOT
+        compiles)
+    -   Fixed SHA256 padding bug (note that this corrects hash values for a
+        lot of things)
+    -   Added move() and readAll() convenience functions to crack.io.
+    -   Fixed broken get() method in PollSet.
+    -   Fixed bug in overrides in nested classes.
+    -   Various comm2 improvements.
+
 1.2
     -   Added @cvars annotation (like @struct, but just generates a
         constructor based on a list of instance variable definitions).
