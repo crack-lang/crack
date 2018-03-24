@@ -357,6 +357,7 @@ two words: $(block)\n`);
             cmd := strip(line);
             if (cmd == '&expand') {
                 format(block);
+                close();
             } else if (cmd == '&title') {
                 header := getHeader(block);
                 if (header) {
