@@ -21,7 +21,7 @@ class EventManager;
 
 ## An EventManager manages a Poller and a schedule of events to be executed
 ## at a specific point in time.
-class EventManager : EventManagerBackRef {
+class EventManager : Object, EventManagerBackRef {
 
     ## The associated poller.
     Poller poller = {};
