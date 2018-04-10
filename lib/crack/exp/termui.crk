@@ -355,7 +355,7 @@ class TermApp {
         oper init(TermApp app) : app = app {}
 
         int oper call(Poller poller, PollEvent event) {
-            if (event.events & POLLIN)
+            if (event.revents & POLLIN)
                 app.onEvent(KeyEvent(cin.read(16)));
             return POLLIN;
         }
