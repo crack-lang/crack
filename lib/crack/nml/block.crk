@@ -15,7 +15,7 @@
 #
 #==============================================================================
 
-import crack.ascii wsplit;
+import crack.ascii strip, wsplit;
 import crack.cont.hashmap HashMap;
 import crack.lang AppendBuffer, InvalidArgumentError;
 import crack.io cout, Formatter, FStr, Writer, StringFormatter, StringWriter;
@@ -184,10 +184,12 @@ class TextBlock {
         tightLeft = tightLeft {
 
         # *literal*, *prelit* and *C* types are both literal.
-        literal = type == 'literal' || type == 'prelit' || type == 'C';
+        literal = type == 'literal' || type == 'prelit' || type == 'C' ||
+            type == 'html';
 
         # *pre*, *prelit* and *C* types are both preformatted.
-        preformatted = type == 'pre' || type == 'prelit' || type == 'C';
+        preformatted = type == 'pre' || type == 'prelit' || type == 'C' ||
+            type == 'html';
 
         # exec types are very special
         isExec = type == 'exec';
@@ -334,7 +336,7 @@ TextBlock makeBlock(String sourceName, int lineNumber, String typeName,
 
 ## A utility function which finds the first header in the text and returns
 ## it as a string.  This is useful for extracting the title from a
-## document.
+## document, though getTitle() is better.
 ##
 ## Returns *None* if no header was found.
 String getHeader(TextBlock block) {
@@ -353,4 +355,35 @@ String getHeader(TextBlock block) {
         }
     }
     return null;
+}
+
+## Extract the title from the document.
+##
+## If there is a comment of the form "title: <title text>", the title text
+## from the comment will always be returned.  Otherwise, the first lowest
+## numbered header will be returned.
+##
+## Returns null if there are no headers and no "title" comment.
+String getTitle(TextBlock block) {
+    String candidate, candidateType;
+    for (child :in block.words) {
+        if (childBlock := TextBlock.cast(child, null)) {
+            if (childBlock.type == 'C') {
+                # Comment block, does it start with "title:"?
+                if ((content := strip(String.cast(childBlock.words[0], '')))
+                      .startsWith('title:')
+                    )
+                    # It does.  Return immediately.
+                    return strip(content.substr(6));
+            } else if (childBlock.type >= '0' && childBlock.type <= '9' &&
+                       candidate && childBlock.type < candidateType
+                       ) {
+                StringFormatter tmp = {};
+                childBlock.flattenTo(tmp);
+                candidate := tmp.makeString();
+                candidateType = childBlock.type;
+            }
+        }
+    }
+    return candidate;
 }
