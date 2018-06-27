@@ -4,7 +4,7 @@ comm2 test
 %%FILE%%
 import crack.eventmgr EventCallbackFunc;
 import crack.io cerr, Formatter, FStr, StandardFormatter, Writer;
-import crack.lang Buffer;
+import crack.lang Buffer, Exception;
 import crack.logger.ctx Log;
 import crack.net InetAddress, Poller, Socket, SocketApd, AF_INET,
     SOCK_STREAM;
@@ -153,6 +153,25 @@ if (true) {
 }
 
 proxy.close();
+comm.stop();
+
+# Verify that we get an exception on a failed connect.
+comm = Comm(serverLog);
+comm.start();
+try {
+    comm.getSyncProxy(ADDR, client);
+    @assert(false && "didn't get an exception on connect failure");
+} catch (Exception ex) {
+    # good.
+}
+
+try {
+    comm.getProxy(ADDR, client);
+    @assert(false && "didn't get an exception on connect failure");
+} catch (Exception ex) {
+    # good.
+}
+
 comm.stop();
 
 cerr `ok\n`;

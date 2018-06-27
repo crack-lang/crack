@@ -768,6 +768,10 @@ class _PollerThread : Thread {
         message := _NewClient(server, handler, __thread.control);
         __thread.control.send(message);
         message.wait();
+        if (message.errCode)
+            throw Exception(
+                FStr() `Connecting to $server: $(ERROR_TEXT[message.errCode])`
+            );
         return CommProxy(__thread.control, handler);
     }
 
@@ -788,6 +792,10 @@ class _PollerThread : Thread {
         message := _NewClient(server, handler, __thread.control);
         __thread.control.send(message);
         message.wait();
+        if (message.errCode)
+            throw Exception(
+                FStr() `Connecting to $server: $(ERROR_TEXT[message.errCode])`
+            );
         return SyncCommProxy(__thread.control, handler);
     }
 
