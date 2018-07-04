@@ -279,6 +279,12 @@ VarDefPtr TypeDef::emitVarDef(Context &container, const std::string &name,
     return container.builder.emitVarDef(container, this, name, initializer);
 }
 
+ResultExprPtr TypeDef::emitRef(Context &context, VarRef *ref) {
+    if (forward)
+        context.error("Cannot emit reference to forward declared class.");
+    return VarDef::emitRef(context, ref);
+}
+
 bool TypeDef::matches(const TypeDef &other) const {
     if (&other == this)
         return true;

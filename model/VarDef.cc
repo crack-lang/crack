@@ -48,6 +48,11 @@ ResultExprPtr VarDef::emitAssignment(Context &context, Expr *expr) {
     return impl->emitAssignment(context, assign.get());
 }
 
+ResultExprPtr VarDef::emitRef(Context &context, VarRef *ref) {
+    assert(impl);
+    return impl->emitRef(context, ref);
+}
+
 FuncDefPtr VarDef::getFuncDef(Context &context,
                               std::vector<ExprPtr> &args,
                               bool allowOverrides

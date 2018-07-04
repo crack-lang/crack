@@ -1,0 +1,12 @@
+%%TEST%%
+forward class dereferences
+%%ARGS%%
+%%FILE%%
+# This verifies a bug fix where we weren't checking for a forward declared
+# class prior to dereferencing it, causing an asssertion failure since the
+# class doesn't have an impl.
+class Foo;
+Foo;
+%%EXPECT%%
+ParseError: %SCRIPTNAME%:5:4: Cannot emit reference to forward declared class.
+%%STDIN%%

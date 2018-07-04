@@ -277,6 +277,11 @@ class TypeDef : public VarDef, public Namespace {
                              );
 
         /**
+         * Emit a reference to a type variable.
+         */
+        virtual ResultExprPtr emitRef(Context &context, VarRef *ref);
+
+        /**
          * Returns true if "other" satisfies the type - in other words, if
          * "other" either equals "this" or is a subclass of "this".
          */

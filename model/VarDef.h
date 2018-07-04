@@ -28,6 +28,7 @@ SPUG_RCPTR(OverloadDef);
 class Serializer;
 SPUG_RCPTR(TypeDef);
 SPUG_RCPTR(VarDefImpl);
+class VarRef;
 
 SPUG_RCPTR(VarDef);
 
@@ -65,6 +66,11 @@ class VarDef : public virtual spug::RCBase {
         virtual ~VarDef();
 
         ResultExprPtr emitAssignment(Context &context, Expr *expr);
+
+        /**
+         * Emit a reference to the variable.
+         */
+        virtual ResultExprPtr emitRef(Context &context, VarRef *ref);
 
         /**
          * Returns a FuncDef that can be used when an instance of the

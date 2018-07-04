@@ -48,8 +48,7 @@ ResultExprPtr VarRef::emit(Context &context) {
                                  def->getDisplayName()
                                 )
                       );
-    assert(def->impl);
-    return def->impl->emitRef(context, this);
+    return def->emitRef(context, this);
 }
 
 ExprPtr VarRef::convert(Context &context, TypeDef *type) {
