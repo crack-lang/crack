@@ -1823,12 +1823,45 @@ int Parser::parseFuncDef(TypeDef *returnType, const Token &nameTok,
                     !TypeDef::isImplicitFinal(name) &&
                     (!nextFuncFlags || nextFuncFlags & FuncDef::virtualized);
 
+   // figure out what the flags are going to be.
+   FuncDef::Flags flags =
+      (isMethod ? FuncDef::method : FuncDef::noFlags) |
+      (isVirtual ? FuncDef::virtualized : FuncDef::noFlags) |
+      (funcFlags == reverseOp ? FuncDef::reverse : FuncDef::noFlags);
+
+   Token tok3 = getToken();
+
+   // Check for a "delete" qualifier.
+   if (tok3.isIdent() && tok3.getData() == "delete") {
+      if (existingDef)
+         checkForOverride(existingDef.get(), argDefs, ownerNS.get(), nameTok,
+                          name,
+                          true
+                          );
+
+      BSTATS_GO(s1)
+      FuncDefPtr funcDef =
+         context->builder.createFuncForward(*context, flags | FuncDef::deleted,
+                                          name,
+                                          returnType,
+                                          argDefs,
+                                          0
+                                          );
+      BSTATS_END
+      cstack.restore();
+      consumeDocs();  // discard them.
+      addFuncDef(funcDef.get());
+      return argDefs.size();
+   }
+
+
    // If we're overriding/implementing a previously declared virtual
    // function, we'll store it here.
    FuncDefPtr override = checkForOverride(existingDef.get(), argDefs,
                                           ownerNS.get(),
                                           nameTok,
-                                          name
+                                          name,
+                                          false
                                           );
 
    // Ignore the override if we're in a class and the override is from a class
@@ -1855,14 +1888,8 @@ int Parser::parseFuncDef(TypeDef *returnType, const Token &nameTok,
                        )
             );
 
-   // figure out what the flags are going to be.
-   FuncDef::Flags flags =
-      (isMethod ? FuncDef::method : FuncDef::noFlags) |
-      (isVirtual ? FuncDef::virtualized : FuncDef::noFlags) |
-      (funcFlags == reverseOp ? FuncDef::reverse : FuncDef::noFlags);
-
-   Token tok3 = getToken();
    InitializersPtr inits;
+
    if (tok3.isSemi()) {
       // forward declaration or stub - see if we've got a stub
       // definition
@@ -3662,7 +3689,8 @@ FuncDefPtr Parser::checkForOverride(VarDef *existingDef,
                                     const ArgVec &argDefs,
                                     Namespace *ownerNS,
                                     const Token &nameTok,
-                                    const string &name
+                                    const string &name,
+                                    bool allowDerivedOverride
                                     ) {
    OverloadDef *existingOvldDef = OverloadDefPtr::cast(existingDef);
    FuncDefPtr override;
@@ -3687,7 +3715,8 @@ FuncDefPtr Parser::checkForOverride(VarDef *existingDef,
    if (override->getOwner() != ownerNS &&
        (!(overrideOwner = TypeDefPtr::cast(override->getOwner())) ||
         !(curClass = TypeDefPtr::cast(ownerNS)) ||
-        !curClass->isDerivedFrom(overrideOwner.get())
+        !curClass->isDerivedFrom(overrideOwner.get()) ||
+        allowDerivedOverride
         )
        )
       return 0;

@@ -45,6 +45,8 @@ class FuncDef : public VarDef {
                             // function provided by the executor (a member of
                             // the .builtin module).
             shlib = 128,    // Function loaded directly from a shared library.
+            deleted = 256,  // Override that prevents the resolution of an
+                            // inherited function.
             explicitFlags = 32768 // these flags were set by an annotation
         } flags;
 

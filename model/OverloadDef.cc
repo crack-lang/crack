@@ -49,6 +49,12 @@ void OverloadDef::flatten(OverloadDef::FuncList &flatFuncs) const {
         (*parent)->flatten(flatFuncs);
 }
 
+namespace {
+    FuncDef *nullIfDeleted(FuncDef *func) {
+        return (func->flags & FuncDef::deleted) ? 0 : func;
+    }
+}
+
 FuncDef *OverloadDef::getMatch(Context &context, vector<ExprPtr> &args,
                                FuncDef::Convert convertFlag,
                                bool allowOverrides
@@ -67,7 +73,7 @@ FuncDef *OverloadDef::getMatch(Context &context, vector<ExprPtr> &args,
         if ((*iter)->matches(context, args, newArgs, convertFlag)) {
             if (convertFlag != FuncDef::noConvert)
                 args = newArgs;
-            return iter->get();
+            return nullIfDeleted(iter->get());
         }
     }
 
@@ -118,7 +124,7 @@ FuncDef *OverloadDef::getMatch(Context &context, std::vector<ExprPtr> &args,
 FuncDef *OverloadDef::getMatch(TypeDef *funcType) const {
     SPUG_FOR(FuncList, iter, funcs) {
         if ((*iter)->type->isDerivedFrom(funcType))
-            return iter->get();
+            return nullIfDeleted(iter->get());
     }
 
     SPUG_FOR(ParentVec, iter, parents) {
@@ -137,7 +143,7 @@ FuncDef *OverloadDef::getSigMatch(const FuncDef::ArgVec &args,
         if (!matchNames && (*iter)->matches(args) ||
             matchNames && (*iter)->matchesWithNames(args)
             )
-            return iter->get();
+            return nullIfDeleted(iter->get());
     }
 
     SPUG_FOR(ParentVec, parent, parents) {
@@ -159,7 +165,7 @@ FuncDef *OverloadDef::getNoArgMatch(bool acceptAlias) {
         if ((*iter)->args.empty() &&
             (acceptAlias || (*iter)->getOwner() == owner)
             )
-            return iter->get();
+            return nullIfDeleted(iter->get());
 
     // check delegated functions.
     for (ParentVec::iterator parent = parents.begin();
@@ -479,7 +485,7 @@ bool OverloadDef::isConstant() {
 
 void OverloadDef::dump(ostream &out, const string &prefix) const {
     Namespace *owner = getOwner();
-    cerr << prefix << "overload " << name << " in " <<
+    out << prefix << "overload " << name << " in " <<
         (owner ? owner->getNamespaceName() : "null") <<
         " {" << endl;
     for (FuncList::const_iterator iter = funcs.begin();
@@ -493,7 +499,7 @@ void OverloadDef::dump(ostream &out, const string &prefix) const {
          ++parent
          )
         (*parent)->dump(out, prefix + "  ");
-    cerr << prefix << "}" << endl;
+    out << prefix << "}" << endl;
 }
 
 void OverloadDef::display(ostream &out, const string &prefix) const {
@@ -502,6 +508,8 @@ void OverloadDef::display(ostream &out, const string &prefix) const {
          ++iter
          ) {
         (*iter)->display(out, prefix + "  ");
+        if ((*iter)->flags & FuncDef::deleted)
+            out << "  (deleted)";
         out << '\n';
     }
 

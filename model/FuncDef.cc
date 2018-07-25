@@ -239,7 +239,10 @@ TypeDefPtr FuncDef::getFuncType(Context &context) {
 
 void FuncDef::dump(ostream &out, const string &prefix) const {
     out << prefix << returnType->getFullName() << " " << getFullName() <<
-        args << "\n";
+        args;
+    if (flags & deleted)
+        out << " (deleted)";
+    out << "\n";
 }
 
 void FuncDef::dump(ostream &out, const ArgVec &args) {

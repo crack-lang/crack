@@ -145,7 +145,12 @@ void Func::finish() {
         Token nameTok(Token::ident, name, new LocationImpl(name.c_str(), 0));
 
         VarDefPtr existingDef = parser.checkForExistingDef(nameTok, name, true);
-        override = parser.checkForOverride(existingDef.get(), realArgs, context->ns.get(), nameTok, name);
+        override = parser.checkForOverride(existingDef.get(), realArgs,
+                                           context->ns.get(),
+                                           nameTok,
+                                           name,
+                                           false
+                                           );
 
         // make overrides implicitly virtual
         if (override) {

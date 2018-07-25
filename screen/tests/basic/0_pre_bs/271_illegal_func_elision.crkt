@@ -1,0 +1,13 @@
+%%TEST%%
+illegal function elision
+%%ARGS%%
+%%FILE%%
+# Verify that we get a different error for an attempt to delete a function
+# that is defined in the same context.
+
+void f() {}
+void f() delete;
+
+%%EXPECT%%
+ParseError: %SCRIPTNAME%:5:6: Definition of f hides previous overload.
+%%STDIN%%

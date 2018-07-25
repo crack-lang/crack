@@ -462,7 +462,8 @@ class Parser {
                                          const model::ArgVec &argDefs,
                                          model::Namespace *ownerNS,
                                          const Token &nameTok,
-                                         const std::string &name
+                                         const std::string &name,
+                                         bool allowDerivedOverride
                                          );
 
       // current parser state.

@@ -2741,6 +2741,37 @@ other functions.  However, these things are sufficient for defining
 interfaces (as in the example above) which is usually all you need to
 bootstrap these kinds of collaborations.
 
+Method Elision
+''''''''''''''
+
+Under certain cicrumstances, it is useful to remove inherited methods from the
+compiled representation of a class.  Crack has special function declaration
+syntax to support this.  By declaring a function followed by the "delete"
+identifier, you effectively hide the function within that context:
+
+{{
+    class A {
+        void f() {}
+    }
+
+    class B : A {
+        void f() delete;
+    }
+
+    A().f(); # OK
+    B().f(); # ERROR: f() is undefined in B.
+}}
+
+This feature was introduced to support elision of #oper bind# and #oper
+release#, specifically to allow the implementation of raw
+(non-reference-counted) pointers.  It may also be useful for providing
+limited interfaces to an existing class.
+
+Note that this only affects the visibility of a method at compile-time:
+for example, deleting a destructor of a class derived from #Object# will not
+prevent the base class destructors from being called when the object is
+destroyed.
+
 Generics
 --------
 

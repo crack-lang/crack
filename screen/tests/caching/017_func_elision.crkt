@@ -1,0 +1,19 @@
+%%TEST%%
+elided function caching
+%%ARGS%%
+%%FILE%%
+# Verify that functions defined with "delete" are cached correctly.
+import crack.io cerr;
+class A : VTableBase {
+  oper bind() { puts("bind called") }
+}
+
+class B : A {
+  oper bind() delete;
+}
+
+b := B();
+cerr `ok\n`;
+%%EXPECT%%
+ok
+%%STDIN%%

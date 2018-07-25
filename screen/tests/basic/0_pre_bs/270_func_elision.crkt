@@ -1,0 +1,22 @@
+%%TEST%%
+function elision
+%%ARGS%%
+%%FILE%%
+# Verify that we can locally delete a function defined in a parent context.
+
+void f() {}
+
+if (1) {
+  void f() delete;
+
+  f();
+}
+
+%%EXPECT%%
+ParseError: %SCRIPTNAME%:8:5: No method exists matching f()
+Possible overloads for f:
+  void 1.f()  (deleted)
+  void f()
+
+
+%%STDIN%%
