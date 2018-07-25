@@ -1,0 +1,26 @@
+%%TEST%%
+rawptr
+%%ARGS%%
+%%FILE%%
+import crack.io cerr;
+import crack.rawptr RawPtr;
+
+class SelfReferential {
+    alias Ptr = RawPtr[SelfReferential];
+    Ptr self;
+
+    oper init() {
+        self = Ptr(this);
+    }
+
+    oper del() {
+        cerr `deleted\n`;
+    }
+}
+
+sr := SelfReferential();
+cerr `ok\n`;
+%%EXPECT%%
+ok
+deleted
+%%STDIN%%

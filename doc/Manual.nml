@@ -3562,12 +3562,11 @@ memory leak. This is because each object retains a reference from the last
 object in the sequence, so even when all external references are removed,
 none of the objects will drop to a reference count of zero.
 
-There's currently no good way around this: you just have to be aware that if
-you create a reference that can introduce a cycle, you'll need to take certain
-remedial measures to avoid leaking the objects.  This is typically
-accomplished by breaking the cycles at some point, normally during the
-destruction of some external object that references the cycle without
-participating in it.
+The best way to work around this is with the #RawPtr# class.
+#crack.rawptr.RawPtr# is a generic appendage that causes the compiler to omit
+calls to bind and release for its specializations.  See #crack.rawptr# for a
+usage example.  You still need to be aware of classes that have cyclic
+references.  When they are present, use RawPtr.  Cautiously.
 
 Primitive Bindings
 ------------------

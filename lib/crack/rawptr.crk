@@ -1,0 +1,29 @@
+## The RawPtr generic.  Allows you to break cyclic references.
+##
+## Example:
+##
+##  class Node {
+##      RawPtr[Node] __parent;
+##      Array[Node] __children = {};
+##
+##      void addChild(Node child) {
+##          __children.append(child);
+##          child.__parent = RawPtr[Node](this);
+##      }
+##
+##      oper del() {
+##          # It's very important to clean these up!
+##          for (child :in __children)
+##              child.__parent = null;
+##      }
+##  }
+
+## A raw pointer to an instance of T.
+##
+## This class breaks reference counting, allowing you to have cyclic
+## references without memory leaks.  Be very careful with this: raw pointers
+## must not be used after the object that they reference has been destroyed.
+class RawPtr[T] = T {
+    oper bind() delete;
+    oper release() delete;
+}
