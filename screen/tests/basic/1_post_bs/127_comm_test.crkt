@@ -137,8 +137,8 @@ proxy.sendSync(TEST_MESSAGE, waiter);
 @assert(waiter.getResult() == TEST_MESSAGE);
 
 if (true) {
-    # Schedule an event, make sure that we get it within 3/10ths of a second
-    # (hopefully this won't be too flakey).
+    # Schedule an event, make sure that we don't get it back before it's
+    # echeduled.
     Event myEventWaiter = {};
     void myEvent() {
         myEventWaiter.signal();
@@ -150,9 +150,8 @@ if (true) {
     myEventWaiter.wait();
     endTime := Time.now();
     diff := endTime - schedTime;
-    @assert(diff.secs == 0 && diff.nsecs >= 100000000);
-    # This check is likely to be flakey.
-    @assert(diff.nsecs < 300000000);
+    if (diff.secs == 0)
+        @assert(diff.nsecs >= 100000000);
 }
 
 proxy.close();
