@@ -61,6 +61,9 @@ class Context : public spug::RCBase {
         // @import statements.
         std::vector<ImportPtr> compileNSImports;
 
+        // Retains ownership of the builder while the context is in scope.
+        builder::BuilderPtr builderOwned;
+
         // initializer for an empty location object
         static parser::Location emptyLoc;
 

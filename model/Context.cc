@@ -126,6 +126,7 @@ Context::Context(builder::Builder &builder, Context::Scope scope,
                  Namespace *compileNS
                  ) :
     loc(parentContext ? parentContext->loc : emptyLoc),
+    builderOwned(&builder),
     parent(parentContext),
     ns(ns),
     compileNS(compileNS ? compileNS :
@@ -155,6 +156,7 @@ Context::Context(builder::Builder &builder, Context::Scope scope,
                  Namespace *ns,
                  Namespace *compileNS
                  ) :
+    builderOwned(&builder),
     ns(ns),
     compileNS(compileNS),
     builder(builder),
