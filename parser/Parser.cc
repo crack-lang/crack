@@ -1389,6 +1389,22 @@ ExprPtr Parser::parseExpression(unsigned precedence) {
       if (funcDef->flags & FuncDef::method)
          funcCall->receiver = operand;
       expr = funcCall->foldConstants();
+   } else if (tok.isLambda()) {
+      TypeDefPtr returnType = parseTypeSpec(0);
+
+      stringstream name;
+      name << ":anonf" << ++nestID;
+      Token nameTok(Token::ident, name.str(), tok.getLocation());
+
+      // Check for an lparen.
+      Token tok = getToken();
+      if (!tok.isLParen())
+         unexpected(tok, "Parenthesis expected for lambda parameter list");
+
+      parseFuncDef(returnType.get(), nameTok, name.str(), normal, -1);
+      OverloadDefPtr ovldDef = context->lookUp(name.str());
+      FuncDefPtr funcDef = ovldDef->getSingleFunction();
+      expr = context->createVarRef(funcDef.get());
    } else if (tok.isLCurly()) {
       unexpected(tok, "blocks as expressions are not supported yet");
    } else {
