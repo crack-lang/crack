@@ -84,6 +84,9 @@ class HTMLFormatter : StdFormatter {
     Writer __out;
     int __last;
 
+    # Set to true when formatting a preformatted block.
+    bool __inPreformatted;
+
     alias CustomFormatter = Functor2[void, HTMLFormatter, TextBlock];
 
     # Special formatters for custom block types.
@@ -171,7 +174,7 @@ class HTMLFormatter : StdFormatter {
         bool needSpace;
 
         for (cur :in blocks) {
-            if (cur.isa(String)) {
+            if (curStr := String.cast(cur, null)) {
                 # if we need some whitespace, write it.  Otherwise indicate
                 # that we need some space next time.
                 if (needSpace)
@@ -179,7 +182,7 @@ class HTMLFormatter : StdFormatter {
                 else
                     needSpace = true;
 
-                _write(_fix(String.cast(cur)));
+                _write(_fix(curStr));
             } else {
                 format(TextBlock.cast(cur));
                 needSpace = false;
@@ -187,8 +190,28 @@ class HTMLFormatter : StdFormatter {
         }
     }
 
+    ## Overrided StdFormatter._write() so we do line wrapping conditionally.
+    void _write(String str) {
+        if (__inPreformatted) {
+            if (buf) {
+                # This could happen if we have uncommitted data from prior to
+                # being preformatted.
+                _commit(buf);
+                buf.size = 0;
+            }
+            _commit(str);
+        } else
+            StdFormatter._write(str);
+    }
+
     ## Formats the block as its HTML equivalent.
     void format(Object block_or_text) {
+        bool lastInPreformatted = __inPreformatted;
+        if ((block := TextBlock.cast(block_or_text, null)) &&
+            block.preformatted
+            )
+            __inPreformatted = true;
+
         if (block_or_text.isa(String)) {
             _write(String.cast(block_or_text));
             return;
@@ -257,6 +280,8 @@ two words: $(block)\n`);
 
         if (!block.tightRight)
             _writeSpace();
+
+        __inPreformatted = lastInPreformatted;
     }
 
     String __makeIndent(int level) {
