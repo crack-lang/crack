@@ -1112,6 +1112,49 @@ Forward declared functions must be resolved by the close of the scope where
 they are declared.  In the example above, if we had not defined #g()# by the
 end of the module, we would have gotten an error.
 
+Lambdas
+'''''''
+
+Lambdas are simply anonymous functions that can be used as constants.
+
+For example, if we want to sort an array by some field, we could write:
+
+{{
+    class Foo {
+        String name;
+        String data;
+    }
+
+    Array[Foo] vals = {};
+
+    ...
+
+    int compareFooByName(Foo a, Foo b) { return cmp(a.name, b.name) }
+    vals.sort(compareFooByName);
+}}
+
+Alternately, we could use a lambda and write:
+
+{{
+    vals.sort(lambda int(Foo a, Foo b) { return cmp(a.name, b.name) });
+}}
+
+This saves us the trouble of declaring a function in a separate statement and
+also avoids poluting the namespace with a single-use definition.
+
+This is a nice feature in and of itself, but it is particularly useful when
+using macros or any knd of code generation (see \X(The Standard Annotations),
+below).
+
+The general form of a lambda is:
+
+[[
+    *lambda* /return-type/ *(* /arguments/ *) {* /function-body/ *}*
+]]
+
+Note that lambdas are not lexical closures: that is, they do not have access
+to local variables from enclosing scopes.
+
 Interpolation Expressions
 -------------------------
 
