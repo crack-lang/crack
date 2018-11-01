@@ -1712,11 +1712,9 @@ FuncDefPtr LLVMBuilder::createExternFuncCommon(Context &context,
     if (symName.empty()) {
         Dl_info dinfo;
         int rdl = dladdr(cfunc, &dinfo);
-        if (!rdl || !dinfo.dli_sname) {
-            throw spug::Exception(SPUG_FSTR("unable to locate symbol for "
-                                            "extern function: " << name));
+        if (rdl && dinfo.dli_sname) {
+            symName = dinfo.dli_sname;
         }
-        symName = dinfo.dli_sname;
     }
 
     ContextPtr funcCtx =
