@@ -1,0 +1,32 @@
+%%TEST%%
+lambdas
+%%ARGS%%
+%%FILE%%
+f := lambda int(int i) { return i + 1 };
+if (f(1) != 2)
+    puts('basic lambdas FAILED');
+
+# Make sure we can do this again in the same context (should produce a
+# different anonymous function name)
+f = lambda int(int i) { return i + 2 };
+if (f(1) != 3)
+    puts('second lambda definition failed');
+
+# Make sure we can pass it to a function.
+if (1) {
+    int myFunc(function[int, int, int] f, int a, int b) {
+        return f(a, b);
+    }
+    # Use two args just to shake things up a bit.
+    if (myFunc(lambda int(int a, int b) { return a + b}, 1, 2) != 3)
+        puts('lambda passed to a function failed');
+}
+
+# Close with "ok" from a lambda.
+if (1) {
+    f := lambda void() { puts('ok') };
+    f();
+}
+%%EXPECT%%
+ok
+%%STDIN%%
