@@ -5,7 +5,7 @@ set -e
 cd /
 apt-get update
 apt-get upgrade -y
-apt-get install -y git wget autoconf automake libtool gettext build-essential libpcre3-dev python
+apt-get install -y git wget autoconf automake libtool gettext build-essential libpcre3-dev python libssl-dev libfuse-dev
 git clone https://github.com/crack-lang/crack
 wget http://llvm.org/releases/3.3/llvm-3.3.src.tar.gz
 tar -xvzf llvm-3.3.src.tar.gz
