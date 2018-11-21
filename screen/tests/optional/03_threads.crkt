@@ -5,7 +5,7 @@ threads
 # Tests the threads module.
 import crack.io cout, StandardFormatter, Writer;
 import crack.lang Buffer, ManagedBuffer;
-import crack.threads Event, MutexLock, Thread, Queue;
+import crack.threads Event, MutexLock, Thread, Queue, Queue2;
 
 @import crack.ann assert;
 
@@ -78,6 +78,30 @@ if (true) {
 }
 @assert(event.signalled());
 et.join();
+
+# Verify queue ordering is FIFO.
+if (true) {
+    q := Queue[int]();
+    q.add(1);
+    q.add(2);
+    q.add(3);
+    @assert(q.get() == 1);
+    @assert(q.get() == 2);
+    @assert(q.get() == 3);
+}
+
+# Verify Queue2 behavior.
+if (true) {
+    q := Queue2[String]();
+    @assert(q.getNonBlocking() is null);
+    q.add('foo');
+    q.add('bar');
+    q.add('baz');
+    @assert(q.getNonBlocking() == 'foo');
+    @assert(q.getNonBlocking() == 'bar');
+    # This isn't optimal in that it doesn't verify the blocking behavior.
+    @assert(q.get() == 'baz');
+}
 
 %%EXPECT%%
 main started

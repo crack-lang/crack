@@ -125,7 +125,8 @@ class Condition : Object, pthread_cond_t {
     }
 }
 
-## A thread-safe queue.
+## The original thread-safe queue.
+## Deprecated.  Use SafeQueue instead unless you really need inheritance.
 class Queue[Elem] {
     Array[Elem] __elems = {};
     Condition __cond = {};
@@ -135,8 +136,46 @@ class Queue[Elem] {
         l := MutexLock(__cond.mutex);
         while (!__elems.count())
             __cond.wait();
-        p := __elems.pop();
+        p := __elems[0];
+        __elems.delete(0);
         return p;
+    }
+
+    ## Add a new element to the end of the queue.
+    void add(Elem elem) {
+        l := MutexLock(__cond.mutex);
+        __elems.append(elem);
+        __cond.signal();
+    }
+}
+
+## A thread-safe queue.
+@final class Queue2[Elem] {
+    Array[Elem] __elems = {};
+    Condition __cond = {};
+    oper init() {}
+
+    ## Get the next element on the queue, wait for one to be added if the
+    ## queue is empty.
+    Elem get() {
+        l := MutexLock(__cond.mutex);
+        while (!__elems.count())
+            __cond.wait();
+        p := __elems[0];
+        __elems.delete(0);
+        return p;
+    }
+
+    ## Returns the next element on the queue, returns null if there are none.
+    Elem getNonBlocking() {
+        l := MutexLock(__cond.mutex);
+        if (__elems) {
+            p := __elems[0];
+            __elems.delete(0);
+            return p;
+        } else {
+            return null;
+        }
     }
 
     ## Add a new element to the end of the queue.
