@@ -89,9 +89,10 @@ import crack.lang AppendBuffer, Buffer, Exception, InvalidArgumentError,
 import crack.logger LogFormatter, Logger;
 import crack.logger.ctx Log;
 import crack.net Address, Pipe, Poller, PollEvent, PollEventCallback, Socket,
-    AF_INET, POLLIN, POLLOUT, POLLERR, POLLHUP, SOCK_STREAM;
+    UnixAddress, AF_INET, AF_UNIX, POLLIN, POLLOUT, POLLERR, POLLHUP,
+    SOCK_STREAM;
 import crack.runtime c_strerror;
-import crack.threads Condition, Event, Mutex, MutexLock, Thread, Queue;
+import crack.threads Condition, Event, Mutex, MutexLock, Thread, Queue2;
 import crack.time Time;
 
 @import crack.ann assert, impl, implements, interface;
@@ -291,6 +292,8 @@ class CommHandler;
     void write(Buffer data) {
         _out.sendData(this, String(data));
     }
+
+    void formatTo(Formatter out) { out `CommHandler($__sock)` }
 }
 
 @final class NewConnection {
@@ -382,6 +385,13 @@ class CommHandler;
     @abstract void run(EventManager eventMan, Log log);
 }
 
+## Special message to terminate the queue
+class _Terminate : _Message {
+    void run(EventManager eventMan, Log log) {
+        eventMan.terminate();
+    }
+}
+
 ## A message with a response that you can wait on.
 ##
 ## Derived classes should lock the mutex prior to modifying any internal state
@@ -443,11 +453,14 @@ class _NewServer : _WaitableMessage {
 
     @final int __run(Poller poller, Log log) {
         try {
-            sock := Socket(AF_INET, SOCK_STREAM, 0);
+            family := __addr.isa(UnixAddress) ? AF_UNIX : AF_INET;
+            sock := Socket(family, SOCK_STREAM, 0);
             if (__reuseAddr && !sock.setReuseAddr(__reuseAddr))
                 return ERR_REUSE_FAILURE;
-            if (!sock.bind(__addr))
+            if (!sock.bind(__addr)) {
+                log.error `Bind to $__addr failed\n`;
                 return ERR_BIND_FAILURE;
+            }
             if (!sock.listen(5))
                 return ERR_LISTEN_FAILURE;
             __handler._out = __out;
@@ -484,9 +497,12 @@ class _NewClient : _WaitableMessage {
 
     @final int __run(Poller poller, Log log) {
         try {
-            sock := Socket(AF_INET, SOCK_STREAM, 0);
-            if (!sock.connect(__addr))
+            family := __addr.isa(UnixAddress) ? AF_UNIX : AF_INET;
+            sock := Socket(family, SOCK_STREAM, 0);
+            if (!sock.connect(__addr)) {
+                log.error `Connection to $__addr failed`;
                 return ERR_CONNECT_FAILURE;
+            }
             __handler._out = __out;
             poller.add(sock, __handler);
             return SUCCESS;
@@ -621,7 +637,7 @@ class _CommPipeHandler @impl PollEventCallback, __OutputChannel {
 
     Pipe __pipe;
     Log __log;
-    Queue[_Message] __queue = {};
+    Queue2[_Message] __queue = {};
 
     # The event manager that owns the pipe.
     EventManagerBackRef __eventMan;
@@ -637,10 +653,7 @@ class _CommPipeHandler @impl PollEventCallback, __OutputChannel {
     int oper call(Poller poller, PollEvent event) {
         if (event.revents & POLLIN) {
             __pipe.read(1024);
-            message := __queue.get();
-            if (message is null)
-                __eventMan.oper from EventManager().terminate();
-            else
+            while (message := __queue.getNonBlocking())
                 message.run(__eventMan.oper from EventManager(), __log);
         } else if (event.revents & POLLERR) {
             __log.error `got error on control pipe handler`;
@@ -663,7 +676,7 @@ class _CommPipeHandler @impl PollEventCallback, __OutputChannel {
 
     ## Send data to the output channel associated with 'handler'.
     void sendData(CommHandler handler, String data) {
-       send(_SendData(handler, data));
+        send(_SendData(handler, data));
     }
 }
 
@@ -706,6 +719,9 @@ class _PollerThread : Thread {
     void close() {
         __control.send(_StopClient(__handler));
     }
+
+    ## Returns the underlying CommHandler for the proxy.
+    CommHandler getCommHandler() { return __handler }
 }
 
 @final class SyncCommProxy {
@@ -750,7 +766,7 @@ class _PollerThread : Thread {
     }
 
     void stop() {
-        __thread.control.send(null);
+        __thread.control.send(_Terminate());
         __thread.join();
         __thread = null;
     }

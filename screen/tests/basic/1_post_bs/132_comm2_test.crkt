@@ -2,6 +2,8 @@
 comm2 test
 %%ARGS%%
 %%FILE%%
+import crack.cont.array Array;
+import crack.cont.hashmap HashMap;
 import crack.eventmgr EventCallbackFunc;
 import crack.io cerr, Formatter, FStr, StandardFormatter, Writer;
 import crack.lang Buffer, Exception;
@@ -21,11 +23,14 @@ log := Formatter.unsafeCast(null);
 
 import crack.threads Condition, Mutex, MutexLock;
 
+# Stores the last result message with no waiter.
+String noWaiter;
+
 class EchoHandler @impl UserHandler {
     Log log;
     bool server;
     bool terminated;
-    WaiterFor[String, int] waiter;
+    HashMap[String, WaiterFor[String, String]] waiters = {};
 
     oper init(Log log, bool server) :
         log = log,
@@ -37,20 +42,28 @@ class EchoHandler @impl UserHandler {
         if (!comm.inBuf.size)
             return;
 
-        # Quit if we don't have a complete message.
-        size := comm.inBuf[0];
-        if (comm.inBuf.size < size + 1)
-            return;
+        while (comm.inBuf) {
+            # Quit if we don't have a complete message.
+            size := comm.inBuf[0];
+            if (comm.inBuf.size < size + 1)
+                return;
 
-        if (server) {
-            comm.outBuf.extend(Buffer(comm.inBuf.buffer, size + 1));
-            comm.inBuf.compact(size + 1);
-        } else if (waiter) {
-            log.info `sending response back to waiter\n`;
-            waiter.setResult(String(comm.inBuf.buffer, size + 1, false));
-            comm.inBuf.compact(size + 1);
-        } else {
-            log.info `client has no waiter!!!\n`;
+            if (server) {
+                comm.outBuf.extend(Buffer(comm.inBuf.buffer, size + 1));
+                comm.inBuf.compact(size + 1);
+            } else {
+                log.info `sending response back to waiter\n`;
+                result := String(comm.inBuf.buffer, size + 1, false);
+                waiter := waiters.get(result);
+                if (waiter) {
+                    waiter.setResult(result);
+                    comm.inBuf.compact(size + 1);
+                } else {
+                    log.info `No waiter for message $(result.getRepr())`;
+                    comm.inBuf.compact(size + 1);
+                    noWaiter = result;
+                }
+            }
         }
     }
 
@@ -59,7 +72,8 @@ class EchoHandler @impl UserHandler {
     }
 
     void addResponder(Object responder) {
-        waiter = WaiterFor[String, int].cast(responder);
+        waiter := WaiterFor[String, String].cast(responder);
+        waiters[waiter.info] = waiter;
     }
 }
 
@@ -98,7 +112,7 @@ client.outBuf.extend('\x0Bhello world');
 int i;
 for (i = 0; i < 100; ++i) {
     poller.waitAndProcess(null);
-    if (client.inBuf == '\013hello world')
+    if (noWaiter == '\013hello world')
         break;
 }
 
@@ -128,10 +142,36 @@ proxy := comm.getSyncProxy(ADDR,
                                clientLog,
                                EchoHandler(clientLog, false)
                            ));
-waiter := WaiterFor[String, int](0);
 const TEST_MESSAGE := '\x0Ctest message';
+waiter := WaiterFor[String, String](TEST_MESSAGE);
 proxy.sendSync(TEST_MESSAGE, waiter);
 @assert(waiter.getResult() == TEST_MESSAGE);
+
+# Do this for a whole bunch of messages, make sure we get the results back in
+# order.
+if (true) {
+    class Expectation {
+        String expectedResult;
+        WaiterFor[String, String] waiter;
+        oper init(String expected) :
+            expectedResult = expected,
+            waiter(expected) {
+        }
+        void check() {
+            @assert(waiter.getResult() == expectedResult);
+        }
+    }
+    Array[Expectation] expectations = {};
+    for (uint32 i; i < 1000; ++i) {
+        expect := Expectation('\004' +
+                              String(byteptr(array[uint32]![i]), 4, true)
+                              );
+        proxy.sendSync(expect.expectedResult, expect.waiter);
+        expectations.append(expect);
+    }
+    for (expect :in expectations)
+        expect.check();
+}
 
 if (true) {
     # Schedule an event, make sure that we get it within 3/10ths of a second
