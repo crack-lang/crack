@@ -114,6 +114,9 @@ FmtEntrypoint _makeFmt(String prefix, Object identifier, Formatter out) {
     # Log formatters for different logging levels.
     FmtEntrypoint debug, info, warn, error, fatal;
 
+    ## Identifier to be recorded with every log message.
+    Object identifier;
+
     ## Constructs a logger that weraps a set of normal formatters.  This adds
     ## log level prefixes to every message string, and should only be used as
     ## a bare-bones logging system for wrapping a simple output stream.
@@ -126,7 +129,8 @@ FmtEntrypoint _makeFmt(String prefix, Object identifier, Formatter out) {
         info = _makeFmt('Info: ', identifier, info),
         warn = _makeFmt('Warn: ', identifier, warn),
         error =_makeFmt('Error: ', identifier, error),
-        fatal =_makeFmt('Fatal: ', identifier, fatal) {
+        fatal =_makeFmt('Fatal: ', identifier, fatal),
+        identifier = identifier {
     }
 
     ## Constructs a clone of 'other' with a different identifier.
@@ -135,11 +139,12 @@ FmtEntrypoint _makeFmt(String prefix, Object identifier, Formatter out) {
         info = other.info ? other.info.clone(identifier) : null,
         warn = other.warn ? other.warn.clone(identifier) : null,
         error = other.error ? other.error.clone(identifier) : null,
-        fatal = other.fatal ? other.fatal.clone(identifier) : null {
+        fatal = other.fatal ? other.fatal.clone(identifier) : null,
+        identifier = identifier {
     }
 
     ## Wraps a crack.logger.Logger.
-    oper init(Logger logger, Object id) {
+    oper init(Logger logger, Object id) : identifier = id {
         debug = LogFmtEntrypoint(LogFormatter(logger, DEBUG), id);
         info = LogFmtEntrypoint(LogFormatter(logger, INFO), id);
         warn = LogFmtEntrypoint(LogFormatter(logger, WARN), id);
@@ -149,6 +154,7 @@ FmtEntrypoint _makeFmt(String prefix, Object identifier, Formatter out) {
 
     ## Wraps a set of FmtEntrypoint's.  Use this for creating your own
     ## logging destinations or wrappers.
+    ## Note that this constructor doesn't initialize the identifier.
     oper init(FmtEntrypoint debug, FmtEntrypoint info, FmtEntrypoint warn,
               FmtEntrypoint error,
               FmtEntrypoint fatal
