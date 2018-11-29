@@ -11,7 +11,7 @@ import crack.logger.ctx Log;
 import crack.net InetAddress, Poller, Socket, SocketApd, AF_INET,
     SOCK_STREAM;
 import crack.net.comm2 Comm, CommHandler, CommHandlerFactory, CommListener,
-    UserHandler, NewConnection, Waiter, WaiterFor;
+    Connection, ConnectionFactory, UserHandler, NewConnection, Waiter, WaiterFor;
 import crack.threads Event;
 import crack.time add, Time, TimeDelta;
 
@@ -83,6 +83,12 @@ class EchoHandlerFactory @impl CommHandlerFactory {
     }
 }
 
+class EchoHandlerFactory2 @impl ConnectionFactory {
+    CommHandler makeConnection(NewConnection conn) {
+        return Connection(conn.log, EchoHandler(conn.log, true));
+    }
+}
+
 poller := Poller();
 
 # Set port number to zero, allow the system to assign it.
@@ -136,7 +142,7 @@ poller = null;
 serverLog := Log(log, log, log, log, log, 'server');
 comm := Comm(serverLog);
 comm.start();
-comm.startServer(ADDR, CommListener(serverLog, EchoHandlerFactory()), true);
+comm.startServer(ADDR, CommListener(serverLog, EchoHandlerFactory2()), true);
 proxy := comm.getSyncProxy(ADDR,
                            client = CommHandler(
                                clientLog,
@@ -193,6 +199,22 @@ if (true) {
 }
 
 proxy.close();
+
+# try creating a direct connection
+if (true) {
+    userHandler := EchoHandler(clientLog, false);
+    orgRc := userHandler.refCount;
+    client := Connection(clientLog, userHandler);
+    comm.connect(ADDR, client);
+    client.sendSync(TEST_MESSAGE, waiter);
+    @assert(waiter.getResult() == TEST_MESSAGE);
+    client.closeSync();
+    client = null;
+
+    // Verify that we've cleaned up.
+    @assert(userHandler.refCount == orgRc);
+}
+
 comm.stop();
 
 # Verify that we get an exception on a failed connect.

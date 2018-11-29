@@ -6,12 +6,12 @@
 ## Example client:
 ##
 ##     class MyHandler @impl UserHandler {
-##         void process(CommHandler comm) {
+##         void process(Connection comm) {
 ##             cout `got data: $(comm.inBuf)\n`;
 ##             comm.inBuf.compact(comm.inBuf.size);
 ##         }
 ##
-##         void terminate(CommHandler comm) {
+##         void terminate(Connection comm) {
 ##             # Use this to do any special processing when the connection has
 ##             # been closed
 ##             cout `terminated\n`;
@@ -25,15 +25,16 @@
 ##
 ##     comm := Comm(Log(null, null, cerr, cerr, cerr, 'client'));
 ##     comm.start();
-##     proxy := comm.getProxy(InetAddress(127, 0, 0, 1, 1234), MyHandler());
-##     # You can also call getSyncProxy() and sendSync() on it, if you've
-##     # implemented addResponder() with a Waiter.
-##     proxy.send('message to server!');
+##     connection := comm.connect(InetAddress(127, 0, 0, 1, 1234), MyHandler());
+##     conn := comm.connect(InetAddress(127, 0, 0, 1, 1234), MyHandler());
+##     # You can also call getSyncProxy(), if you've implemented
+##     # addResponder() with a Waiter.
+##     conn.write('message to server!');
 ##
 ## Example server:
 ##
 ##    class MyHandler @impl UserHandler {
-##        void process(CommHandler comm) {
+##        void process(Connection comm) {
 ##            cout `got data from client: $(comm.inBuf)\n`;
 ##
 ##            # send it back.
@@ -43,20 +44,21 @@
 ##            comm.inBuf.compact(comm.inBuf.size);
 ##        }
 ##
-##        void terminate(CommHandler comm) {
+##        void terminate(Connection comm) {
 ##            cout `terminated\n`;
 ##        }
 ##
 ##        void addResponder(Object responder) {
 ##            # Use this to add a callback or waiter, e.g.
 ##            # waiter = WaiterFor[int, String].cast(responder);
-##            # This is less useful on the server side.
+##            # On the server side, this can be used to send synchronous
+##            # messages back to the client.
 ##        }
 ##    }
 ##
-##    class MyHandlerFactory @impl CommHandlerFactory {
-##        CommHandler makeCommHandler(NewConnection conn) {
-##            return CommHandler(conn.log, MyHandler());
+##    class MyHandlerFactory @impl ConnectionFactory {
+##        Connection makeConnection(NewConnection conn) {
+##            return Connection(conn.log, MyHandler());
 ##        }
 ##    }
 ##
@@ -67,15 +69,15 @@
 ##                     );
 ##
 ##
-##     UserHandler uh = makeUserHandler()
+##    UserHandler uh = makeUserHandler()
 ##
 ## These examples both use the Comm object to use proxies and to start a
 ## background poller thread.  For more control, you can create the underlying
 ## objects directly, though the basic mechanism of defining a UserHandler for
-## processing incoming data and a CommHandlerFactory on the server side for
+## processing incoming data and a ConnectionFactory on the server side for
 ## responding to new connections remains the same.
 ##
-## It is important to note that the CommHandler and CommDispatcher classes are
+## It is important to note that the Connection and CommDispatcher classes are
 ## not thread-safe.  To interact with them from another thread, you'll need to
 ## provide some sort of messaging system to the poller thread, possibly along
 ## with some synchronization mechanisms (this is part of what Comm buys you).
@@ -99,15 +101,15 @@ import crack.time Time;
 
 uint defaultBlockSize = 4096;
 
-class CommHandler;
+class Connection;
 
 @interface UserHandler {
 
     ## Called when a message is received.
-    @abstract void process(CommHandler handler);
+    @abstract void process(Connection handler);
 
     ## Called when a connection is terminated.
-    @abstract void terminate(CommHandler handler);
+    @abstract void terminate(Connection handler);
 
     ## Adds a "responder" object.  Responders are objects that are activated
     ## after processing a complete response message.  They are typically
@@ -121,7 +123,7 @@ class CommHandler;
     ## Object.
     ##
     ## Users should not call this directly, at least not on a handler that has
-    ## already been associated with a proxy.  Use SyncProxy.sendSync() instead.
+    ## already been associated with a proxy.  Use Connection.sendSync() instead.
     @abstract void addResponder(Object responder);
 }
 
@@ -130,23 +132,51 @@ class CommHandler;
     @abstract void run(EventManager eventMan, Log log);
 }
 
+## A message with a response that you can wait on.
+##
+## Derived classes should lock the mutex prior to modifying any internal state
+## to be shared between threads.
+@abstract class _WaitableMessage : _Message {
+    Event _event = {};
+
+    ## Trigger the condition.
+    @final void trigger() {
+        _event.signal();
+    }
+
+    @final void wait() {
+        MutexLock lock = {_event.getMutex()};
+        _event.wait();
+    }
+}
+
 ## Interface for sending messages and raw data to the poller thread.
 @interface _PollerControl {
-    @abstract void sendData(CommHandler handler, String data);
     @abstract void sendMessage(_Message message);
+}
+
+## A communication mechanism for waiting on a result from a message/response
+## communication in the poller thread.
+class Waiter {
+    Event _event = {};
+
+    ## Signal the condition.
+    @final void _signal() { _event.signal() }
+
+    ## Wait on the condition.  Caller should be holding the mutex.
+    @final void _wait() { _event.wait() }
 }
 
 ## A communication endpoint handler.  Can be used for both server and client
 ## side connection handling.
 ##
 ##
-@final class CommHandler @impl PollEventCallback, Writer {
-
+@final class Connection @impl PollEventCallback, Writer {
     uint blockSize = defaultBlockSize;
     Socket __sock;
     bool __close;
     _PollerControl __out;
-    CommHandler __associate;
+    Connection __associate;
     Log log;
 
     ## If true, The user handler's process() method is called for all events,
@@ -166,6 +196,52 @@ class CommHandler;
 
     ## The user data handler.
     UserHandler userHandler;
+
+    @final void addResponder(Object responder);
+    @final void removeFrom(Poller poller);
+
+    class __SendData : _Message {
+        Connection __handler;
+        String __data;
+
+        oper init(Connection handler, String data) :
+            __handler = handler,
+            __data = data {
+        }
+
+        void run(EventManager eventMan, Log log) {
+            log.debug `Sending $(__data.size) bytes to $__handler`;
+            __handler.outBuf.extend(__data);
+        }
+    }
+
+    class __SendSync : _Message {
+        Connection __handler;
+        String __data;
+        Waiter __waiter;
+
+        oper init(Connection handler, String data, Waiter waiter) :
+            __handler = handler,
+            __data = data,
+            __waiter = waiter {
+        }
+
+        void run(EventManager eventMan, Log log) {
+            __handler.addResponder(__waiter);
+            __handler.outBuf.extend(__data);
+        }
+    }
+
+    class __StopClient : _WaitableMessage {
+        Connection __handler;
+
+        oper init(Connection handler) : __handler = handler {}
+
+        void run(EventManager eventMan, Log log) {
+            __handler.removeFrom(eventMan.poller);
+            trigger();
+        }
+    }
 
     ## Alternate constructor to allow us to create a handler without a socket.
     ## XXX should probably always use this.
@@ -197,10 +273,18 @@ class CommHandler;
         userHandler.terminate(this);
     }
 
-    ## Close the socket and remove it from the poller the next time our event
-    ## processor is called.
+    ## Close the socket asynchronously.
     @final void close() {
-        __close = true;
+        __out.sendMessage(__StopClient(this));
+    }
+
+    ## Close the socket and wait for it to be close.
+    ## Note that this must not be called from the poller thread, otherwise it
+    ## will block forever.
+    @final void closeSync() {
+        msg := __StopClient(this);
+        __out.sendMessage(msg);
+        msg.wait();
     }
 
     oper del() {
@@ -297,22 +381,33 @@ class CommHandler;
     ## Write 'data' back to the output channel.  This is safe to use from any
     ## thread.
     void write(Buffer data) {
-        __out.sendData(this, String(data));
+        __out.sendMessage(__SendData(this, String(data)));
+    }
+
+    ## Send a message.
+    void _sendMessage(_Message msg) {
+        __out.sendMessage(msg);
+    }
+
+    ## Send a synchronous message to the client, wait for it with
+    ## waiter.getResult().
+    void sendSync(String data, Waiter waiter) {
+        _sendMessage(__SendSync(this, data, waiter));
     }
 
     ## Associate the handler with another comm handler.  This is required if
     ## you are wrapping another protocol.
-    void associate(CommHandler comm) {
+    void associate(Connection comm) {
         __associate = comm;
     }
 
     void _setControlChannel(_PollerControl out) {
         __out = out;
         if (__associate)
-            __associate._setOutChannel(out);
+            __associate._setControlChannel(out);
     }
 
-    void formatTo(Formatter out) { out `CommHandler($__sock)` }
+    void formatTo(Formatter out) { out `Connection($__sock)` }
 }
 
 @final class NewConnection {
@@ -328,9 +423,23 @@ class CommHandler;
     }
 }
 
-## Interface for classes used to construct the CommHandler on a new connection.
+## Interface for classes used to construct the Connection on a new connection.
+@interface ConnectionFactory {
+    @abstract Connection makeConnection(NewConnection conn);
+}
+
+## Legacy interface for CommHandlerFactory.
+## Deprecated.  Implement ConnectionFactory instead.
 @interface CommHandlerFactory {
-    @abstract CommHandler makeCommHandler(NewConnection conn);
+    @abstract Connection makeCommHandler(NewConnection conn);
+}
+
+class _CommHandlerFactoryAdapter @impl ConnectionFactory {
+    CommHandlerFactory __factory;
+    oper init(CommHandlerFactory factory) : __factory = factory {}
+    Connection makeConnection(NewConnection conn) {
+        return __factory.makeCommHandler(conn);
+    }
 }
 
 ## A listener that listens on a socket and creates communication handlers to
@@ -341,11 +450,17 @@ class CommHandler;
     Functor1[void, Socket] __onSocketInit;
     _PollerControl _out;
     Log log;
-    CommHandlerFactory commHandlerFactory;
+    ConnectionFactory connectionFactory;
+    alias commHandlerFactory = connectionFactory;
+
+    oper init(Log log, ConnectionFactory commHandlerFactory) :
+        log = log,
+        connectionFactory = commHandlerFactory {
+    }
 
     oper init(Log log, CommHandlerFactory commHandlerFactory) :
         log = log,
-        commHandlerFactory = commHandlerFactory {
+        connectionFactory = _CommHandlerFactoryAdapter(commHandlerFactory) {
     }
 
     oper del() {
@@ -372,10 +487,10 @@ class CommHandler;
         if (event.revents & POLLIN) {
             accepted := __sock.accept();
             log.info `New connection received from $(accepted.addr)`;
-            comm := commHandlerFactory.makeCommHandler(
+            comm := connectionFactory.makeConnection(
                 NewConnection(log, accepted)
             );
-            comm._setOutChannel(_out);
+            comm._setControlChannel(_out);
             if (!comm.isClosed())
                 poller.add(accepted.sock, comm);
         } else if (event.revents & POLLERR) {
@@ -399,28 +514,13 @@ class CommHandler;
     }
 }
 
+# Preserve original name.
+alias CommHandler = Connection;
+
 ## Special message to terminate the queue
 class _Terminate : _Message {
     void run(EventManager eventMan, Log log) {
         eventMan.terminate();
-    }
-}
-
-## A message with a response that you can wait on.
-##
-## Derived classes should lock the mutex prior to modifying any internal state
-## to be shared between threads.
-@abstract class _WaitableMessage : _Message {
-    Event _event = {};
-
-    ## Trigger the condition.
-    @final void trigger() {
-        _event.signal();
-    }
-
-    @final void wait() {
-        MutexLock lock = {_event.getMutex()};
-        _event.wait();
     }
 }
 
@@ -497,12 +597,12 @@ class _NewServer : _WaitableMessage {
 class _NewClient : _WaitableMessage {
 
     Address __addr;
-    CommHandler __handler;
+    Connection __handler;
     _PollerControl __out;
 
     int errCode;
 
-    oper init(Address addr, CommHandler handler,
+    oper init(Address addr, Connection handler,
               _PollerControl out) :
         __addr = addr,
         __handler = handler,
@@ -517,7 +617,7 @@ class _NewClient : _WaitableMessage {
                 log.error `Connection to $__addr failed`;
                 return ERR_CONNECT_FAILURE;
             }
-            __handler._setOutChannel(__out);
+            __handler._setControlChannel(__out);
             poller.add(sock, __handler);
             return SUCCESS;
         } catch (Exception ex) {
@@ -530,61 +630,6 @@ class _NewClient : _WaitableMessage {
         MutexLock lock = {_event.getMutex()};
         errCode = __run(eventMan.poller, log);
         trigger();
-    }
-}
-
-class _StopClient : _WaitableMessage {
-    CommHandler __handler;
-
-    oper init(CommHandler handler) : __handler = handler {}
-
-    void run(EventManager eventMan, Log log) {
-        __handler.removeFrom(eventMan.poller);
-        trigger();
-    }
-}
-
-class _SendData : _Message {
-    CommHandler __handler;
-    String __data;
-
-    oper init(CommHandler handler, String data) :
-        __handler = handler,
-        __data = data {
-    }
-
-    void run(EventManager eventMan, Log log) {
-        log.debug `Sending $(__data.size) bytes to $__handler`;
-        __handler.outBuf.extend(__data);
-    }
-}
-
-## A communication mechanism for waiting on a result from a message/response
-## communication in the poller thread.
-class Waiter {
-    Event _event = {};
-
-    ## Signal the condition.
-    @final void _signal() { _event.signal() }
-
-    ## Wait on the condition.  Caller should be holding the mutex.
-    @final void _wait() { _event.wait() }
-}
-
-class _SendSync : _Message {
-    CommHandler __handler;
-    String __data;
-    Waiter __waiter;
-
-    oper init(CommHandler handler, String data, Waiter waiter) :
-        __handler = handler,
-        __data = data,
-        __waiter = waiter {
-    }
-
-    void run(EventManager eventMan, Log log) {
-        __handler.addResponder(__waiter);
-        __handler.outBuf.extend(__data);
     }
 }
 
@@ -641,9 +686,9 @@ class _ScheduleEvent : _Message {
 class _CommPipeHandler @impl PollEventCallback, _PollerControl {
 
     class __Message {
-        CommHandler target;
+        Connection target;
         String data;
-        oper init(CommHandler target, String data) :
+        oper init(Connection target, String data) :
             target = target,
             data = data {
         }
@@ -683,14 +728,9 @@ class _CommPipeHandler @impl PollEventCallback, _PollerControl {
         return POLLIN | POLLERR | POLLHUP;
     }
 
-    void send(_Message message) {
+    void sendMessage(_Message message) {
         __queue.add(message);
         __pipe.write('x');
-    }
-
-    ## Send data to the output channel associated with 'handler'.
-    void sendData(CommHandler handler, String data) {
-        send(_SendData(handler, data));
     }
 }
 
@@ -713,55 +753,47 @@ class _PollerThread : Thread {
 
 ## Serves as a proxy for a remote connection managed from a background thread
 ## created by Comm.
-## Allows you to send data to the remote peer safely from a non-poller thread.
+## This class doesn't provide any additional functionality on top of
+## Connection.  It exists for backwards compatibility.
 @final class CommProxy {
+    Connection __handler;
 
-    _CommPipeHandler __control;
-    CommHandler __handler;
-
-    oper init(_CommPipeHandler control, CommHandler handler) :
-        __control = control,
-        __handler = handler {
-    }
+    oper init(Connection handler) : __handler = handler {}
 
     ## Sends 'data' asynchronously to the other communication endpoint.
     void send(String data) {
-        __control.send(_SendData(__handler, data));
+        __handler.write(data);
     }
 
-    ## Close the connection.
+    ## Close the connection asynchronously.
     void close() {
-        __control.send(_StopClient(__handler));
+        __handler.close();
     }
 
-    ## Returns the underlying CommHandler for the proxy.
-    CommHandler getCommHandler() { return __handler }
+    ## Returns the underlying Connection for the proxy.
+    Connection getConnection() { return __handler }
+    alias getCommHandler = getConnection;
 }
 
 @final class SyncCommProxy {
+    Connection __handler;
 
-    _CommPipeHandler __control;
-    CommHandler __handler;
-
-    oper init(_CommPipeHandler control, CommHandler handler) :
-        __control = control,
-        __handler = handler {
-    }
+    oper init(Connection handler) : __handler = handler {}
 
     ## Sends 'data' asynchronously to the other communication endpoint.
     void send(String data) {
-        __control.send(_SendData(__handler, data));
+        __handler.write(data);
     }
 
     ## Close the connection.
     void close() {
-        __control.send(_StopClient(__handler));
+        __handler.close();
     }
 
     ## Send a synchronous message.  Wait for the result with
     ## 'waiter.getResult()'.
     void sendSync(String data, Waiter waiter) {
-        __control.send(_SendSync(__handler, data, waiter));
+        __handler.sendSync(data, waiter);
     }
 }
 
@@ -780,15 +812,17 @@ class _PollerThread : Thread {
     }
 
     void stop() {
-        __thread.control.send(_Terminate());
+        __thread.control.sendMessage(_Terminate());
         __thread.join();
         __thread = null;
     }
 
-    ## Connect to 'server' with the handler without creating a proxy.
-    @final void connect(Address server, CommHandler handler) {
+    ## Connect the handler to the server.  Use this if you want to retain
+    ## control of the creation of the handler (mainly so you can specify a Log
+    ## object).
+    @final void connect(Address server, Connection handler) {
         message := _NewClient(server, handler, __thread.control);
-        __thread.control.send(message);
+        __thread.control.sendMessage(message);
         message.wait();
         if (message.errCode)
             throw Exception(
@@ -796,23 +830,29 @@ class _PollerThread : Thread {
             );
     }
 
-    ## Make a CommProxy for the given handler.
-    CommProxy makeCommProxy(CommHandler handler) {
-        return CommProxy(__thread.control, handler);
+    ## Connect to the server and return a new connection.  The new connection
+    ## will have a log object that records the Comm log's name concatenated with
+    ## `-$server`.
+    Connection connect(Address server, UserHandler userHandler) {
+        conn := Connection(Log(__log, FStr() `$(__log.identifier)-$server`),
+                           userHandler
+                           );
+        connect(server, conn);
+        return conn;
     }
 
     ## Create a connection to a remote server in the poller thread and return
     ## a proxy for the connection.
     ##
-    ## Unless you need to create the CommHandler to customize logging, use the
+    ## Unless you need to create the Connection to customize logging, use the
     ## version that accepts a UserHandler instead.
     ##
     ## Do not interact with 'handler' directly after calling this unless it
     ## is mutex protected: the contents of the handler will be subject to
     ## manipulation from the poller thread.
-    @final CommProxy getProxy(Address server, CommHandler handler) {
+    @final CommProxy getProxy(Address server, Connection handler) {
         connect(server, handler);
-        return CommProxy(__thread.control, handler);
+        return CommProxy(handler);
     }
 
     ## Create a connection to a remote server in the poller thread and return
@@ -821,27 +861,27 @@ class _PollerThread : Thread {
     ## is mutex protected: the contents of the handler will be subject to
     ## manipulation from the poller thread.
     @final CommProxy getProxy(Address server, UserHandler handler) {
-        return getProxy(server, CommHandler(__log, handler));
+        return getProxy(server, Connection(__log, handler));
     }
 
     ## Same as getProxy(), only returns a synchronous proxy.
     ##
-    ## Unless you need to create the CommHandler to customize logging, use the
+    ## Unless you need to create the Connection to customize logging, use the
     ## version that accepts a UserHandler instead.
-    @final SyncCommProxy getSyncProxy(Address server, CommHandler handler) {
+    @final SyncCommProxy getSyncProxy(Address server, Connection handler) {
         message := _NewClient(server, handler, __thread.control);
-        __thread.control.send(message);
+        __thread.control.sendMessage(message);
         message.wait();
         if (message.errCode)
             throw Exception(
                 FStr() `Connecting to $server: $(ERROR_TEXT[message.errCode])`
             );
-        return SyncCommProxy(__thread.control, handler);
+        return SyncCommProxy(handler);
     }
 
     ## Same as getProxy(), only returns a synchronous proxy.
     @final SyncCommProxy getSyncProxy(Address server, UserHandler handler) {
-        return getSyncProxy(server, CommHandler(__log, handler));
+        return getSyncProxy(server, Connection(__log, handler));
     }
 
     ## Start a new server in the poller thread, listening on the given
@@ -850,7 +890,7 @@ class _PollerThread : Thread {
     ## "REUSEADDR" option on the socket.
     ##
     ## Unless you want to create the CommListener to customize logging, use
-    ## the version that accepts a CommHandlerFactory instead.
+    ## the version that accepts a ConnectionFactory instead.
     ##
     ## Do not interact with 'listener' directly after calling this unless it
     ## is mutex protected, as it will be subject to manipulation from the
@@ -859,7 +899,7 @@ class _PollerThread : Thread {
                             bool resuseAddr
                             ) {
         message := _NewServer(addr, listener, true, __thread.control);
-        __thread.control.send(message);
+        __thread.control.sendMessage(message);
         message.wait();
         if (message.errCode)
             throw Exception(
@@ -875,7 +915,7 @@ class _PollerThread : Thread {
     ## Do not interact with 'handlerFactory' directly after calling this
     ## unless it is mutex protected, as it will be subject to manipulation
     ## from the poller thread.
-    @final void startServer(Address addr, CommHandlerFactory handlerFactory,
+    @final void startServer(Address addr, ConnectionFactory handlerFactory,
                             bool reuseAddr
                             ) {
         startServer(addr, CommListener(__log, handlerFactory), reuseAddr);
@@ -885,7 +925,7 @@ class _PollerThread : Thread {
     ## the time is in the past).  The vevent will always be run from the
     ## event manager thread.
     @final void scheduleEvent(Time time, EventCallback event) {
-        __thread.control.send(_ScheduleEvent(time, event));
+        __thread.control.sendMessage(_ScheduleEvent(time, event));
     }
 
     ## Returns the Comm object's log.
