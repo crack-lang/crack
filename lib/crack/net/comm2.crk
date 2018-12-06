@@ -87,7 +87,7 @@ import crack.eventmgr EventCallback, EventManager, EventManagerBackRef;
 import crack.functor Functor1;
 import crack.io cerr, Formatter, FStr, Writer;
 import crack.lang AppendBuffer, Buffer, Exception, InvalidArgumentError,
-    SystemError;
+    InvalidStateError, SystemError;
 import crack.logger LogFormatter, Logger;
 import crack.logger.ctx Log;
 import crack.net Address, Pipe, Poller, PollEvent, PollEventCallback, Socket,
@@ -176,8 +176,9 @@ class Waiter {
     Socket __sock;
     bool __close;
     _PollerControl __out;
-    Connection __associate;
+    Connection __associate, __owner;
     Log log;
+    _PollerControl getOut() { return __out }
 
     ## If true, The user handler's process() method is called for all events,
     ## not just data input.
@@ -271,19 +272,28 @@ class Waiter {
         }
         __sock = null;
         userHandler.terminate(this);
+        __associate = null;
+    }
+
+    @final Connection __getOwner() {
+        return __owner ? __owner : this;
     }
 
     ## Close the socket asynchronously.
     @final void close() {
-        __out.sendMessage(__StopClient(this));
+        __out.sendMessage(__StopClient(__getOwner()));
+
+        # Break the reference cycle to the owner.
+        __owner = null;
     }
 
     ## Close the socket and wait for it to be close.
     ## Note that this must not be called from the poller thread, otherwise it
     ## will block forever.
     @final void closeSync() {
-        msg := __StopClient(this);
+        msg := __StopClient(__getOwner());
         __out.sendMessage(msg);
+        __owner = null;
         msg.wait();
     }
 
@@ -386,6 +396,10 @@ class Waiter {
 
     ## Send a message.
     void _sendMessage(_Message msg) {
+        if (!__out)
+            throw InvalidStateError(I'Connection object used before connected \
+                                      or associated.'
+                                    );
         __out.sendMessage(msg);
     }
 
@@ -395,16 +409,20 @@ class Waiter {
         _sendMessage(__SendSync(this, data, waiter));
     }
 
-    ## Associate the handler with another comm handler.  This is required if
-    ## you are wrapping another protocol.
-    void associate(Connection comm) {
-        __associate = comm;
-    }
-
     void _setControlChannel(_PollerControl out) {
         __out = out;
         if (__associate)
             __associate._setControlChannel(out);
+    }
+
+    ## Associate the handler with another comm handler.  This is required if
+    ## you are wrapping another protocol.  'conn' should be the connection
+    ## that otherwise would not be registered with the poller.
+    void associate(Connection conn) {
+        __associate = conn;
+        conn.__owner = this;
+        if (__out)
+            __associate._setControlChannel(__out);
     }
 
     void formatTo(Formatter out) { out `Connection($__sock)` }
