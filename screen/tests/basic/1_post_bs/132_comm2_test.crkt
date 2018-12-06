@@ -29,7 +29,7 @@ String noWaiter;
 class EchoHandler @impl UserHandler {
     Log log;
     bool server;
-    bool terminated;
+    int terminated;
     HashMap[String, WaiterFor[String, String]] waiters = {};
 
     oper init(Log log, bool server) :
@@ -68,7 +68,7 @@ class EchoHandler @impl UserHandler {
     }
 
     void terminate(CommHandler comm) {
-        terminated = true;
+        ++terminated;
     }
 
     void addResponder(Object responder) {
@@ -212,6 +212,73 @@ if (true) {
     client = null;
 
     // Verify that we've cleaned up.
+    @assert(userHandler.refCount == orgRc);
+}
+
+# Verify that associated connections work and get cleaned up correctly.
+#
+# This is about as clean an example as you're likely to get for the use of
+# associated connections.  Aside from SSL, there's not normally a lot of need
+# for them.
+if (true) {
+    class PassThroughHandler @impl UserHandler {
+        Connection userConn;
+        oper init(Connection userConn) : userConn = userConn {}
+        void process(Connection conn) {
+            if (conn.inBuf) {
+                # Pass data received to the user connection.
+                userConn.inBuf.extend(conn.inBuf);
+                conn.inBuf.size = 0;
+
+                # We have to explicitly call the user handler.
+                userConn.userHandler.process(userConn);
+            }
+
+            if (userConn.outBuf) {
+                # Move data in userConn's outBuf to our inBuf.
+                conn.outBuf.extend(userConn.outBuf);
+                userConn.outBuf.size = 0;
+            }
+        }
+
+        void terminate(Connection conn) {
+            # We have to pass the terminate on to the associated connection
+            and pass it its own connection.
+            userConn.userHandler.terminate(userConn);
+        }
+
+        void addResponder(Object object) {}
+    }
+
+    # Create the user handler and connection.
+    userHandler := EchoHandler(clientLog, false);
+    orgRc := userHandler.refCount;
+    userConnection := Connection(clientLog, userHandler);
+
+    client := comm.connect(
+        ADDR,
+        passThroughHandler := PassThroughHandler(userConnection)
+    );
+    # Set processAllEvents so that we get an invocation when userConn gets
+    # data.
+    client.processAllEvents = true;
+    client.associate(userConnection);
+
+    waiter = WaiterFor[String, String](TEST_MESSAGE);
+    userConnection.sendSync(TEST_MESSAGE, waiter);
+    @assert(waiter.getResult() == TEST_MESSAGE);
+
+    @assert(!client.isClosed());
+    userConnection.closeSync();
+    @assert(client.isClosed());
+
+    # Verify that "terminate()" has been called exactly once.
+    @assert(userHandler.terminated == 1);
+
+    # Remove all references and verify that our handler's reference count is
+    # the same as before.
+    passThroughHandler.userConn = null;
+    userConnection = null;
     @assert(userHandler.refCount == orgRc);
 }
 
