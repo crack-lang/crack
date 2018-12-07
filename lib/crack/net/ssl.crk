@@ -1,0 +1,335 @@
+## SSL/TLS wrapper.
+##
+## Usage:
+##
+##     import crack.net.comm2 Comm, UserHandler;
+##     import crack.net.ssl SSLContext;
+##     comm := Comm();
+##
+##     context := SSLContext.make(makePath('keyfile'), makePath('certfile'),
+##                                comm
+##                                );
+##
+##     # Start a server.
+##     comm.startServer(INET_ADDR,
+##                      context.makeConnectionFactory(MyUserHandler()),
+##                      true
+##                      );
+##
+##     # Connect to a server.
+##     conn := context.connect(INET_ADDR, MyUserHandler());
+##     conn.write('hello server!');
+
+# TODO:
+# - Calling stuff on the user's comm handler (e.g. close()) probably won't
+#   get delegated.
+
+import crack.ext._ssl SSL_library_init, BIO, SSL, SSL_CTX, SSLv23_method,
+    SSL_FILETYPE_PEM, SSL_CTX_new, BIO_new, BIO_s_mem, SSL_new,
+    SSL_ERROR_NONE, SSL_ERROR_WANT_READ;
+import crack.fs makePath, Path;
+import crack.io cerr, FStr;
+import crack.lang AppendBuffer, Buffer, CString, Exception,
+    InvalidArgumentError, ManagedBuffer, WriteBuffer;
+import crack.logger error;
+import crack.logger.ctx Log;
+import crack.net Address;
+import crack.net.comm2 Comm, Connection, ConnectionFactory, CommProxy,
+    NewConnection, UserHandler;
+import crack.threads Condition, Mutex, MutexLock;
+
+@import crack.ann assert, impl;
+
+const int
+    PRISTINE = 1,
+    CONNECTING = 0,
+    ACCEPTING = 1,
+    CONNECTED = 2,
+    ERROR = 3;
+
+class SSLError : Exception {
+    int rc;
+
+    oper init(int rc) : Exception(FStr() `SSL error: $rc`), rc = rc {}
+    oper init(String text) : Exception(text) {}
+}
+
+## Users must not write to outBuf, use the write() method instead.
+@final class SSLContext {
+    SSL_CTX __ctx;
+    Comm __comm;
+
+    ## Stores the current connection state in a place that can be owned by
+    ## both the response handler and the SSLContext object.
+    class __State {
+        SSL __ssl;
+        int __state = PRISTINE;
+        BIO rd, __wr;
+        Mutex __mutex = {};
+        Condition __stateChange;
+
+        oper init(SSL ssl, BIO rd, BIO wr) :
+            __ssl = ssl,
+            rd = rd,
+            __wr = wr {
+
+            __stateChange = Condition(__mutex);
+        }
+
+        @static __State make(SSL_CTX ctx) {
+            ssl := SSL_new(ctx);
+            rd := BIO_new(BIO_s_mem());
+            wr := BIO_new(BIO_s_mem());
+            ssl.setBIO(rd, wr);
+            rd.setBlocking(false);
+            wr.setBlocking(false);
+            return __State(ssl, rd, wr);
+        }
+
+        ## Write all data in the SSL BIO through to the proxy.
+        void __flush(Connection handler) {
+            ManagedBuffer buf = {4096};
+            while (true) {
+                rc := __wr.read(buf.buffer, buf.cap);
+                if (rc <= 0)
+                    break;
+                buf.size = rc;
+                handler.write(buf);
+                if (rc < 4096)
+                    break;
+            }
+        }
+
+        int connect(Connection handler) {
+            lock := MutexLock(__mutex);
+            rc := __ssl.getError(__ssl.connect());
+            __flush(handler);
+            return rc;
+        }
+
+        int accept(Connection handler) {
+            lock := MutexLock(__mutex);
+            rc := __ssl.getError(__ssl.accept());
+            __flush(handler);
+            return rc;
+        }
+
+        @final int getState() {
+            lock := MutexLock(__mutex);
+            return __state;
+        }
+
+        @final void setState(int state) {
+            lock := MutexLock(__mutex);
+            __state = state;
+            __stateChange.signal();
+        }
+
+        @final void setError(int rc) {
+            lock := MutexLock(__mutex);
+            error `got an error: rc = $rc`;
+            __state = ERROR;
+            __stateChange.signal();
+        }
+
+        ## Read through the SSL object.  Returns true if successful, false if
+        ## there was an error.
+        @final bool read(WriteBuffer buf) {
+            lock := MutexLock(__mutex);
+            rc := __ssl.read(buf.buffer, buf.cap);
+            if (rc < 0) {
+                setError(__ssl.getError(rc));
+                return false;
+            } else {
+                buf.size = rc;
+                return true;
+            }
+        }
+
+        ## Write data, return the amount written.
+        void write(Connection handler, Buffer data) {
+            lock := MutexLock(__mutex);
+            int pos;
+            while (pos < data.size) {
+                rc := __ssl.write(data.buffer + pos, data.size - pos);
+                if (rc < 0)
+                    throw SSLError(rc);
+                pos += rc;
+                __flush(handler);
+            }
+        }
+
+        ## Wait for a state change, return the new state.  Don't wait at all
+        ## if the state is 'state'.
+        int awaitChange(int state) {
+            lock := MutexLock(__mutex);
+            if (__state == state)
+                return __state;
+            __stateChange.wait();
+            return __state;
+        }
+
+        ## Wait for the connection protocol to complete.  Throw an exception
+        ## if we don't end up in the connected state.
+        void waitForConnection() {
+            state := awaitChange(CONNECTED);
+            if (state != CONNECTED)
+                throw SSLError('Not connected.');
+        }
+    }
+
+    class __ResponseProcessor @impl UserHandler {
+        __State state;
+        UserHandler __userHandler;
+        Connection __userConnection;
+
+        oper init(__State state, Connection userConnection, Log log) :
+            state = state,
+            __userHandler = userConnection.userHandler,
+            __userConnection = userConnection {
+        }
+
+        void process(Connection comm) {
+            # Keep processing for as long as there's data in the inbuf.
+            int pos;
+            while (pos < comm.inBuf.size) {
+                rc := state.rd.write(comm.inBuf.buffer + pos,
+                                     comm.inBuf.size - pos
+                                     );
+
+                # Check for an error.
+                if (rc <= 0) {
+                    comm.log.error `error writing to rd buffer`;
+                    state.setError(-1);
+                    return;
+                }
+                pos += rc;
+
+                # Do our processing.
+                if (state.getState() == CONNECTING) {
+                    rc = state.connect(comm);
+                    if (rc == SSL_ERROR_NONE)
+                        state.setState(CONNECTED);
+                    else if (rc != SSL_ERROR_WANT_READ)
+                        state.setError(rc);
+                } else if (state.getState() == ACCEPTING) {
+                    rc = state.accept(comm);
+                    if (rc == SSL_ERROR_NONE)
+                        state.setState(CONNECTED);
+                    else if (rc != SSL_ERROR_WANT_READ)
+                        state.setError(rc);
+                } else {
+                    # Assume CONNECTED.
+                    if (state.read(__userConnection.inBuf)) {
+                        __userHandler.process(__userConnection);
+                    }
+                }
+            }
+            comm.inBuf.size = 0;
+
+            # Check for anything sent through the user's comm handler, slurp
+            # it into ours.
+            if (__userConnection.isClosed()) {
+                comm.close();
+            } else if (__userConnection.outBuf) {
+                state.write(comm, __userConnection.outBuf);
+                __userConnection.outBuf.size = 0;
+            }
+        }
+
+        void addResponder(Object responder) {
+            __userHandler.addResponder(responder);
+        }
+
+        void terminate(Connection handler) {
+            __userHandler.terminate(__userConnection);
+        }
+    }
+
+    ## Handler factory for SSL servers.
+    class __HandlerFactory @impl ConnectionFactory {
+        SSL_CTX __ctx;
+        ConnectionFactory __userHandlerFactory;
+
+        oper init(SSL_CTX ctx, ConnectionFactory userHandlerFactory) :
+            __ctx = ctx,
+            __userHandlerFactory = userHandlerFactory {
+        }
+
+        Connection makeConnection(NewConnection conn) {
+            # Create a new __State instance for the connection.
+            state := __State.make(__ctx);
+
+            # Create the Connection for the user handler.
+            userConnection := __userHandlerFactory.makeConnection(conn);
+
+            # Wrap it in a __ResponseProcessor, create a new Connection for
+            # the actual connection.
+            processor :=
+                __ResponseProcessor(state, userConnection, conn.log);
+            commHandler := Connection(conn.log, processor);
+            commHandler.processAllEvents = true;
+            commHandler.associate(userConnection);
+            state.accept(commHandler);
+            return commHandler;
+        }
+    }
+
+    oper init(SSL_CTX ctx, Comm comm) :
+        __ctx = ctx,
+        __comm = comm {
+    }
+
+    @static SSLContext make(Path keyFile, Path certFile, Comm comm) {
+        ctx := SSL_CTX_new(SSLv23_method());
+
+        if (ctx.useCertificateFile(CString(certFile.getFullName()).buffer,
+                                   SSL_FILETYPE_PEM
+                                   ) != 1
+            )
+            throw InvalidArgumentError('Invalid cert file');
+
+        if (ctx.usePrivateKeyFile(CString(keyFile.getFullName()).buffer,
+                                  SSL_FILETYPE_PEM
+                                  ) != 1
+            )
+            throw InvalidArgumentError('Invalid key file');
+
+        return SSLContext(ctx, comm);
+    }
+
+    ## Initiate an SSL connection.  The object will buffer data until the
+    ## connection has been established.
+    ## Returns 0 if successful, or an SSL error code if not.
+    Connection connect(Address addr, UserHandler handler) {
+        log := Log(__comm.getLog(),
+                   FStr() `$(__comm.getLog().identifier)-$addr`
+                   );
+        userConnection := Connection(log, handler);
+        state := __State.make(__ctx);
+        state.setState(CONNECTING);
+        sslConnection :=
+            Connection(log,
+                       __ResponseProcessor(state, userConnection, log)
+                       );
+
+        sslConnection.associate(userConnection);
+        sslConnection.processAllEvents = true;
+        __comm.connect(addr, sslConnection);
+        state.connect(sslConnection);
+        state.waitForConnection();
+        return userConnection;
+    }
+
+    ## Returns a new HandlerFactory for creating a server.
+    ##
+    ## userHandlerFactory: Handler factory for the protocol.  This will be
+    ##     invoked to create a handler every time a new connection is accepted.
+    ##     The resulting handler will be wrapped by an SSL handler to deal with
+    ##     decrypting the incoming data.
+    ConnectionFactory makeConnectionFactory(
+        ConnectionFactory userHandlerFactory
+    ) {
+        return __HandlerFactory(__ctx, userHandlerFactory);
+    }
+}
