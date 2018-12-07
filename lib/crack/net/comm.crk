@@ -31,7 +31,7 @@ import crack.io cerr, Formatter, StandardFormatter, Writer;
 import crack.lang AppendBuffer, Exception;
 import crack.net Address, Pipe, Poller, PollEvent, PollEventCallback, Socket,
     AF_INET, POLLIN, POLLOUT, POLLERR, POLLHUP, SOCK_STREAM;
-import crack.threads Condition, Event, Mutex, MutexLock, Thread, Queue;
+import crack.threads Condition, Event, Mutex, MutexLock, Thread, Queue2;
 import crack.time Time;
 
 @import crack.ann impl;
@@ -275,6 +275,13 @@ class Waiter;
     @abstract void run(EventManager eventMan, Log log);
 }
 
+## Special message to terminate the queue
+class _Terminate : _Message {
+    void run(EventManager eventMan, Log log) {
+        eventMan.terminate();
+    }
+}
+
 ## A message with a response that you can wait on.
 ##
 ## Derived classes should lock the mutex prior to modifying any internal state
@@ -505,7 +512,7 @@ class _CommPipeHandler @impl PollEventCallback {
 
     Pipe __pipe;
     Log __log;
-    Queue[_Message] __queue = {};
+    Queue2[_Message] __queue = {};
 
     # The event manager that owns the pipe.
     EventManagerBackRef __eventMan;
@@ -521,10 +528,7 @@ class _CommPipeHandler @impl PollEventCallback {
     int oper call(Poller poller, PollEvent event) {
         if (event.revents & POLLIN) {
             __pipe.read(1024);
-            message := __queue.get();
-            if (message is null)
-                __eventMan.oper from EventManager().terminate();
-            else
+            while (message := __queue.getNonBlocking())
                 message.run(__eventMan.oper from EventManager(), __log);
         } else if (event.revents & POLLERR) {
             __log.error `got error on control pipe handler`;
@@ -628,7 +632,7 @@ class Comm {
     }
 
     void stop() {
-        __thread.control.send(null);
+        __thread.control.send(_Terminate());
         __thread.join();
         __thread = null;
     }
