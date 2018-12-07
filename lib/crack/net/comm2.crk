@@ -239,7 +239,13 @@ class Waiter {
         oper init(Connection handler) : __handler = handler {}
 
         void run(EventManager eventMan, Log log) {
+            lock := MutexLock(_event.getMutex());
             __handler.removeFrom(eventMan.poller);
+
+            # Clear the handler so that no references are retained to keep the
+            # object in existence after this action completes.
+            __handler = null;
+
             trigger();
         }
     }
