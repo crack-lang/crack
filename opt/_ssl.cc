@@ -215,43 +215,6 @@ void crack_ext__ssl_cinit(crack::ext::Module *mod) {
     type_SSL_METHOD->finish();
 
 
-    crack::ext::Type *type_SSL_CTX = mod->addType("SSL_CTX", sizeof(Undef));
-
-    f = type_SSL_CTX->addMethod(
-        type_void,
-        "free",
-        (void *)SSL_CTX_free
-    );
-
-
-    f = type_SSL_CTX->addMethod(
-        type_int,
-        "useCertificateFile",
-        (void *)SSL_CTX_use_certificate_file
-    );
-    f->addArg(type_byteptr,
-              "filename"
-              );
-    f->addArg(type_int,
-              "type"
-              );
-
-
-    f = type_SSL_CTX->addMethod(
-        type_int,
-        "usePrivateKeyFile",
-        (void *)SSL_CTX_use_PrivateKey_file
-    );
-    f->addArg(type_byteptr,
-              "file"
-              );
-    f->addArg(type_int,
-              "type"
-              );
-
-    type_SSL_CTX->finish();
-
-
     crack::ext::Type *type_SSL = mod->addType("SSL", sizeof(Undef));
 
     f = type_SSL->addMethod(
@@ -345,6 +308,99 @@ void crack_ext__ssl_cinit(crack::ext::Module *mod) {
               );
 
     type_SSL->finish();
+
+
+    crack::ext::Type *function = mod->getType("function");
+
+    crack::ext::Type *function_puint_c_sSSL_c_sbyteptr_c_sbyteptr_c_suint_q;
+    {
+        std::vector<crack::ext::Type *> params(5);
+        params[0] = type_uint;
+        params[1] = type_SSL;
+        params[2] = type_byteptr;
+        params[3] = type_byteptr;
+        params[4] = type_uint;
+        function_puint_c_sSSL_c_sbyteptr_c_sbyteptr_c_suint_q = function->getSpecialization(params);
+    }
+
+    crack::ext::Type *function_puint_c_sSSL_c_sbyteptr_c_sbyteptr_c_suint_c_sbyteptr_c_suint_q;
+    {
+        std::vector<crack::ext::Type *> params(7);
+        params[0] = type_uint;
+        params[1] = type_SSL;
+        params[2] = type_byteptr;
+        params[3] = type_byteptr;
+        params[4] = type_uint;
+        params[5] = type_byteptr;
+        params[6] = type_uint;
+        function_puint_c_sSSL_c_sbyteptr_c_sbyteptr_c_suint_c_sbyteptr_c_suint_q = function->getSpecialization(params);
+    }
+
+    crack::ext::Type *type_SSL_CTX = mod->addType("SSL_CTX", sizeof(Undef));
+
+    f = type_SSL_CTX->addMethod(
+        type_void,
+        "free",
+        (void *)SSL_CTX_free
+    );
+
+
+    f = type_SSL_CTX->addMethod(
+        type_int,
+        "useCertificateFile",
+        (void *)SSL_CTX_use_certificate_file
+    );
+    f->addArg(type_byteptr,
+              "filename"
+              );
+    f->addArg(type_int,
+              "type"
+              );
+
+
+    f = type_SSL_CTX->addMethod(
+        type_int,
+        "usePrivateKeyFile",
+        (void *)SSL_CTX_use_PrivateKey_file
+    );
+    f->addArg(type_byteptr,
+              "file"
+              );
+    f->addArg(type_int,
+              "type"
+              );
+
+
+    f = type_SSL_CTX->addMethod(
+        type_void,
+        "setPSKServerCallback",
+        (void *)SSL_CTX_set_psk_server_callback
+    );
+    f->addArg(function_puint_c_sSSL_c_sbyteptr_c_sbyteptr_c_suint_q,
+              "serverCB"
+              );
+
+
+    f = type_SSL_CTX->addMethod(
+        type_void,
+        "setPSKClientCallback",
+        (void *)SSL_CTX_set_psk_client_callback
+    );
+    f->addArg(function_puint_c_sSSL_c_sbyteptr_c_sbyteptr_c_suint_c_sbyteptr_c_suint_q,
+              "clientCB"
+              );
+
+
+    f = type_SSL_CTX->addMethod(
+        type_int,
+        "usePSKIdentityHint",
+        (void *)SSL_CTX_use_psk_identity_hint
+    );
+    f->addArg(type_byteptr,
+              "hint"
+              );
+
+    type_SSL_CTX->finish();
 
 
     crack::ext::Type *type_EVPCipher = mod->addType("EVPCipher", sizeof(Undef));

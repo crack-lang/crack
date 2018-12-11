@@ -2,7 +2,9 @@
 crack.net.ssl
 %%ARGS%%
 %%FILE%%
+import crack.logger setLogLevel, FATAL;
 import crack.logger.ctx Log;
+import crack.ext._ssl SSL;
 import crack.fs makePath;
 import crack.net InetAddress;
 import crack.net.comm2 Comm, Connection, ConnectionFactory, NewConnection,
@@ -11,11 +13,12 @@ import crack.io cerr;
 import crack.io.readers LineReader;
 import crack.random MersenneTwister;
 import crack.runtime sleep;
-import crack.net.ssl SSLContext;
+import crack.net.ssl SSLContext, SSLError;
 
 @import crack.ann assert, impl;
 
-# XXX need to set this to zero.
+setLogLevel(FATAL);
+
 const ADDR := InetAddress(127, 0, 0, 1, 4433);
 
 # The last client to connect.
@@ -91,7 +94,56 @@ client = null;
 @assert(clientHandler.refCount == orgRc);
 @assert(clientHandler.terminated == 1);
 
-@assert(lastClient is null);
+# Test PSK auth.
+if (true) {
+
+    import crack.runtime memcpy, strcpy;
+
+    clientPSK := serverPSK := array[byte]![1, 2, 3, 4];
+
+    uint clientCB(SSL ssl, byteptr hint, byteptr identity,
+                  uint max_identity_length,
+                  byteptr psk,
+                  uint max_psk_length
+                  ) {
+        ident := 'identity';
+        @assert(ident.size < max_psk_length);
+        strcpy(identity, ident.buffer);
+
+        @assert(max_psk_length >= 4);
+        memcpy(psk, byteptr(clientPSK), 4);
+        return 4;
+    }
+
+    uint serverCB(SSL ssl, byteptr identity, byteptr psk, uint max_psk_length) {
+        @assert(String(identity) == 'identity');
+
+        @assert(max_psk_length >= 4);
+        memcpy(psk, byteptr(serverPSK), 4);
+        return 4;
+    }
+
+    ctx := SSLContext.make(clientCB, serverCB, comm);
+    const ADDR2 := InetAddress(127, 0, 0, 1, 4434);
+    comm.startServer(ADDR2,
+                     ctx.makeConnectionFactory(TestHandlerFactory()),
+                     true
+                     );
+
+    client := ctx.connect(ADDR2, ClientHandler());
+    waiter = WaiterFor[String, int](0);
+    client.sendSync('\016secret message', waiter);
+    @assert(waiter.getResult() == '\016secret message');
+    client.closeSync();
+
+    clientPSK = array[byte]![4, 3, 2, 1];
+    try {
+        client = ctx.connect(ADDR2, ClientHandler());
+        @assert(false && "connection succeeded with invalid password.");
+    } catch (SSLError ex) {
+        # ok.
+    }
+}
 
 comm.stop();
 

@@ -298,6 +298,30 @@ class SSLError : Exception {
         return SSLContext(ctx, comm);
     }
 
+    ## Make a new SSLContext for the given pre-shared key functions.
+    ## Either clientCallback or serverCallback may be null if the context is
+    ## not for use with a client or a server.
+    ##    uint callback(SSL ssl, byteptr hint, byteptr identity,
+    ##                  uint max_identity_length,
+    ##                  byteptr psk,
+    ##                  uint max_psk_length
+    ##                  )
+    ##    uint serverCallback(SSL ssl, byteptr identity, byteptr psk,
+    ##                        int max_psk_length
+    ##                        )
+    @static SSLContext make(
+        function[uint, SSL, byteptr, byteptr, uint, byteptr, uint] clientCB,
+        function[uint, SSL, byteptr, byteptr, uint] serverCB,
+        Comm comm
+    ) {
+        ctx := SSL_CTX_new(SSLv23_method());
+        if (clientCB)
+            ctx.setPSKClientCallback(clientCB);
+        if (serverCB)
+            ctx.setPSKServerCallback(serverCB);
+        return SSLContext(ctx, comm);
+    }
+
     ## Initiate an SSL connection.  The object will buffer data until the
     ## connection has been established.
     ## Returns 0 if successful, or an SSL error code if not.

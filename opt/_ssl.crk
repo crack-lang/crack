@@ -172,24 +172,6 @@ struct Undef {};
     void SSL_library_init();
 
     @cname Undef
-    class SSL_CTX {
-
-#        @cname SSL_CTX_new
-#        oper new(SSL_METHOD method);
-
-        @cname SSL_CTX_free
-        void free();
-
-        @cname SSL_CTX_use_certificate_file
-        int useCertificateFile(byteptr filename, int type);
-
-        @cname SSL_CTX_use_PrivateKey_file
-        int usePrivateKeyFile(byteptr file, int type);
-    }
-
-    SSL_CTX SSL_CTX_new(SSL_METHOD method);
-
-    @cname Undef
     class SSL {
 
 #        @cname SSL_new
@@ -225,6 +207,37 @@ struct Undef {};
         @cname SSL_get_error
         int getError(int ret);
     }
+
+    @cname Undef
+    class SSL_CTX {
+
+#        @cname SSL_CTX_new
+#        oper new(SSL_METHOD method);
+
+        @cname SSL_CTX_free
+        void free();
+
+        @cname SSL_CTX_use_certificate_file
+        int useCertificateFile(byteptr filename, int type);
+
+        @cname SSL_CTX_use_PrivateKey_file
+        int usePrivateKeyFile(byteptr file, int type);
+
+        @cname SSL_CTX_set_psk_server_callback
+        void setPSKServerCallback(
+            function[uint, SSL, byteptr, byteptr, uint] serverCB
+        );
+
+        @cname SSL_CTX_set_psk_client_callback
+        void setPSKClientCallback(
+            function[uint, SSL, byteptr, byteptr, uint, byteptr, uint] clientCB
+        );
+
+        @cname SSL_CTX_use_psk_identity_hint
+        int usePSKIdentityHint(byteptr hint);
+    }
+
+    SSL_CTX SSL_CTX_new(SSL_METHOD method);
 
     SSL SSL_new(SSL_CTX ctx);
 
