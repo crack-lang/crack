@@ -517,7 +517,7 @@ void showInLess(String content) {
 }
 
 const Regex
-    COMMENT_RX = {r'(#|//).*$|/\*([^\*]|\*[^/])\*/',
+    COMMENT_RX = {r'(#|//).*$|/\*([^\*]|\*[^/])*\*/',
                   PCRE_MULTILINE | PCRE_ANCHORED},
 
     # The IString regex doesn't exactly work because IStrings can be nested,
@@ -525,7 +525,7 @@ const Regex
     STRING_RX = {r'"([^"]|\\")*"|' r"'([^']|\\')*'|`([^`]|\\`)*`",
                  PCRE_MULTILINE | PCRE_ANCHORED
                  },
-    NORMAL_RX = {r'([^#"\'`/~!@#\$%\^&\*\(\)\-\+=\{\}\[\]:;<>,\.\?/]|/[^\*/])+',
+    NORMAL_RX = {r'([^#"\'`/~!@#\$%\^&\*\(\)\-\+=\{\}\[\]:;<>,\.\?/])+',
                  /*`*/ PCRE_MULTILINE | PCRE_ANCHORED},
     SYMBOL_RX = {r'[~!@#\$%\^&\*\(\)\-\+=\{\}\[\]:;<>,\.\?/]+', PCRE_ANCHORED};
 
@@ -534,7 +534,14 @@ String colorize(String code) {
     AppendBuffer result = {code.size + code.size / 10};
     splitter := Splitter(null, code);
     while (splitter.rest) {
-        if (splitter.consume(NORMAL_RX)) {
+        if (splitter.consume(COMMENT_RX)) {
+            # Since less doesn't perserve attributes.
+            result.extend(COMMENT);
+            result.extend(
+                split(splitter.first, b'\n').join('\n' + COMMENT)
+            );
+            result.extend(NORMAL);
+        } else if (splitter.consume(NORMAL_RX)) {
             result.extend(splitter.first);
         } else if (splitter.consume(STRING_RX)) {
             # less doesn't seem to preserve attributes across linebreaks, so
@@ -544,10 +551,6 @@ String colorize(String code) {
             result.extend(
                 split(splitter.first, b'\n').join('\n' + STRING)
             );
-            result.extend(NORMAL);
-        } else if (splitter.consume(COMMENT_RX)) {
-            result.extend(COMMENT);
-            result.extend(splitter.first);
             result.extend(NORMAL);
         } else if (splitter.consume(SYMBOL_RX)) {
             result.extend(SYMBOL);
