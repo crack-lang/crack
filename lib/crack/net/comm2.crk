@@ -84,6 +84,7 @@
 
 import crack.cont.array Array;
 import crack.eventmgr EventCallback, EventManager, EventManagerBackRef;
+import crack.fieldset HashMapFieldSet;
 import crack.functor Functor1;
 import crack.io cerr, Formatter, FStr, Writer;
 import crack.lang AppendBuffer, Buffer, Exception, InvalidArgumentError,
@@ -125,6 +126,13 @@ class Connection;
     ## Users should not call this directly, at least not on a handler that has
     ## already been associated with a proxy.  Use Connection.sendSync() instead.
     @abstract void addResponder(Object responder);
+}
+
+@final class NewConnection;
+
+## Interface for classes that create user handlers.
+@interface UserHandlerFactory {
+    @abstract UserHandler makeUserHandler(NewConnection conn);
 }
 
 ## Base class for all messages sent to the poller thread.
@@ -169,9 +177,8 @@ class Waiter {
 
 ## A communication endpoint handler.  Can be used for both server and client
 ## side connection handling.
-##
-##
-@final class Connection @impl PollEventCallback, Writer {
+@final class Connection : HashMapFieldSet
+                          @implements PollEventCallback, Writer {
     uint blockSize = defaultBlockSize;
     Socket __sock;
     bool __close;

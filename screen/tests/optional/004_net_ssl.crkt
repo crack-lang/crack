@@ -13,7 +13,7 @@ import crack.io cerr;
 import crack.io.readers LineReader;
 import crack.random MersenneTwister;
 import crack.runtime sleep;
-import crack.net.ssl SSLContext, SSLError;
+import crack.net.ssl SSLConnection, SSLContext, SSLError;
 
 @import crack.ann assert, impl;
 
@@ -24,8 +24,18 @@ const ADDR := InetAddress(127, 0, 0, 1, 4433);
 # The last client to connect.
 Connection lastClient;
 
+bool checkSSLUserData = false;
+
 class ServerHandler @impl UserHandler {
     void process(Connection conn) {
+        ssl := SSLConnection.get(conn);
+        if (!ssl)
+            cerr `SSL object not attached to connection.`;
+
+        # Verify that user data got passed through correctly.
+        if (checkSSLUserData && !(ssl.getUserData(0) is ADDR))
+            cerr `User data not associated with SSL connection.`;
+
         if (conn.inBuf && conn.inBuf.size > conn.inBuf[0]) {
             conn.write(conn.inBuf);
             conn.inBuf.compact(conn.inBuf[0]);
@@ -52,6 +62,7 @@ class ClientHandler @impl UserHandler {
     int terminated;
 
     void process(Connection conn) {
+        @assert(SSLConnection.get(conn));
         if (conn.inBuf && conn.inBuf.size > conn.inBuf[0]) {
             if (__waiter)
                 __waiter.setResult(
@@ -120,9 +131,11 @@ if (true) {
 
         @assert(max_psk_length >= 4);
         memcpy(psk, byteptr(serverPSK), 4);
+        ssl.setExData(0, ADDR);
         return 4;
     }
 
+    checkSSLUserData = true;
     ctx := SSLContext.make(clientCB, serverCB, comm);
     const ADDR2 := InetAddress(127, 0, 0, 1, 4434);
     comm.startServer(ADDR2,

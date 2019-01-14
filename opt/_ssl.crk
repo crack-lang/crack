@@ -206,6 +206,12 @@ struct Undef {};
 
         @cname SSL_get_error
         int getError(int ret);
+
+        @cname SSL_set_ex_data
+        int setExData(int index, voidptr data);
+
+        @cname SSL_get_ex_data
+        voidptr getExData(int index);
     }
 
     @cname Undef

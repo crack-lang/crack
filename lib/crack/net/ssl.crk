@@ -27,6 +27,7 @@
 import crack.ext._ssl SSL_library_init, BIO, SSL, SSL_CTX, SSLv23_method,
     SSL_FILETYPE_PEM, SSL_CTX_new, BIO_new, BIO_s_mem, SSL_new,
     SSL_ERROR_NONE, SSL_ERROR_WANT_READ;
+import crack.fieldset FieldSet;
 import crack.fs makePath, Path;
 import crack.io cerr, FStr;
 import crack.lang AppendBuffer, Buffer, CString, Exception,
@@ -39,6 +40,7 @@ import crack.net.comm2 Comm, Connection, ConnectionFactory, CommProxy,
 import crack.threads Condition, Mutex, MutexLock;
 
 @import crack.ann assert, impl;
+@import crack.fieldset_ann fieldset_accessors;
 
 const int
     PRISTINE = 1,
@@ -52,6 +54,19 @@ class SSLError : Exception {
 
     oper init(int rc) : Exception(FStr() `SSL error: $rc`), rc = rc {}
     oper init(String text) : Exception(text) {}
+}
+
+## Wraps the SSL object in an object so we can store it in a fieldset.
+class SSLConnection {
+    ## The underlying SSL object.
+    SSL ssl;
+
+    oper init(SSL ssl) : ssl = ssl {}
+
+    void setUserData(int index, voidptr data) { ssl.setExData(index, data) }
+    voidptr getUserData(int index) { return ssl.getExData(index) }
+
+    @fieldset_accessors(SSLConnection);
 }
 
 ## Users must not write to outBuf, use the write() method instead.
@@ -131,6 +146,8 @@ class SSLError : Exception {
             __state = ERROR;
             __stateChange.signal();
         }
+
+        @final SSL getSSL() { return __ssl }
 
         ## Read through the SSL object.  Returns true if successful, false if
         ## there was an error.
@@ -262,6 +279,7 @@ class SSLError : Exception {
 
             # Create the Connection for the user handler.
             userConnection := __userHandlerFactory.makeConnection(conn);
+            SSLConnection(state.getSSL()).putIn(userConnection);
 
             # Wrap it in a __ResponseProcessor, create a new Connection for
             # the actual connection.
@@ -331,6 +349,7 @@ class SSLError : Exception {
                    );
         userConnection := Connection(log, handler);
         state := __State.make(__ctx);
+        SSLConnection(state.getSSL()).putIn(userConnection);
         state.setState(CONNECTING);
         sslConnection :=
             Connection(log,

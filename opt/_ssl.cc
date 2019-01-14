@@ -307,6 +307,29 @@ void crack_ext__ssl_cinit(crack::ext::Module *mod) {
               "ret"
               );
 
+
+    f = type_SSL->addMethod(
+        type_int,
+        "setExData",
+        (void *)SSL_set_ex_data
+    );
+    f->addArg(type_int,
+              "index"
+              );
+    f->addArg(type_voidptr,
+              "data"
+              );
+
+
+    f = type_SSL->addMethod(
+        type_voidptr,
+        "getExData",
+        (void *)SSL_get_ex_data
+    );
+    f->addArg(type_int,
+              "index"
+              );
+
     type_SSL->finish();
 
 
