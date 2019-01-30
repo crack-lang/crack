@@ -656,6 +656,16 @@ class MidiReader {
 
     oper init(Reader src) : src = src {}
 
+    @final bool gotMoreData() {
+        if (pos == buf.size) {
+            src.read(buf);
+            if (!buf.size)
+                return false;
+            pos = 0;
+        }
+        return true;
+    }
+
     @final void needByte() {
         if (pos == buf.size) {
             src.read(buf);
@@ -739,6 +749,9 @@ class MidiReader {
         Track track = {name};
         uint t;
         while (true) {
+            if (!gotMoreData())
+                break;
+
             # read the time
             t += readVarLen();
             evt := readEvent();
