@@ -149,9 +149,9 @@ class SSLConnection {
 
         @final SSL getSSL() { return __ssl }
 
-        ## Read through the SSL object.  Returns true if successful, false if
-        ## there was an error.
-        @final bool read(AppendBuffer buf) {
+        ## Read through the SSL object.  Returns the SSL error code if
+        ## unsuccessful.
+        @final int read(AppendBuffer buf) {
             lock := MutexLock(__mutex);
 
             # Make sure the buffer has ample capacity.
@@ -160,11 +160,10 @@ class SSLConnection {
 
             rc := __ssl.read(buf.buffer + buf.size, buf.cap - buf.size);
             if (rc < 0) {
-                setError(__ssl.getError(rc));
-                return false;
+                return __ssl.getError(rc);
             } else {
                 buf.size += rc;
-                return true;
+                return 0;
             }
         }
 
@@ -242,8 +241,13 @@ class SSLConnection {
                         state.setError(rc);
                 } else {
                     # Assume CONNECTED.
-                    if (state.read(__userConnection.inBuf))
+                    rc := state.read(__userConnection.inBuf);
+                    if (!rc)
                         __userHandler.process(__userConnection);
+                    else if (rc == SSL_ERROR_WANT_READ)
+                        break;
+                    else
+                        state.setError(rc);
                 }
             }
             comm.inBuf.size = 0;
