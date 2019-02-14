@@ -1,0 +1,40 @@
+%%TEST%%
+verify that we can create appendages on abstract/final classes
+%%ARGS%%
+%%FILE%%
+import crack.io cout;
+@final class Final {
+    void f() {
+        cout `called Final.f()\n`;
+    }
+}
+
+class Append = Final {
+    void f() {
+        cout `called Append.f()\n`;
+    }
+}
+
+@abstract class Abstract {
+    @abstract void f();
+}
+
+class AbsAppend = Abstract {
+    void f() {
+        cout `called AbsAppend.f()\n`;
+    }
+}
+
+class AbstractImpl : Abstract {
+    void f() {
+        cout `called AbstractImpl.f()\n`;
+    }
+}
+
+Append(Final()).f();
+AbsAppend(AbstractImpl()).f();
+
+%%EXPECT%%
+called Append.f()
+called AbsAppend.f()
+%%STDIN%%

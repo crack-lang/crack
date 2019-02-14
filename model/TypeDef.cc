@@ -820,7 +820,7 @@ void TypeDef::rectify(Context &classContext) {
                           );
     } else if (!abstract) {
         vector<FuncDefPtr> funcs;
-        if (gotAbstractFuncs(&funcs)) {
+        if (gotAbstractFuncs(&funcs) && !appendage) {
             ostringstream tmp;
             tmp << "Non-abstract class " << name <<
                 " has abstract methods:\n";

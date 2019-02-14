@@ -3372,7 +3372,7 @@ TypeDefPtr Parser::parseClassDef() {
                      );
             
             // Make sure it's not final.
-            if (baseClass->final)
+            if (baseClass->final && !isAppendage)
                error(identLoc,
                      SPUG_FSTR("You may not derive from final class " <<
                                 baseClass->name
