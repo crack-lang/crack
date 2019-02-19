@@ -11,7 +11,7 @@ import crack.net.comm2 Comm, Connection, ConnectionFactory, NewConnection,
     UserHandler, WaiterFor;
 import crack.io cerr;
 import crack.io.readers LineReader;
-import crack.lang AppendBuffer, Buffer;
+import crack.lang AppendBuffer, Buffer, Exception;
 import crack.random MersenneTwister;
 import crack.runtime sleep;
 import crack.net.ssl SSLConnection, SSLContext, SSLError;
@@ -69,6 +69,10 @@ class TestHandlerFactory @impl ConnectionFactory {
     }
 }
 
+class ShutOut : Exception {
+    oper init() : Exception() {}
+}
+
 class ClientHandler @impl UserHandler {
     WaiterFor[String, int] __waiter;
     int terminated;
@@ -92,11 +96,13 @@ class ClientHandler @impl UserHandler {
     }
 
     void terminate(Connection handler) {
+        if (__waiter)
+            __waiter.setError(ShutOut());
         terminated += 1;
     }
 }
 
-comm := Comm(Log(null, null, cerr, cerr, cerr, 'ssltest'));
+comm := Comm(Log(null, null, null, cerr, cerr, 'ssltest'));
 comm.start();
 conn := SSLContext.make(makePath('test/test1.key'), makePath('test/test1.crt'),
                         comm
@@ -145,6 +151,9 @@ client = null;
 @assert(clientHandler.refCount == orgRc);
 @assert(clientHandler.terminated == 1);
 
+# Going to use this server address for the next two tests.
+const ADDR2 := InetAddress(127, 0, 0, 1, 4434);
+
 # Test PSK auth.
 if (true) {
 
@@ -177,7 +186,6 @@ if (true) {
 
     checkSSLUserData = true;
     ctx := SSLContext.make(clientCB, serverCB, comm);
-    const ADDR2 := InetAddress(127, 0, 0, 1, 4434);
     comm.startServer(ADDR2,
                      ctx.makeConnectionFactory(TestHandlerFactory()),
                      true
@@ -195,6 +203,20 @@ if (true) {
         @assert(false && "connection succeeded with invalid password.");
     } catch (SSLError ex) {
         # ok.
+    }
+}
+
+# Test that an unencrypted client fails fast.  (This assumes the existence of
+# the server started in the last test.
+if (true) {
+    conn := comm.connect(ADDR2, ClientHandler());
+    waiter := WaiterFor[String, int](0);
+    conn.sendSync('\007lol hi!', waiter);
+    try {
+        waiter.getResult();
+        @assert(false && "connection timeout test failed");
+    } catch (ShutOut ex) {
+        # ok
     }
 }
 

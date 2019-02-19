@@ -28,6 +28,7 @@ import crack.ext._ssl SSL_library_init, BIO, SSL, SSL_CTX, SSLv23_method,
     SSL_FILETYPE_PEM, SSL_CTX_new, BIO_new, BIO_s_mem, SSL_new,
     SSL_ERROR_NONE, SSL_ERROR_WANT_READ;
 import crack.fieldset FieldSet;
+import crack.eventmgr EventCallback;
 import crack.fs makePath, Path;
 import crack.io cerr, FStr;
 import crack.lang AppendBuffer, Buffer, CString, Exception,
@@ -37,9 +38,11 @@ import crack.logger.ctx Log;
 import crack.net Address;
 import crack.net.comm2 Comm, Connection, ConnectionFactory, CommProxy,
     NewConnection, UserHandler;
+import crack.rawptr RawPtr;
 import crack.threads Condition, Mutex, MutexLock;
+import crack.time add, seconds, Time;
 
-@import crack.ann assert, impl;
+@import crack.ann assert, cvars, impl;
 @import crack.fieldset_ann fieldset_accessors;
 
 const int
@@ -197,6 +200,12 @@ class SSLConnection {
             if (state != CONNECTED)
                 throw SSLError('Not connected.');
         }
+
+        ## Returns true if we're connected.
+        bool isConnected() {
+            lock := MutexLock(__mutex);
+            return __state == CONNECTED;
+        }
     }
 
     class __ResponseProcessor @impl UserHandler {
@@ -276,9 +285,16 @@ class SSLConnection {
         SSL_CTX __ctx;
         ConnectionFactory __userHandlerFactory;
 
-        oper init(SSL_CTX ctx, ConnectionFactory userHandlerFactory) :
+        # Comm indirectly owns Poller which indirectly owns the handler
+        # factory, so we back-link to the comm object, which we need to
+        # schedule a timeout.
+        RawPtr[Comm] __comm;
+
+        oper init(SSL_CTX ctx, ConnectionFactory userHandlerFactory,
+                  Comm comm) :
             __ctx = ctx,
-            __userHandlerFactory = userHandlerFactory {
+            __userHandlerFactory = userHandlerFactory,
+            __comm = RawPtr[Comm](comm) {
         }
 
         Connection makeConnection(NewConnection conn) {
@@ -297,6 +313,30 @@ class SSLConnection {
             commHandler.processAllEvents = true;
             commHandler.associate(userConnection);
             state.accept(commHandler);
+
+            # Start the clock: if the client hasn't completed a connection in
+            # a reasonble time, shut him down.
+            class ConnectTimeout @impl EventCallback {
+                @cvars {
+                    Connection conn;
+                    __State state;
+                    Log log;
+                    Address addr;
+                }
+
+                void oper call() {
+                    if (!state.isConnected()) {
+                        log.warn I`Connection to $(addr) timed out.`;
+                        conn.close();
+                    }
+                }
+            }
+            __comm.scheduleEvent(add(Time.now(), seconds(5)),
+                                 ConnectTimeout(commHandler, state, conn.log,
+                                                conn.accepted.addr
+                                                )
+                                 );
+
             return commHandler;
         }
     }
@@ -381,6 +421,6 @@ class SSLConnection {
     ConnectionFactory makeConnectionFactory(
         ConnectionFactory userHandlerFactory
     ) {
-        return __HandlerFactory(__ctx, userHandlerFactory);
+        return __HandlerFactory(__ctx, userHandlerFactory, __comm);
     }
 }
