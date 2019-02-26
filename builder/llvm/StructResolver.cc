@@ -203,9 +203,9 @@ Type *StructResolver::mapStructType(StructType *structTy) {
         SR_DEBUG cerr << "Unregistered duplicate type found for " <<
             canonicalName << endl;
         structTy->setName(canonicalName);
-        SPUG_CHECK(structTy->getName() == canonicalName,
-                   "Failed to fix name of unregistered duplicate type " <<
-                   canonicalName);
+//        SPUG_CHECK(structTy->getName() == canonicalName,
+//                   "Failed to fix name of unregistered duplicate type " <<
+//                   canonicalName);
         return mapStructTypeByElements(structTy);
     } else if (type->getName() != canonicalName) {
         // This was to help me debug something.
