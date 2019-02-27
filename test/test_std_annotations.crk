@@ -5,7 +5,7 @@
 #   file, You can obtain one at http://mozilla.org/MPL/2.0/.
 #
 
-import crack.io cout, StringFormatter;
+import crack.io cout, FStr, StringFormatter;
 import crack.cont.array Array;
 @import crack.ann define, interface, impl, implements;
 @import test.testmac foo, bar, tm_concat, tm_stringify;
@@ -22,6 +22,10 @@ if (@oneHundred() != 100)
 
 if (@echo(200) != 200)
     cout `macro with one arg failed\n`;
+
+var := 1;
+if (@echo(FStr() `$var + 1 = $(var + 1)`) != '1 + 1 = 2')
+    cout `IString argument to macro failed\n`;
 
 if (!@equals(1, 1))
     cout `macro with two args failed\n`;

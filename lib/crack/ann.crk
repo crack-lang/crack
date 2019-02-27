@@ -511,6 +511,26 @@ Node _readNode(MacroDeserializer src) {
     return node;
 }
 
+## Parse the rest of the i-string (after the ISTR_BEGIN token) into 'result'
+## (backwards, of course).
+void parseIString(CrackContext ctx, NodeList result) {
+    int parenCount = 0;
+    while (true) {
+        tok := ctx.getToken();
+        result.pushHead(Tok(tok));
+        if (tok.isLParen()) {
+            parenCount++;
+        } else if (!parenCount && tok.isIdent()) {
+            ctx.continueIString();
+        } else if (tok.isRParen()) {
+            if (!--parenCount)
+                ctx.continueIString();
+        } else if (tok.isIstrEnd()) {
+            break;
+        }
+    }
+}
+
 ## Parse macro arguments, returns them as an array of NodeList objects.
 Array[NodeList] parseArgs(CrackContext ctx, uint argCount) {
     # extract the arguments from the following tokens
@@ -558,6 +578,10 @@ Array[NodeList] parseArgs(CrackContext ctx, uint argCount) {
                 popTo(brackStack, BRACK);
             } else if (tok.isRCurly() && brackStack) {
                 popTo(brackStack, CURL);
+            } else if (tok.isIstrBegin()) {
+                argTokList.pushHead(Tok(tok));
+                parseIString(ctx, argTokList);
+                continue;
             }
 
             argTokList.pushHead(Tok(tok));
