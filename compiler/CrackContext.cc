@@ -134,11 +134,16 @@ int CrackContext::getScope() {
     return context->scope;
 }
 
+namespace {
+    char *stringToChars(const string &str) {
+        char *result = reinterpret_cast<char *>(malloc(str.size() + 1));
+        strcpy(result, str.c_str());
+        return result;
+    }
+}
+
 char *CrackContext::getNamespaceName() {
-    string name = context->ns->getNamespaceName();
-    char *result = reinterpret_cast<char *>(malloc(name.size() + 1));
-    strcpy(result, name.c_str());
-    return result;
+    return stringToChars(context->ns->getNamespaceName());
 }
 
 void CrackContext::storeAnnotation(const char *name, AnnotationFunc func) {
@@ -255,6 +260,11 @@ const Def *CrackContext::getLocalDefs() const {
          )
         result = new Def(iter->first, iter->second.get(), result);
     return result;
+}
+
+char *CrackContext::consumeDocs() const {
+    string docs = parser->consumeDocs();
+    return stringToChars(docs);
 }
 
 void CrackContext::_inject(CrackContext *inst, char *sourceName, int lineNumber,
@@ -382,4 +392,8 @@ void CrackContext::_continueIString(CrackContext *inst) {
 
 const Def *CrackContext::_getLocalDefs(CrackContext *inst) {
     return inst->getLocalDefs();
+}
+
+char *CrackContext::_consumeDocs(CrackContext *inst) {
+    return inst->consumeDocs();
 }

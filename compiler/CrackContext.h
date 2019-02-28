@@ -109,6 +109,7 @@ class CrackContext {
         static Location *_getLocation(CrackContext *inst);
         static void _continueIString(CrackContext *inst);
         static const Def *_getLocalDefs(CrackContext *inst);
+        static char *_consumeDocs(CrackContext *inst);
 
     public:
         enum Event { funcEnter, funcLeave };
@@ -266,6 +267,14 @@ class CrackContext {
          * No order is guaranteed.
          */
         const Def* getLocalDefs() const;
+
+        /**
+         * Consume the current doc-comments and return them as a string.
+         *
+         * The caller receives ownership of the resulting pointer and must
+         * free it.
+         */
+        char *consumeDocs() const;
 
         /**
          * This is a back-door for things like the compiler-defined "export"

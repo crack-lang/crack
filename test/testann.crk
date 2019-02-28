@@ -162,3 +162,8 @@ void null_token_test(CrackContext ctx) {
                       )
                 );
 }
+
+void consume_docs_test(CrackContext ctx) {
+    docs := String(ctx.consumeDocs());
+    ctx.putBack(Token(TOK_STRING, docs.buffer, ctx.getLocation()));
+}

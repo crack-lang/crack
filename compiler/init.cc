@@ -543,6 +543,9 @@ void init(Module *mod) {
     cc->addMethod(defType, "getLocalDefs",
                   (void *)CrackContext::_getLocalDefs
                   );
+    cc->addMethod(mod->getByteptrType(), "consumeDocs",
+                  (void *)CrackContext::_consumeDocs
+                  );
 
     cc->finish();
 
