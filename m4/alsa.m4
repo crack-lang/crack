@@ -121,18 +121,16 @@ fi
 
 if test "x$alsa_found" = "xyes" ; then
    ifelse([$2], , :, [$2])
-   LIBS=`echo $LIBS | sed 's/-lasound//g'`
-   LIBS=`echo $LIBS | sed 's/  //'`
-   LIBS="-lasound $LIBS"
 fi
 if test "x$alsa_found" = "xno" ; then
    ifelse([$3], , :, [$3])
-   CFLAGS="$alsa_save_CFLAGS"
-   LDFLAGS="$alsa_save_LDFLAGS"
-   LIBS="$alsa_save_LIBS"
    ALSA_CFLAGS=""
    ALSA_LIBS=""
 fi
+
+CFLAGS="$alsa_save_CFLAGS"
+LDFLAGS="$alsa_save_LDFLAGS"
+LIBS="$alsa_save_LIBS"
 
 dnl That should be it.  Now just export out symbols:
 AC_SUBST(ALSA_CFLAGS)
