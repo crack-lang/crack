@@ -1,0 +1,142 @@
+#%%TEST%%
+#command line parsing (crack.cmd)
+#%%ARGS%%
+#%%FILE%%
+
+import crack.exp.cmd ArgError, ArgInfo, ArgVal, CommandInterface;
+import crack.io cerr;
+import crack.strutil StringArray;
+
+@import crack.ann assert;
+@import crack.exp.cmd.ann command;
+
+ci := CommandInterface![
+    ArgInfo[String]('foo', null, false, null),
+    ArgInfo[bool]('boolpos', null, false, true),
+    ArgInfo[bool]('flag1', StringArray!['-f'], true, false),
+    ArgInfo[String]('flag2', StringArray!['-g'], true, null),
+    ArgInfo[bool]('standalone', StringArray!['-h'], false, null),
+    ArgInfo[String]('longarg', StringArray!['--longarg'], true, null),
+    ArgInfo[String]('longarg2', StringArray!['--larg2'], true, null),
+    ArgInfo[int]('defaultedPos', null, true, 123),
+    ArgInfo[int]('defaulted', StringArray!['-d'], true, 100),
+    ArgInfo[bool]('negated', StringArray!['--negated'], true, true),
+];
+result := ci.parseArgs(StringArray!['--longarg=long arg val', 'value', 'true',
+                                    '-fg', 'gval', '--larg2', 'larg2 val',
+                                    '-h', '--no-negated']);
+@assert(ArgVal[String].cast(result['foo']).val == 'value');
+@assert(ArgVal[int].cast(result['defaultedPos']).val == 123);
+@assert(ArgVal[bool].cast(result['flag1']).val);
+@assert(ArgVal[String].cast(result['flag2']).val == 'gval');
+@assert(ArgVal[bool].cast(result['standalone']).val);
+@assert(ArgVal[int].cast(result['defaulted']).val == 100);
+@assert(ArgVal[bool].cast(result['boolpos']).val);
+@assert(ArgVal[String].cast(result['longarg']).val == 'long arg val');
+@assert(ArgVal[String].cast(result['longarg2']).val == 'larg2 val');
+@assert(!ArgVal[bool].cast(result['negated']).val);
+
+# Required argument not provided.
+ci = CommandInterface![
+    ArgInfo[String]('foo', null, false, null),
+];
+result = ci.parseArgs(StringArray!['val']);
+@assert(ArgVal[String].cast(result['foo']).val == 'val');
+try {
+    ci.parseArgs(StringArray![]);
+    @assert(false);
+} catch (ArgError ex) {
+}
+
+# Required flag not provided.
+ci = CommandInterface![
+    ArgInfo[bool]('foo', StringArray!['-f'], false, null),
+];
+result = ci.parseArgs(StringArray!['-f']);
+@assert(ArgVal[bool].cast(result['foo']).val);
+try {
+    ci.parseArgs(StringArray![]);
+    @assert(false);
+} catch (ArgError ex) {
+}
+
+# Missing parameter at the end of the args.
+ci = CommandInterface![
+    ArgInfo[String]('foo', StringArray!['-f'], false, null),
+];
+result = ci.parseArgs(StringArray!['-f', 'val']);
+@assert(ArgVal[String].cast(result['foo']).val == 'val');
+try {
+    ci.parseArgs(StringArray!['-f']);
+    @assert(false);
+} catch (ArgError ex) {
+}
+
+# Invalid argument for a bool.
+ci = CommandInterface![
+    ArgInfo[bool]('foo', StringArray!['--flag'], false, null),
+];
+result = ci.parseArgs(StringArray!['--flag=true']);
+@assert(ArgVal[bool].cast(result['foo']).val);
+try {
+    ci.parseArgs(StringArray!['--flag=totally not a bool']);
+    @assert(false);
+} catch (ArgError ex) {
+    @assert(ex.text == 'Invalid value for boolean type: totally not a bool');
+}
+
+# Unknown flag in a singla dash flag cluster.
+try {
+    ci = CommandInterface![
+        ArgInfo[bool]('foo', StringArray!['-f'], false, null),
+    ];
+    ci.parseArgs(StringArray!['-fl']);
+    @assert(false);
+} catch (ArgError ex) {
+    @assert(ex.text == 'Unknown flag -l');
+}
+
+# Unknown long flag.
+try {
+    ci = CommandInterface();
+    ci.parseArgs(StringArray!['--unknown']);
+    @assert(false);
+} catch (ArgError ex) {
+    @assert(ex.text == 'Unknown flag --unknown');
+}
+
+# Unknown long flag with a value.
+try {
+    ci = CommandInterface();
+    ci.parseArgs(StringArray!['--unknown=value']);
+    @assert(false);
+} catch (ArgError ex) {
+    @assert(ex.text == 'Unknown flag --unknown');
+}
+
+# Unknown negated long bool flags
+try {
+    ci = CommandInterface();
+    ci.parseArgs(StringArray!['--no-unknown']);
+    @assert(false);
+} catch (ArgError ex) {
+    @assert(ex.text == 'Unknown flag --no-unknown');
+}
+
+# test that long non-flags throw an exception.
+# test invalid value for a type.
+# Test invalid value for an integer type (and implement it)
+
+@command int foo(String arg1, @flag('-f') int flag = 0) {
+    return flag;
+}
+fooInst := foo(StringArray!['first', '-f100']);
+
+@assert(fooInst() == 100);
+@assert(fooInst.arg1 == 'first');
+
+cerr `ok\n`;
+
+#%%EXPECT%%
+#ok
+#%%STDIN%%

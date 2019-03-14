@@ -1,0 +1,262 @@
+##
+##
+## Single character boolean flags should be specified without values, e.g.
+## "-f".  Long boolean flags may be specified either without a value, with the
+## "no-" prefix or with an explicit value.  "--flag", "--flag=false", and
+## "--no-flag" are all legal.  Note that there is no way to negate a single
+## character boolean flag.
+
+import crack.ascii parseInt, toLower;
+import crack.cont.array Array;
+import crack.cont.hashmap HashMap;
+import crack.functor Functor1;
+import crack.io cerr, FStr, Formatter;
+import crack.lang Exception, InvalidStateError;
+import crack.strutil StringArray;
+
+@import crack.ann assert, cvars, define, struct;
+
+## Base class for ArgVal[T].  We could just as easily use Object for this, but
+## the base class is a better semantic cue.
+class ArgValBase {}
+
+@abstract class ArgInfoBase {
+    @cvars {
+        String name;
+        StringArray flagNames;
+        bool hasDefaultValue;
+    }
+
+    @abstract Class getType();
+
+    @abstract
+    ArgValBase makeArgVal(String name, Object converter);
+
+    @abstract
+    ArgValBase makeDefaultValue();
+}
+
+## Generic holder for a value of the parameter type.
+@final class ArgVal[T] : ArgValBase {
+    T val;
+    oper init(T val) : val = val {}
+    void formatTo(Formatter out) { out `ArgVal[$(this.class.name)]($val)` }
+}
+
+## Class describing a flag or argument.  Should be specialized using the data
+## type of the argument.
+@final class ArgInfo[T] : ArgInfoBase {
+    T defaultValue;
+
+    oper init(String name, StringArray flagNames, bool hasDefaultValue,
+              T defaultValue
+              ) :
+        ArgInfoBase(name, flagNames, hasDefaultValue),
+        defaultValue = defaultValue {
+    }
+
+    Class getType() { return T }
+
+    ArgValBase makeArgVal(String val, Object converter) {
+        conv := Functor1[T, String].cast(converter);
+        return ArgVal[T](conv(val));
+    }
+
+    ArgValBase makeDefaultValue() { return ArgVal[T](defaultValue) }
+}
+
+## Thrown when there is an error parsing the flags and arguments.
+@final class ArgError : Exception {
+    oper init(String text) : Exception(text) {}
+}
+
+String convertToString(String val) { return val }
+int convertToInt(String val) { return parseInt(val) }
+bool convertToBool(String val) {
+    normVal := toLower(val);
+    if (normVal == 'true')
+        return true;
+    else if (normVal == 'false')
+        return false;
+    else
+        throw ArgError(FStr() `Invalid value for boolean type: $val`);
+}
+
+@final class CommandInterface {
+    ## Positional arguments.
+    Array[ArgInfoBase] positional = {};
+
+    ## Flags.
+    HashMap[String, ArgInfoBase] flags = {};
+
+    ## Where T is a class, converters ia a mapping of uintz(T) to an instance
+    ## of Functor1[T, String] which is a function to convert from a string
+    ## argument to an instance of T.  Unfortunately, there's no way we can
+    ## currently verify that the type is correct until the functor is used by
+    ## generated code.
+    HashMap[uintz, Object] converters = {};
+
+    void __initConverters() {
+        converters[uintz(String)] =
+            Functor1[String, String].Wrap(convertToString);
+        converters[uintz(int)] = Functor1[int, String].Wrap(convertToInt);
+        converters[uintz(bool)] = Functor1[bool, String].Wrap(convertToBool);
+    }
+
+    oper init() {
+        __initConverters();
+    }
+
+    ## Add an argInfo object to the interface.  This allows us to be
+    ## initialized from the literal list syntax.
+    void append(ArgInfoBase argInfo) {
+        if (argInfo.flagNames) {
+            # It's a flag, add the arg info under all of the flag names.
+            for (flagName :in argInfo.flagNames) {
+                @assert(!flags.hasKey(flagName));
+                flags[flagName] = argInfo;
+            }
+        } else {
+            # Positional argument.  Add to those.
+
+            # Once we start adding optional arguments, all of the arguments
+            # have to be optional.
+            if (!argInfo.hasDefaultValue && positional)
+                @assert(!positional[-1].hasDefaultValue);
+            positional.append(argInfo);
+        }
+    }
+
+    Object __getConverter(Class cls) {
+        result := converters.get(uintz(cls));
+        if (!converters)
+            throw InvalidStateError(
+                FStr() `No converter defined for type $(cls.name)`
+            );
+        return result;
+    }
+
+    ## Parse arguments and return a mapping of all defined argument names to
+    ## their converted values.
+    HashMap[String, ArgValBase] parseArgs(StringArray args) {
+
+        result := HashMap[String, ArgValBase]();
+
+        @define storeFlag(argInfo, value) {
+            result[argInfo.name] = argInfo.makeArgVal(
+                value,
+                __getConverter(argInfo.getType())
+            )
+        }
+
+        ArgInfoBase lastFlag;
+        int curPositional;
+
+        for (arg :in args) {
+
+            if (lastFlag) {
+                @storeFlag(lastFlag, arg);
+                lastFlag = null;
+                continue;
+            }
+
+            if (arg.startsWith('-')) {
+                # Got a flag.  Parse it out.
+                if (arg.startsWith('--')) {
+                    equalPos := arg.lfind('=');
+                    if (equalPos == -1) {
+                        # Didn't find an argument.  Is it a boolean?
+                        if (flag := flags.get(arg)) {
+                            if (!(flag.getType() is bool)) {
+                                # Value will be the next argument.
+                                lastFlag = flag;
+                                continue;
+                            }
+                            @storeFlag(flag, 'true');
+
+                        # No.  Is it a negated boolean ("--no-flag")?
+                        } else if (arg.startsWith('--no-') &&
+                                   flag := flags.get('--' + arg.slice(5))) {
+                            if (!(flag.getType() is bool))
+                                throw ArgError(
+                                    FStr() I`Flag $arg requires an argument.`
+                                );
+                            @storeFlag(flag, 'false');
+                        } else {
+                            throw ArgError(FStr() `Unknown flag $arg`);
+                        }
+                    } else {
+                        # Flag with an argument.
+                        flagName := arg.slice(0, equalPos);
+                        flagVal := arg.slice(equalPos + 1);
+                        if (flag := flags.get(flagName))
+                            @storeFlag(flag, flagVal);
+                        else
+                            throw ArgError(FStr() `Unknown flag $flagName`);
+                    }
+                } else {
+                    # Single character flag (or sequence of single character
+                    # flags)
+                    for (int i = 1; i < arg.count(); ++i) {
+                        char := arg[i];
+                        flagName := String(byteptr![b'-', char], 2, true);
+                        flag := flags.get(flagName);
+                        if (!flag)
+                            throw ArgError(FStr() `Unknown flag $flagName`);
+
+                        if (flag.getType() is bool) {
+                            @storeFlag(flag, 'true');
+                        } else {
+                            # The flag needs a value.
+                            if (i < arg.count() - 1) {
+                                # Not at the end of the argument, use the rest
+                                # of the argument as the value.
+                                @storeFlag(flag, arg.substr(i + 1));
+                                break;
+                            } else {
+                                lastFlag = flag;
+                            }
+                        }
+                    }
+                }
+            } else {
+                # non-option argument.
+                if (curPositional < positional.count()) {
+                    argInfo := positional[curPositional++];
+                    @storeFlag(argInfo, arg);
+                } else {
+                    throw ArgError('Too many positional arguments.');
+                }
+            }
+        }
+
+        if (lastFlag)
+            throw ArgError(
+                FStr() I`Argument expected for flag $(lastFlag.name)`
+            );
+
+        # Set all unprocessed arguments to their default value.
+        for (pos :in positional) {
+            if (!result.hasKey(pos.name)) {
+                if (!pos.hasDefaultValue)
+                    throw ArgError(
+                        FStr() `Required argument $(pos.name) not provided.`
+                    );
+                result[pos.name] = pos.makeDefaultValue();
+            }
+        }
+        for (flagItem :in flags) {
+            flag := flagItem.val;
+            if (!result.hasKey(flag.name)) {
+                if (!flag.hasDefaultValue)
+                    throw ArgError(
+                        FStr() I`Required flag $(flag.name) ($(flag.flagNames) \
+                                not provided.`
+                    );
+                result[flag.name] = flag.makeDefaultValue();
+            }
+        }
+
+        return result;
+    }
+}

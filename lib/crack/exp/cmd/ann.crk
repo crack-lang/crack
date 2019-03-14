@@ -1,0 +1,203 @@
+## Annotations for command-line processing.
+
+import crack.ann deserializeNodeList, deserializeXMac, readBlock, NodeList,
+    NodeListImpl, Tok, Type;
+import crack.compiler CrackContext, Token, TOK_NULLKW, TOK_STRING;
+import crack.cont.array Array;
+import crack.io cerr;
+import crack.strutil StringArray;
+
+@import crack.ann cvars, tokens, xmac;
+
+Array[Tok] parseFlagAnn(CrackContext ctx) {
+    tok := ctx.getToken();
+    result := Array[Tok]();
+    if (tok.isLParen()) {
+        while (true) {
+            tok = ctx.getToken();
+            if (tok.isRParen())
+                break;
+
+            if (tok.isString())
+                result.append(Tok(tok));
+            else
+                ctx.error(tok, '@flags only supports string arguments'.buffer);
+
+            tok = ctx.getToken();
+            if (tok.isRParen())
+                break;
+            else if (!tok.isComma())
+                ctx.error(tok, 'comma or closing paren expected'.buffer);
+        }
+        return result;
+
+    } else {
+        ctx.putBack(tok);
+        return result;
+    }
+}
+
+class Arg {
+    @cvars {
+        NodeList type;
+        Token name;
+        # It would be better to store this in an array of Token (we don't need
+        # the Tok type) but we can't put those into an array.
+        Array[Tok] flags;
+        Token default;
+    }
+
+    NodeList emit() {
+        return @xmac* { $type $name }.expand();
+    }
+}
+
+NodeList emitFieldsAsInstVars(Array[Arg] args) {
+    NodeList result = NodeListImpl();
+    for (arg :in args) {
+        emittedArg := arg.emit();
+        result = @xmac* { $result $emittedArg; }.expand();
+    }
+
+    return result;
+}
+
+NodeList emitFieldsAsArgInfoArray(Array[Arg] args) {
+    NodeList elems = NodeListImpl();
+    for (arg :in args) {
+
+        # Generate flags array.
+        NodeList flagsArr;
+        if (arg.flags) {
+            flagsArr = NodeListImpl();
+            for (flag :in arg.flags) {
+                flagTok := flag.tok;
+                flagsArr = @xmac* { $flagsArr $flagTok, }.expand();
+            }
+            flagsArr = @xmac* { StringArray![ $flagsArr ] }.expand();
+        } else {
+            flagsArr = @tokens { null };
+        }
+
+        name := Token(TOK_STRING, arg.name.getText(), arg.name.getLocation());
+        type := arg.type;
+        hasDefaultValue := !(arg.default is null) ? @tokens { true } :
+                                                    @tokens { false };
+        defaultValue := !(arg.default is null) ?
+                            arg.default :
+                            Token(TOK_NULLKW, 'null'.buffer,
+                                  arg.name.getLocation()
+                                  );
+
+        elems = @xmac* {
+            $elems
+            ArgInfo[$type]($name, $flagsArr, $hasDefaultValue, $defaultValue),
+        }.expand();
+    }
+
+    return @xmac* { [ $elems ] }.expand();
+}
+
+NodeList emitFieldAssignments(Array[Arg] args) {
+    NodeList result = NodeListImpl();
+    for (arg :in args) {
+        name := arg.name;
+        type := arg.type;
+        nameStr := Token(TOK_STRING, arg.name.getText(),
+                         arg.name.getLocation()
+                         );
+        result = @xmac* {
+            $result
+            this.$name = ArgVal[$type].cast(argVals[$nameStr]).val;
+        }.expand();
+    }
+    return result;
+}
+
+## A command-line command.
+## Usage:
+##    import crack.cmd ArgInfo, ArgVal, CommandInterface;
+##    import crack.strutil StringArray;
+##    @import crack.ann command;
+##
+##    ## This is a doc-comment, which is preserved.
+##    @command int foo(String positionalArg,
+##                     int anotherPosArg,
+##                     String optionalArg = null,
+##                     @flag('-f') bool someFlag
+##                     ) {
+##        ....
+##    |
+void command(CrackContext ctx) {
+    returnType := NodeListImpl();
+    Type.parse(ctx, returnType);
+
+    name := ctx.getToken();
+    if (!name.isIdent())
+        ctx.error(name, 'Identifier expected'.buffer);
+
+    tok := ctx.getToken();
+    if (!tok.isLParen())
+        ctx.error(tok, 'arg list expected'.buffer);
+
+    args := Array[Arg]();
+    tok = ctx.getToken();
+    while (!tok.isRParen()) {
+        Array[Tok] flagNames;
+
+        # Check for an annotation.
+        if (tok.isAnn()) {
+            tok = ctx.getToken();
+            if (!tok.isIdent())
+                ctx.error(tok, 'Identifier expected in annotation'.buffer);
+
+            if (String(tok.getText()) == 'flag')
+                flagNames = parseFlagAnn(ctx);
+            else
+                # Should probably just pass this through to the argument list.
+                ctx.error(tok, 'Unknown arg annotation.'.buffer);
+
+            tok = ctx.getToken();
+        }
+
+        argType := NodeListImpl();
+        ctx.putBack(tok);
+        Type.parse(ctx, argType);
+
+        arg := ctx.getToken();
+        if (!tok.isIdent())
+            ctx.error(tok, 'identifier expected in arg list'.buffer);
+
+        # Check for a default value.
+        tok = ctx.getToken();
+        Token default;
+        if (tok.isAssign()) {
+            default = ctx.getToken();
+            tok = ctx.getToken();
+        }
+
+        args.append(Arg(argType, arg, flagNames, default));
+        if (tok.isComma())
+            tok = ctx.getToken();
+        else if (!tok.isRParen())
+            ctx.error(tok, 'comma, default value or end paren expected'.buffer);
+    }
+
+    block := readBlock(ctx);
+    fieldsAsInstVars := emitFieldsAsInstVars(args);
+    fieldsAsArgInfoArray := emitFieldsAsArgInfoArray(args);
+    fieldAssignments := emitFieldAssignments(args);
+
+    @xmac* {
+        class $name {
+            $fieldsAsInstVars
+            oper init(StringArray args) {
+                ci := CommandInterface!$fieldsAsArgInfoArray;
+                argVals := ci.parseArgs(args);
+                $fieldAssignments
+            }
+
+            $returnType oper call() $block
+        }
+    }.expand(ctx);
+}
