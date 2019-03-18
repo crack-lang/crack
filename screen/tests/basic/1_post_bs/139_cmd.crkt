@@ -125,17 +125,16 @@ try {
     @assert(ex.text == 'Unknown flag --no-unknown');
 }
 
-# FIXME!
 # Non-integer value given to integer argument.
-#try {
-#    ci = CommandInterface![
-#        ArgInfo[int]('arg', null, false, 0)
-#    ];
-#    ci.parseArgs(StringArray!['not an integer']);
-#    @assert(false);
-#} catch (ArgError ex) {
-#    cerr `$(ex.text)\n`;
-#}
+try {
+    ci = CommandInterface![
+        ArgInfo[int]('arg', null, false, 0)
+    ];
+    ci.parseArgs(StringArray!['not an integer']);
+    @assert(false && 'illegal integer value does not throw an exception');
+} catch (ArgError ex) {
+    @assert(ex.text == 'Invalid value for integer argument: not an integer');
+}
 
 # Adding an argument after a multi gives an error.
 try {

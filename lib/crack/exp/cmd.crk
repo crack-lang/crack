@@ -12,6 +12,7 @@ import crack.cont.hashmap HashMap;
 import crack.functor Functor1;
 import crack.io cerr, FStr, Formatter;
 import crack.lang Exception, InvalidStateError;
+import crack.regex Regex;
 import crack.strutil StringArray;
 
 @import crack.ann assert, cvars, define, impl, implements, interface, struct;
@@ -162,7 +163,15 @@ class MultiArgConverterImpl[ContainerT, ElemT] :
 }
 
 String convertToString(String val) { return val }
-int convertToInt(String val) { return parseInt(val) }
+
+const INT_RX := Regex(r'\d+');
+
+int convertToInt(String val) {
+    if (!INT_RX.match(val))
+        throw ArgError(FStr() `Invalid value for integer argument: $val`);
+    return parseInt(val)
+}
+
 bool convertToBool(String val) {
     normVal := toLower(val);
     if (normVal == 'true')
