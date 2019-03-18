@@ -1018,6 +1018,9 @@ class _InjectionNode : Node {
     }
 }
 
+## Represents an arbitrary type.
+##
+## Note: this doesn't yet deal with "typeof()" expressions.
 class Type {
     String name;
     Array[Type] params;
@@ -1034,6 +1037,10 @@ class Type {
         }
     }
 
+    ## Parse a type out of the following tokens.
+    ##
+    ## result: nullable.  If present, this is a node list into which to inject
+    ##     the type tokens.
     @static Type parse(CrackContext ctx, NodeList result) {
         tok := ctx.getToken();
         if (!tok.isIdent())
@@ -1506,21 +1513,19 @@ void _implements(CrackContext ctx, bool emitObject) {
         Tok(Token(TOK_COMMA, ",".buffer, firstTok.getLocation()))
     );
 
-    # read the body.
-    body := readBlock(ctx);
+    # Parse an opening brace.
+    openingBrace := ctx.getToken();
+    if (!openingBrace.isLCurly())
+        ctx.error(openingBrace, 'opening curly bracket expected.'.buffer);
+    loc := openingBrace.getLocation();
 
-    # remove the closing bracket, store the location for error reporting
-    loc := body.popHead().getLocation();
-
-    # inject the get*Object() implementation
+    # inject the get*Object() implementations.
     StringFormatter f = {};
     for (iface :in ifaces)
         f `    Object oper from $iface() { return this; }\n`;
-    f `}\0`;
+    f `\0`;
     ctx.inject(loc.getName(), loc.getLineNumber(), f.string().buffer);
-
-    # inject the body
-    body.expand(ctx, null);
+    ctx.putBack(openingBrace);
 
     # inject the interfaces
     for (node :in interfaces)
@@ -1795,6 +1800,9 @@ TreeMap[String, uint] _getVarNames(NodeList nodes) {
 ## The xmac can then be expanded into a context as follows:
 ##
 ##     m.expand(ctx);
+##
+## Required imports:
+##     import crack.ann deserializeXMac;
 void xmac(CrackContext ctx) {
     # See if the next token is '*', indicating that we should interpolate
     # variables.

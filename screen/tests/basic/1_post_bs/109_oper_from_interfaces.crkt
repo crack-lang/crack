@@ -4,7 +4,7 @@ interfaces using "oper from"
 %%FILE%%
 import crack.io cout;
 @import crack.ann interface, impl;
-import crack.functor Functor1;
+import crack.functor Functor0, Functor1;
 
 if (true) {
      @interface A {
@@ -68,6 +68,17 @@ if (true) {
 
      B()(100);
      D()(100);
+}
+
+# Compile-time test to verify that we can derive from an implementation before
+# class completion (this was a bug).
+if (true) {
+     class A @impl Functor0[void] {
+          oper init() {}
+          void oper call() {}
+          class B : A {
+          }
+     }
 }
 
 %%EXPECT%%
