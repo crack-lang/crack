@@ -3,8 +3,10 @@
 #%%ARGS%%
 #%%FILE%%
 
+import crack.cont.array Array;
 import crack.exp.cmd ArgError, ArgInfo, ArgVal, CommandInterface;
 import crack.io cerr;
+import crack.lang AssertionError;
 import crack.strutil StringArray;
 
 @import crack.ann assert;
@@ -123,9 +125,29 @@ try {
     @assert(ex.text == 'Unknown flag --no-unknown');
 }
 
-# test that long non-flags throw an exception.
-# test invalid value for a type.
-# Test invalid value for an integer type (and implement it)
+# FIXME!
+# Non-integer value given to integer argument.
+#try {
+#    ci = CommandInterface![
+#        ArgInfo[int]('arg', null, false, 0)
+#    ];
+#    ci.parseArgs(StringArray!['not an integer']);
+#    @assert(false);
+#} catch (ArgError ex) {
+#    cerr `$(ex.text)\n`;
+#}
+
+# Adding an argument after a multi gives an error.
+try {
+    ci = CommandInterface![
+        ArgInfo[int]('arg', null, false, 0, true),
+        ArgInfo[int]('extra', null, false, 0),
+    ];
+    @assert(false && 'No exception adding an arg after a multi-arg');
+} catch (AssertionError ex) {
+    @assert(ex.text.endsWith('Assertion failed: ( ! positional || ! '
+                             'positional [ - 1 ] . multi )\n'));
+}
 
 @command int foo(String arg1, @flag('-f') int flag = 0) {
     return flag;
@@ -134,6 +156,22 @@ fooInst := foo(StringArray!['first', '-f100']);
 
 @assert(fooInst() == 100);
 @assert(fooInst.arg1 == 'first');
+
+fooInst = foo(StringArray!['first']);
+@assert(fooInst() == 0);
+
+# Multi-value argument
+@command Array[int] multiInt(@multi Array[int] args) {
+    return args;
+}
+@assert(multiInt(StringArray!['1', '2', '3'])() == Array[int]![1, 2, 3]);
+
+# Multi-argument flags.
+@command Array[bool] multiFlag(@multi @flag('-f', '--f') Array[bool] vals) {
+    return vals;
+}
+@assert(multiFlag(StringArray!['-f', '--no-f', '-f', '--no-f'])() ==
+        Array[bool]![true, false, true, false]);
 
 cerr `ok\n`;
 

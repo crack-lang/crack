@@ -14,26 +14,72 @@ import crack.io cerr, FStr, Formatter;
 import crack.lang Exception, InvalidStateError;
 import crack.strutil StringArray;
 
-@import crack.ann assert, cvars, define, struct;
+@import crack.ann assert, cvars, define, impl, implements, interface, struct;
 
 ## Base class for ArgVal[T].  We could just as easily use Object for this, but
 ## the base class is a better semantic cue.
 class ArgValBase {}
 
+## Base class for converters.
+@abstract class ConverterBase {
+    ## Returns true if the converter is a converter for a boolean type.
+    @abstract bool isBool();
+}
+
+@abstract class Converter[T] : ConverterBase @implements Functor1[T, String] {
+
+    oper init() {}
+
+    bool isBool() {
+        # For a basic Converter, this determination is very simple: is this
+        # class bool?  We override this for Multi types.
+        return T is bool;
+    }
+
+    class Wrap : Converter {
+        function[T, String] __rep;
+        oper init(function[T, String] rep) : __rep = rep {}
+        T oper call(String val) { return __rep(val) }
+    }
+}
+
 @abstract class ArgInfoBase {
     @cvars {
+        ## Argument name.  This is the variable name that will be created for
+        ## it and the name that the ArgVal will be stored under in the
+        ## dictionary.
         String name;
+
+        ## The converter for the argument.
+        ConverterBase converter;
+
+        ## An array of flag names.  Nullable.  If present, the argument is a
+        ## flag.  THe values of this should either be single-hyphen short
+        ## flags (e.g. "-f") or double-hyphen long flags (e.g. "--flag").
         StringArray flagNames;
+
+        ## If true, the argument has a default value.  If false, the argument
+        ## _must_ be specified.
         bool hasDefaultValue;
+
+        ## If true, the argument can be specified multiple times.
+        bool multi;
     }
 
     @abstract Class getType();
 
     @abstract
-    ArgValBase makeArgVal(String name, Object converter);
+    ArgValBase makeArgVal(String name);
+
+    @abstract
+    void addNewVal(ArgValBase curVal, String val);
 
     @abstract
     ArgValBase makeDefaultValue();
+
+    ## Returns true if the argument is boolean.  THis is important because it
+    ## affects flag parsing.
+    bool isBool() { return converter.isBool() }
 }
 
 ## Generic holder for a value of the parameter type.
@@ -41,6 +87,37 @@ class ArgValBase {}
     T val;
     oper init(T val) : val = val {}
     void formatTo(Formatter out) { out `ArgVal[$(this.class.name)]($val)` }
+}
+
+## Base class for converters for multi-argument types.  The type argument of
+## this generic is the type of the collection.  See MultiArgConverterImpl for
+## a composable implementation of this.
+@abstract class MultiArgConverter[T] : Converter[T] {
+    @abstract void addNewVal(ArgVal[T] curVal, String val);
+}
+
+## Implements MultiArgConverter for any container type that implements
+## "append(ElemT)".
+class MultiArgConverterImpl[ContainerT, ElemT] :
+        MultiArgConverter[ContainerT] {
+
+    Functor1[ElemT, String] __elemConverter;
+
+    oper init(Functor1[ElemT, String] elemConverter) :
+        __elemConverter = elemConverter {
+    }
+
+    ContainerT oper call(String val) {
+        return ContainerT![__elemConverter(val)];
+    }
+
+    void addNewVal(ArgVal[ContainerT] curVal, String val) {
+        curVal.val.append(__elemConverter(val));
+    }
+
+    bool isBool() {
+        return ElemT is bool;
+    }
 }
 
 ## Class describing a flag or argument.  Should be specialized using the data
@@ -51,15 +128,29 @@ class ArgValBase {}
     oper init(String name, StringArray flagNames, bool hasDefaultValue,
               T defaultValue
               ) :
-        ArgInfoBase(name, flagNames, hasDefaultValue),
+        ArgInfoBase(name, null, flagNames, hasDefaultValue, false),
+        defaultValue = defaultValue {
+    }
+
+    oper init(String name, StringArray flagNames, bool hasDefaultValue,
+              T defaultValue,
+              bool multi
+              ) :
+        ArgInfoBase(name, null, flagNames, hasDefaultValue, multi),
         defaultValue = defaultValue {
     }
 
     Class getType() { return T }
 
-    ArgValBase makeArgVal(String val, Object converter) {
-        conv := Functor1[T, String].cast(converter);
+    ArgValBase makeArgVal(String val) {
+        conv := Converter[T].cast(converter);
         return ArgVal[T](conv(val));
+    }
+
+    void addNewVal(ArgValBase curVal, String val) {
+        conv := MultiArgConverter[T].cast(converter);
+        cv := ArgVal[T].cast(curVal);
+        conv.addNewVal(cv, val);
     }
 
     ArgValBase makeDefaultValue() { return ArgVal[T](defaultValue) }
@@ -94,13 +185,25 @@ bool convertToBool(String val) {
     ## argument to an instance of T.  Unfortunately, there's no way we can
     ## currently verify that the type is correct until the functor is used by
     ## generated code.
-    HashMap[uintz, Object] converters = {};
+    HashMap[uintz, ConverterBase] converters = {};
 
     void __initConverters() {
-        converters[uintz(String)] =
-            Functor1[String, String].Wrap(convertToString);
-        converters[uintz(int)] = Functor1[int, String].Wrap(convertToInt);
-        converters[uintz(bool)] = Functor1[bool, String].Wrap(convertToBool);
+        converters[uintz(String)] = stringConv :=
+            Converter[String].Wrap(convertToString);
+        converters[uintz(int)] = intConv :=
+            Converter[int].Wrap(convertToInt);
+        converters[uintz(bool)] =
+            boolConv := Converter[bool].Wrap(convertToBool);
+
+        # Converters for multi-argument types.  XXX the bad thing about this
+        # approach is that we can't do things like have a non-multi argument
+        # parse a comma separated list.
+        converters[uintz(Array[String])] =
+            MultiArgConverterImpl[Array[String], String](stringConv);
+        converters[uintz(Array[int])] =
+            MultiArgConverterImpl[Array[int], int](intConv);
+        converters[uintz(Array[bool])] =
+            MultiArgConverterImpl[Array[bool], bool](boolConv);
     }
 
     oper init() {
@@ -110,6 +213,10 @@ bool convertToBool(String val) {
     ## Add an argInfo object to the interface.  This allows us to be
     ## initialized from the literal list syntax.
     void append(ArgInfoBase argInfo) {
+        # If no converter was provided, look one up.
+        if (argInfo.converter is null)
+            argInfo.converter = converters[uintz(argInfo.getType())];
+
         if (argInfo.flagNames) {
             # It's a flag, add the arg info under all of the flag names.
             for (flagName :in argInfo.flagNames) {
@@ -119,6 +226,10 @@ bool convertToBool(String val) {
         } else {
             # Positional argument.  Add to those.
 
+            # Can't add positional arguments after a "multi" positional
+            # argument (these consume all remaining args).
+            @assert(!positional || !positional[-1].multi);
+
             # Once we start adding optional arguments, all of the arguments
             # have to be optional.
             if (!argInfo.hasDefaultValue && positional)
@@ -127,26 +238,22 @@ bool convertToBool(String val) {
         }
     }
 
-    Object __getConverter(Class cls) {
-        result := converters.get(uintz(cls));
-        if (!converters)
-            throw InvalidStateError(
-                FStr() `No converter defined for type $(cls.name)`
-            );
-        return result;
-    }
-
     ## Parse arguments and return a mapping of all defined argument names to
     ## their converted values.
     HashMap[String, ArgValBase] parseArgs(StringArray args) {
-
         result := HashMap[String, ArgValBase]();
 
         @define storeFlag(argInfo, value) {
-            result[argInfo.name] = argInfo.makeArgVal(
-                value,
-                __getConverter(argInfo.getType())
-            )
+            if (argInfo.multi && (curVal := result.get(argInfo.name))) {
+                argInfo.addNewVal(curVal, value);
+            } else if (result.get(argInfo.name)) {
+                throw ArgError(
+                    FStr() I`Argument $(argInfo.name) can not be specified \
+                             more than once.`
+                );
+            } else {
+                result[argInfo.name] = argInfo.makeArgVal(value)
+            }
         }
 
         ArgInfoBase lastFlag;
@@ -167,7 +274,7 @@ bool convertToBool(String val) {
                     if (equalPos == -1) {
                         # Didn't find an argument.  Is it a boolean?
                         if (flag := flags.get(arg)) {
-                            if (!(flag.getType() is bool)) {
+                            if (!flag.isBool()) {
                                 # Value will be the next argument.
                                 lastFlag = flag;
                                 continue;
@@ -177,7 +284,7 @@ bool convertToBool(String val) {
                         # No.  Is it a negated boolean ("--no-flag")?
                         } else if (arg.startsWith('--no-') &&
                                    flag := flags.get('--' + arg.slice(5))) {
-                            if (!(flag.getType() is bool))
+                            if (!flag.isBool())
                                 throw ArgError(
                                     FStr() I`Flag $arg requires an argument.`
                                 );
@@ -189,10 +296,11 @@ bool convertToBool(String val) {
                         # Flag with an argument.
                         flagName := arg.slice(0, equalPos);
                         flagVal := arg.slice(equalPos + 1);
-                        if (flag := flags.get(flagName))
+                        if (flag := flags.get(flagName)) {
                             @storeFlag(flag, flagVal);
-                        else
+                        } else {
                             throw ArgError(FStr() `Unknown flag $flagName`);
+                        }
                     }
                 } else {
                     # Single character flag (or sequence of single character
@@ -204,7 +312,7 @@ bool convertToBool(String val) {
                         if (!flag)
                             throw ArgError(FStr() `Unknown flag $flagName`);
 
-                        if (flag.getType() is bool) {
+                        if (flag.isBool()) {
                             @storeFlag(flag, 'true');
                         } else {
                             # The flag needs a value.
@@ -222,7 +330,9 @@ bool convertToBool(String val) {
             } else {
                 # non-option argument.
                 if (curPositional < positional.count()) {
-                    argInfo := positional[curPositional++];
+                    argInfo := positional[curPositional];
+                    if (!argInfo.multi)
+                        ++curPositional;
                     @storeFlag(argInfo, arg);
                 } else {
                     throw ArgError('Too many positional arguments.');

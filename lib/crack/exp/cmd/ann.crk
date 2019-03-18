@@ -45,6 +45,7 @@ class Arg {
         # the Tok type) but we can't put those into an array.
         Array[Tok] flags;
         Token default;
+        bool multi;
     }
 
     NodeList emit() {
@@ -88,10 +89,12 @@ NodeList emitFieldsAsArgInfoArray(Array[Arg] args) {
                             Token(TOK_NULLKW, 'null'.buffer,
                                   arg.name.getLocation()
                                   );
+        multi := arg.multi ? @tokens { true } : @tokens { false };
 
         elems = @xmac* {
             $elems
-            ArgInfo[$type]($name, $flagsArr, $hasDefaultValue, $defaultValue),
+            ArgInfo[$type]($name, $flagsArr, $hasDefaultValue, $defaultValue,
+                           $multi),
         }.expand();
     }
 
@@ -144,15 +147,19 @@ void command(CrackContext ctx) {
     tok = ctx.getToken();
     while (!tok.isRParen()) {
         Array[Tok] flagNames;
+        bool multi;
 
-        # Check for an annotation.
-        if (tok.isAnn()) {
+        # Check for annotations.
+        while (tok.isAnn()) {
             tok = ctx.getToken();
             if (!tok.isIdent())
                 ctx.error(tok, 'Identifier expected in annotation'.buffer);
 
-            if (String(tok.getText()) == 'flag')
+            tokText := String(tok.getText());
+            if (tokText == 'flag')
                 flagNames = parseFlagAnn(ctx);
+            else if (tokText == 'multi')
+                multi = true;
             else
                 # Should probably just pass this through to the argument list.
                 ctx.error(tok, 'Unknown arg annotation.'.buffer);
@@ -176,7 +183,7 @@ void command(CrackContext ctx) {
             tok = ctx.getToken();
         }
 
-        args.append(Arg(argType, arg, flagNames, default));
+        args.append(Arg(argType, arg, flagNames, default, multi));
         if (tok.isComma())
             tok = ctx.getToken();
         else if (!tok.isRParen())
