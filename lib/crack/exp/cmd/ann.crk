@@ -2,12 +2,83 @@
 
 import crack.ann deserializeNodeList, deserializeXMac, readBlock, NodeList,
     NodeListImpl, Tok, Type;
-import crack.compiler CrackContext, Token, TOK_NULLKW, TOK_STRING;
+import crack.compiler CrackContext, Token, TOK_IDENT, TOK_NULLKW, TOK_STRING;
 import crack.cont.array Array;
-import crack.io cerr;
+import crack.io cerr, FStr;
 import crack.strutil StringArray;
 
 @import crack.ann cvars, tokens, xmac;
+
+class CommandArgs {
+    NodeList parentType = NodeListImpl();
+    Token __parentName;
+
+    # @command( arg = val, ... )
+    #          ^                ^
+    void parse(CrackContext ctx) {
+        while (true) {
+            tok := ctx.getToken();
+            if (tok.isRParen())
+                break;
+
+            if (!tok.isIdent())
+                ctx.error(tok,
+                          'Identifier expected in @command arguments'.buffer
+                          );
+
+            argTok := tok;
+            arg := String(argTok.getText());
+
+            tok = ctx.getToken();
+            if (!tok.isAssign())
+                ctx.error(
+                    tok,
+                    'Assignment operator expected in @command args.'.buffer
+                );
+
+            if (arg == 'parent') {
+                Type.parse(ctx, parentType);
+            } else if (arg == 'parentAttr') {
+                tok = ctx.getToken();
+                if (!tok.isIdent())
+                    ctx.error(
+                        tok,
+                        'Identifier expected after parentAttr arg'.buffer
+                    );
+                __parentName = tok;
+            } else {
+                ctx.error(argTok,
+                        FStr() `Unknown @command argument $arg\0`.buffer
+                        );
+            }
+
+            tok = ctx.getToken();
+            if (tok.isRParen())
+                break;
+            else if (!tok.isComma())
+                ctx.error(
+                    tok,
+                    'Comma or end paren expected in @command args.'.buffer
+                );
+        }
+    }
+
+    Token getParentName() {
+        return !(__parentName is null) ?
+                    __parentName :
+                    Token(TOK_IDENT, 'parent'.buffer,
+                          parentType.getLocation()
+                          );
+    }
+
+    NodeList emitParentInstVar() {
+        if (!parentType)
+            return parentType;
+
+        parentVar := getParentName();
+        return @xmac* { $parentType $parentVar ; }.expand();
+    }
+}
 
 Array[Tok] parseFlagAnn(CrackContext ctx) {
     tok := ctx.getToken();
@@ -37,6 +108,26 @@ Array[Tok] parseFlagAnn(CrackContext ctx) {
     }
 }
 
+# @subcmd ( variable )
+#        ^            ^
+Token parseSubcmdAnn(CrackContext ctx) {
+    tok := ctx.getToken();
+    if (!tok.isLParen())
+        ctx.error(tok, 'argument list expected after @subcmd annotation'.buffer);
+
+    ident := ctx.getToken();
+    if (!ident.isIdent())
+        ctx.error(ident, 'identifier expected in @subcmd argument list'.buffer);
+
+    tok = ctx.getToken();
+    if (!tok.isRParen())
+        ctx.error(
+            tok,
+            '@subcmd arguments must consist of a single identifier'.buffer
+        );
+    return ident;
+}
+
 class Arg {
     @cvars {
         NodeList type;
@@ -48,14 +139,24 @@ class Arg {
         bool multi;
     }
 
+    @final bool isSubcmd() { return !type }
+
     NodeList emit() {
         return @xmac* { $type $name }.expand();
+    }
+
+    ## For subcommands, we usurp this object to store just the name of the
+    ## variable bound to a SubcommandArgInfo object.
+    @static Arg subcmd(Token variable) {
+        return Arg(null, variable, null, null, false);
     }
 }
 
 NodeList emitFieldsAsInstVars(Array[Arg] args) {
     NodeList result = NodeListImpl();
     for (arg :in args) {
+        if (arg.isSubcmd())
+            continue;
         emittedArg := arg.emit();
         result = @xmac* { $result $emittedArg; }.expand();
     }
@@ -66,6 +167,13 @@ NodeList emitFieldsAsInstVars(Array[Arg] args) {
 NodeList emitFieldsAsArgInfoArray(Array[Arg] args) {
     NodeList elems = NodeListImpl();
     for (arg :in args) {
+
+        # check for a subcommand
+        if (arg.isSubcmd()) {
+            var := arg.name;
+            elems = @xmac* { $elems $var }.expand();
+            continue;
+        }
 
         # Generate flags array.
         NodeList flagsArr;
@@ -104,6 +212,9 @@ NodeList emitFieldsAsArgInfoArray(Array[Arg] args) {
 NodeList emitFieldAssignments(Array[Arg] args) {
     NodeList result = NodeListImpl();
     for (arg :in args) {
+        if (arg.isSubcmd())
+            continue;
+
         name := arg.name;
         type := arg.type;
         nameStr := Token(TOK_STRING, arg.name.getText(),
@@ -131,7 +242,26 @@ NodeList emitFieldAssignments(Array[Arg] args) {
 ##                     ) {
 ##        ....
 ##    |
+##
+## You can also add arguments to @command by following it with parenthesized
+## arguments:
+##
+##     @command(parent = foo)
+##
+## Arguments to @command are:
+##     parent: The class that this is a subcommand of.  An instance of this
+##         will be added to your class and assigned when the subcommand is
+##         instantiated along with the other arguments.
+##     parentAttr: The name of the variable assign the parent instance to
+##         ("parent" by default).
+
 void command(CrackContext ctx) {
+    tok := ctx.getToken();
+    commandArgs := CommandArgs();
+    if (tok.isLParen())
+        commandArgs.parse(ctx);
+    else
+        ctx.putBack(tok);
     returnType := NodeListImpl();
     Type.parse(ctx, returnType);
 
@@ -139,7 +269,7 @@ void command(CrackContext ctx) {
     if (!name.isIdent())
         ctx.error(name, 'Identifier expected'.buffer);
 
-    tok := ctx.getToken();
+    tok = ctx.getToken();
     if (!tok.isLParen())
         ctx.error(tok, 'arg list expected'.buffer);
 
@@ -148,6 +278,7 @@ void command(CrackContext ctx) {
     while (!tok.isRParen()) {
         Array[Tok] flagNames;
         bool multi;
+        bool omitArg;  # Don't parse an argument after the annotations.
 
         # Check for annotations.
         while (tok.isAnn()) {
@@ -156,34 +287,44 @@ void command(CrackContext ctx) {
                 ctx.error(tok, 'Identifier expected in annotation'.buffer);
 
             tokText := String(tok.getText());
-            if (tokText == 'flag')
+            if (tokText == 'flag') {
                 flagNames = parseFlagAnn(ctx);
-            else if (tokText == 'multi')
+            } else if (tokText == 'multi') {
                 multi = true;
-            else
+            } else if (tokText == 'subcmd') {
+                omitArg = true;
+                tok = parseSubcmdAnn(ctx);
+                args.append(Arg.subcmd(tok));
+            } else {
                 # Should probably just pass this through to the argument list.
                 ctx.error(tok, 'Unknown arg annotation.'.buffer);
+            }
 
             tok = ctx.getToken();
         }
 
-        argType := NodeListImpl();
-        ctx.putBack(tok);
-        Type.parse(ctx, argType);
+        # Parse the argument (unless we got an annotation that doesn't modify
+        # one).
+        if (!omitArg) {
+            argType := NodeListImpl();
+            ctx.putBack(tok);
+            Type.parse(ctx, argType);
 
-        arg := ctx.getToken();
-        if (!tok.isIdent())
-            ctx.error(tok, 'identifier expected in arg list'.buffer);
+            arg := ctx.getToken();
+            if (!tok.isIdent())
+                ctx.error(tok, 'identifier expected in arg list'.buffer);
 
-        # Check for a default value.
-        tok = ctx.getToken();
-        Token default;
-        if (tok.isAssign()) {
-            default = ctx.getToken();
+            # Check for a default value.
             tok = ctx.getToken();
+            Token default;
+            if (tok.isAssign()) {
+                default = ctx.getToken();
+                tok = ctx.getToken();
+            }
+
+            args.append(Arg(argType, arg, flagNames, default, multi));
         }
 
-        args.append(Arg(argType, arg, flagNames, default, multi));
         if (tok.isComma())
             tok = ctx.getToken();
         else if (!tok.isRParen())
@@ -194,17 +335,43 @@ void command(CrackContext ctx) {
     fieldsAsInstVars := emitFieldsAsInstVars(args);
     fieldsAsArgInfoArray := emitFieldsAsArgInfoArray(args);
     fieldAssignments := emitFieldAssignments(args);
+    parentInstVar := commandArgs.emitParentInstVar();
+    NodeList parentConstruction;
+    if (commandArgs.parentType) {
+        parentVar := commandArgs.getParentName();
+        parentType := commandArgs.parentType;
+        parentConstruction =
+            @xmac* { $parentVar = $parentType(parentVals) }.expand();
+    } else {
+        parentConstruction = NodeListImpl();
+    }
 
     @xmac* {
-        class $name {
+        class $name @impl ArgParser {
             $fieldsAsInstVars
+            $parentInstVar
             oper init(StringArray args) {
                 ci := CommandInterface!$fieldsAsArgInfoArray;
                 argVals := ci.parseArgs(args);
                 $fieldAssignments
             }
 
+            oper init(ValueMap argVals) {
+                $fieldAssignments
+            }
+
+            oper init() {}
+
             $returnType oper call() $block
+
+            ValueMap parseArgs(Array[String] args, ValueMap parentVals) {
+                ci := CommandInterface!$fieldsAsArgInfoArray;
+                argVals := ci.parseArgs(args);
+                $parentConstruction;
+                $fieldAssignments
+                this();
+                return argVals;
+            }
         }
     }.expand(ctx);
 }

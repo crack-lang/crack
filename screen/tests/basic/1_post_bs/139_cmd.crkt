@@ -1,15 +1,17 @@
-#%%TEST%%
-#command line parsing (crack.cmd)
-#%%ARGS%%
-#%%FILE%%
+%%TEST%%
+command line parsing (crack.cmd)
+%%ARGS%%
+%%FILE%%
 
 import crack.cont.array Array;
-import crack.exp.cmd ArgError, ArgInfo, ArgVal, CommandInterface;
+import crack.cont.hashmap HashMap;
+import crack.exp.cmd ActionFunc, ArgError, ArgInfo, ArgParser, ArgVal,
+    ArgValBase, CommandInterface, SubcommandArgInfo, ValueMap;
 import crack.io cerr;
 import crack.lang AssertionError;
 import crack.strutil StringArray;
 
-@import crack.ann assert;
+@import crack.ann assert, impl;
 @import crack.exp.cmd.ann command;
 
 ci := CommandInterface![
@@ -37,6 +39,32 @@ result := ci.parseArgs(StringArray!['--longarg=long arg val', 'value', 'true',
 @assert(ArgVal[String].cast(result['longarg']).val == 'long arg val');
 @assert(ArgVal[String].cast(result['longarg2']).val == 'larg2 val');
 @assert(!ArgVal[bool].cast(result['negated']).val);
+
+# Subcommands.
+if (true) {
+    ci = CommandInterface![
+        ArgInfo[bool]('parentFlag', StringArray!['-p'], true, false),
+    ];
+    subcmd := CommandInterface![
+        ArgInfo[bool]('subflag', StringArray!['--sf'], true, false),
+        ArgInfo[String]('subpos', null, false, null, true),
+    ];
+    subCmdArgInfo := SubcommandArgInfo();
+    subCmdArgInfo.add('subcmd', subcmd);
+    class Action @impl ActionFunc {
+        bool subflag;
+        String subpos;
+        void oper call(HashMap[String, ArgValBase] values) {
+            subflag = ArgVal[bool].cast(values['subflag']).val;
+            subpos = ArgVal[String].cast(values['subpos']).val;
+        }
+    }
+    subcmd.action = action := Action();
+    ci.append(subCmdArgInfo);
+    ci.parseArgs(StringArray!['-p', 'subcmd', '--sf', 'subval']);
+    @assert(action.subpos == 'subval');
+    @assert(action.subflag);
+}
 
 # Required argument not provided.
 ci = CommandInterface![
@@ -172,8 +200,26 @@ fooInst = foo(StringArray!['first']);
 @assert(multiFlag(StringArray!['-f', '--no-f', '-f', '--no-f'])() ==
         Array[bool]![true, false, true, false]);
 
+# Subcommand.
+if (true) {
+    String fooArg;
+    bool mainFlag;
+    subs := SubcommandArgInfo();
+    @command void main(@flag('-f') bool mainFlag, @subcmd(subs)) {}
+
+    @command(parent = main) void foo(String arg) {
+        mainFlag = parent.mainFlag;
+        fooArg = arg;
+    }
+    subs.add('foo', foo());
+
+    main(StringArray!['-f', 'foo', 'fooval'])();;
+    @assert(fooArg == 'fooval');
+    @assert(mainFlag);
+}
+
 cerr `ok\n`;
 
-#%%EXPECT%%
-#ok
-#%%STDIN%%
+%%EXPECT%%
+ok
+%%STDIN%%

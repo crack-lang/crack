@@ -9,9 +9,10 @@
 import crack.ascii parseInt, toLower;
 import crack.cont.array Array;
 import crack.cont.hashmap HashMap;
+import crack.cont.treemap TreeMap;
 import crack.functor Functor1;
 import crack.io cerr, FStr, Formatter;
-import crack.lang Exception, InvalidStateError;
+import crack.lang AssertionError, Exception, InvalidStateError;
 import crack.regex Regex;
 import crack.strutil StringArray;
 
@@ -20,6 +21,10 @@ import crack.strutil StringArray;
 ## Base class for ArgVal[T].  We could just as easily use Object for this, but
 ## the base class is a better semantic cue.
 class ArgValBase {}
+
+# A mapping of name to value.
+alias ValueMap = HashMap[String, ArgValBase];
+@export_symbols ValueMap;
 
 ## Base class for converters.
 @abstract class ConverterBase {
@@ -65,6 +70,10 @@ class ArgValBase {}
 
         ## If true, the argument can be specified multiple times.
         bool multi;
+
+        ## If true, this argument overrides processing for the remainder of
+        ## the command line.
+        bool override;
     }
 
     @abstract Class getType();
@@ -78,9 +87,38 @@ class ArgValBase {}
     @abstract
     ArgValBase makeDefaultValue();
 
-    ## Returns true if the argument is boolean.  THis is important because it
+    ## Returns true if the argument is boolean.  This is important because it
     ## affects flag parsing.
     bool isBool() { return converter.isBool() }
+
+    ## Parse the remaining arguments.  This gets called for ArgInfo objects
+    ## with the "override" flag set.
+    @abstract
+    ValueMap parseArgs(Array[String] args, ValueMap parentVals);
+}
+
+## Interface for classes that know how to parse arguments.
+@interface ArgParser {
+
+    ## Parse a set of arguments and return the argument value map.  This may
+    ## also invoke a function for the command.
+    ##
+    ## 'parentVals' is a nullable mapping of existing values passed in from
+    ## the parent, if any.
+    @abstract ValueMap parseArgs(Array[String] args, ValueMap parentVals);
+
+    ## Convenience form of parseArgs.
+    @final ValueMap parseArgs(Array[String] args) {
+        return parseArgs(args, null);
+    }
+
+    @final bool oper >=(ArgParser other) {
+        return this.oper from ArgParser().cmp(other) >= 0;
+    }
+
+    @final bool oper <=(ArgParser other) {
+        return this.oper from ArgParser().cmp(other) >= 0;
+    }
 }
 
 ## Generic holder for a value of the parameter type.
@@ -89,6 +127,10 @@ class ArgValBase {}
     oper init(T val) : val = val {}
     void formatTo(Formatter out) { out `ArgVal[$(this.class.name)]($val)` }
 }
+
+# Function to be called after all arguments are parsed (see CommandInterface).
+alias ActionFunc = Functor1[void, ValueMap];
+@export_symbols ActionFunc;
 
 ## Base class for converters for multi-argument types.  The type argument of
 ## this generic is the type of the collection.  See MultiArgConverterImpl for
@@ -99,7 +141,7 @@ class ArgValBase {}
 
 ## Implements MultiArgConverter for any container type that implements
 ## "append(ElemT)".
-class MultiArgConverterImpl[ContainerT, ElemT] :
+@final class MultiArgConverterImpl[ContainerT, ElemT] :
         MultiArgConverter[ContainerT] {
 
     Functor1[ElemT, String] __elemConverter;
@@ -129,7 +171,7 @@ class MultiArgConverterImpl[ContainerT, ElemT] :
     oper init(String name, StringArray flagNames, bool hasDefaultValue,
               T defaultValue
               ) :
-        ArgInfoBase(name, null, flagNames, hasDefaultValue, false),
+        ArgInfoBase(name, null, flagNames, hasDefaultValue, false, false),
         defaultValue = defaultValue {
     }
 
@@ -137,7 +179,7 @@ class MultiArgConverterImpl[ContainerT, ElemT] :
               T defaultValue,
               bool multi
               ) :
-        ArgInfoBase(name, null, flagNames, hasDefaultValue, multi),
+        ArgInfoBase(name, null, flagNames, hasDefaultValue, multi, false),
         defaultValue = defaultValue {
     }
 
@@ -155,6 +197,16 @@ class MultiArgConverterImpl[ContainerT, ElemT] :
     }
 
     ArgValBase makeDefaultValue() { return ArgVal[T](defaultValue) }
+
+    ValueMap parseArgs(Array[String] args, ValueMap parentVals) {
+        throw AssertionError(
+            'parseArgs() called on ArgInfo[T] unsupported.'
+        );
+    }
+
+    void formatTo(Formatter out) {
+        out `ArgInfo[$(T.name)]($name, $flagNames)`;
+    }
 }
 
 ## Thrown when there is an error parsing the flags and arguments.
@@ -182,7 +234,44 @@ bool convertToBool(String val) {
         throw ArgError(FStr() `Invalid value for boolean type: $val`);
 }
 
-@final class CommandInterface {
+## The object used to indicate that an argument is not a normal argument, but
+## rather is a subcommand.
+@final class SubcommandArgInfo : ArgInfoBase {
+    class __FakeConverter : ConverterBase {
+        bool isBool() { return false }
+    }
+    TreeMap[String, ArgParser] commands = {};
+    oper init() :
+        ArgInfoBase('', __FakeConverter(), null, false, false, true) {
+    }
+
+    ValueMap parseArgs(Array[String] args, ValueMap parentVals) {
+        if (!args)
+            throw ArgError('No command specified.');
+
+        if (cmd := commands.get(args[0])) {
+            # We're assuming that this is not a flag, which is probably ok.
+            return cmd.parseArgs(args.subarray(1), parentVals);
+        } else {
+            # TODO: Show usage.
+            throw ArgError(FStr() `Unknonwn command $cmd`);
+        }
+    }
+
+    void add(String name, ArgParser subcommand) {
+        commands[name] = subcommand;
+    }
+
+    # TODO: Break ArgInfoBase into a another base class so we either cast to
+    # SubcommandArgInfo or ArgInfo[T]
+    Class getType() { return null }
+    ArgValBase makeArgVal(String val) { return null }
+    ArgValBase makeDefaultValue() { return null }
+    void addNewVal(ArgValBase curVal, String val) {}
+    void formatTo(Formatter out) { out `subcmd` }
+}
+
+@final class CommandInterface @impl ArgParser {
     ## Positional arguments.
     Array[ArgInfoBase] positional = {};
 
@@ -195,6 +284,10 @@ bool convertToBool(String val) {
     ## currently verify that the type is correct until the functor is used by
     ## generated code.
     HashMap[uintz, ConverterBase] converters = {};
+
+    ## Optional function to be called when the argument list is parsed.
+    ## Nullable.
+    ActionFunc action;
 
     void __initConverters() {
         converters[uintz(String)] = stringConv :=
@@ -249,10 +342,19 @@ bool convertToBool(String val) {
 
     ## Parse arguments and return a mapping of all defined argument names to
     ## their converted values.
-    HashMap[String, ArgValBase] parseArgs(StringArray args) {
-        result := HashMap[String, ArgValBase]();
+    ValueMap parseArgs(Array[String] args, ValueMap parentArgs) {
+        result := parentArgs ? parentArgs : ValueMap();
 
         @define storeFlag(argInfo, value) {
+            if (argInfo.override) {
+                subargs := argInfo.parseArgs(args.subarray(argIter.index),
+                                             result
+                                             );
+                if (action)
+                    action(result);
+                # TODO: maybe add subcommand args to the result?
+                return result;
+            }
             if (argInfo.multi && (curVal := result.get(argInfo.name))) {
                 argInfo.addNewVal(curVal, value);
             } else if (result.get(argInfo.name)) {
@@ -268,7 +370,8 @@ bool convertToBool(String val) {
         ArgInfoBase lastFlag;
         int curPositional;
 
-        for (arg :in args) {
+        for (argIter :on args) {
+            arg := argIter.elem();
 
             if (lastFlag) {
                 @storeFlag(lastFlag, arg);
@@ -376,6 +479,8 @@ bool convertToBool(String val) {
             }
         }
 
+        if (action)
+            action(result);
         return result;
     }
 }
