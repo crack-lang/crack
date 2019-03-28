@@ -1,13 +1,13 @@
 ## Annotations for command-line processing.
 
-import crack.ann deserializeNodeList, deserializeXMac, readBlock, NodeList,
-    NodeListImpl, Tok, Type;
+import crack.ann deserializeNodeList, deserializeXMac, readBlock, Node,
+    NodeList, NodeListImpl, Tok, Type;
 import crack.compiler CrackContext, Token, TOK_IDENT, TOK_NULLKW, TOK_STRING;
 import crack.cont.array Array;
 import crack.io cerr, FStr;
 import crack.strutil StringArray;
 
-@import crack.ann cvars, tokens, xmac;
+@import crack.ann assert, cvars, tokens, xmac;
 
 class CommandArgs {
     NodeList parentType = NodeListImpl();
@@ -108,26 +108,6 @@ Array[Tok] parseFlagAnn(CrackContext ctx) {
     }
 }
 
-# @subcmd ( variable )
-#        ^            ^
-Token parseSubcmdAnn(CrackContext ctx) {
-    tok := ctx.getToken();
-    if (!tok.isLParen())
-        ctx.error(tok, 'argument list expected after @subcmd annotation'.buffer);
-
-    ident := ctx.getToken();
-    if (!ident.isIdent())
-        ctx.error(ident, 'identifier expected in @subcmd argument list'.buffer);
-
-    tok = ctx.getToken();
-    if (!tok.isRParen())
-        ctx.error(
-            tok,
-            '@subcmd arguments must consist of a single identifier'.buffer
-        );
-    return ident;
-}
-
 class Arg {
     @cvars {
         NodeList type;
@@ -164,14 +144,22 @@ NodeList emitFieldsAsInstVars(Array[Arg] args) {
     return result;
 }
 
+## Create the name of the subcommand variable for a command.  'var' is the
+## variable name of the command class.
+Token createSubcommandVar(Token var) {
+    return Token(TOK_IDENT, (String(var.getText()) + '_subcmds\0').buffer,
+                 var.getLocation()
+                 );
+}
+
 NodeList emitFieldsAsArgInfoArray(Array[Arg] args) {
     NodeList elems = NodeListImpl();
     for (arg :in args) {
 
         # check for a subcommand
         if (arg.isSubcmd()) {
-            var := arg.name;
-            elems = @xmac* { $elems $var }.expand();
+            var := createSubcommandVar(arg.name);
+            elems = @xmac* { $elems SubcommandArgInfo($var), }.expand();
             continue;
         }
 
@@ -209,6 +197,26 @@ NodeList emitFieldsAsArgInfoArray(Array[Arg] args) {
     return @xmac* { [ $elems ] }.expand();
 }
 
+## Create the name of the subcommand variable from a node list.
+Token createSubcommandVar(CrackContext ctx, NodeList var) {
+    # Make sure we just have one element.
+    Node node;
+    for (item :in var) {
+        if (node) {
+            ctx.error(FStr() I`Can't use composite type name \
+                               $(var.toString(null)) as parent (hint: create \
+                               an alias for it and use that instead)\0`.buffer
+                      );
+        } else {
+            node = item;
+        }
+    }
+    @assert(node);
+
+    # Convert to a token.
+    return createSubcommandVar(Tok.cast(node).tok);
+}
+
 NodeList emitFieldAssignments(Array[Arg] args) {
     NodeList result = NodeListImpl();
     for (arg :in args) {
@@ -231,6 +239,7 @@ NodeList emitFieldAssignments(Array[Arg] args) {
 ## A command-line command.
 ## Usage:
 ##    import crack.cmd ArgInfo, ArgVal, CommandInterface;
+##    import crack.cont.treemap TreeMap;
 ##    import crack.strutil StringArray;
 ##    @import crack.ann command;
 ##
@@ -266,6 +275,7 @@ void command(CrackContext ctx) {
     Type.parse(ctx, returnType);
 
     name := ctx.getToken();
+    nameStr := Token(TOK_STRING, name.getText(), name.getLocation());
     if (!name.isIdent())
         ctx.error(name, 'Identifier expected'.buffer);
 
@@ -274,6 +284,7 @@ void command(CrackContext ctx) {
         ctx.error(tok, 'arg list expected'.buffer);
 
     args := Array[Arg]();
+    bool isParentCommand;
     tok = ctx.getToken();
     while (!tok.isRParen()) {
         Array[Tok] flagNames;
@@ -293,8 +304,8 @@ void command(CrackContext ctx) {
                 multi = true;
             } else if (tokText == 'subcmd') {
                 omitArg = true;
-                tok = parseSubcmdAnn(ctx);
-                args.append(Arg.subcmd(tok));
+                args.append(Arg.subcmd(name));
+                isParentCommand = true;
             } else {
                 # Should probably just pass this through to the argument list.
                 ctx.error(tok, 'Unknown arg annotation.'.buffer);
@@ -346,7 +357,34 @@ void command(CrackContext ctx) {
         parentConstruction = NodeListImpl();
     }
 
+    # Generate the subcommand variable, which is a map containing all of the
+    # subcommands for a given command.
+    NodeList subcommandVarDef;
+    if (isParentCommand) {
+        subcommandVar := createSubcommandVar(name);
+        subcommandVarDef =
+            @xmac* {
+                TreeMap[String, ArgParser] $subcommandVar = {};
+            }.expand();
+    } else {
+        subcommandVarDef = NodeListImpl();
+    }
+
+    # Generate the parent binder, which is the statement that binds a
+    # subcommand to its parent's subcommand map.
+    NodeList parentBinder;
+    if (commandArgs.parentType) {
+        parentSubcommandVar :=
+            createSubcommandVar(ctx, commandArgs.parentType);
+        parentBinder = @xmac* {
+            $parentSubcommandVar[$nameStr] = $name();
+        }.expand();
+    } else {
+        parentBinder = NodeListImpl();
+    }
+
     @xmac* {
+        $subcommandVarDef
         class $name @impl ArgParser {
             $fieldsAsInstVars
             $parentInstVar
@@ -372,6 +410,9 @@ void command(CrackContext ctx) {
                 this();
                 return argVals;
             }
+
+            String getName() { return $nameStr }
         }
+        $parentBinder
     }.expand(ctx);
 }

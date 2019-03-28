@@ -112,6 +112,10 @@ alias ValueMap = HashMap[String, ArgValBase];
         return parseArgs(args, null);
     }
 
+    ## Returns the name of the arg-parser (used by subcommands, for toplevel
+    ## commands this is not used).
+    @abstract String getName();
+
     @final bool oper >=(ArgParser other) {
         return this.oper from ArgParser().cmp(other) >= 0;
     }
@@ -240,9 +244,17 @@ bool convertToBool(String val) {
     class __FakeConverter : ConverterBase {
         bool isBool() { return false }
     }
-    TreeMap[String, ArgParser] commands = {};
+
+    TreeMap[String, ArgParser] commands;
+
     oper init() :
-        ArgInfoBase('', __FakeConverter(), null, false, false, true) {
+        ArgInfoBase('', __FakeConverter(), null, false, false, true),
+        commands() {
+    }
+
+    oper init(TreeMap[String, ArgParser] commands) :
+        ArgInfoBase('', __FakeConverter(), null, false, false, true),
+        commands = commands {
     }
 
     ValueMap parseArgs(Array[String] args, ValueMap parentVals) {
@@ -483,4 +495,6 @@ bool convertToBool(String val) {
             action(result);
         return result;
     }
+
+    String getName() { return '' }
 }

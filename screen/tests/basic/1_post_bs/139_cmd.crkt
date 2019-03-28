@@ -10,6 +10,7 @@ import crack.exp.cmd ActionFunc, ArgError, ArgInfo, ArgParser, ArgVal,
 import crack.io cerr;
 import crack.lang AssertionError;
 import crack.strutil StringArray;
+import crack.cont.treemap TreeMap;
 
 @import crack.ann assert, impl;
 @import crack.exp.cmd.ann command;
@@ -204,14 +205,12 @@ fooInst = foo(StringArray!['first']);
 if (true) {
     String fooArg;
     bool mainFlag;
-    subs := SubcommandArgInfo();
-    @command void main(@flag('-f') bool mainFlag, @subcmd(subs)) {}
+    @command void main(@flag('-f') bool mainFlag, @subcmd) {}
 
     @command(parent = main) void foo(String arg) {
         mainFlag = parent.mainFlag;
         fooArg = arg;
     }
-    subs.add('foo', foo());
 
     main(StringArray!['-f', 'foo', 'fooval'])();;
     @assert(fooArg == 'fooval');
