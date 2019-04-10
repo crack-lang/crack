@@ -157,17 +157,24 @@ class SSLConnection {
         @final int read(AppendBuffer buf) {
             lock := MutexLock(__mutex);
 
-            # Make sure the buffer has ample capacity.
-            if (buf.cap - buf.size < 1024)
-                buf.grow(buf.cap * 2);
+            # Read as much as we can.
+            while (true) {
+                # Make sure the buffer has ample capacity.
+                if (buf.cap - buf.size < 1024)
+                    buf.grow(buf.cap * 2);
 
-            rc := __ssl.read(buf.buffer + buf.size, buf.cap - buf.size);
-            if (rc < 0) {
-                return __ssl.getError(rc);
-            } else {
-                buf.size += rc;
-                return 0;
-            }
+                rc := __ssl.read(buf.buffer + buf.size, buf.cap - buf.size);
+                if (rc < 0) {
+                    # Return the error, but don't treat a "want read" as an
+                    # error, that just means we can't read anything more from
+                    # the connection at this time.
+                    error := __ssl.getError(rc);
+                    return (error == SSL_ERROR_WANT_READ) ? 0 : error;
+                } else {
+                    buf.size += rc;
+                }
+             }
+            return 0; # Unreachable.
         }
 
         ## Write data, return the amount written.
@@ -181,6 +188,14 @@ class SSLConnection {
                 pos += rc;
                 __flush(handler);
             }
+        }
+
+        ## Flush any data that has accumulated in the SSL output buffer to the
+        ## handler's output buffer. It is not necessary to do this after a
+        ## write(), as write already does this.
+        void flush(Connection handler) {
+            lock := MutexLock(__mutex);
+            __flush(handler);
         }
 
         ## Wait for a state change, return the new state.  Don't wait at all
@@ -236,30 +251,30 @@ class SSLConnection {
                 pos += rc;
 
                 # Do our processing.
-                if (state.getState() == CONNECTING) {
+                int stateVal = state.getState();
+                if (stateVal == CONNECTING) {
                     rc = state.connect(comm);
                     if (rc == SSL_ERROR_NONE)
-                        state.setState(CONNECTED);
+                        state.setState(stateVal = CONNECTED);
                     else if (rc != SSL_ERROR_WANT_READ)
                         state.setError(rc);
-                } else if (state.getState() == ACCEPTING) {
+                } else if (stateVal == ACCEPTING) {
                     rc = state.accept(comm);
                     if (rc == SSL_ERROR_NONE)
-                        state.setState(CONNECTED);
+                        state.setState(stateVal = CONNECTED);
                     else if (rc != SSL_ERROR_WANT_READ)
                         state.setError(rc);
-                } else {
+                }
+                if (stateVal == CONNECTED) {
                     # Assume CONNECTED.
                     rc := state.read(__userConnection.inBuf);
                     if (!rc)
                         __userHandler.process(__userConnection);
-                    else if (rc == SSL_ERROR_WANT_READ)
-                        break;
                     else
                         state.setError(rc);
                 }
             }
-            comm.inBuf.size = 0;
+            comm.inBuf.compact(pos);
 
             # Check for anything sent through the user's comm handler, slurp
             # it into ours.
@@ -268,6 +283,13 @@ class SSLConnection {
             } else if (__userConnection.outBuf) {
                 state.write(comm, __userConnection.outBuf);
                 __userConnection.outBuf.size = 0;
+            } else {
+                # We do a flush so that if there's anything that the SSL
+                # object wants to write out-of-band, it can do so.
+                # There's no evidence that this is necessary.  Unfortunately
+                # the documentation I've found on this mode of usage has been
+                # sparse, so we're doing this as a precaution.
+                state.flush(comm);
             }
         }
 
