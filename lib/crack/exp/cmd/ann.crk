@@ -12,6 +12,7 @@ import crack.strutil StringArray;
 class CommandArgs {
     NodeList parentType = NodeListImpl();
     Token __parentName;
+    Token converters;
 
     # @command( arg = val, ... )
     #          ^                ^
@@ -46,6 +47,14 @@ class CommandArgs {
                         'Identifier expected after parentAttr arg'.buffer
                     );
                 __parentName = tok;
+            } else if (arg == 'converters') {
+                tok = ctx.getToken();
+                if (!tok.isIdent())
+                    ctx.error(
+                        tok,
+                        'Value of "converters" must be a variable name'.buffer
+                    );
+                converters = tok;
             } else {
                 ctx.error(argTok,
                         FStr() `Unknown @command argument $arg\0`.buffer
@@ -238,7 +247,7 @@ NodeList emitFieldAssignments(Array[Arg] args) {
 
 ## A command-line command.
 ## Usage:
-##    import crack.cmd ArgInfo, ArgVal, CommandInterface;
+##    import crack.cmd ArgInfo, ArgVal, CommandInterface, ConverterBase;
 ##    import crack.cont.treemap TreeMap;
 ##    import crack.strutil StringArray;
 ##    @import crack.ann command;
@@ -383,15 +392,36 @@ void command(CrackContext ctx) {
         parentBinder = NodeListImpl();
     }
 
+    NodeList convertersBinder;
+    if (!(commandArgs.converters is null)) {
+        converters := commandArgs.converters;
+        convertersBinder = @xmac* { $converters }.expand();
+    } else {
+        convertersBinder = @tokens { null };
+    }
+
     @xmac* {
         $subcommandVarDef
         class $name @impl ArgParser {
             $fieldsAsInstVars
             $parentInstVar
-            oper init(StringArray args) {
-                ci := CommandInterface!$fieldsAsArgInfoArray;
+
+            @final void __init(Array[String] args,
+                               Array[ConverterBase] converters
+                               ) {
+                ci := CommandInterface(converters);
+                ci.addArgs(Array[ArgInfoBase]!$fieldsAsArgInfoArray);
+
                 argVals := ci.parseArgs(args);
                 $fieldAssignments
+            }
+
+            oper init(Array[String] args) {
+                __init(args, $convertersBinder);
+            }
+
+            oper init(Array[String] args, Array[ConverterBase] converters) {
+                __init(args, converters);
             }
 
             oper init(ValueMap argVals) {

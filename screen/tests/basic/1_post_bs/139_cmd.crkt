@@ -5,8 +5,9 @@ command line parsing (crack.cmd)
 
 import crack.cont.array Array;
 import crack.cont.hashmap HashMap;
-import crack.exp.cmd ActionFunc, ArgError, ArgInfo, ArgParser, ArgVal,
-    ArgValBase, CommandInterface, SubcommandArgInfo, ValueMap;
+import crack.exp.cmd ActionFunc, ArgError, ArgInfoBase, ArgInfo, ArgParser,
+    ArgVal, ArgValBase, CommandInterface, Converter, ConverterBase,
+    SubcommandArgInfo, ValueMap;
 import crack.io cerr;
 import crack.lang AssertionError;
 import crack.strutil StringArray;
@@ -215,6 +216,19 @@ if (true) {
     main(StringArray!['-f', 'foo', 'fooval'])();;
     @assert(fooArg == 'fooval');
     @assert(mainFlag);
+}
+
+# Converters
+if (true) {
+    class Foo {
+        String val;
+        oper init(String val) : val = val {}
+        @static Foo create(String val) { return Foo(val) }
+    }
+    converters := Array[ConverterBase]![Converter[Foo].Wrap(Foo.create)];
+    @command(converters = converters) void main(Foo arg) {}
+    inst := main(StringArray!['someval']);
+    @assert(inst.arg && inst.arg.val == 'someval');
 }
 
 cerr `ok\n`;

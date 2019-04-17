@@ -30,6 +30,9 @@ alias ValueMap = HashMap[String, ArgValBase];
 @abstract class ConverterBase {
     ## Returns true if the converter is a converter for a boolean type.
     @abstract bool isBool();
+
+    ## Returns the type that the converter converts to.
+    @abstract Class getType();
 }
 
 @abstract class Converter[T] : ConverterBase @implements Functor1[T, String] {
@@ -41,6 +44,8 @@ alias ValueMap = HashMap[String, ArgValBase];
         # class bool?  We override this for Multi types.
         return T is bool;
     }
+
+    Class getType() { return T }
 
     class Wrap : Converter {
         function[T, String] __rep;
@@ -243,6 +248,7 @@ bool convertToBool(String val) {
 @final class SubcommandArgInfo : ArgInfoBase {
     class __FakeConverter : ConverterBase {
         bool isBool() { return false }
+        Class getType() { return void }
     }
 
     TreeMap[String, ArgParser] commands;
@@ -324,6 +330,17 @@ bool convertToBool(String val) {
         __initConverters();
     }
 
+    void addConverters(Array[ConverterBase] newConverters) {
+        for (conv :in newConverters)
+            converters[uintz(conv.getType())] = conv;
+    }
+
+    oper init(Array[ConverterBase] converters) {
+        __initConverters();
+        if (converters)
+            addConverters(converters);
+    }
+
     ## Add an argInfo object to the interface.  This allows us to be
     ## initialized from the literal list syntax.
     void append(ArgInfoBase argInfo) {
@@ -350,6 +367,12 @@ bool convertToBool(String val) {
                 @assert(!positional[-1].hasDefaultValue);
             positional.append(argInfo);
         }
+    }
+
+    ## Add the list of argument info objects.
+    void addArgs(Array[ArgInfoBase] argInfos) {
+        for (arg :in argInfos)
+            append(arg);
     }
 
     ## Parse arguments and return a mapping of all defined argument names to
