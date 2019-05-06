@@ -176,4 +176,7 @@ if (1) {
     if (!j || k) cout `FAILED object bool conversion in interface.\n`;
 }
 
+# test nested parens in macro arguments.
+if (1)  @echo({if (false) {} else if ((true)) {}}) else {}
+
 cout `ok\n`;

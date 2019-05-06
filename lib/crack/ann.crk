@@ -551,8 +551,10 @@ Array[NodeList] parseArgs(CrackContext ctx, uint argCount) {
     void popTo(Array[byte] brackStack, byte val) {
         for (int i = brackStack.count() - 1; i >= 0; --i) {
             if (brackStack[i] == val) {
-                while (brackStack.count() > i)
+                while (brackStack.count() > i) {
                     brackStack.delete(brackStack.count() - 1);
+                }
+                break;
             }
         }
     }
