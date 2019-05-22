@@ -6351,10 +6351,295 @@ Crack's GTK libraries are really a toy implementation or proof of concept.
 You can probably implement minimal programs with them, you can implement
 larger programs if you care to augment the library.
 
-Command Line Option Processing
-------------------------------
+Command Processing
+------------------
 
-The #crack.exp.cmdline# module allows you to do options processing:
+Crack provides a command line option library similar to Java's jcommander or
+python's argparse.  It is still experimental, and therefore the interface may
+be subject to change.
+
+A command is defined as a function with a special annotation:
+
+{{
+    import crack.cont.array Array;
+    import crack.cont.treemap TreeMap;
+    import crack.exp.cmd ArgInfo, ArgInfoBase, ArgParser, ArgVal,
+        CommandArgParser, CommandInterface, ConverterBase, ValueMap;
+    import crack.io Formatter;
+    import crack.strutil StringArray;
+
+    @import crack.ann impl;
+    @import crack.exp.cmd.ann command;
+
+    @command int main(String arg, @flag('-f') bool foo) {
+        cout `first argument is $arg\n`;
+        cout `flag value is $foo\n`;
+    }
+
+    exit(main(args.subarray(1))());
+}}
+
+Positional arguments are simply defined as normal arguments.  Flags are
+defined using the @flag annotation. (This isn't a real annotation, it receives
+special treatment by the #@command# annotation.  It should not be imported).
+
+The #@command# annotation parses what looks like a function, but it generates
+a class.  When we call the function, we generate an instance of the class
+which is populated by the array of arguments passed into it,
+
+The function that we defined ends up being the "#oper call()#" method in this
+class, so we actually do the processing by calling the instance.  The argument
+list that we pass in gets translated to attributes of the class.
+
+Arguments are converted to values based on their types.  The command
+processing code defines built-in converters for Strings, integers and
+booleans, as well as lists of these (for use across \X(Multiple Arguments)).
+
+Flags
+'''''
+
+Flags are defined by adding the #@flag# pseudo-annotation before an argument.
+#@flag# has an argument list consisting of the flag names that are associated
+with that argument.  These must be literal strings (variables and non-literal
+constants are not allowed).
+
+A flag name should begin with either a single or a double hyphen: the single
+hyphen is used for single character flag names ("short names"), the double
+hyphen is used for "long names."  For example, to have a flag associated with
+a logfile, we might do this:
+
+{{
+    @command int main(@flag('-l', '--logfile') String logfile) {
+        ...
+    }
+}}
+
+All flags have an associated value except boolean flags.  Short flag names
+can have the value passed either immediately following the flag name or as the
+next command line argument:
+
+{{
+    $ command -llogfile.txt     # this works
+    $ command -l logfile.txt    # so does this.
+}}
+
+Likewise, long flag arguments can also be specified as part of the flag
+(separated by an equal sign) or as the next argument:
+
+{{
+    $ command --logfile=logfile.txt
+    # command --logfile logfile.txt
+}}
+
+Boolean flags do not require an argument.  Short boolean flags /may not/ have
+an argument - their presence indicates "true", their absence indicates
+"false". Long flags may be negated by either prefixing the flag name with
+"--no-" or by adding "=false" to the end of the flag ("=true" is also
+supported).  Long binary flags do not support the use of the value as the
+next argument.
+
+{{
+    $ command --happy        # Sets "happy" to true.
+    $ command --no-happy     # Sets "happy" to false.
+    $ command --happy=false  # So does this.
+    $ command --happy false  # Sets happy to true, "false" is the next
+                             # positional argument!
+}}
+
+Subcommands
+'''''''''''
+
+You can create "subcommands" by defining a command with a parent.  For
+example, to define the "get" and "put" subcommands, we can do this:
+
+{{
+    import crack.exp.cmd SubcommandArgInfo;
+
+    @command int main(@flag('--global-flag') String globalFlag,
+                      @subcmd
+                      ) {
+    }
+
+    @command(parent = main) int get(String arg) {
+        cout `get called with $arg.  Global flag = $(parent.globalFlag)`;
+    }
+
+    @command(parent = main) int put(String arg) {
+        cout `put called with $arg.  Global flag = $(parent.globalFlag)`;
+    }
+}}
+
+The main command has a special pseudo-argument, "#@subcmd#", which indicates
+the position of the subcommand.
+
+The subcommands must each contain a parameter ("#parent = main#") indicating
+the parent command.
+
+We can now call the commands as follows:
+
+{{
+    $ command --global-flag=blech get foo
+    get called with foo.  Global flag = blech
+    $ command put bar --global-flag=barch
+    put called with bar.  Global flag = barch
+}}
+
+Subcommaneds can have flags and arguments of their own.  From within the
+subcommand's function, the parent command's attributes are accessible through
+the "parent" object (see the use of #globalFlag# in the example above.  To
+use a name other than "parent" for this, you can specify "#parentAttr =
+/name/#" in the #@command# parameters.
+
+Optional Arguments
+''''''''''''''''''
+
+Optional arguments are specified using a default value syntax.  For example:
+
+{{
+    @command int foo(String optional = 'value') {
+        ...
+    }
+}}
+
+Optonal arguments must be single token literals.  Most flags should generally
+be defined using a default value (the alternative is that they be required).
+
+Positional optional arguments must be specified at the end of the argument
+list.  You can not mix optional positional arguments with multiple arguments.
+
+Multiple Arguments
+''''''''''''''''''
+
+The "#@multi#" pseudo-annotation is used to define arguments that may be
+specified multiple times.  These should be used with an Array of the basic
+type (in truth, any container with default or element count constructor and an
+#append()# method which adds an element can be used, but it is necessary to
+define a converter tor the type, see \X(Defining Converters) below):
+
+{{
+    @command int main(@multi Array[String] words) {
+        ...
+    }
+}}
+
+The command definition above consumes all (non-flag) arguments and puts them
+in 'words'.
+
+You can do the same thing with flags:
+
+{{
+    @command int main(@multi @flag('-f') Array[bool] vals) {
+        ...
+    }
+}}
+
+Defining Converters
+'''''''''''''''''''
+
+There are a canned set of types that can be used for command arguments,
+currently these are #String#, #bool#, #int# and arrays of these
+(#crack.cont.array.Array#, not the built-in #array# type).
+
+However, it is often desirable to pass more elaborate types, such as dates, or
+to enforce constraints on string types (such as that they be file names, or
+members of a set of canned values).
+
+The canned argument types are defined as /converters/, and user-defined
+converters may be provided to extend (or override) this set.
+
+Defining a converter is usually a simple matter of defining a function to
+convert from a string to the required type.  For example, let's say we want an
+argument that passes colors by name:
+
+{{
+    @struct Color {
+        int red, green, blue;
+    }
+
+    Color convertColor(String name) {
+        if (toLower(name) == 'red')
+            return Color(0xff, 0, 0);
+        else if (toLower(name) == 'green')
+            return Color(0, 0xff, 0);
+        else if (tolower(name) == 'blue')
+            return Color(0, 0, 0xff);
+        else
+            # Default to black.
+            return Color(0, 0, 0);
+    }
+}}
+
+Now we create an array of converters to give to our command:
+
+{{
+    import crack.exp.cmd Converter;
+
+    converters := Array[ConverterBase]![Converter[Color].Wrap(convertColor)];
+}}
+
+And finally, register it in the command annotation:
+
+{{
+    @command(converters = converters) int main(Color color) {
+        ...
+    }
+}}
+
+Note that converters are not inherited from parent commands: the converter
+argument must be passed to every command definition where the extended types
+are desired.
+
+Also note that converters for the existing types override the existing
+definitions.
+
+Multiple argument types must have their own converters.  For this, use the
+#MultiArgConverterImpl# generic paramterized by the collection type and the
+element type.  To define converters for the Color type above:
+
+{{
+    import crack.exp.cmd Converter, MultiArgConverterImpl;
+
+    converters := Array[ConverterBase]![
+        Converter[Color].Wrap(convertColor),
+        MultiArgConverterImpl[Array[Color], Color]
+    ];
+}}
+
+The MultiArgConverterImpl requires that the container implement the #append()#
+method for the element type.  For containers that do not provide an append,
+you can provide your own implementation derived from #MultiArgConverter[T]#
+(where #T# is the element type).
+
+Documentation Generation
+''''''''''''''''''''''''
+
+The #@command# annotation does special handling of doc-comments, and you can
+use the #addHelpCommand()# function to add a special "help" subcommand:
+
+{{
+    import crack.exp.cmd.doc addHelpCommand;
+
+    ## This is a command.
+    @command void main(
+        ## The "foo" flag.
+        @flag('-f') int foo = -1,
+        @subcmd
+    ) {
+    }
+
+    addHelpCommand(main_subcmds, main);
+}}
+
+After this, running "#command help#" will produce a help message with the
+command documentation, including documentation on flags and subcommands.
+Running "#command help /subcommand/#" will provide help on /subcommand/.
+
+The Legacy #crack.cmdline Module
+''''''''''''''''''''''''''''''''
+
+The #crack.cmdline# module also allows you to do options processing.  It
+is more work to use than #crack.exp.cmd#, but has the advantage of not
+currently being in experimental.
 
 {{
     import crack.sys argv;
