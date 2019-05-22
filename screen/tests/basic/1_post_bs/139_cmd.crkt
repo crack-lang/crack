@@ -1,14 +1,15 @@
-%%TEST%%
-command line parsing (crack.cmd)
-%%ARGS%%
-%%FILE%%
+#%%TEST%%
+#command line parsing (crack.cmd)
+#%%ARGS%%
+#%%FILE%%
 
 import crack.cont.array Array;
 import crack.cont.hashmap HashMap;
 import crack.exp.cmd ActionFunc, ArgError, ArgInfoBase, ArgInfo, ArgParser,
-    ArgVal, ArgValBase, CommandInterface, Converter, ConverterBase,
-    SubcommandArgInfo, ValueMap;
-import crack.io cerr;
+    ArgVal, ArgValBase, CommandArgParser, CommandInterface, Converter,
+    ConverterBase, SubcommandArgInfo, ValueMap;
+import crack.exp.cmd.doc addHelpCommand;
+import crack.io cerr, cout, StringFormatter;
 import crack.lang AssertionError;
 import crack.strutil StringArray;
 import crack.cont.treemap TreeMap;
@@ -17,16 +18,16 @@ import crack.cont.treemap TreeMap;
 @import crack.exp.cmd.ann command;
 
 ci := CommandInterface![
-    ArgInfo[String]('foo', null, false, null),
-    ArgInfo[bool]('boolpos', null, false, true),
-    ArgInfo[bool]('flag1', StringArray!['-f'], true, false),
-    ArgInfo[String]('flag2', StringArray!['-g'], true, null),
-    ArgInfo[bool]('standalone', StringArray!['-h'], false, null),
-    ArgInfo[String]('longarg', StringArray!['--longarg'], true, null),
-    ArgInfo[String]('longarg2', StringArray!['--larg2'], true, null),
-    ArgInfo[int]('defaultedPos', null, true, 123),
-    ArgInfo[int]('defaulted', StringArray!['-d'], true, 100),
-    ArgInfo[bool]('negated', StringArray!['--negated'], true, true),
+    ArgInfo[String]('foo', null, false, null, 'docs'),
+    ArgInfo[bool]('boolpos', null, false, true, 'docs'),
+    ArgInfo[bool]('flag1', StringArray!['-f'], true, false, 'docs'),
+    ArgInfo[String]('flag2', StringArray!['-g'], true, null, 'docs'),
+    ArgInfo[bool]('standalone', StringArray!['-h'], false, null, 'docs'),
+    ArgInfo[String]('longarg', StringArray!['--longarg'], true, null, 'docs'),
+    ArgInfo[String]('longarg2', StringArray!['--larg2'], true, null, 'docs'),
+    ArgInfo[int]('defaultedPos', null, true, 123, 'docs'),
+    ArgInfo[int]('defaulted', StringArray!['-d'], true, 100, 'docs'),
+    ArgInfo[bool]('negated', StringArray!['--negated'], true, true, 'docs'),
 ];
 result := ci.parseArgs(StringArray!['--longarg=long arg val', 'value', 'true',
                                     '-fg', 'gval', '--larg2', 'larg2 val',
@@ -45,11 +46,11 @@ result := ci.parseArgs(StringArray!['--longarg=long arg val', 'value', 'true',
 # Subcommands.
 if (true) {
     ci = CommandInterface![
-        ArgInfo[bool]('parentFlag', StringArray!['-p'], true, false),
+        ArgInfo[bool]('parentFlag', StringArray!['-p'], true, false, 'docs'),
     ];
     subcmd := CommandInterface![
-        ArgInfo[bool]('subflag', StringArray!['--sf'], true, false),
-        ArgInfo[String]('subpos', null, false, null, true),
+        ArgInfo[bool]('subflag', StringArray!['--sf'], true, false, 'docs'),
+        ArgInfo[String]('subpos', null, false, null, true, 'docs'),
     ];
     subCmdArgInfo := SubcommandArgInfo();
     subCmdArgInfo.add('subcmd', subcmd);
@@ -70,7 +71,7 @@ if (true) {
 
 # Required argument not provided.
 ci = CommandInterface![
-    ArgInfo[String]('foo', null, false, null),
+    ArgInfo[String]('foo', null, false, null, 'docs'),
 ];
 result = ci.parseArgs(StringArray!['val']);
 @assert(ArgVal[String].cast(result['foo']).val == 'val');
@@ -82,7 +83,7 @@ try {
 
 # Required flag not provided.
 ci = CommandInterface![
-    ArgInfo[bool]('foo', StringArray!['-f'], false, null),
+    ArgInfo[bool]('foo', StringArray!['-f'], false, null, 'docs'),
 ];
 result = ci.parseArgs(StringArray!['-f']);
 @assert(ArgVal[bool].cast(result['foo']).val);
@@ -94,7 +95,7 @@ try {
 
 # Missing parameter at the end of the args.
 ci = CommandInterface![
-    ArgInfo[String]('foo', StringArray!['-f'], false, null),
+    ArgInfo[String]('foo', StringArray!['-f'], false, null, 'docs'),
 ];
 result = ci.parseArgs(StringArray!['-f', 'val']);
 @assert(ArgVal[String].cast(result['foo']).val == 'val');
@@ -106,7 +107,7 @@ try {
 
 # Invalid argument for a bool.
 ci = CommandInterface![
-    ArgInfo[bool]('foo', StringArray!['--flag'], false, null),
+    ArgInfo[bool]('foo', StringArray!['--flag'], false, null, 'docs'),
 ];
 result = ci.parseArgs(StringArray!['--flag=true']);
 @assert(ArgVal[bool].cast(result['foo']).val);
@@ -120,7 +121,7 @@ try {
 # Unknown flag in a singla dash flag cluster.
 try {
     ci = CommandInterface![
-        ArgInfo[bool]('foo', StringArray!['-f'], false, null),
+        ArgInfo[bool]('foo', StringArray!['-f'], false, null, 'docs'),
     ];
     ci.parseArgs(StringArray!['-fl']);
     @assert(false);
@@ -158,7 +159,7 @@ try {
 # Non-integer value given to integer argument.
 try {
     ci = CommandInterface![
-        ArgInfo[int]('arg', null, false, 0)
+        ArgInfo[int]('arg', null, false, 0, 'docs')
     ];
     ci.parseArgs(StringArray!['not an integer']);
     @assert(false && 'illegal integer value does not throw an exception');
@@ -169,8 +170,8 @@ try {
 # Adding an argument after a multi gives an error.
 try {
     ci = CommandInterface![
-        ArgInfo[int]('arg', null, false, 0, true),
-        ArgInfo[int]('extra', null, false, 0),
+        ArgInfo[int]('arg', null, false, 0, true, 'docs'),
+        ArgInfo[int]('extra', null, false, 0, 'docs'),
     ];
     @assert(false && 'No exception adding an arg after a multi-arg');
 } catch (AssertionError ex) {
@@ -231,8 +232,42 @@ if (true) {
     @assert(inst.arg && inst.arg.val == 'someval');
 }
 
+if (true) {
+    ## This is a command comment.
+    @command void foo(
+        ## First argument.
+        String arg1,
+
+        ## Set this flag to do something awesome.
+        @flag('-f') bool flag = false,
+        @subcmd
+    ) {
+    }
+
+    addHelpCommand(foo_subcmds, foo());
+    oldCout := cout;
+    cout = tmp := StringFormatter();
+    foo(StringArray!['toot', 'help']);
+    cout = oldCout;
+    @assert(
+        tmp.string() ==
+         I'foo <arg1> <command>
+            This is a command comment.
+
+           arg1
+              First argument.
+
+           Flags:
+           -f
+              Set this flag to do something awesome.
+
+           Subcommands:
+             help -- Show this help message.
+           ');
+}
+
 cerr `ok\n`;
 
-%%EXPECT%%
-ok
-%%STDIN%%
+#%%EXPECT%%
+#ok
+#%%STDIN%%

@@ -6,15 +6,15 @@
 ## "--no-flag" are all legal.  Note that there is no way to negate a single
 ## character boolean flag.
 
-import crack.ascii parseInt, toLower;
+import crack.ascii parseInt, strip, toLower;
 import crack.cont.array Array;
 import crack.cont.hashmap HashMap;
 import crack.cont.treemap TreeMap;
 import crack.functor Functor1;
 import crack.io cerr, FStr, Formatter;
-import crack.lang AssertionError, Exception, InvalidStateError;
+import crack.lang AppendBuffer, AssertionError, Exception, InvalidStateError;
 import crack.regex Regex;
-import crack.strutil StringArray;
+import crack.strutil split, StringArray;
 
 @import crack.ann assert, cvars, define, impl, implements, interface, struct;
 
@@ -79,6 +79,9 @@ alias ValueMap = HashMap[String, ArgValBase];
         ## If true, this argument overrides processing for the remainder of
         ## the command line.
         bool override;
+
+        ## Documentation extracted from doc-comments.
+        String docs;
     }
 
     @abstract Class getType();
@@ -120,6 +123,26 @@ alias ValueMap = HashMap[String, ArgValBase];
     ## Returns the name of the arg-parser (used by subcommands, for toplevel
     ## commands this is not used).
     @abstract String getName();
+
+    ## Returns a single sentence summary of the command.
+    @abstract String getBrief();
+
+    ## Return the brief given the complete multi-line docs.  This will be the
+    ## docs up to the first newline.
+    @static String _makeBrief(String docs) {
+        result := AppendBuffer(100);
+        lines := split(docs, b'\n');
+        for (line :in lines) {
+            line = strip(line);
+            if (!line)
+                break;
+            if (result)
+                result.append(b' ');
+            result.extend(line);
+        }
+
+        return String(result, true);
+    }
 
     @final bool oper >=(ArgParser other) {
         return this.oper from ArgParser().cmp(other) >= 0;
@@ -178,17 +201,23 @@ alias ActionFunc = Functor1[void, ValueMap];
     T defaultValue;
 
     oper init(String name, StringArray flagNames, bool hasDefaultValue,
-              T defaultValue
+              T defaultValue,
+              String docs
               ) :
-        ArgInfoBase(name, null, flagNames, hasDefaultValue, false, false),
+        ArgInfoBase(name, null, flagNames, hasDefaultValue, false, false,
+                    docs
+                    ),
         defaultValue = defaultValue {
     }
 
     oper init(String name, StringArray flagNames, bool hasDefaultValue,
               T defaultValue,
-              bool multi
+              bool multi,
+              String docs
               ) :
-        ArgInfoBase(name, null, flagNames, hasDefaultValue, multi, false),
+        ArgInfoBase(name, null, flagNames, hasDefaultValue, multi, false,
+                    docs
+                    ),
         defaultValue = defaultValue {
     }
 
@@ -254,12 +283,12 @@ bool convertToBool(String val) {
     TreeMap[String, ArgParser] commands;
 
     oper init() :
-        ArgInfoBase('', __FakeConverter(), null, false, false, true),
+        ArgInfoBase('command', __FakeConverter(), null, false, false, true, ''),
         commands() {
     }
 
     oper init(TreeMap[String, ArgParser] commands) :
-        ArgInfoBase('', __FakeConverter(), null, false, false, true),
+        ArgInfoBase('command', __FakeConverter(), null, false, false, true, ''),
         commands = commands {
     }
 
@@ -286,7 +315,13 @@ bool convertToBool(String val) {
     ArgValBase makeArgVal(String val) { return null }
     ArgValBase makeDefaultValue() { return null }
     void addNewVal(ArgValBase curVal, String val) {}
-    void formatTo(Formatter out) { out `subcmd` }
+
+    void formatTo(Formatter out) {
+        for (cmdEnt :in commands) {
+            cmd := cmdEnt.val;
+            out `$(cmd.oper to Object())\n`;
+        }
+    }
 }
 
 @final class CommandInterface @impl ArgParser {
@@ -306,6 +341,12 @@ bool convertToBool(String val) {
     ## Optional function to be called when the argument list is parsed.
     ## Nullable.
     ActionFunc action;
+
+    ## Command name.
+    String __name;
+
+    ## Command documentation.
+    String docs;
 
     void __initConverters() {
         converters[uintz(String)] = stringConv :=
@@ -330,12 +371,22 @@ bool convertToBool(String val) {
         __initConverters();
     }
 
+    ## Returns the subcommands ArgInfo object (if any) or null if not.
+    SubcommandArgInfo getSubcommand() {
+        if (!positional)
+            return null;
+        return SubcommandArgInfo.cast(positional[-1], null);
+    }
+
     void addConverters(Array[ConverterBase] newConverters) {
         for (conv :in newConverters)
             converters[uintz(conv.getType())] = conv;
     }
 
-    oper init(Array[ConverterBase] converters) {
+    oper init(String name, Array[ConverterBase] converters, String docs) :
+        __name = name,
+        docs = docs {
+
         __initConverters();
         if (converters)
             addConverters(converters);
@@ -387,8 +438,17 @@ bool convertToBool(String val) {
                                              );
                 if (action)
                     action(result);
-                # TODO: maybe add subcommand args to the result?
-                return result;
+
+                # We set the value for the subcommand argument to the value
+                # map parsed from the subcommand.  This lets us do normal
+                # verification that the command is present and also gives the
+                # parent command access to the child commands arguments.
+                result[argInfo.name] = ArgVal[ValueMap](subargs);
+
+                # We do a "break" here to get out of the arg processing
+                # loop.  We can't simply return because we still need to fill
+                # in any missing optionals.  DON'T BREAK THIS.
+                break;
             }
             if (argInfo.multi && (curVal := result.get(argInfo.name))) {
                 argInfo.addNewVal(curVal, value);
@@ -519,5 +579,41 @@ bool convertToBool(String val) {
         return result;
     }
 
-    String getName() { return '' }
+    String getName() { return __name }
+
+    String getBrief() { return _makeBrief(docs) }
+
+    void formatTo(Formatter out) {
+        out.write(docs);
+        for (arg :in positional) {
+            if (subcmd := SubcommandArgInfo.cast(arg, null))
+                out `$subcmd\n`;
+            else
+                out `$(arg.name)\n- $(arg.docs)\n`;
+        }
+        for (flagEntry :in flags) {
+            arg := flagEntry.val;
+            out `$(arg.name)\n- $(arg.docs)\n`;
+        }
+    }
+}
+
+## Interface implemented by user commands defined using the @command
+## annotation.
+@interface CommandArgParser : ArgParser {
+
+    ## Facade that guards the internal objects, including the
+    ## CommandInterface.  See oper call() below, which makes this
+    ## object accessible to users of the data class.
+    class Internals {
+        CommandInterface __ci;
+
+        oper init(CommandInterface ci) : __ci = ci {}
+
+        CommandInterface getCommandInterface() {
+            return __ci;
+        }
+    }
+
+    @abstract Internals oper !();
 }

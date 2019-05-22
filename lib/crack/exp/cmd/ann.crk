@@ -4,7 +4,9 @@ import crack.ann deserializeNodeList, deserializeXMac, readBlock, Node,
     NodeList, NodeListImpl, Tok, Type;
 import crack.compiler CrackContext, Token, TOK_IDENT, TOK_NULLKW, TOK_STRING;
 import crack.cont.array Array;
-import crack.io cerr, FStr;
+import crack.io cerr, Formatter, FStr;
+import crack.lang AppendBuffer, CString;
+import crack.runtime strlen;
 import crack.strutil StringArray;
 
 @import crack.ann assert, cvars, tokens, xmac;
@@ -126,6 +128,7 @@ class Arg {
         Array[Tok] flags;
         Token default;
         bool multi;
+        String desc;
     }
 
     @final bool isSubcmd() { return !type }
@@ -137,7 +140,7 @@ class Arg {
     ## For subcommands, we usurp this object to store just the name of the
     ## variable bound to a SubcommandArgInfo object.
     @static Arg subcmd(Token variable) {
-        return Arg(null, variable, null, null, false);
+        return Arg(null, variable, null, null, false, null);
     }
 }
 
@@ -196,10 +199,15 @@ NodeList emitFieldsAsArgInfoArray(Array[Arg] args) {
                                   );
         multi := arg.multi ? @tokens { true } : @tokens { false };
 
+        argDocs := Token(TOK_STRING, CString(arg.desc).buffer,
+                         arg.name.getLocation()
+                         );
+
         elems = @xmac* {
             $elems
             ArgInfo[$type]($name, $flagsArr, $hasDefaultValue, $defaultValue,
-                           $multi),
+                           $multi,
+                           $argDocs),
         }.expand();
     }
 
@@ -245,12 +253,45 @@ NodeList emitFieldAssignments(Array[Arg] args) {
     return result;
 }
 
+## Documentation accumulator.  Use this to collect documentation tokens in an
+## annotation.
+##
+## This is a solution for a problem we shouldn't have.  Unfortunately,
+## CrackContext.getToken() returns doc-comments that it encounters by default,
+## meaning that all annotations really should be dealing with them.
+##
+## This isn't good enough for crack.ann yet.  It loses doc comment tokens
+## during putback.
+class _DocAccum {
+    AppendBuffer __curDocs = AppendBuffer(256);
+    CrackContext __ctx;
+    oper init(CrackContext ctx) : __ctx = ctx {}
+
+    Token getToken() {
+        tok := __ctx.getToken();
+        while (tok.isDoc()) {
+            txt := tok.getText();
+            __curDocs.extend(txt, strlen(txt));
+            tok = __ctx.getToken();
+        }
+        return tok;
+    }
+
+    String consumeDocs() {
+        return String(__curDocs, true);
+    }
+}
+
+
 ## A command-line command.
 ## Usage:
-##    import crack.cmd ArgInfo, ArgVal, CommandInterface, ConverterBase;
+##    import crack.cont.array Array;
+##    import crack.exp.cmd ArgInfo, ArgInfoBase, ArgParser, ArgVal,
+##        CommandInterface, ConverterBase, ValueMap;
 ##    import crack.cont.treemap TreeMap;
 ##    import crack.strutil StringArray;
-##    @import crack.ann command;
+##    @import crack.ann impl;
+##    @import crack.exp.cmd.ann command;
 ##
 ##    ## This is a doc-comment, which is preserved.
 ##    @command int foo(String positionalArg,
@@ -274,6 +315,7 @@ NodeList emitFieldAssignments(Array[Arg] args) {
 ##         ("parent" by default).
 
 void command(CrackContext ctx) {
+    commandDocs := String(ctx.consumeDocs(), true);
     tok := ctx.getToken();
     commandArgs := CommandArgs();
     if (tok.isLParen())
@@ -291,10 +333,11 @@ void command(CrackContext ctx) {
     tok = ctx.getToken();
     if (!tok.isLParen())
         ctx.error(tok, 'arg list expected'.buffer);
+    dcx := _DocAccum(ctx);
 
     args := Array[Arg]();
     bool isParentCommand;
-    tok = ctx.getToken();
+    tok = dcx.getToken();
     while (!tok.isRParen()) {
         Array[Tok] flagNames;
         bool multi;
@@ -302,7 +345,7 @@ void command(CrackContext ctx) {
 
         # Check for annotations.
         while (tok.isAnn()) {
-            tok = ctx.getToken();
+            tok = dcx.getToken();
             if (!tok.isIdent())
                 ctx.error(tok, 'Identifier expected in annotation'.buffer);
 
@@ -320,7 +363,7 @@ void command(CrackContext ctx) {
                 ctx.error(tok, 'Unknown arg annotation.'.buffer);
             }
 
-            tok = ctx.getToken();
+            tok = dcx.getToken();
         }
 
         # Parse the argument (unless we got an annotation that doesn't modify
@@ -330,23 +373,26 @@ void command(CrackContext ctx) {
             ctx.putBack(tok);
             Type.parse(ctx, argType);
 
-            arg := ctx.getToken();
+            arg := dcx.getToken();
             if (!tok.isIdent())
                 ctx.error(tok, 'identifier expected in arg list'.buffer);
 
             # Check for a default value.
-            tok = ctx.getToken();
+            tok = dcx.getToken();
             Token default;
             if (tok.isAssign()) {
-                default = ctx.getToken();
-                tok = ctx.getToken();
+                default = dcx.getToken();
+                tok = dcx.getToken();
             }
 
-            args.append(Arg(argType, arg, flagNames, default, multi));
+            args.append(Arg(argType, arg, flagNames, default, multi,
+                            dcx.consumeDocs()
+                            )
+                        );
         }
 
         if (tok.isComma())
-            tok = ctx.getToken();
+            tok = dcx.getToken();
         else if (!tok.isRParen())
             ctx.error(tok, 'comma, default value or end paren expected'.buffer);
     }
@@ -400,17 +446,32 @@ void command(CrackContext ctx) {
         convertersBinder = @tokens { null };
     }
 
+    commandDocsTok := Token(TOK_STRING, commandDocs.buffer,
+                            name.getLocation()
+                            );
+
     @xmac* {
         $subcommandVarDef
-        class $name @impl ArgParser {
+        class $name @impl CommandArgParser {
             $fieldsAsInstVars
             $parentInstVar
+            Array[ConverterBase] __converters;
+
+            @final CommandInterface __createCommandInterface() {
+                ci := CommandInterface($nameStr, __converters, $commandDocsTok);
+                ci.addArgs(Array[ArgInfoBase]!$fieldsAsArgInfoArray);
+                return ci;
+            }
+
+            @final CommandInterface getCommandInterface() {
+                return __createCommandInterface();
+            }
 
             @final void __init(Array[String] args,
                                Array[ConverterBase] converters
                                ) {
-                ci := CommandInterface(converters);
-                ci.addArgs(Array[ArgInfoBase]!$fieldsAsArgInfoArray);
+                __converters = converters;
+                ci := __createCommandInterface();
 
                 argVals := ci.parseArgs(args);
                 $fieldAssignments
@@ -428,12 +489,16 @@ void command(CrackContext ctx) {
                 $fieldAssignments
             }
 
+            Internals oper !() {
+                return Internals(__createCommandInterface());
+            }
+
             oper init() {}
 
             $returnType oper call() $block
 
             ValueMap parseArgs(Array[String] args, ValueMap parentVals) {
-                ci := CommandInterface!$fieldsAsArgInfoArray;
+                ci := __createCommandInterface();
                 argVals := ci.parseArgs(args);
                 $parentConstruction;
                 $fieldAssignments
@@ -442,6 +507,7 @@ void command(CrackContext ctx) {
             }
 
             String getName() { return $nameStr }
+            String getBrief() { return _makeBrief($commandDocsTok) }
         }
         $parentBinder
     }.expand(ctx);

@@ -1,0 +1,129 @@
+## Command documentation renderer.
+
+import crack.cont.array Array;
+import crack.exp.cmd ArgInfo, ArgInfoBase, ArgParser, ArgVal,
+    CommandArgParser, CommandInterface, ConverterBase, SubcommandArgInfo,
+    ValueMap;
+import crack.cont.treemap TreeMap;
+import crack.io cout, cerr, Formatter;
+import crack.lang KeyError;
+import crack.strutil StringArray;
+
+@import crack.ann impl;
+@import crack.exp.cmd.ann command;
+
+void formatDocs(Formatter out, CommandInterface command) {
+    out `$(command.getName())`;
+    for (arg :in command.positional) {
+        out ` <$(arg.name)>`;
+    }
+    out `\n`;
+
+    out `$(command.docs)\n`;
+    SubcommandArgInfo subcmd;
+    for (arg :in command.positional) {
+        # Render docs on all of the arguments except subcommands, save those
+        # for later.
+        if (!(subcmd = SubcommandArgInfo.cast(arg, null)))
+            out `$(arg.name)\n  $(arg.docs)\n`;
+    }
+
+    if (command.flags) {
+        out `Flags:\n`;
+        for (flagEntry :in command.flags) {
+            arg := flagEntry.val;
+
+            bool first = true;
+            for (name :in arg.flagNames) {
+                if (!first)
+                    out `, `;
+                else
+                    first = false;
+                out `$name`;
+                if (!arg.isBool())
+                    out ` <$(arg.name)>`;
+            }
+            out `\n  $(arg.docs)\n`;
+        }
+    }
+
+    if (subcmd) {
+        out `Subcommands:\n`;
+        for (arg :in subcmd.commands) {
+            # TODO: split into words and stream indented.
+            out `  $(arg.key) -- $(arg.val.getBrief())\n`;
+        }
+    }
+}
+
+const HELP_HELP := 'Show this help message.';
+
+## Add a help subcommand to a main command.  If the main command is called
+## "main" and defined by the @command annotation, typical use of this would be:
+##
+##      addHelpCommand(main_subcmds, main());
+void addHelpCommand(TreeMap[String, ArgParser] parentCmds,
+                    CommandArgParser parent
+                    ) {
+    class HelpCommand @impl CommandArgParser {
+        String command;
+        CommandArgParser parent;
+        Array[ConverterBase] __converters;
+
+        @final CommandInterface __createCommandInterface() {
+            ci := CommandInterface('help', __converters, HELP_HELP);
+            ci.addArgs(Array[ArgInfoBase]![
+                        ArgInfo[String]('command', null, true, null,
+                        false,
+                        'Command to get help on.'),
+                       ]);
+            return ci;
+        }
+
+        @final CommandInterface getCommandInterface() {
+            return __createCommandInterface();
+        }
+
+        @final void __init(Array[String] args,
+                           Array[ConverterBase] converters
+                           ) {
+            __converters = converters;
+            ci := __createCommandInterface();
+
+            argVals := ci.parseArgs(args);
+            command = ArgVal[String].cast(argVals['command']).val;
+        }
+
+        Internals oper !() {
+            return Internals(__createCommandInterface());
+        }
+
+        oper init(CommandArgParser parent) : parent = parent {}
+
+        void oper call() {
+            if (command) {
+                subcmd := (!parent).getCommandInterface().getSubcommand();
+                try {
+                    cmd := CommandArgParser.cast(subcmd.commands[command]);
+                    formatDocs(cout, (!cmd).getCommandInterface());
+                    return;
+                } catch (KeyError ex) {
+                    cerr `Unkonwn command: $command\n`;
+                }
+            }
+            formatDocs(cout, (!parent).getCommandInterface());
+        }
+
+        ValueMap parseArgs(Array[String] args, ValueMap parentVals) {
+            ci := __createCommandInterface();
+            argVals := ci.parseArgs(args);
+            command = ArgVal[String].cast(argVals['command']).val;
+            this();
+            return argVals;
+        }
+
+        String getName() { return 'help' }
+        String getBrief() { return HELP_HELP }
+    }
+    parentCmds['help'] = HelpCommand(parent);
+}

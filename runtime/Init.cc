@@ -790,7 +790,7 @@ extern "C" void crack_runtime_cinit(Module *mod) {
     f = mod->addFunc(voidType, "free", (void *)free, "free");
     f->addArg(voidptrType, "size");
 
-    f = mod->addFunc(voidType, "strcpy", (void *)strcpy, "strcpy");
+    f = mod->addFunc(byteptrType, "strcpy", (void *)strcpy, "strcpy");
     f->addArg(byteptrType, "dst");
     f->addArg(byteptrType, "src");
 

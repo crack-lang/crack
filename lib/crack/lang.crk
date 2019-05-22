@@ -721,6 +721,16 @@ class String : Buffer {
                ) {
     }
 
+    ## Initialize from a null-terminated c-string and optionally take
+    ## ownership.
+    oper init(byteptr cString, bool takeOwnership) :
+        Buffer(null, strlen(cString)) {
+        if (takeOwnership)
+            buffer = cString;
+        else
+            buffer = strcpy(malloc(size + 1), cString);
+    }
+
     ## Initialize from a null-terminated c-string
     oper init(byteptr cString) : Buffer(null, strlen(cString)) {
         buffer = malloc(size + 1);
