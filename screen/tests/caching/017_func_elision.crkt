@@ -3,7 +3,6 @@ elided function caching
 %%ARGS%%
 %%FILE%%
 # Verify that functions defined with "delete" are cached correctly.
-import crack.io cerr;
 class A : VTableBase {
   oper bind() { puts("bind called") }
 }
@@ -13,7 +12,7 @@ class B : A {
 }
 
 b := B();
-cerr `ok\n`;
+puts('ok');
 %%EXPECT%%
 ok
 %%STDIN%%
