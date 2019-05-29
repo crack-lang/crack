@@ -8,6 +8,11 @@ appBuf := AppendBuffer(1024);
 appBuf.extend('some data');
 foo := FooBuffer(appBuf.buffer, appBuf.size);
 
+if (true) {
+    # Nested module contexts require some special lookups.
+    cout;
+}
+
 cout `ok: $foo\n`;
 # Note that func() uses the print() function, which appears to use its own
 # buffers and doesn't flush as quickly as the interpolation string on cout, so

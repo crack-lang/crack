@@ -1034,8 +1034,16 @@ VarDefPtr Context::lookUp(const std::string &varName, Namespace *srcNs) {
         srcNs = ns.get();
     VarDefPtr def = srcNs->lookUp(varName);
 
-    if (!def)
-        def = getModuleContext()->maybeLazyImport(varName);
+    if (!def) {
+        // Try to do a lazy import.  Note that we have to get the toplevel
+        // module context, as statements in the global module scope are also
+        // in module contexts.  Toplevel module contexts are normally defined
+        // as toplevel (there seem to be some esoteric cases where they are
+        // not).
+        ContextPtr mod = getModuleContext()->getToplevel();
+        if (mod)
+            def = mod->maybeLazyImport(varName);
+    }
 
     // if we got an overload, we may need to create an overload in this
     // context.  (we can get away with checking the owner because overloads
