@@ -110,6 +110,12 @@ class CrackContext {
         static void _continueIString(CrackContext *inst);
         static const Def *_getLocalDefs(CrackContext *inst);
         static char *_consumeDocs(CrackContext *inst);
+        static void _addLazyImport(CrackContext *inst,
+                                   const char *module,
+                                   const char *localName,
+                                   const char *sourceName,
+                                   bool rawSharedLib
+                                   );
 
     public:
         enum Event { funcEnter, funcLeave };
@@ -275,6 +281,14 @@ class CrackContext {
          * free it.
          */
         char *consumeDocs() const;
+
+        /**
+         * Adds a new lazy import to the context (see model/Context.h).
+         */
+        void addLazyImport(const char *module, const char *localName,
+                           const char *sourceName,
+                           bool rawSharedLib
+                           );
 
         /**
          * This is a back-door for things like the compiler-defined "export"

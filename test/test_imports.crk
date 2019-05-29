@@ -1,0 +1,11 @@
+
+import crack.compiler CrackContext;
+@import crack.ann auto_imports;
+
+@auto_imports {
+    crack.lang AppendBuffer, FooBuffer = Buffer;
+    crack.io cout;
+
+    # Test relative imports (this works if the cwd is the source root).
+    .test.testmod2 func;
+}

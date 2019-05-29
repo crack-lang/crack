@@ -1845,6 +1845,123 @@ NodeList makeNodeList(Token tok) {
     return NodeListImpl![Tok(tok)];
 }
 
+## Get an identifier, give a parse error if we got something else.
+Token getIdent(CrackContext ctx) {
+    tok := ctx.getToken();
+    if (!tok.isIdent())
+        ctx.error(tok, 'Identifier expected.'.buffer);
+    return tok;
+}
+
+Token _parseModuleName(CrackContext ctx) {
+    modNameFmt := StringFormatter();
+    modFirstTok := ctx.getToken();
+    Token tok;
+    if (modFirstTok.isDot()) {
+        modNameFmt `.`;
+        tok = getIdent(ctx);
+    } else if (modFirstTok.isIdent()) {
+        tok = modFirstTok;
+    } else {
+        ctx.error(tok, 'Identifier or period expected.'.buffer);
+    }
+    modNameFmt.format(tok.getText());
+
+    while (true) {
+        tok = ctx.getToken();
+        if (!tok.isDot()) {
+            ctx.putBack(tok);
+            break;
+        }
+
+        modNameFmt `.$(getIdent(ctx).getText())`;
+    }
+    modNameFmt `\0`;
+    return Token(TOK_STRING, modNameFmt.string().buffer,
+                 modFirstTok.getLocation()
+                 );
+}
+
+## Auto imports.  This generates an "auto_import" annotation function that
+## registers lazy imports for all of the names defined in it.
+##
+## Names and modules are identified with the syntax of the "import" statement,
+## minus the "import" keyword itself:
+##
+##  @auto_imports {
+##      module.name Import, OtherImport;
+##      other.module AnotherName, AliasedName = Name;
+##  }
+##
+## To use it, simply @import the module and use the auto_import annotation:
+##
+##  @import imports auto_import; @auto_import
+void auto_imports(CrackContext ctx) {
+    tok := ctx.getToken();
+    if (!tok.isLCurly())
+        ctx.error(tok, 'Curly brace expected.'.buffer);
+
+    class Import {
+        Token moduleName, localName, sourceName;
+        oper init(Token moduleName, Token localName, Token sourceName) :
+            moduleName = moduleName,
+            localName = localName,
+            sourceName = sourceName {
+        }
+    }
+    imports := Array[Import]();
+
+    while (true) {
+        moduleName := _parseModuleName(ctx);
+
+        while (true) {
+            sourceName := localName := getIdent(ctx);
+            tok = ctx.getToken();
+            if (tok.isAssign()) {
+                sourceName = getIdent(ctx);
+                tok = ctx.getToken();
+            }
+
+            imports.append(
+                Import(
+                    moduleName,
+                    Token(TOK_STRING, localName.getText(),
+                          localName.getLocation()),
+                    Token(TOK_STRING, sourceName.getText(),
+                          sourceName.getLocation())
+                )
+            );
+
+            if (tok.isSemi())
+                break;
+            else if (!tok.isComma())
+                ctx.error(tok, 'Semicolon or comma expected'.buffer);
+        }
+
+        # Parse the closing curly.
+        tok = ctx.getToken();
+        if (tok.isRCurly())
+            break;
+        ctx.putBack(tok);
+    }
+
+    ctx.inject(@FILE.buffer, @LINE, '}'.buffer);
+    for (imp :in imports) {
+        # "ctx.addLazyImport($module.buffer, $localName.buffer, $sourceName.buffer,
+        #                    false);
+        ctx.inject(@FILE.buffer, @LINE, '.buffer, false);'.buffer);
+        ctx.putBack(imp.sourceName);
+        ctx.inject(@FILE.buffer, @LINE, '.buffer, '.buffer);
+        ctx.putBack(imp.localName);
+        ctx.inject(@FILE.buffer, @LINE, '.buffer, '.buffer);
+        ctx.putBack(imp.moduleName);
+        ctx.inject(@FILE.buffer, @LINE, 'ctx.addLazyImport('.buffer);
+    }
+    ctx.inject(@FILE.buffer, @LINE,
+               'void auto_import(CrackContext ctx) {'.buffer
+               );
+}
+
 ## Expands the sanitized scope name as a string.
 ## This converts the "main script" scope name to simply ".main".
 void SCOPE_NAME(CrackContext ctx) {

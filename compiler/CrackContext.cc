@@ -267,6 +267,13 @@ char *CrackContext::consumeDocs() const {
     return stringToChars(docs);
 }
 
+void CrackContext::addLazyImport(const char *module, const char *localName,
+                                 const char *sourceName,
+                                 bool rawSharedLib
+                                 ) {
+    context->addLazyImport(module, localName, sourceName, rawSharedLib);
+}
+
 void CrackContext::_inject(CrackContext *inst, char *sourceName, int lineNumber,
                            char *code
                            ) {
@@ -396,4 +403,13 @@ const Def *CrackContext::_getLocalDefs(CrackContext *inst) {
 
 char *CrackContext::_consumeDocs(CrackContext *inst) {
     return inst->consumeDocs();
+}
+
+void CrackContext::_addLazyImport(CrackContext *inst,
+                                  const char *module,
+                                  const char *localName,
+                                  const char *sourceName,
+                                  bool rawSharedLib
+                                  ) {
+    inst->addLazyImport(module, localName, sourceName, rawSharedLib);
 }

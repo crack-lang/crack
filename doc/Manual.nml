@@ -3165,6 +3165,42 @@ set of interdependent modules as a set of modules in the top-level directory:
 the user can simply unpack this directory into any location in their module
 path.
 
+Auto-imports
+''''''''''''
+
+It's generally preferable for a programmer to not have to deal with imports at
+all: as long as names are unique (or can be given unique aliases) within the
+scope of a project, it is much easier to simple define all of the imports in a
+common module and be done with them.  The auto-import annotation allows us to
+do this.  For example, we can define an a "`my_imports`" module as such:
+
+{{
+    import crack.compiler CrackContext;
+    @import crack.ann auto_imports;
+    @auto_imports {
+        crack.lang AppendBuffer, Buffer, Exception;
+        crack.io cin, cout, cerr, StringFormatter;
+    }
+}}
+
+And then use it from another module as follows:
+
+{{
+    @import my_imports @auto_import; @auto_import;
+
+    cout `We can use cout without importing it!\n`;
+}}
+
+#`auto_imports`# registers the modules and symbols as /lazy import/.  These
+modules are only imported if the names are referenced but undefined in the
+module using #`auto_import`#.
+
+The contents of an #`@auto_imports`# block is a list of import statements
+without the import keyword (since these are the only things allowed in the
+block, there is no need to distinguish them.
+
+See \X(Annotations) below for more general information on this concept.
+
 Protocols
 ---------
 
@@ -4260,6 +4296,13 @@ are expanded to the variable definition list and the constructor:
 }}
 
 This form allows inheritence and the definition of other methods.
+
+Other standard annotations
+''''''''''''''''''''''''''
+
+The standard annotation module contains other annotations as well.  See
+\X(Auto-imports) for information on automating lazy-imports.  See
+\X(Interfaces) for information on the #@interface# annotation.
 
 Annotations in Generics
 '''''''''''''''''''''''
@@ -6634,7 +6677,7 @@ After this, running "#command help#" will produce a help message with the
 command documentation, including documentation on flags and subcommands.
 Running "#command help /subcommand/#" will provide help on /subcommand/.
 
-The Legacy #crack.cmdline Module
+The Legacy #crack.cmdline# Module
 ''''''''''''''''''''''''''''''''
 
 The #crack.cmdline# module also allows you to do options processing.  It

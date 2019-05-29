@@ -101,6 +101,20 @@ void Context::showSourceLoc(const Location &loc, ostream &out) {
 
 }
 
+VarDefPtr Context::maybeLazyImport(const std::string &name) {
+    map<string, ImportInfo>::iterator iter = lazyImports.find(name);
+    if (iter != lazyImports.end()) {
+        emitImport(ns.get(), iter->second.moduleName, iter->second.imports,
+                   false,
+                   false,
+                   iter->second.rawSharedLib
+                   );
+        return ns->lookUp(name);
+    }
+
+    return 0;
+}
+
 void Context::warnOnHide(const string &name) {
     if (ns->lookUp(name))
         cerr << loc.getName() << ":" << loc.getLineNumber() << ": " <<
@@ -1020,6 +1034,9 @@ VarDefPtr Context::lookUp(const std::string &varName, Namespace *srcNs) {
         srcNs = ns.get();
     VarDefPtr def = srcNs->lookUp(varName);
 
+    if (!def)
+        def = getModuleContext()->maybeLazyImport(varName);
+
     // if we got an overload, we may need to create an overload in this
     // context.  (we can get away with checking the owner because overloads
     // are never aliased)
@@ -1309,6 +1326,31 @@ void Context::recordDependency(ModuleDef *module) {
     // indicate that our module depends on this other one.
     ContextPtr modCtx = getModuleContext();
     ModuleDefPtr::arcast(modCtx->ns->getModule())->recordDependency(module);
+}
+
+void Context::addLazyImport(const std::string &module,
+                            const std::string &localName,
+                            const std::string &sourceName,
+                            bool rawSharedLib
+                            ) {
+    vector<string> parsedName;
+    if (rawSharedLib) {
+        parsedName.push_back(module);
+    } else {
+        // Parse the module name.
+        size_t last = 0;
+        for (size_t pos; (pos = module.find('.', last)) != -1; ) {
+             parsedName.push_back(module.substr(last, pos - last));
+             last = pos + 1;
+        }
+        parsedName.push_back(module.substr(last));
+    }
+    lazyImports.emplace(localName,
+                        ImportInfo(parsedName,
+                                   ImportedDef(localName, sourceName),
+                                   rawSharedLib
+                                   )
+                        );
 }
 
 void Context::dump(ostream &out, const std::string &prefix) const {

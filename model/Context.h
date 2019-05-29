@@ -67,6 +67,22 @@ class Context : public spug::RCBase {
         // initializer for an empty location object
         static parser::Location emptyLoc;
 
+        struct ImportInfo {
+            const std::vector<std::string> moduleName;
+            ImportedDefVec imports;
+            const bool rawSharedLib;
+
+            ImportInfo(std::vector<std::string> moduleName,
+                       const ImportedDef &importDef,
+                       bool rawSharedLib
+                       ) :
+                    moduleName(moduleName),
+                    rawSharedLib(rawSharedLib) {
+                imports.push_back(importDef);
+            }
+        };
+        std::map<std::string, ImportInfo> lazyImports;
+
         // emit a variable definition with no error checking.
         VarDefPtr emitVarDef(Context *defCtx, TypeDef *type,
                              const std::string &name,
@@ -89,6 +105,11 @@ class Context : public spug::RCBase {
          * source line and caret position of the problem
          */
         void showSourceLoc(const parser::Location &loc, std::ostream &out);
+
+        /**
+         * Try to do a lazy import of 'hame', returns null if unable to do so.
+         */
+        VarDefPtr maybeLazyImport(const std::string &name);
 
     public:
 
@@ -577,6 +598,18 @@ class Context : public spug::RCBase {
          * like an implicit import of a dependent module.
          */
         void recordDependency(ModuleDef *module);
+
+        /**
+         * Record a lazy import for use in the context.  This should only be
+         * applied to module contexts.
+         *
+         * Lazy imports are loaded when an undefined symbol is referenced.
+         */
+        void addLazyImport(const std::string &module,
+                           const std::string &localName,
+                           const std::string &sourceName,
+                           bool rawSharedLib
+                           );
 
         void dump(std::ostream &out, const std::string &prefix) const;
         void dump();

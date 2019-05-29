@@ -546,6 +546,13 @@ void init(Module *mod) {
     cc->addMethod(mod->getByteptrType(), "consumeDocs",
                   (void *)CrackContext::_consumeDocs
                   );
+    f = cc->addMethod(mod->getByteptrType(), "addLazyImport",
+                      (void *)CrackContext::_addLazyImport
+                      );
+    f->addArg(mod->getByteptrType(), "module");
+    f->addArg(mod->getByteptrType(), "localName");
+    f->addArg(mod->getByteptrType(), "sourceName");
+    f->addArg(mod->getBoolType(), "rawSharedLib");
 
     cc->finish();
 
