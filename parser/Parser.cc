@@ -3307,6 +3307,8 @@ TypeDefPtr Parser::parseClassDef() {
       parseGenericParms(generic->parms);
       generic->ns = context->ns;
       context->collectCompileNSImports(generic->compileNSImports);
+      context->getModuleContext()->getToplevel()
+         ->collectLazyImports(generic->lazyImports);
       generic->seedCompileNS(*context);
       tok = getToken();
       generic->addToken(tok);

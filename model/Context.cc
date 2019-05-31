@@ -1211,6 +1211,14 @@ void Context::collectCompileNSImports(vector<ImportPtr> &imports) const {
         imports.push_back(*i);
 }
 
+void Context::collectLazyImports(
+    vector<Context::ImportInfo> &importInfo
+) const {
+    typedef map<string, ImportInfo> ImportInfoMap;
+    SPUG_FOR(ImportInfoMap, iter, lazyImports)
+        importInfo.push_back(iter->second);
+}
+
 namespace {
     struct ContextStack {
         const list<string> &stack;
@@ -1359,6 +1367,12 @@ void Context::addLazyImport(const std::string &module,
                                    rawSharedLib
                                    )
                         );
+}
+
+void Context::addLazyImport(const Context::ImportInfo &import) {
+    // Have to store it under all of the local names.
+    SPUG_FOR(ImportedDefVec, iter, import.imports)
+        lazyImports.emplace(iter->local, import);
 }
 
 void Context::dump(ostream &out, const std::string &prefix) const {

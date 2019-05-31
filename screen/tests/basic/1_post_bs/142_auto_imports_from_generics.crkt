@@ -1,0 +1,12 @@
+%%TEST%%
+auto imports from generics
+%%ARGS%%
+%%FILE%%
+@import test.test_imports auto_import; @auto_import;
+@import crack.ann assert;
+import test.testmod9 G;
+
+cout `$(G[int].fb.name)\n`;
+%%EXPECT%%
+Buffer
+%%STDIN%%

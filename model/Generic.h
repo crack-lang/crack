@@ -9,6 +9,7 @@
 #define _model_Generic_h_
 
 #include "parser/Token.h"
+#include "Context.h"
 #include "GenericParm.h"
 #include "Namespace.h"
 #include "VarDef.h"
@@ -40,6 +41,9 @@ class Generic {
 
         // The list of compile namespace imports.
         std::vector<ImportPtr> compileNSImports;
+
+        // The lazy imports of the original module.
+        std::vector<Context::ImportInfo> lazyImports;
 
         /** Add the token to the body. */
         void addToken(const parser::Token &tok) {

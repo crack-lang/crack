@@ -1,0 +1,19 @@
+
+@import test.test_imports auto_import; @auto_import;
+
+# A generic that does auto-imports.
+class G[T] {
+    alias fb = FooBuffer;
+}
+
+
+if (true) {
+
+    # Make sure this works in a nested context.
+    class G2[T] {
+        alias fb = FooBuffer;
+    }
+
+    class X {}
+    b := G2[X].fb(null, 0)
+}

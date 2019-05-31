@@ -51,6 +51,24 @@ SPUG_RCPTR(Context);
  * Holds everything relevant to the current parse context.
  */
 class Context : public spug::RCBase {
+    public:
+        // Defines the set of names needed to replicate an import for lazy
+        // importing.
+        struct ImportInfo {
+            const std::vector<std::string> moduleName;
+            ImportedDefVec imports;
+            const bool rawSharedLib;
+
+            ImportInfo(std::vector<std::string> moduleName,
+                       const ImportedDef &importDef,
+                       bool rawSharedLib
+                       ) :
+                    moduleName(moduleName),
+                    rawSharedLib(rawSharedLib) {
+                imports.push_back(importDef);
+            }
+        };
+
     private:
         // break, continue and catch branchpoints
         BranchpointPtr breakBranch, continueBranch, catchBranch;
@@ -67,20 +85,6 @@ class Context : public spug::RCBase {
         // initializer for an empty location object
         static parser::Location emptyLoc;
 
-        struct ImportInfo {
-            const std::vector<std::string> moduleName;
-            ImportedDefVec imports;
-            const bool rawSharedLib;
-
-            ImportInfo(std::vector<std::string> moduleName,
-                       const ImportedDef &importDef,
-                       bool rawSharedLib
-                       ) :
-                    moduleName(moduleName),
-                    rawSharedLib(rawSharedLib) {
-                imports.push_back(importDef);
-            }
-        };
         std::map<std::string, ImportInfo> lazyImports;
 
         // emit a variable definition with no error checking.
@@ -538,6 +542,11 @@ class Context : public spug::RCBase {
          */
         void collectCompileNSImports(std::vector<ImportPtr> &imports) const;
 
+        /**
+         * Collects the set of lazy imports into importInfo.
+         */
+        void collectLazyImports(std::vector<ImportInfo> &importInfo) const;
+
         // error/warning handling
 
         /**
@@ -610,6 +619,11 @@ class Context : public spug::RCBase {
                            const std::string &sourceName,
                            bool rawSharedLib
                            );
+
+        /**
+         * Adds a full lazy import structure.
+         */
+        void addLazyImport(const ImportInfo &info);
 
         void dump(std::ostream &out, const std::string &prefix) const;
         void dump();

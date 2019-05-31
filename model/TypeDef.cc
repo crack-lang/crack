@@ -1041,6 +1041,10 @@ void instantiateGeneric(TypeDef *type, Context &context, Context &localCtx,
     localCtx.ns->aliasAll(type->genericInfo->ns.get());
     localCtx.compileNS = type->genericInfo->compileNS;
 
+    // Add all of the lazy imports from the generic's module.
+    SPUG_FOR(vector<Context::ImportInfo>, iter, type->genericInfo->lazyImports)
+        localCtx.addLazyImport(*iter);
+
     // alias the template arguments to their parameter names
     for (int i = 0; i < types->size(); ++i)
         localCtx.ns->addAlias(type->genericInfo->parms[i]->name,
