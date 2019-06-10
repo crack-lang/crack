@@ -27,6 +27,7 @@ model/ResultExpr.cc
 model/Import.cc
 model/ImportedDef.cc
 model/Initializers.cc
+model/LazyImports.cc
 model/AllocExpr.cc
 model/CompositeNamespace.cc
 model/IntConst.cc

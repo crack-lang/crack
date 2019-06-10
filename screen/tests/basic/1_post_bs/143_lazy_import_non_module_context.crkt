@@ -1,0 +1,11 @@
+%%TEST%%
+lazy imports in a non-module context
+%%ARGS%%
+%%FILE%%
+if (true) {
+    @import test.test_imports auto_import;
+    @auto_import;
+}
+%%EXPECT%%
+ParseError: %SCRIPTNAME%:3:5: Attempted to add a lazy import to a non-module context.
+%%STDIN%%

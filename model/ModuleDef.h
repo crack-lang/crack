@@ -12,6 +12,7 @@
 #include <set>
 #include <vector>
 #include "util/SourceDigest.h"
+#include "LazyImports.h"
 #include "ModuleDefMap.h"
 #include "Namespace.h"
 #include "VarDef.h"
@@ -54,6 +55,9 @@ class ModuleDef : public VarDef, public Namespace {
 
         // Compile time dependencies.
         ModuleDefMap compileTimeDeps;
+
+        // Set of lazy imports associated with the module.
+        LazyImportsPtr lazyImports;
 
         void serializeAliases(model::Serializer &serializer,
                               bool privateAliases,
@@ -217,6 +221,15 @@ class ModuleDef : public VarDef, public Namespace {
         virtual NamespacePtr getNamespaceOwner();
         virtual ModuleDefPtr getModule();
         virtual bool isHiddenScope();
+
+        void addLazyImport(const std::string &moduleName,
+                           bool rawSharedLib,
+                           const ImportedDef &import);
+
+        LazyImports::ModuleImports getLazyImport(const std::string &name);
+
+        LazyImportsPtr getLazyImports() const { return lazyImports; }
+        void setLazyImports(LazyImports *imports) { lazyImports = imports; }
 
         /**
          * Parse a canonical module name, return it as a vector of name

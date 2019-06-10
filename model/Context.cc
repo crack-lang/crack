@@ -33,6 +33,7 @@
 #include "GlobalNamespace.h"
 #include "IntConst.h"
 #include "FloatConst.h"
+#include "LazyImports.h"
 #include "LocalNamespace.h"
 #include "ModuleDef.h"
 #include "NullConst.h"
@@ -102,12 +103,16 @@ void Context::showSourceLoc(const Location &loc, ostream &out) {
 }
 
 VarDefPtr Context::maybeLazyImport(const std::string &name) {
-    map<string, ImportInfo>::iterator iter = lazyImports.find(name);
-    if (iter != lazyImports.end()) {
-        emitImport(ns.get(), iter->second.moduleName, iter->second.imports,
+    ModuleDef *modDef = ModuleDefPtr::rcast(ns);
+    if (!modDef)
+        return 0;
+
+    LazyImports::ModuleImports import = modDef->getLazyImport(name);
+    if (import.exists()) {
+        emitImport(ns.get(), import.getModuleName(), import.getImports(),
                    false,
                    false,
-                   iter->second.rawSharedLib
+                   import.isRawSharedLib()
                    );
         return ns->lookUp(name);
     }
@@ -1211,14 +1216,6 @@ void Context::collectCompileNSImports(vector<ImportPtr> &imports) const {
         imports.push_back(*i);
 }
 
-void Context::collectLazyImports(
-    vector<Context::ImportInfo> &importInfo
-) const {
-    typedef map<string, ImportInfo> ImportInfoMap;
-    SPUG_FOR(ImportInfoMap, iter, lazyImports)
-        importInfo.push_back(iter->second);
-}
-
 namespace {
     struct ContextStack {
         const list<string> &stack;
@@ -1349,30 +1346,20 @@ void Context::addLazyImport(const std::string &module,
                             const std::string &sourceName,
                             bool rawSharedLib
                             ) {
-    vector<string> parsedName;
-    if (rawSharedLib) {
-        parsedName.push_back(module);
-    } else {
-        // Parse the module name.
-        size_t last = 0;
-        for (size_t pos; (pos = module.find('.', last)) != -1; ) {
-             parsedName.push_back(module.substr(last, pos - last));
-             last = pos + 1;
-        }
-        parsedName.push_back(module.substr(last));
-    }
-    lazyImports.emplace(localName,
-                        ImportInfo(parsedName,
-                                   ImportedDef(localName, sourceName),
-                                   rawSharedLib
-                                   )
-                        );
+    ModuleDefPtr mod = ModuleDefPtr::rcast(ns);
+    if (!mod)
+        error("Attempted to add a lazy import to a non-module context.");
+    mod->addLazyImport(module, rawSharedLib,
+                       ImportedDef(localName, sourceName)
+                       );
 }
 
-void Context::addLazyImport(const Context::ImportInfo &import) {
-    // Have to store it under all of the local names.
-    SPUG_FOR(ImportedDefVec, iter, import.imports)
-        lazyImports.emplace(iter->local, import);
+LazyImportsPtr Context::getLazyImports() const {
+    return ModuleDefPtr::arcast(ns)->getLazyImports();
+}
+
+void Context::setLazyImports(LazyImports *imports) {
+    ModuleDefPtr::arcast(ns)->setLazyImports(imports);
 }
 
 void Context::dump(ostream &out, const std::string &prefix) const {

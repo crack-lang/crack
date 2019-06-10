@@ -43,7 +43,7 @@ class Generic {
         std::vector<ImportPtr> compileNSImports;
 
         // The lazy imports of the original module.
-        std::vector<Context::ImportInfo> lazyImports;
+        LazyImportsPtr lazyImports;
 
         /** Add the token to the body. */
         void addToken(const parser::Token &tok) {

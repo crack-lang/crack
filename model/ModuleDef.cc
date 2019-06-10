@@ -180,6 +180,22 @@ bool ModuleDef::isHiddenScope() {
     return false;
 }
 
+void ModuleDef::addLazyImport(const std::string &moduleName,
+                              bool rawSharedLib,
+                              const ImportedDef &import
+                              ) {
+    if (!lazyImports)
+        lazyImports = new LazyImports();
+    lazyImports->addImport(moduleName, rawSharedLib, import);
+}
+
+LazyImports::ModuleImports ModuleDef::getLazyImport(
+    const std::string &localName
+) {
+    return lazyImports ? lazyImports->getImport(localName) :
+                         LazyImports::ModuleImports();
+}
+
 ModuleDef::StringVec ModuleDef::parseCanonicalName(const std::string &name) {
     StringVec result;
 
