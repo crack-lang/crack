@@ -7,10 +7,14 @@
 
 #include "LazyImports.h"
 
+#include <sstream>
+
 #include "spug/check.h"
 #include "spug/stlutil.h"
 #include "Deserializer.h"
 #include "ModuleDef.h"
+#include "NestedDeserializer.h"
+#include "ProtoBuf.h"
 #include "Serializer.h"
 #include "TypeDef.h"      // Required for RCPtr resolution.
 
@@ -65,8 +69,79 @@ LazyImports::ModuleImports LazyImports::getImport(const string &localName) {
 }
 
 void LazyImports::serialize(Serializer &serializer) {
+    SPUG_FOR(ImportsByModule, iter, byModule) {
+        ostringstream temp;
+        Serializer sub(serializer, temp);
+
+        // Serialize the module name components.
+        SPUG_FOR(vector<string>, nameIter, iter->second->getModuleName()) {
+            sub.write(CRACK_PB_KEY(1, string), "module.header");
+            sub.write(*nameIter, "module");
+        }
+
+        // Serialize the symbols
+        SPUG_FOR(ImportedDefVec, impIter, iter->second->getImports()) {
+            ostringstream temp2;
+            Serializer sub2(sub, temp2);
+            sub2.write(CRACK_PB_KEY(1, string), "sourceName.header");
+            sub2.write(impIter->source, "sourceName");
+            if (impIter->local != impIter->source) {
+                sub2.write(CRACK_PB_KEY(2, string), "localName.header");
+                sub2.write(impIter->local, "localName");
+            }
+
+            sub.write(CRACK_PB_KEY(2, string), "import.header");
+            sub.write(temp2.str(), "import");
+        }
+
+        serializer.write(CRACK_PB_KEY(2, string), "lazyImports.header");
+        serializer.write(temp.str(), "lazyImports");
+    }
 }
 
-LazyImportsPtr LazyImports::deserialize(Deserializer &deser) {
-    return 0;
+ImportedDef LazyImports::deserializeImportSymbol(Deserializer &deser) {
+    string local, source;
+    bool gotLocalName = false;
+    CRACK_PB_BEGIN(deser, 1024, importSymbol)
+        CRACK_PB_FIELD(1, string) {
+            source = importSymbolDeser.readString(32, "sourceName");
+            break;
+        }
+        CRACK_PB_FIELD(2, string) {
+            local = importSymbolDeser.readString(32, "localName");
+            gotLocalName = true;
+            break;
+        }
+    CRACK_PB_END
+    if (!gotLocalName)
+        local = source;
+    return ImportedDef(local, source);
+}
+
+void LazyImports::deserializeModuleImports(Deserializer &deser) {
+    ModuleImports *imports = 0;
+    vector<string> moduleName;
+    CRACK_PB_BEGIN(deser, 1024, lazyImports)
+        CRACK_PB_FIELD(1, string) {
+            // make sure we haven't created the ModuleImports object yet.
+            SPUG_CHECK(!imports,
+                       "bad serialization format: module name elements after "
+                       "import symbols."
+                       );
+            moduleName.push_back(lazyImportsDeser.readString(32, "module"));
+            break;
+        }
+        CRACK_PB_FIELD(2, string) {
+            if (!imports) {
+                imports = new ModuleImports(moduleName, false);
+                pair<string, bool> modId(
+                    ModuleDef::joinName(moduleName),
+                    false
+                );
+                byModule[modId] = imports;
+            }
+            addImportTo(*imports, deserializeImportSymbol(lazyImportsDeser));
+            break;
+        }
+    CRACK_PB_END
 }

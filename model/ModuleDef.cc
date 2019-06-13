@@ -17,6 +17,7 @@
 #include "NamespaceAliasTreeNode.h"
 #include "Context.h"
 #include "Deserializer.h"
+#include "Generic.h"
 #include "GenericModuleInfo.h"
 #include "NestedDeserializer.h"
 #include "OverloadDef.h"
@@ -31,11 +32,11 @@ using namespace crack::util;
 // Serialize all of the aliases in the module.  If 'privateAliases' is
 // true, just serialize the private aliases.  Otherwise just serialize the
 // public aliases.
-void ModuleDef::serializeAliases(Serializer &serializer,
-                                 bool privateAliases,
-                                 const char *optionalBlockName,
-                                 const char *aliasTreeName
-                                 ) {
+void ModuleDef::serializeOptional(Serializer &serializer,
+                                  bool privateAliases,
+                                  const char *optionalBlockName,
+                                  const char *aliasTreeName
+                                  ) {
     NamespaceAliasTreeNodePtr aliasTree = getAliasTree(privateAliases);
 
     // Add all of the slaves.
@@ -49,17 +50,24 @@ void ModuleDef::serializeAliases(Serializer &serializer,
         }
     }
 
-    // If we have an alias tree, write an optional block for it.
-    if (aliasTree) {
+    // If we have an alias tree or lazy imports, write an optional block for
+    // them.
+    if (aliasTree || lazyImports && privateAliases) {
         ostringstream temp;
         Serializer sub(serializer, temp);
 
         ostringstream temp2;
         Serializer sub2(sub, temp2);
-        aliasTree->serialize(sub2);
-        sub.write(CRACK_PB_KEY(1, string),
-                  (string(aliasTreeName) + ".header").c_str());
-        sub.write(temp2.str(), aliasTreeName);
+
+        if (aliasTree) {
+            aliasTree->serialize(sub2);
+            sub.write(CRACK_PB_KEY(1, string),
+                    (string(aliasTreeName) + ".header").c_str());
+            sub.write(temp2.str(), aliasTreeName);
+        }
+
+        if (privateAliases && lazyImports)
+            lazyImports->serialize(sub);
 
         serializer.write(temp.str(), optionalBlockName);
     } else {
@@ -361,16 +369,16 @@ void ModuleDef::serialize(Serializer &serializer) {
         serializer.write(iter->first, "exports");
 
     // Write all of the public aliases.
-    serializeAliases(serializer, false, "optional", "aliasTree");
+    serializeOptional(serializer, false, "optional", "aliasTree");
 
     // sign the metadata
     serializer.digestEnabled = false;
     metaDigest = serializer.hasher.getDigest();
 
     // Now write private aliases.
-    serializeAliases(serializer, true, "optionalPostDigest",
-                     "privateAliasTree"
-                     );
+    serializeOptional(serializer, true, "optionalPostDigest",
+                      "privateAliasTree"
+                      );
 }
 
 void ModuleDef::serializeHeader(Serializer &serializer) const {
@@ -381,8 +389,8 @@ void ModuleDef::serializeHeader(Serializer &serializer) const {
 }
 
 namespace {
-    void deserializeAliases(Deserializer &deser, ModuleDef *mod,
-                            const char *aliasTreeName) {
+    void deserializeOptional(Deserializer &deser, ModuleDef *mod,
+                             const char *aliasTreeName) {
         // Read optional data.
         CRACK_PB_BEGIN(deser, 256, optional)
             CRACK_PB_FIELD(1, string) {
@@ -402,6 +410,17 @@ namespace {
                     "Bad 'name' parameter in cached module alias section!"
                 );
                 mod->deserializeAliases(tempDeser);
+                break;
+            }
+
+            CRACK_PB_FIELD(2, string) {
+                LazyImportsPtr lazyImports = mod->getLazyImports();
+                if (!lazyImports)
+                    mod->setLazyImports(
+                        (lazyImports = new LazyImports()).get()
+                    );
+                lazyImports->deserializeModuleImports(optionalDeser);
+                break;
             }
         CRACK_PB_END
     }
@@ -650,14 +669,20 @@ ModuleDefPtr ModuleDef::deserialize(Deserializer &deser,
             true;
 
     // Deserialize the public aliases.
-    ::deserializeAliases(deser, mod.get(), "aliasTree");
+    deserializeOptional(deser, mod.get(), "aliasTree");
 
     mod->metaDigest = deser.hasher.getDigest();
     mod->sourcePath = sourcePath;
     mod->sourceDigest = recordedSourceDigest;
 
     // Now do the private aliases.
-    ::deserializeAliases(deser, mod.get(), "privateAliasTree");
+    deserializeOptional(deser, mod.get(), "privateAliasTree");
+
+    // If we ended up with lazy imports, propagate those to all generics.
+    if (mod->lazyImports) {
+        SPUG_FOR(vector<TypeDefPtr>, iter, deser.getRegisteredGenerics())
+            (*iter)->genericInfo->lazyImports = mod->lazyImports;
+    }
 
     if (Serializer::trace)
         cerr << ">>>> Finished deserializing module " << canonicalName << endl;

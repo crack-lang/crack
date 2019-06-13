@@ -59,11 +59,13 @@ class ModuleDef : public VarDef, public Namespace {
         // Set of lazy imports associated with the module.
         LazyImportsPtr lazyImports;
 
-        void serializeAliases(model::Serializer &serializer,
-                              bool privateAliases,
-                              const char *optionalBlockName,
-                              const char *aliasTreeName
-                              );
+        // Serialize one of the module level optional blocks (the first has
+        // public aliases, the second has private aliases and lazy imports).
+        void serializeOptional(model::Serializer &serializer,
+                               bool privateAliases,
+                               const char *optionalBlockName,
+                               const char *aliasTreeName
+                               );
 
     protected:
 

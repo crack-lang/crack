@@ -204,6 +204,56 @@ bool moduleReload() {
     return success;
 }
 
+bool moduleLazyImports() {
+    DataSet ds;
+    ds.addTestModules();
+
+    LazyImportsPtr lazyImports = new LazyImports();
+    lazyImports->addImport("foo.bar", false, ImportedDef("local", "source"));
+    lazyImports->addImport("baz", false, ImportedDef("name"));
+    ds.dep0->setLazyImports(lazyImports.get());
+
+    ostringstream dep0Data;
+    Serializer ser1(dep0Data);
+    ds.dep0->serialize(ser1);
+
+    MockBuilder builder;
+    builder.incref();
+    builder.options = new builder::BuilderOptions();
+    Construct construct(Options(), &builder);
+    construct.allowSourceless = true;
+    Context context(builder, Context::module, &construct,
+                    0, // namespace, filled in by ModuleDef::deserialize()
+                    new GlobalNamespace(0, "")
+                    );
+    context.incref();
+
+    DataSet ds2;
+    construct.registerModule(ds2.builtins.get());
+
+    istringstream src1(dep0Data.str());
+    Deserializer deser1(src1, &context);
+    ModuleDefPtr dep0 = ModuleDef::deserialize(deser1, "dep0");
+    dep0->finished = true;
+    construct.registerModule(dep0.get());
+
+    lazyImports = dep0->getLazyImports();
+    if (!lazyImports) {
+        cerr << "lazy imports not restored" << endl;
+        return false;
+    }
+    if (!lazyImports->getImport("local").exists()) {
+        cerr << "lazy import 'local' not restored" << endl;
+        return false;
+    }
+    if (!lazyImports->getImport("name").exists()) {
+        cerr << "lazy import 'name' not restored" << endl;
+        return false;
+    }
+
+    return true;
+}
+
 bool reloadOfSelfReferrentTypes() {
     bool success = true;
     DataSet ds;
@@ -308,6 +358,7 @@ TestCase testCases[] = {
     {"moduleTestDeps", moduleTestDeps},
     {"moduleSerialization", moduleSerialization},
     {"moduleReload", moduleReload},
+    {"moduleLazyImports", moduleLazyImports},
     {"reloadOfSelfReferrentTypes", reloadOfSelfReferrentTypes},
     {"operatorSerialization", operatorSerialization},
     {0, 0}

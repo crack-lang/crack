@@ -93,6 +93,8 @@ So given this, our meta-data format is:
         blob optionalPostDigest {
             # Private aliases for the module.
             optional AliasTreeNode privateAliasTree = 1
+
+            repeated LazyImportEntry lazyImports = 2
         }
     }
 
@@ -130,6 +132,18 @@ So given this, our meta-data format is:
 
         # Canonical name of the origin module.
         optional blob genericModule = 4
+    }
+
+    LazyImportEntry {
+        repeated string module = 1
+        repeated LazyImportSymbol import = 2
+    }
+
+    LazyImportSymbol {
+        optional string sourceName = 1
+
+        # Only present if it differs from sourceName
+        optional string localName = 2
     }
 
     # identifies a dependency module by its canonical name and the hash of its

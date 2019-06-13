@@ -480,6 +480,29 @@ test.run();
 test.main('import mod2 g; g(1, "x", 1.0)');
 test.run();
 
+# This verifies that generics persist lazy import information.
+test.preBootstrap = false;
+test.mod('imports', "
+    import crack.compiler CrackContext;
+    @import crack.ann auto_imports;
+    @auto_imports {
+        crack.lang Buffer;
+    }
+    ");
+test.mod('mod1', "
+    @import imports auto_import; @auto_import;
+    class G[T] {
+        alias fb = Buffer;
+    }
+    ");
+test.main('import mod1 G; puts(G[int].fb.name);');
+test.run();
+# By rebuilding against another instantiation of the generic G, we are using
+# the pre-compiled mod1 but not the precompiled generic module for G[int],
+# this ensures that the auto-imports are preserved in meta-data.
+test.main('import mod1 G; puts(G[bool].fb.name);');
+test.run()
+
 %%REXPECT%%
 out: alias
 terminated: success
@@ -619,5 +642,9 @@ terminated: success
 out: builtin generic linkage, mod2
 out: Overload
 out: array\[.builtin.float\]
+terminated: success
+out: Buffer
+terminated: success
+out: Buffer
 terminated: success
 %%STDIN%%

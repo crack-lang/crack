@@ -264,6 +264,7 @@ noinst_HEADERS = \
     model/Initializers.h \
     model/InstVarDef.h \
     model/IntConst.h \
+    model/LazyImports.h \
     model/LocalNamespace.h \
     model/ModuleDef.h \
     model/ModuleDefMap.h \

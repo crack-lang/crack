@@ -10,16 +10,20 @@
 
 #include <string>
 #include <map>
+#include <vector>
 
 #include "spug/RCBase.h"
 #include "spug/RCPtr.h"
 #include "util/Hasher.h"
+#include "TypeDef.h"
 
 namespace spug {
     SPUG_RCPTR(RCBase);
 }
 
 namespace model {
+
+SPUG_RCPTR(TypeDef);
 
 class Context;
 
@@ -34,6 +38,14 @@ class Deserializer {
         };
         SPUG_RCPTR(ObjMap);
         ObjMapPtr objMap;
+
+        // Array to keep track of generics that need to be fixed if there are
+        // lazy imports associated with the module (these are deserialized
+        // after the types are).
+        class TypeList : public std::vector<TypeDefPtr>, public spug::RCBase {
+        };
+        SPUG_RCPTR(TypeList);
+        TypeListPtr genericsToFix;
 
     public:
 
@@ -64,6 +76,7 @@ class Deserializer {
         Deserializer(std::istream &src) :
             src(src),
             objMap(new ObjMap()),
+            genericsToFix(new TypeList()),
             context(0),
             digestEnabled(false) {
         }
@@ -71,6 +84,7 @@ class Deserializer {
         Deserializer(std::istream &src, Context *context) :
             src(src),
             objMap(new ObjMap()),
+            genericsToFix(new TypeList()),
             context(context),
             digestEnabled(false) {
         }
@@ -78,6 +92,7 @@ class Deserializer {
         Deserializer(Deserializer &parent, std::istream &src) :
             src(src),
             objMap(parent.objMap),
+            genericsToFix(parent.genericsToFix),
             context(parent.context),
             digestEnabled(false) {
         }
@@ -157,6 +172,19 @@ class Deserializer {
          * a fixed width of 8 bytes.
          */
         double readDouble(const char *name);
+
+        /**
+         * Register a generic that has been serialized for subsequent fix-up
+         * of lazy imports.
+         */
+        void registerGeneric(TypeDef *type);
+
+        /**
+         * Returns the list of all registered generics.
+         */
+        const std::vector<TypeDefPtr> &getRegisteredGenerics() const {
+            return *genericsToFix;
+        }
 };
 
 }

@@ -1550,6 +1550,7 @@ TypeDefPtr TypeDef::deserializeTypeDef(Deserializer &deser, const char *name) {
         type->genericInfo = Generic::deserialize(deser);
         type->genericInfo->ns = deser.context->ns.get();
         type->genericInfo->seedCompileNS(*deser.context);
+        deser.registerGeneric(type.get());
     } else {
         // bases
         int count = deser.readUInt("#bases");

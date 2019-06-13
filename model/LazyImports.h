@@ -53,13 +53,6 @@ class LazyImports : public spug::RCBase {
 
                 ModuleImports() : rawSharedLib(false) {}
 
-//                ModuleImports &operator =(const ModuleImports &other) {
-//                    moduleName = other.moduleName;
-//                    rawSharedLib = other.rawSharedLib;
-//                    imports = other.imports;
-//                    return *this;
-//                }
-
                 void addImport(const ImportedDef &import) {
                     imports.push_back(import);
                 }
@@ -90,6 +83,8 @@ class LazyImports : public spug::RCBase {
         ImportsMap byLocalName;
 
         void addImportTo(ModuleImports &imports, const ImportedDef &def);
+
+        static ImportedDef deserializeImportSymbol(Deserializer &deser);
     public:
 
         /**
@@ -121,8 +116,8 @@ class LazyImports : public spug::RCBase {
         /** Serialize the object as a sequence of LazyImportEntry fields. */
         void serialize(Serializer &serializer);
 
-        /** Deserialize the object. */
-        static LazyImportsPtr deserialize(Deserializer &deser);
+        /** Deserialize a single ModuleImports instance. */
+        void deserializeModuleImports(Deserializer &deser);
 };
 
 };

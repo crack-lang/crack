@@ -135,3 +135,7 @@ double Deserializer::readDouble(const char *name) {
         hasher.add(&val, sizeof(double));
     return val;
 }
+
+void Deserializer::registerGeneric(TypeDef *type) {
+    genericsToFix->push_back(type);
+}
