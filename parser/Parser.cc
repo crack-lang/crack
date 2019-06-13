@@ -3844,7 +3844,11 @@ void Parser::parsePostDot(ExprPtr &expr, TypeDefPtr &type) {
          expr = context->createVarRef(def.get());
       }
    } else if (def) {
-      expr = new Deref(expr.get(), def.get());
+      if (TypeDefPtr::rcast(def))
+         // Types are inherently static and don't need to be dereferenced.
+         expr = context->createVarRef(def.get());
+      else
+         expr = new Deref(expr.get(), def.get());
    }
 
    // XXX in order to handle value.Base::method(), we need to try

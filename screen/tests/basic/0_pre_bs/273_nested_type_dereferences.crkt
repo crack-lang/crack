@@ -1,0 +1,14 @@
+%%TEST%%
+nested type derferences
+%%ARGS%%
+%%FILE%%
+class X {}
+class A { alias Y = X; }
+puts(A().Y.name);
+
+class B { alias C = B; }
+puts(B().C.name);
+%%EXPECT%%
+X
+B
+%%STDIN%%
