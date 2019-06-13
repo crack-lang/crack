@@ -51,7 +51,9 @@ int float_str(double d, char* buf, unsigned int size) {
 }
 
 int crk_puts(char *str) {
-    return puts(str);
+    int rc = puts(str);
+    fflush(stdout);
+    return rc;
 }
 
 int crk_putc(char byte) {
