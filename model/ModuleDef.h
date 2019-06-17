@@ -230,7 +230,12 @@ class ModuleDef : public VarDef, public Namespace {
 
         LazyImports::ModuleImports getLazyImport(const std::string &name);
 
-        LazyImportsPtr getLazyImports() const { return lazyImports; }
+        /**
+         * Get the lazy imports for a module.  If "create" is true, creates
+         * the lazy imports if they are undefined.  Otherwise, will return
+         * null if there are no lazy imports defined.
+         */
+        LazyImportsPtr getLazyImports(bool create);
         void setLazyImports(LazyImports *imports) { lazyImports = imports; }
 
         /**

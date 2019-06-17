@@ -237,7 +237,7 @@ bool moduleLazyImports() {
     dep0->finished = true;
     construct.registerModule(dep0.get());
 
-    lazyImports = dep0->getLazyImports();
+    lazyImports = dep0->getLazyImports(false);
     if (!lazyImports) {
         cerr << "lazy imports not restored" << endl;
         return false;

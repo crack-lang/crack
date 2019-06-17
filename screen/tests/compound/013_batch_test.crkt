@@ -490,10 +490,13 @@ test.mod('imports', "
     }
     ");
 test.mod('mod1', "
-    @import imports auto_import; @auto_import;
     class G[T] {
         alias fb = Buffer;
     }
+
+    # Verifies that lazy imports can be defined after the generics in which
+    # they are used, both serialized and not.
+    @import imports auto_import; @auto_import;
     ");
 test.main('import mod1 G; puts(G[int].fb.name);');
 test.run();

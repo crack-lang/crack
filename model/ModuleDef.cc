@@ -52,7 +52,7 @@ void ModuleDef::serializeOptional(Serializer &serializer,
 
     // If we have an alias tree or lazy imports, write an optional block for
     // them.
-    if (aliasTree || lazyImports && privateAliases) {
+    if (aliasTree || lazyImports && !lazyImports->empty() && privateAliases) {
         ostringstream temp;
         Serializer sub(serializer, temp);
 
@@ -202,6 +202,12 @@ LazyImports::ModuleImports ModuleDef::getLazyImport(
 ) {
     return lazyImports ? lazyImports->getImport(localName) :
                          LazyImports::ModuleImports();
+}
+
+LazyImportsPtr ModuleDef::getLazyImports(bool create) {
+    if (!lazyImports && create)
+        lazyImports = new LazyImports();
+    return lazyImports;
 }
 
 ModuleDef::StringVec ModuleDef::parseCanonicalName(const std::string &name) {
@@ -414,11 +420,7 @@ namespace {
             }
 
             CRACK_PB_FIELD(2, string) {
-                LazyImportsPtr lazyImports = mod->getLazyImports();
-                if (!lazyImports)
-                    mod->setLazyImports(
-                        (lazyImports = new LazyImports()).get()
-                    );
+                LazyImportsPtr lazyImports = mod->getLazyImports(true);
                 lazyImports->deserializeModuleImports(optionalDeser);
                 break;
             }

@@ -103,6 +103,8 @@ class LazyImports : public spug::RCBase {
 
         ~LazyImports();
 
+        bool empty() { return byModule.empty(); }
+
         /**
          * Returns a ModuleImports object for the given symbol (and none of the
          * other symbols for the same module).
