@@ -52,7 +52,9 @@ void ModuleDef::serializeOptional(Serializer &serializer,
 
     // If we have an alias tree or lazy imports, write an optional block for
     // them.
-    if (aliasTree || lazyImports && !lazyImports->empty() && privateAliases) {
+    if (aliasTree ||
+        lazyImports && lazyImports->shouldSerialize() && privateAliases
+        ) {
         ostringstream temp;
         Serializer sub(serializer, temp);
 

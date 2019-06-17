@@ -87,6 +87,9 @@ class LazyImports : public spug::RCBase {
         static ImportedDef deserializeImportSymbol(Deserializer &deser);
     public:
 
+        /** Gets set to true if the lazy imports may be used by generics. */
+        bool usedByGenerics = false;
+
         /**
          * Returns the ModuleImports object for the module.
          *
@@ -103,7 +106,12 @@ class LazyImports : public spug::RCBase {
 
         ~LazyImports();
 
-        bool empty() { return byModule.empty(); }
+        /**
+         * Returns true if the lazy imports should be serialized with the
+         * module meta data. (i.e. if they are non-empty and potentially used
+         * by generics).
+         */
+        bool shouldSerialize() { return !byModule.empty() && usedByGenerics; }
 
         /**
          * Returns a ModuleImports object for the given symbol (and none of the

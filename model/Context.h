@@ -596,7 +596,7 @@ class Context : public spug::RCBase {
                            bool rawSharedLib
                            );
 
-        LazyImportsPtr getLazyImports() const;
+        LazyImportsPtr getLazyImports(bool create) const;
 
         void setLazyImports(LazyImports *imports);
 

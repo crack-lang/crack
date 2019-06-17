@@ -1354,8 +1354,8 @@ void Context::addLazyImport(const std::string &module,
                        );
 }
 
-LazyImportsPtr Context::getLazyImports() const {
-    return ModuleDefPtr::arcast(ns)->getLazyImports();
+LazyImportsPtr Context::getLazyImports(bool create) const {
+    return ModuleDefPtr::arcast(ns)->getLazyImports(create);
 }
 
 void Context::setLazyImports(LazyImports *imports) {

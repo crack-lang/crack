@@ -157,6 +157,12 @@ bool moduleReload() {
     DataSet ds;
     ds.addTestModules();
 
+    // Add lazy imports that areen't used by generics to the dep0 module,
+    // these should not be persisted.
+    LazyImportsPtr lazyImports = new LazyImports();
+    lazyImports->addImport("baz", false, ImportedDef("name"));
+    ds.dep0->setLazyImports(lazyImports.get());
+
     ostringstream dep0Data, dep1Data, modData;
     Serializer ser1(dep0Data);
     ds.dep0->serialize(ser1);
@@ -200,6 +206,10 @@ bool moduleReload() {
         cerr << "Invalid owner of dep1.t1" << endl;
         success = false;
     }
+    if (dep0->getLazyImports(false)) {
+        cerr << "Lazy imports serialized unnecessarily." << endl;
+        success = false;
+    }
 
     return success;
 }
@@ -211,6 +221,7 @@ bool moduleLazyImports() {
     LazyImportsPtr lazyImports = new LazyImports();
     lazyImports->addImport("foo.bar", false, ImportedDef("local", "source"));
     lazyImports->addImport("baz", false, ImportedDef("name"));
+    lazyImports->usedByGenerics = true;
     ds.dep0->setLazyImports(lazyImports.get());
 
     ostringstream dep0Data;
