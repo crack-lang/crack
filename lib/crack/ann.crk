@@ -1853,12 +1853,22 @@ Token getIdent(CrackContext ctx) {
     return tok;
 }
 
+String _getParentNS(CrackContext ctx) {
+    nsName := CString(ctx.getNamespaceName(), true);
+    if ((pos := nsName.rfind(b'.')) != -1)
+        return nsName.substr(0, pos);
+    else
+        return nsName;
+}
+
 Token _parseModuleName(CrackContext ctx) {
     modNameFmt := StringFormatter();
     modFirstTok := ctx.getToken();
     Token tok;
     if (modFirstTok.isDot()) {
-        modNameFmt `.`;
+        # If the first token is a dot, append the parent scope of the
+        # auto-imports module - we'll want these imports relative to that.
+        modNameFmt `$(_getParentNS(ctx)).`;
         tok = getIdent(ctx);
     } else if (modFirstTok.isIdent()) {
         tok = modFirstTok;
