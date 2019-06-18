@@ -3170,9 +3170,9 @@ Auto-imports
 
 It's generally preferable for a programmer to not have to deal with imports at
 all: as long as names are unique (or can be given unique aliases) within the
-scope of a project, it is much easier to simple define all of the imports in a
+scope of a project, it is much easier to simply define all of the imports in a
 common module and be done with them.  The auto-import annotation allows us to
-do this.  For example, we can define an a "`my_imports`" module as such:
+do this.  For example, we can define a "`my_imports`" module as such:
 
 {{
     import crack.compiler CrackContext;
@@ -3191,15 +3191,53 @@ And then use it from another module as follows:
     cout `We can use cout without importing it!\n`;
 }}
 
-#`auto_imports`# registers the modules and symbols as /lazy import/.  These
-modules are only imported if the names are referenced but undefined in the
-module using #`auto_import`#.
+#`auto_imports`# registers the modules and symbols as /lazy imports/.  These
+modules are only imported if the identifiers associated with them are
+referenced but not defined in the module.
 
 The contents of an #`@auto_imports`# block is a list of import statements
 without the import keyword (since these are the only things allowed in the
-block, there is no need to distinguish them.
+block, there is no need to distinguish them).
 
-See \X(Annotations) below for more general information on this concept.
+You can also use relative import notation to define auto-imports:
+
+{{
+    @auto_imports {
+        .mod func, CONSTANT;
+    }
+}}
+
+When using relative auto--imports, the module name is presumed to be relative
+to enclosing name of the module defining the auto-imports.  So if the module
+above is "#foo.imports#", "#.mod#" would load from the module "#foo.mod#".  In
+this way, packages can provide their own "imports" files and remain
+relocatable to any location within the module tree.
+
+Auto imports currently do not work for compile-time imports (imported with
+#@import#).
+
+When defining auto-import modules, it is important to consider backwards
+compatibility.  Users may make use of multiple auto-import modules in any
+order.  Namespace collisions are not a problem in this context, the last lazy
+import definition wins.  However, if the owner of an auto-import module
+introduces a new definition in another version of their code, they may end up
+overriding an earlier auto-import that the user was relying on:
+
+{{
+    # "foo" provides an auto-import for getFuncie.
+    @import foo foo_auto_import = auto_import; @foo_auto_import;
+    # "bar" also provides an auto-import for getFuncie, but didn't used to!
+    @import bar bar_auto_import = auto_import; @bar_auto_import;
+
+    # User was expecting foo.getFuncie(), but gets bar.getFuncie().
+    getFuncie();
+}}
+
+For this reason, it is recommended that import modules be versioned.  By
+appending a version number to the name of the imports file (e.g. "`imports1_5`")
+you can ensure that the set of imports referenced by a particular external
+user remains constant, while still providing a way to extend your set of
+auto-imports.
 
 Protocols
 ---------
