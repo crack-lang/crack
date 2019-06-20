@@ -12,6 +12,7 @@
 #include <string.h>
 #include <spug/StringFmt.h>
 #include <spug/stlutil.h>
+#include <spug/Tracer.h>
 #include <fstream>
 #include "builder/Builder.h"
 #include "parser/Token.h"
@@ -53,6 +54,14 @@ using namespace crack::util;
 using namespace parser;
 
 Location Context::emptyLoc;
+
+bool Context::traceLazyImports = false;
+namespace {
+    spug::Tracer tracer("LazyImports", Context::traceLazyImports,
+                        "Lazy import activation (when a lazy import is "
+                         "actually used and imported)."
+                        );
+}
 
 Construct* Context::getCompileTimeConstruct() {
     if (construct->compileTimeConstruct.get())
@@ -109,6 +118,13 @@ VarDefPtr Context::maybeLazyImport(const std::string &name) {
 
     LazyImports::ModuleImports import = modDef->getLazyImport(name);
     if (import.exists()) {
+        if (traceLazyImports) {
+            const ImportedDef &imp = import.getImports().front();
+            cerr << "Lazy import activated from " <<
+                ns->getNamespaceName() << ": " <<
+                ModuleDef::joinName(import.getModuleName()) << ' ' <<
+                imp.local << " = " << imp.source << endl;
+        }
         emitImport(ns.get(), import.getModuleName(), import.getImports(),
                    false,
                    false,

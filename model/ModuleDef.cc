@@ -256,12 +256,12 @@ ModuleDef::StringVec ModuleDef::parseCanonicalName(const std::string &name) {
 string ModuleDef::joinName(const ModuleDef::StringVec &parts) {
     ostringstream result;
 
-    bool first;
+    bool first = true;
     for (StringVec::const_iterator i = parts.begin(); i < parts.end(); ++i) {
-        if (!first) {
+        if (!first)
             result << '.';
-            first = true;
-        }
+        else
+            first = false;
         result << *i;
     }
 
