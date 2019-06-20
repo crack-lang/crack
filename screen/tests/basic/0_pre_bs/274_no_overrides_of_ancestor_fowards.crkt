@@ -1,0 +1,26 @@
+%%TEST%%
+no overrides of ancestor forwards definitions
+%%ARGS%%
+%%FILE%%
+# This was a bug, when oper init() was forward defined, a nested class's
+# "oper init" was being regarded as an override.
+
+class Base : VTableBase {
+    oper init();
+
+    class Derived : Base {
+        # This used to cause an error because the compiler thought we were
+        # overriding NodeBase.init() (and we ended up trying to call the
+        # initializers assuming the incorrect type for "this")
+        oper init() { puts('Derived') }
+    }
+
+    oper init() { puts('Base') }
+}
+
+Base.Derived();
+
+%%EXPECT%%
+Base
+Derived
+%%STDIN%%
