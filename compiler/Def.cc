@@ -19,10 +19,14 @@ Def::Def(const std::string &name, VarDef *rep, Def *next) :
     next(next) {
 
     rep->incref();
+    if (next)
+        next->bind();
 }
 
 Def::~Def() {
     rep->decref();
+    if (next)
+        const_cast<Def*>(next)->release();
 }
 
 const char *Def::getName() const {
@@ -54,10 +58,12 @@ const Def *Def::_getNext(const Def *inst) {
 }
 
 void Def::_bind(Def *inst) {
-    inst->bind();
+    if (inst)
+        inst->bind();
 }
 
 void Def::_release(Def *inst) {
-    inst->release();
+    if (inst)
+        inst->release();
 }
 
