@@ -3239,6 +3239,13 @@ you can ensure that the set of imports referenced by a particular external
 user remains constant, while still providing a way to extend your set of
 auto-imports.
 
+Crack provides an auto-import module for most of its standard library.  For
+version 1.5 of crack, this module is #`crack.imports1_5`#.  Note that the
+first use of this module does add noticeable overhead to the compile time of a
+program that makes use of it.  Tracing the actual imports of the modules (with
+the "-t LazyImports" option) can be used to determine the actual imports used
+by all modules and convert the auto-import into traditional import statements.
+
 Protocols
 ---------
 
@@ -3272,7 +3279,7 @@ translates to roughly the following code:
 
 {{
     for (tempIter := container.iter(); tempIter; tempIter.next()) {
-        x := tempIter.elem();
+        x = tempIter.elem();
         cout `$x\n`;
     }
 }}
