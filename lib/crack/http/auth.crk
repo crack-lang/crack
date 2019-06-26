@@ -267,3 +267,5 @@ class LoginHandler : MethodDispatcher {
         return;
     }
 }
+
+@export_symbols LoginURL, RandomNumberGenerator;
