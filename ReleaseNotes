@@ -1,3 +1,10 @@
+1.5
+    -   Added lambdas.
+    -   Added SSL support to the comm2 communication library.
+    -   Added a better, experimental command line proceessing library.
+    -   Added automatic imports (you can now define all of your imports in a
+        file and they will be imported on demand)
+    -   Various bug fixes and improvements.
 1.4
     -   Added the RawPtr class.
     -   Implemented function elision.

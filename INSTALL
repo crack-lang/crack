@@ -24,8 +24,8 @@ cost).
 
 Build Crack:
 
-$ tar -xvzf crack-1.4.tar.gz
-$ cd crack-1.4
+$ tar -xvzf crack-1.5.tar.gz
+$ cd crack-1.5
 $ ./configure
 $ make
 $ make check  # optional
@@ -46,7 +46,7 @@ Quick Install:
 (if llvm and spug are in standard locations, and you wish to install in
  the default /usr/local)
 
-$ cd crack-1.4
+$ cd crack-1.5
 $ mkdir build; cd build
 $ cmake ..
 $ make

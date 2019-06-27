@@ -12,7 +12,7 @@
 The Crack Programming Language Guide
 ====================================
 
-This is the manual for version 1.4 of the Crack Programming Language.  Crack
+This is the manual for version 1.5 of the Crack Programming Language.  Crack
 is an imperative, object-oriented language along the lines of Java, Python and
 C++.  It can be compiled in Just In Time and Ahead Of Time modes and has been
 tested on 32 and 64 bit x86 Linux Debian and Ubuntu systems.
@@ -679,7 +679,7 @@ You'll generally want to use the memory-managed #Array# collection instead
 Control Structures
 ------------------
 
-Crack 1.4 supports four control structures: the "if\/else" statement,
+Crack 1.5 supports four control structures: the "if\/else" statement,
 the "while" statement, the "for" statement and the "try\/catch" statement.
 "if" runs code blocks depending on whether a condition is true or false:
 
@@ -4309,7 +4309,7 @@ member variables.  For example:
     Coord c = {10, 20};
 }}
 
-Structs are very limited as of Crack 1.4.  In particular:
+Structs are very limited as of Crack 1.5.  In particular:
 
 -   They don't support inheritence.
 -   You can't add any other methods.
@@ -4561,7 +4561,7 @@ extension, you'll want to:
 -   build it into a shared library, linked with whatever support code it needs
     (usually the code it's wrapping)
 -   Add the include directory for crack headers to the include path (usually
-    something like #`/usr/local/include/crack-1.4`#)
+    something like #`/usr/local/include/crack-1.5`#)
 
 The Extension Generator
 '''''''''''''''''''''''
@@ -6761,7 +6761,7 @@ be backwards compatible until the major version number changes.  See
 The remainder of this appendix describes the things you need to know when
 upgrading between versions.
 
-From 1.1 through to 1.4
+From 1.1 through to 1.5
 -----------------------
 
 No known changes affecting compatibility.
