@@ -107,6 +107,16 @@ TypeDefPtr FunctionTypeDef::getSpecialization(Context &context,
         tempSpec.get()
     );
 
+    // Add an unsafeCast method so we can cast from a voidptr.
+    FuncDefPtr unsafeCast =
+        new GeneralOpDef<UnsafeCastCall>(tempSpec.get(), FuncDef::noFlags,
+                                         "unsafeCast",
+                                         1
+                                         );
+    unsafeCast->args[0] =
+        new ArgDef(context.construct->voidptrType.get(), "val");
+    context.addDef(unsafeCast.get(), tempSpec.get());
+
     // Give it a specialized "oper call" method, which wraps the
     // call to the function pointer
     FuncDefPtr fptrCall = new FunctionPtrOpDef(returnCType, arity);

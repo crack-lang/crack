@@ -1,0 +1,14 @@
+%%TEST%%
+operations on func types
+%%ARGS%%
+%%FILE%%
+# Added this just to verify unsafeCast()...
+void func() {
+    puts('ok');
+}
+voidptr v = func;
+function[void] f = function[void].unsafeCast(v);
+f();
+%%EXPECT%%
+ok
+%%STDIN%%
