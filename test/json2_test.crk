@@ -1,0 +1,77 @@
+
+import crack.cont.array Array;
+import crack.io cerr, StringReader;
+import crack.lang AppendBuffer;
+import crack.math abs;
+import crack.enc.json2 appendUTF8Char, parse, Box, JSONObjectMap;
+
+@import crack.ann assert;
+
+String utf8Enc(int uchar) {
+    buf := AppendBuffer(16);
+    appendUTF8Char(buf, uchar);
+    return String(buf, true);
+}
+
+@assert(utf8Enc(1) == '\001');
+@assert(utf8Enc(0x7f) == '\x7f');
+@assert(utf8Enc(0x80) == '\xc2\x80');
+@assert(utf8Enc(0x7ff) == '\xdf\xbf');
+@assert(utf8Enc(0x800) == '\xe0\xa0\x80');
+@assert(utf8Enc(0xffff) == '\xef\xbf\xbf');
+@assert(utf8Enc(0x10000) == '\xf0\x90\x80\x80');
+@assert(utf8Enc(0x10ffff) == '\xf4\x8f\xbf\xbf');
+
+@assert(parse('"test string"') == 'test string');
+@assert(parse('  "test string"') == 'test string');
+@assert(parse('["first", "second"]') == Array[Object]!['first', 'second']);
+@assert(parse('  [  "first"  ,   "second" ] ') ==
+        Array[Object]!['first', 'second']);
+@assert(parse('[]') == Array[Object]());
+
+obj := JSONObjectMap.cast(parse('{"foo":"bar","baz":"bot"}'));
+@assert(obj['foo'] == 'bar');
+@assert(obj['baz'] == 'bot');
+@assert(obj.count() == 2);
+
+obj = JSONObjectMap.cast(parse(' { "foo" : "bar" , "baz" : "bot" } '));
+@assert(obj['foo'] == 'bar');
+@assert(obj['baz'] == 'bot');
+@assert(obj.count() == 2);
+
+obj = JSONObjectMap.cast(parse('{"foo": "bar"}'));
+@assert(obj['foo'] == 'bar');
+@assert(obj.count() == 1);
+
+obj = JSONObjectMap.cast(parse('{}'));
+@assert(obj.count() == 0);
+
+@assert(Box[bool].cast(parse('true')).val);
+@assert(!Box[bool].cast(parse('false')).val);
+@assert(parse('null') is null);
+@assert(Box[bool].cast(parse(' true ')).val);
+@assert(!Box[bool].cast(parse(' false ')).val);
+@assert(parse(' null ') is null);
+
+@assert(parse(r'"\\\"\b\f\n\r\t\u07fFblech"') == '\\\"\b\f\n\r\t\xdf\xbfblech');
+
+bool feq(float64 a, float64 b) {
+    return abs(a - b) < abs(a) / 100000.0;
+}
+
+@assert(feq(Box[float64].cast(parse('1.25e+06')).val, 1.25e+06));
+@assert(feq(Box[float64].cast(parse('1E+06')).val, 1e+06));
+@assert(feq(Box[float64].cast(parse('1.23')).val, 1.23));
+@assert(feq(Box[float64].cast(parse('123')).val, 123));
+arr := Array[Object].cast(parse('[1.23e+06]'));
+@assert(feq(Box[float64].cast(arr[0]).val, 1.23e+06));
+arr = Array[Object].cast(parse('[ 1.23e+06 ]'));
+@assert(feq(Box[float64].cast(arr[0]).val, 1.23e+06));
+arr = Array[Object].cast(parse('[1.23]'));
+@assert(feq(Box[float64].cast(arr[0]).val, 1.23));
+arr = Array[Object].cast(parse('[1E-5]'));
+@assert(feq(Box[float64].cast(arr[0]).val, 1e-5));
+arr = Array[Object].cast(parse('[100]'));
+@assert(feq(Box[float64].cast(arr[0]).val, 100));
+
+cerr `ok\n`;
