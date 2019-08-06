@@ -4967,6 +4967,31 @@ The following standard exception types are defined in #crack.lang#:
 #InvalidArgumentError#::
     Thrown when a function is passed an invalid argument.
 
+The Box Generic
+'''''''''''''''
+
+#crack.lang.Box# is a generic class that is simply an object wrapper around
+another type. It is mainly intended to allow the use of built-in types in
+contexts that require an #Object#.  However, it can also be used as a (very
+expensive) form of pass by reference.
+
+#Box[T]# has a single attribute named "val".  It also provides the full suite
+of object methods for comparison, hashing, formatting, and equality, so you
+can use them fairly similarly to the original types.
+
+Examples:
+
+{{
+    import crack.lang Box;
+
+    i := Box[int](100);
+    if (i == Box[int](100)) cout `comparison works.\n`;
+
+    void modifyArg(Box[String] arg) {
+        arg.val = 'mutated!';
+    }
+}}
+
 Containers
 ----------
 

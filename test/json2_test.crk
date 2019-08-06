@@ -1,9 +1,9 @@
 
 import crack.cont.array Array;
 import crack.io cerr, StringReader;
-import crack.lang AppendBuffer;
+import crack.lang AppendBuffer, Box;
 import crack.math abs;
-import crack.enc.json2 appendUTF8Char, parse, Box, JSONObjectMap;
+import crack.enc.json2 appendUTF8Char, parse, JSONObjectMap;
 
 @import crack.ann assert;
 

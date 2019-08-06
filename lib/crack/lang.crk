@@ -1401,3 +1401,55 @@ $$
 uint makeHashVal(uint64 val) { return uint(val >> 32 ^ val); }
 uint makeHashVal(int64 val) { return uint(val >> 32 ^ val); }
 uint makeHashVal(bool val) { return val ? 1 : 0; }
+
+## Box can be used to wrap builtin types in an Object.
+class Box[T] {
+    T val;
+
+    oper init(T val) : val = val {}
+
+    int cmp(Object other) {
+        if ((o := Box.cast(other, null)) != null)
+            return cmp(val, o.val);
+        else
+            return Object.cmp(other);
+    }
+
+    uint makeHashVal() {
+        return makeHashVal(val);
+    }
+
+    void formatTo(Formatter out) {
+        out `$val`;
+    }
+
+    @final bool oper <(T other) {
+        return cmp(val, other) < 0;
+    }
+
+    @final bool oper <=(T other) {
+        return cmp(val, other) <= 0;
+    }
+
+    @final bool oper ==(T other) {
+        return cmp(val, other) == 0;
+    }
+
+    @final bool oper !=(T other) {
+        return cmp(val, other) != 0;
+    }
+
+    @final bool oper >=(T other) {
+        return cmp(val, other) >= 0;
+    }
+
+    @final bool oper >(T other) {
+        return cmp(val, other) > 0;
+    }
+
+    bool isTrue() {
+        return val;
+    }
+}
+
+

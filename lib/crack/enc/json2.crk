@@ -20,18 +20,12 @@ import crack.ascii isDigit, isSpace;
 import crack.cont.array Array;
 import crack.cont.treemap TreeMap;
 import crack.io cerr, FStr, Reader, StringReader;
-import crack.lang AppendBuffer, Exception, InvalidArgumentError, ManagedBuffer,
-    WriteBuffer;
+import crack.lang AppendBuffer, Box, Exception, InvalidArgumentError,
+    ManagedBuffer, WriteBuffer;
 import crack.runtime memcmp;
 import crack.math strtod;
 
 @import crack.ann assert, cvars, impl, interface;
-
-class Box[T] {
-    @cvars {
-        T val;
-    }
-}
 
 alias JSONObjectMap = TreeMap[String, Object];
 @export_symbols JSONObjectMap;
