@@ -1,0 +1,485 @@
+## An alternate json parser implementation that fixes some of the problems of
+## the original one:
+## - The parser generator was never integrated into our build, and has since
+##   diverged to the point where it was not obvious how to make modifications
+##   to it.
+## - No support for unicode escape sequences in strings.
+## - Limited to building its own datastructures.
+##
+## The JSON2 parser and encoder mostly work with normal Crack objects - e.g.
+## JSONObject is just an appendage on TreeMap[String, Object], lists are just
+## Array[Object].  Moreover, the parser allows you to specify a handler so you
+## are not limited to creating a datastructure: you can handle the stream
+## however you want.  This allows you to do things like directly populate
+## native objects or deal with extremely large JSON streams.
+
+# TODO: This code will be moved into the crack codebase, targeted for version
+# 1.6.
+
+import crack.ascii isDigit, isSpace;
+import crack.cont.array Array;
+import crack.cont.treemap TreeMap;
+import crack.io cerr, FStr, Reader, StringReader;
+import crack.lang AppendBuffer, Exception, InvalidArgumentError, ManagedBuffer,
+    WriteBuffer;
+import crack.runtime memcmp;
+import crack.math strtod;
+
+@import crack.ann assert, cvars, impl, interface;
+
+class Box[T] {
+    @cvars {
+        T val;
+    }
+}
+
+alias JSONObjectMap = TreeMap[String, Object];
+@export_symbols JSONObjectMap;
+
+class JSONObject = JSONObjectMap {
+    int oper []=(String key, int val) {
+        this[key] = Box[float64](val);
+        return val;
+    }
+
+    float64 oper []=(String key, float64 val) {
+        this[key] = Box[float64](val);
+        return val;
+    }
+
+    bool oper []=(String key, bool val) {
+        this[key] = Box[bool](val);
+        return val;
+    }
+}
+
+@interface Handler {
+
+    ## Called when we start parsing a JSON object.
+    @abstract void onBeginObject();
+
+    ## Called when we finish parsing a JSON object.
+    @abstract void onEndObject();
+
+    ## Called when we start parsing a list.
+    @abstract void onBeginList();
+
+    ## Called when we finish parsing a list.
+    @abstract void onEndList();
+
+    ## Called when we parse a boolean.
+    @abstract void onBool(bool value);
+
+    ## Called when we parse a number.
+    @abstract void onNumber(float64 value);
+
+    ## Called when we parse the null literal.
+    @abstract void onNull();
+
+    ## Called when we parse a string.  The string is guaranteed to be UTF-8
+    ## legal.
+    @abstract void onString(String value);
+}
+
+class ParseError : Exception {
+    oper init(String text) : Exception(text) {}
+}
+
+class DefaultHandler @impl Handler {
+    class Frame {
+        JSONObject getObject() { throw Exception('Unsupported operation'); }
+        Array[Object] getList() { throw Exception('Unsupported operation'); }
+        Object get() { throw Exception('Unsupported operation'); }
+        void add(Object obj) { throw Exception('Unsupported operation'); }
+    }
+
+    class ObjectFrame : Frame {
+        JSONObject __obj = JSONObject(JSONObjectMap());
+        JSONObject getObject() { return  __obj }
+        String __curKey;
+
+        void add(Object obj) {
+            if (__curKey is null) {
+                __curKey = String.cast(obj);
+            } else {
+                __obj[__curKey] = obj;
+                __curKey = null;
+            }
+        }
+    }
+
+    class ListFrame : Frame {
+        Array[Object] __arr = Array[Object]();
+        Array[Object] getList() { return __arr }
+        void add(Object obj) { __arr.append(obj) }
+    }
+
+    class TopFrame : Frame {
+        Object result;
+        void add(Object obj) {
+            @assert(result is null);
+            result = obj;
+        }
+
+        Object get() { return result }
+    }
+
+    Array[Frame] __stack = [TopFrame()];
+
+    Object getTop() {
+        @assert(__stack.count() == 1);
+        return __stack[0].get();
+    }
+
+    void onBeginObject() {
+        __stack.append(ObjectFrame());
+    }
+
+    ## Called when we finish parsing a JSON object.
+    void onEndObject() {
+        cur := __stack.pop();
+        __stack[-1].add(cur.getObject());
+    }
+
+    ## Called when we start parsing a list.
+    void onBeginList() {
+        __stack.append(ListFrame());
+    }
+
+    ## Called when we finish parsing a list.
+    void onEndList() {
+        listFrame := __stack.pop();
+        __stack[-1].add(listFrame.getList());
+    }
+
+    ## Called when we parse a boolean.
+    void onBool(bool value) {
+        __stack[-1].add(Box[bool](value));
+    }
+
+    ## Called when we parse a number.
+    void onNumber(float64 value) {
+        __stack[-1].add(Box[float64](value));
+    }
+
+    ## Called when we parse the null literal.
+    void onNull() {
+        __stack[-1].add(null);
+    }
+
+    ## Called when we parse a string.  The string is guaranteed to be UTF-8
+    ## legal.
+    void onString(String value) {
+        __stack[-1].add(value);
+    }
+}
+
+## Appends a UTF8 character to the buffer.  This is exposed mainly for
+## testing, don't import it as it's likely to move into a utf8 module.
+void appendUTF8Char(AppendBuffer buf, int char) {
+    if (char <= 0x7f) {
+        buf.append(byte(char));
+    } else if (char <= 0x7ff) {
+        buf.append(0xc0 | byte(char >> 6));
+        buf.append(0x80 | byte(char & 0x3f));
+    } else if (char <= 0xffff) {
+        buf.append(0xe0 | byte(char >> 12));
+        buf.append(0x80 | byte((char >> 6) & 0x3f));
+        buf.append(0x80 | byte(char & 0x3f));
+    } else {
+        buf.append(0xf0 | byte(char >> 18));
+        buf.append(0x80 | byte((char >> 12) & 0x3f));
+        buf.append(0x80 | byte((char >> 6) & 0x3f));
+        buf.append(0x80 | byte(char & 0x3f));
+    }
+}
+
+int hexDec(byte char) {
+    if (char >= b'0' && char <= b'9')
+        return char - b'0';
+    else if (char >= b'a' && char <= b'f')
+        return char - b'a' + 10;
+    else if (char >= b'A' && char <= b'F')
+        return char - b'A' + 10;
+    else
+        throw InvalidArgumentError('Illegal character value');
+}
+
+class Parser {
+
+    int __pos;
+    ManagedBuffer __buf = {1024};
+
+    @cvars {
+        Reader __src;
+        Handler __handler;
+    }
+
+    ## Compact and try to refill the buffer if it doesn't contain the
+    ## specified number of bytes of data.  Returns false if it still doesn't
+    ## (i.e. got an end of stream).
+    @final bool __want(int bytes) {
+        if (__buf.size - __pos < bytes) {
+            __buf.compact(__pos);
+            __pos = 0;
+            if (__buf) {
+                rc := __src.read(WriteBuffer(__buf.buffer + __buf.size,
+                                             1024 - __buf.size
+                                             )
+                                 );
+                __buf.size += rc;
+            } else {
+                __src.read(__buf);
+            }
+
+            if (__buf.size < bytes)
+                return false;
+        }
+
+        return true;
+    }
+
+    ## Compact and refill the buffer if it doesn't contain the specified
+    ## number of bytes of data.
+    @final void __need(int bytes) {
+        if (!__want(bytes))
+            throw ParseError('Unexpected EOF');
+    }
+
+    ## Peek at the next character.  Returns 0 if we're at the end of the
+    ## stream.
+    @final byte __peek() {
+        if (!__want(1))
+            return 0;
+        return __buf[__pos];
+    }
+
+    ## Forward to the next character, returns it but doesn't consume it.
+    @final byte __next() {
+        @assert(__pos < __buf.size);
+        ++__pos;
+        return __peek();
+    }
+
+    byte __getch() {
+        __need(1);
+        return __buf[__pos++];
+    }
+
+    void __parseString() {
+        result := AppendBuffer(1024);
+        ++__pos;
+        while (true) {
+            ch := __getch();
+            if (ch == b'"') {
+                break;
+            } else if (ch == b'\\') {
+                ch = __getch();
+                if (ch == b'b') {
+                    ch = b'\b';
+                } else if (ch == b'f') {
+                    ch = b'\f';
+                } else if (ch == b'n') {
+                    ch = b'\n';
+                } else if (ch == b'r') {
+                    ch = b'\r';
+                } else if (ch == b't') {
+                    ch = b'\t';
+                } else if (ch == b'u') {
+                    __need(4);
+                    int uchar = hexDec(__buf[__pos]) << 12 |
+                                hexDec(__buf[__pos + 1]) << 8 |
+                                hexDec(__buf[__pos + 2]) << 4 |
+                                hexDec(__buf[__pos + 3]);
+                    __pos += 4;
+                    appendUTF8Char(result, uchar);
+                    continue;
+                }
+                result.append(ch);
+            } else {
+                result.append(ch);
+            }
+        }
+
+        __handler.onString(String(result, true));
+    }
+
+    void __consumeSpace() {
+        __need(1);
+        while (isSpace(__buf[__pos])) {
+            __pos++;
+            __need(1);
+        }
+    }
+
+    void parse();
+
+    ## Format internal state for display (intended as a debugging tool)
+    String formatState() {
+        return FStr() I`pos = $__pos, size = $(__buf.size), remaining = [\
+                        $(String(__buf, uintz(__pos), uintz(__buf.size -
+                                              __pos)))]`
+    }
+
+    ## Gives an error message followed by the remainder of the buffer.
+    void error(String message) {
+        throw ParseError(FStr() `$message: $(
+                                 String(__buf, __pos, __buf.size - __pos))`
+                         );
+    }
+
+    void __parseArray() {
+        ++__pos;
+        __handler.onBeginList();
+
+        # Deal with an empty list.
+        __consumeSpace();
+        if (__buf[__pos] != b']') {
+            while (true) {
+                parse();
+                __consumeSpace();
+                if (__buf[__pos] == b']')
+                    break;
+                if (__buf[__pos] != b',')
+                    error('Comma or end bracket expected');
+                ++__pos;
+                __consumeSpace();
+            }
+        }
+        ++__pos;
+        __handler.onEndList();
+    }
+
+    void __parseObject() {
+        ++__pos;
+        __handler.onBeginObject();
+        __consumeSpace();
+        if (__buf[__pos] != b'}') {
+            while (true) {
+                if (__buf[__pos] != b'"')
+                    error('String expected for object key');
+                __parseString();
+                __consumeSpace();
+                if (__buf[__pos] != b':')
+                    error('Colon expected after object key');
+                ++__pos;
+                __consumeSpace();
+                parse();
+                __consumeSpace();
+                if (__buf[__pos] == b'}')
+                    break;
+                if (__buf[__pos] != b',')
+                    error('Comma or end bracket expected');
+                ++__pos;
+                __consumeSpace();
+            }
+        }
+        ++__pos;
+
+        __handler.onEndObject();
+    }
+
+    void __parseKeyword(int count) {
+        # TODO: This isn't quite right, if the stream is something like
+        # tr<EOF> we should get an unsupported token error, not an Unexpected
+        # EOF.  Either way, it's bad input, so this is mainly an ergonomic
+        # issue for developers.
+        __need(count);
+        if (!memcmp(__buf.buffer + __pos, 'true'.buffer, 4)) {
+            __pos += 4;
+            __handler.onBool(true);
+        } else if (count >= 5 &&
+                   !memcmp(__buf.buffer + __pos, 'false'.buffer, 5)
+                   ) {
+            __pos += 5;
+            __handler.onBool(false);
+        } else if (!memcmp(__buf.buffer + __pos, 'null'.buffer, 4)) {
+            __pos += 4;
+            __handler.onNull();
+        } else {
+            error('Unexpected token');
+        }
+    }
+
+
+    void __parseInt(AppendBuffer temp) {
+        ch := __peek();
+        if (ch == b'-' || ch == b'+') {
+            temp.append(ch);
+            ch = __next();
+            if (!isDigit(ch))
+                error('Expected digit after sign');
+        }
+
+        # Consume the integer part.
+        while (isDigit(ch)) {
+            __next();
+            temp.append(ch);
+            ch = __peek();
+        }
+    }
+
+    void __parseNumber() {
+        temp := AppendBuffer(16);
+
+        # Parse the initial integer component.
+        __parseInt(temp);
+
+        # Fraction.  Since this is optional, do a lookahead.
+        ch := __peek();
+        if (ch == b'.') {
+            temp.append(ch);
+            __next();
+            while (isDigit(ch = __peek())) {
+                temp.append(ch);
+                ch = __next();
+            }
+        }
+
+        # Exponent.  TODO: This will fail at the end of the stream.
+        if (ch == b'e' || ch == b'E') {
+            temp.append(ch);
+            __next();
+            __parseInt(temp);
+        }
+
+        temp.append(0);
+        __handler.onNumber(strtod(temp.buffer));
+    }
+
+    void parse() {
+        __consumeSpace();
+        ch := __buf[__pos];
+        if (ch == b'"')
+            __parseString();
+        else if (ch == b'[')
+            __parseArray();
+        else if (ch == b'{')
+            __parseObject();
+        else if (ch == b'f')
+            __parseKeyword(5);
+        else if (ch == b't' || ch == b'n')
+            __parseKeyword(4);
+        else if (isDigit(ch) || ch == b'-')
+            __parseNumber();
+        else
+            error('Unexpected token');
+    }
+}
+
+## Parse a JSON value out of a reader stream.  The reader should produce a
+## stream of unicode safe characters.  Note that any extraneous data after the
+## value may be consumed but ignored.
+Object parse(Reader src) {
+    handler := DefaultHandler();
+    Parser(src, handler).parse();
+    return handler.getTop();
+}
+
+## Parse a JSON value out of a string, return the value.  Note that this can
+## be any JSON value type, not just JSONObject.  Extraneous data after the
+## value is ignored.
+Object parse(String json) {
+    return parse(StringReader(json));
+}
+

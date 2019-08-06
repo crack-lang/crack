@@ -1,0 +1,8 @@
+%%TEST%%
+json2 tests
+%%ARGS%%
+%%FILE%%
+import test.json2_test;
+%%EXPECT%%
+ok
+%%STDIN%%
