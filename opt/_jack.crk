@@ -42,6 +42,43 @@
         byteptr getName();
     }
 
+    # Indicates which fields have been set in the JackPosition structure
+    const int
+        JACK_POSITION_BBT = 'JackPositionBBT', # Bar, Beat, Tick
+        JACK_POSITION_TIMECODE = 'JackPositionTimecode', # External timecode
+        JACK_BBT_FRAME_OFFSET = 'JackBBTFrameOffset'; # Frame offset of BBT information
+
+    # Transport states.
+    const int
+        JACK_TRANSPORT_STOPPED = 'JackTransportStopped', # Transport halted
+        JACK_TRANSPORT_ROLLING = 'JackTransportRolling', # Transport playing
+        JACK_TRANSPORT_LOOPING = 'JackTransportLooping', # For OLD_TRANSPORT, now ignored
+        JACK_TRANSPORT_STARTING = 'JackTransportStarting'; # Waiting for sync ready
+
+    # There are also bits for the following experimental fields, which we
+    # don't support as they're not guaranteed to continue to exist.
+    # JackAudioVideoRatio 	- audio frames per video frame
+    # JackVideoFrameOffset - frame offset of first video frame
+
+    # Jack position structure,
+    @cname jack_position_t
+    class JackPosition {
+        /*jack_time_t*/ uint64 usecs;
+        /*jack_nframes_t*/ uint32 frame_rate;
+        /*jack_nframes_t*/ uint32 frame;
+        /*jack_position_bits_t*/ int valid;
+
+        int32 bar;
+        int32 beat;
+        int32 tick;
+
+        float64 bar_start_tick;
+        float32 beats_per_bar;
+        float32 beat_type;
+        float64 ticks_per_beat;
+        float64 beats_per_minute;
+    }
+
     class JackClient {
         @cname jack_set_process_callback
         int setProcessCallback(function[int, uint32, voidptr] callback,
@@ -74,6 +111,43 @@
                                 byteptr type_name_pattern,
                                 uint64 flags
                                 );
+
+        ## Time since jack server began in frames.  For use outside of the jack
+        ## callback thread.
+        ##
+        ## Note that frame time appears to be absolute and is time since the
+        ## jack daemon was started.
+        @cname jack_frame_time
+        uint32 frameTime();
+
+        ## Time since the jack server began in frames.  For use within the jack
+        ## callback.
+        @cname jack_last_frame_time
+        uint32 lastFrameTime();
+
+        ## Set the transport time to the given time in frames.
+        ##
+        ## Note that this doesn't change unless the transport is rolling.
+        @cname jack_transport_locate
+        int transportLocate(uint32 pos);
+
+        ## Start the transport rolling.
+        @cname jack_transport_start
+        int transportStart();
+
+        ## Stop the transport.
+        @cname jack_transport_stop
+        int transportStop();
+
+        ## Returns the current transport state and fills 'pos' with position
+        ## data.  A null 'pos' can be passed if position information is not
+        ## desired.
+        @cname jack_transport_query
+        int transportQuery(JackPosition pos);
+
+        ## Set the position (and optionally midi time data) of the transport.
+        @cname jack_transport_reposition
+        int transportReposition(JackPosition pos);
     }
 
     @cname jack_client_open
@@ -84,6 +158,7 @@
     @cname jack_free
     void Jack_free(voidptr ptr);
 }
+
 
 
 
