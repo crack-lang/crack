@@ -8,13 +8,16 @@ import crack.net Poller;
 import crack.time Time;
 
 alias EventCallback = Functor0[void];
+# Deprecated.  Use EventCallback.Wrap.
 alias EventCallbackFunc = Function0[void];
 @export_symbols EventCallback, EventCallbackFunc;
 
 class EventManager;
 
-## Class to break the reference cycle for EventManager.  Use this to reference
-## an EventManager from a callback.
+## Class to break the reference cycle for EventManager.
+##
+## This class predates the existence of RawPtr, and will likely be
+## discontinued in the next major version of the language.
 @abstract class EventManagerBackRef : VTableBase {
     @abstract EventManager oper from EventManager();
 }

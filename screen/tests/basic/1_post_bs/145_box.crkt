@@ -1,0 +1,26 @@
+%%TEST%%
+The Box generic
+%%ARGS%%
+%%FILE%%
+import crack.io cout;
+import crack.lang cmp, Box;
+
+@import crack.ann assert;
+
+@assert(Box[int](100).val == 100);
+@assert(!cmp(Box[function[void]](null).val, function[void].unsafeCast(null)));
+@assert(Box[function[void]](null) == Box[function[void]](null));
+
+zero := Box[int](0);
+one := Box[int](1);
+@assert(one);
+@assert(!zero);
+@assert(!cmp(zero, zero));
+@assert(cmp(one, zero) > 0);
+@assert(cmp(zero, one) < 0);
+@assert(one.makeHashVal() == 1);
+
+cout `ok\n`;
+%%EXPECT%%
+ok
+%%STDIN%%

@@ -97,6 +97,9 @@ class Context : public spug::RCBase {
         VarDefPtr maybeLazyImport(const std::string &name);
 
     public:
+        // Set if the user has requested tracing of lazy import activation
+        // (public so the Tracer object can reference it).
+        static bool traceLazyImports;
 
         // context scope - this is used to control how variables defined in
         // the scope are stored.

@@ -1873,7 +1873,7 @@ Token _parseModuleName(CrackContext ctx) {
     } else if (modFirstTok.isIdent()) {
         tok = modFirstTok;
     } else {
-        ctx.error(tok, 'Identifier or period expected.'.buffer);
+        ctx.error(modFirstTok, 'Identifier or period expected.'.buffer);
     }
     modNameFmt.format(tok.getText());
 

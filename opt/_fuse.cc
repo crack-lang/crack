@@ -5,6 +5,21 @@ struct DoubleTimeSpec {
     timespec first, second;
 };
 
+// Though the secs/nsecs fields are documented as int32 and long
+// respectively, they appear to be implemented as 64 bit values.
+int32_t DoubleTimeSpec_getATimeSecs(DoubleTimeSpec *spec) {
+    return spec->first.tv_sec;
+}
+int32_t DoubleTimeSpec_getATimeNSecs(DoubleTimeSpec *spec) {
+    return spec->first.tv_nsec;
+}
+int32_t DoubleTimeSpec_getMTimeSecs(DoubleTimeSpec *spec) {
+    return spec->second.tv_sec;
+}
+int32_t DoubleTimeSpec_getMTimeNSecs(DoubleTimeSpec *spec) {
+    return spec->second.tv_nsec;
+}
+
 typedef struct statvfs StatVFS;
 
 struct Undef {};
@@ -97,6 +112,34 @@ void crack_ext__fuse_cinit(crack::ext::Module *mod) {
 
 
     crack::ext::Type *type_DoubleTimeSpec = mod->addType("DoubleTimeSpec", sizeof(DoubleTimeSpec));
+
+    f = type_DoubleTimeSpec->addMethod(
+        type_int32,
+        "getATimeSecs",
+        (void *)DoubleTimeSpec_getATimeSecs
+    );
+
+
+    f = type_DoubleTimeSpec->addMethod(
+        type_int32,
+        "getATimeNSecs",
+        (void *)DoubleTimeSpec_getATimeNSecs
+    );
+
+
+    f = type_DoubleTimeSpec->addMethod(
+        type_int32,
+        "getMTimeSecs",
+        (void *)DoubleTimeSpec_getMTimeSecs
+    );
+
+
+    f = type_DoubleTimeSpec->addMethod(
+        type_int32,
+        "getMTimeNSecs",
+        (void *)DoubleTimeSpec_getMTimeNSecs
+    );
+
     type_DoubleTimeSpec->finish();
 
 

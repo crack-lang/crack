@@ -12,7 +12,7 @@
 The Crack Programming Language Guide
 ====================================
 
-This is the manual for version 1.4 of the Crack Programming Language.  Crack
+This is the manual for version 1.5 of the Crack Programming Language.  Crack
 is an imperative, object-oriented language along the lines of Java, Python and
 C++.  It can be compiled in Just In Time and Ahead Of Time modes and has been
 tested on 32 and 64 bit x86 Linux Debian and Ubuntu systems.
@@ -679,7 +679,7 @@ You'll generally want to use the memory-managed #Array# collection instead
 Control Structures
 ------------------
 
-Crack 1.4 supports four control structures: the "if\/else" statement,
+Crack 1.5 supports four control structures: the "if\/else" statement,
 the "while" statement, the "for" statement and the "try\/catch" statement.
 "if" runs code blocks depending on whether a condition is true or false:
 
@@ -3239,6 +3239,13 @@ you can ensure that the set of imports referenced by a particular external
 user remains constant, while still providing a way to extend your set of
 auto-imports.
 
+Crack provides an auto-import module for most of its standard library.  For
+version 1.5 of crack, this module is #`crack.imports1_5`#.  Note that the
+first use of this module does add noticeable overhead to the compile time of a
+program that makes use of it.  Tracing the actual imports of the modules (with
+the "-t LazyImports" option) can be used to determine the actual imports used
+by all modules and convert the auto-import into traditional import statements.
+
 Protocols
 ---------
 
@@ -3272,7 +3279,7 @@ translates to roughly the following code:
 
 {{
     for (tempIter := container.iter(); tempIter; tempIter.next()) {
-        x := tempIter.elem();
+        x = tempIter.elem();
         cout `$x\n`;
     }
 }}
@@ -4302,7 +4309,7 @@ member variables.  For example:
     Coord c = {10, 20};
 }}
 
-Structs are very limited as of Crack 1.4.  In particular:
+Structs are very limited as of Crack 1.5.  In particular:
 
 -   They don't support inheritence.
 -   You can't add any other methods.
@@ -4554,7 +4561,7 @@ extension, you'll want to:
 -   build it into a shared library, linked with whatever support code it needs
     (usually the code it's wrapping)
 -   Add the include directory for crack headers to the include path (usually
-    something like #`/usr/local/include/crack-1.4`#)
+    something like #`/usr/local/include/crack-1.5`#)
 
 The Extension Generator
 '''''''''''''''''''''''
@@ -4959,6 +4966,31 @@ The following standard exception types are defined in #crack.lang#:
 
 #InvalidArgumentError#::
     Thrown when a function is passed an invalid argument.
+
+The Box Generic
+'''''''''''''''
+
+#crack.lang.Box# is a generic class that is simply an object wrapper around
+another type. It is mainly intended to allow the use of built-in types in
+contexts that require an #Object#.  However, it can also be used as a (very
+expensive) form of pass by reference.
+
+#Box[T]# has a single attribute named "val".  It also provides the full suite
+of object methods for comparison, hashing, formatting, and equality, so you
+can use them fairly similarly to the original types.
+
+Examples:
+
+{{
+    import crack.lang Box;
+
+    i := Box[int](100);
+    if (i == Box[int](100)) cout `comparison works.\n`;
+
+    void modifyArg(Box[String] arg) {
+        arg.val = 'mutated!';
+    }
+}}
 
 Containers
 ----------
@@ -6754,7 +6786,7 @@ be backwards compatible until the major version number changes.  See
 The remainder of this appendix describes the things you need to know when
 upgrading between versions.
 
-From 1.1 through to 1.4
+From 1.1 through to 1.5
 -----------------------
 
 No known changes affecting compatibility.

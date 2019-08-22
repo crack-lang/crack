@@ -12,6 +12,21 @@
             timespec first, second;
         };
 
+        // Though the secs/nsecs fields are documented as int32 and long
+        // respectively, they appear to be implemented as 64 bit values.
+        int32_t DoubleTimeSpec_getATimeSecs(DoubleTimeSpec *spec) {
+            return spec->first.tv_sec;
+        }
+        int32_t DoubleTimeSpec_getATimeNSecs(DoubleTimeSpec *spec) {
+            return spec->first.tv_nsec;
+        }
+        int32_t DoubleTimeSpec_getMTimeSecs(DoubleTimeSpec *spec) {
+            return spec->second.tv_sec;
+        }
+        int32_t DoubleTimeSpec_getMTimeNSecs(DoubleTimeSpec *spec) {
+            return spec->second.tv_nsec;
+        }
+
         typedef struct statvfs StatVFS;
 
         struct Undef {};
@@ -66,7 +81,19 @@
     class FuseConnInfo {
     }
 
-    class DoubleTimeSpec {}
+    class DoubleTimeSpec {
+        @cname DoubleTimeSpec_getATimeSecs
+        int32 getATimeSecs();
+
+        @cname DoubleTimeSpec_getATimeNSecs
+        int32 getATimeNSecs();
+
+        @cname DoubleTimeSpec_getMTimeSecs
+        int32 getMTimeSecs();
+
+        @cname DoubleTimeSpec_getMTimeNSecs
+        int32 getMTimeNSecs();
+    }
 
     @cname Undef
     class FusePollHandle {}
