@@ -24,6 +24,11 @@ class FakeFormatter {
     oper to bool() { return 1; }
 }
 
+# Make sure forward declared functions and classes don't cause an error if
+# undefined at the end of the generic module.
+void forwardFunc();
+class ForwardClass;
+
 bool gotStaticCalled;
 class A[T] {
     T val;
@@ -116,5 +121,9 @@ if (1) {
         G[__M] __carr;
     }
 }
+
+# Define these now that we're done.
+void forwardFunc() {}
+class ForwardClass {}
 
 puts('ok');
