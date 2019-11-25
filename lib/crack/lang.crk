@@ -1403,7 +1403,7 @@ uint makeHashVal(int64 val) { return uint(val >> 32 ^ val); }
 uint makeHashVal(bool val) { return val ? 1 : 0; }
 
 ## Box can be used to wrap builtin types in an Object.
-class Box[T] {
+class Box[T] : Object {
     T val;
 
     oper init(T val) : val = val {}
@@ -1451,5 +1451,3 @@ class Box[T] {
         return val;
     }
 }
-
-
