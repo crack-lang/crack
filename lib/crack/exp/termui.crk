@@ -419,7 +419,7 @@ class TermApp {
         }
 
         # The diffs continue to the end of the buffer.
-        return i;
+        return i - 1;
     }
 
     ## Write the delta starting at 'pos', return the location after the write.
