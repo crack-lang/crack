@@ -1272,6 +1272,11 @@ is::
     object on the right.  This isn't defined for numbers, only for aggregates
     and primitive pointer types.  It essentially checks for the equivalence of
     the pointers.
+!is::
+    True if the object on the left is not identical to the object on the
+    right.  This isn't a real operator, it is syntactic sugar that translates
+    to the negation of the #is# operator.  That is, #a !is b# is semantically
+    equivalent to #!(a is b)#.
 
 Basic Arithmetic
 ''''''''''''''''

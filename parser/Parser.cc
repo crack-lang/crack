@@ -1007,6 +1007,42 @@ void Parser::checkForRedefine(const Token &tok, VarDef *def) const {
       redefineError(tok, def);
 }
 
+ExprPtr Parser::parseBinOp(Expr *rawExpr, const Token &tok, 
+                           unsigned precedence
+                           ) {
+   ExprPtr expr = rawExpr;
+   // Parse the right-hand-side expression.
+   ExprPtr rhs = parseExpression(precedence);
+
+   FuncCall::ExprVec exprs(2);
+   exprs[0] = expr;
+   exprs[1] = rhs;
+
+   FuncDefPtr func = lookUpBinOp(tok.getData(), exprs);
+   if (!func)
+      error(tok,
+            SPUG_FSTR("Operator " << expr->getTypeDisplayName() << " " <<
+                     tok.getData() << " " << rhs->getTypeDisplayName() <<
+                     " undefined."
+                     )
+            );
+   BSTATS_GO(s1)
+   FuncCallPtr funcCall = context->builder.createFuncCall(func.get());
+   BSTATS_END
+   funcCall->args = exprs;
+   if (func->flags & FuncDef::method)
+      funcCall->receiver =
+         (func->flags & FuncDef::reverse) ? rhs : expr;
+   expr = funcCall;
+   try {
+      return expr->foldConstants();
+   } catch (DivZeroError &ex) {
+      warn(tok, "Division by zero.");
+      // expr should still be the func call.
+      return expr;
+   }
+}
+
 ExprPtr Parser::parseSecondary(const Primary &primary, unsigned precedence) {
    ExprPtr expr = primary.expr;
    Token tok = getToken();
@@ -1138,35 +1174,7 @@ ExprPtr Parser::parseSecondary(const Primary &primary, unsigned precedence) {
          if (newPrec <= precedence)
             break;
 
-         // parse the right-hand-side expression
-         ExprPtr rhs = parseExpression(newPrec);
-
-         FuncCall::ExprVec exprs(2);
-         exprs[0] = expr;
-         exprs[1] = rhs;
-
-         FuncDefPtr func = lookUpBinOp(tok.getData(), exprs);
-         if (!func)
-            error(tok,
-                  SPUG_FSTR("Operator " << expr->getTypeDisplayName() << " " <<
-                            tok.getData() << " " << rhs->getTypeDisplayName() <<
-                            " undefined."
-                            )
-                  );
-         BSTATS_GO(s1)
-         FuncCallPtr funcCall = context->builder.createFuncCall(func.get());
-         BSTATS_END
-         funcCall->args = exprs;
-         if (func->flags & FuncDef::method)
-            funcCall->receiver =
-               (func->flags & FuncDef::reverse) ? rhs : expr;
-         expr = funcCall;
-         try {
-            expr = expr->foldConstants();
-         } catch (DivZeroError &ex) {
-            warn(tok, "Division by zero.");
-            // expr should still be the func call.
-         }
+         expr = parseBinOp(expr.get(), tok, newPrec);
       } else if (tok.isIstrBegin()) {
          expr = parseIString(expr.get());
       } else if (tok.isQuest()) {
@@ -1174,21 +1182,59 @@ ExprPtr Parser::parseSecondary(const Primary &primary, unsigned precedence) {
             break;
          expr = parseTernary(expr.get());
       } else if (tok.isBang()) {
-         // this is special wacky collection syntax Type![1, 2, 3]
-         TypeDef *type = convertTypeRef(expr.get());
-         if (!type)
-            error(tok,
-                  "Exclamation point can not follow a non-type expression"
-                  );
+         // Check for the 'is' keyword to see if this is the "!is" sugar.
+         Token tok2 = toker.getToken();
+         if (tok2.getType() == Token::isKw) {
+            unsigned newPrec = getPrecedence(tok2.getData());
+            if (newPrec <= precedence)
+               break;
 
-         // check for a square bracket
-         tok = toker.getToken();
-         if (!tok.isLBracket())
-            error(tok,
-                  "Sequence initializer ('[ ... ]') expected after "
-                   "'type!'"
-                  );
-         expr = parseConstSequence(type);
+            // parse the full "is" operation.
+            expr = parseBinOp(expr.get(), tok2, newPrec);
+            
+            // Wrap it in a synthetic "not" operation
+            
+            // Look up the unary operator, first in the methods of the "is" 
+            // expression return type and then in the global context.
+            FuncCall::ExprVec args;
+            FuncDefPtr funcDef = context->lookUp(
+               "oper !", 
+               args,
+               expr->getType(*context).get()
+            );
+            if (!funcDef) {
+               args.push_back(expr);
+               funcDef = context->lookUp("oper !", args);
+            }
+            if (!funcDef)
+               error(tok, SPUG_FSTR("'oper !' is not defined for type " << 
+                                    expr->type->name));
+      
+            // Emit the function or method call.
+            BSTATS_GO(s1)
+            FuncCallPtr funcCall =
+               context->builder.createFuncCall(funcDef.get());
+            BSTATS_END
+            funcCall->args = args;
+            if (funcDef->flags & FuncDef::method)
+               funcCall->receiver = expr;
+            expr = funcCall->foldConstants();
+         } else {
+            // this is special wacky collection syntax Type![1, 2, 3]
+            TypeDef *type = convertTypeRef(expr.get());
+            if (!type)
+               error(tok,
+                     "Exclamation point can not follow a non-type expression"
+                     );
+   
+            // check for a square bracket
+            if (!tok2.isLBracket())
+               error(tok2,
+                     "Sequence initializer ('[ ... ]') expected after "
+                     "'type!'"
+                     );
+            expr = parseConstSequence(type);
+         }
       } else if (tok.isAssign() || tok.isAugAssign()) {
          ExprPtr val = parseExpression();
          expr = makeAssign(expr.get(), tok, val.get());
