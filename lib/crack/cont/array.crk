@@ -260,7 +260,7 @@ class Array[Elem] {
     }
 
     oper del() {
-        if (!(__rep is null)) {
+        if (__rep !is null) {
             if (__cap && _isObject(__rep[0])) {
                 for (uint i = 0; i < __size; ++i) {
                     _release(__rep[i]);

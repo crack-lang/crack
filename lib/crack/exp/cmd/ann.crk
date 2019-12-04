@@ -75,7 +75,7 @@ class CommandArgs {
     }
 
     Token getParentName() {
-        return !(__parentName is null) ?
+        return __parentName !is null ?
                     __parentName :
                     Token(TOK_IDENT, 'parent'.buffer,
                           parentType.getLocation()
@@ -190,9 +190,9 @@ NodeList emitFieldsAsArgInfoArray(Array[Arg] args) {
 
         name := Token(TOK_STRING, arg.name.getText(), arg.name.getLocation());
         type := arg.type;
-        hasDefaultValue := !(arg.default is null) ? @tokens { true } :
-                                                    @tokens { false };
-        defaultValue := !(arg.default is null) ?
+        hasDefaultValue := arg.default !is null ? @tokens { true } :
+                                                  @tokens { false };
+        defaultValue := arg.default !is null ?
                             arg.default :
                             Token(TOK_NULLKW, 'null'.buffer,
                                   arg.name.getLocation()
@@ -439,7 +439,7 @@ void command(CrackContext ctx) {
     }
 
     NodeList convertersBinder;
-    if (!(commandArgs.converters is null)) {
+    if (commandArgs.converters !is null) {
         converters := commandArgs.converters;
         convertersBinder = @xmac* { $converters }.expand();
     } else {

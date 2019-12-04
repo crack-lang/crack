@@ -113,7 +113,7 @@ class GTKObject : Handlers {
     }
 
     oper del() {
-        if (!(_rep is null))
+        if (_rep !is null)
             gtk_object_destroy(_rep);
     }
 }
@@ -127,7 +127,7 @@ class Widget : GTKObject {
     }
 
     @final void destroy() {
-        if (!(_rep is null))
+        if (_rep !is null)
             # _rep gets set to null in onDestroy()
             gtk_widget_destroy(GtkWidget.unsafeCast(_rep));
     }

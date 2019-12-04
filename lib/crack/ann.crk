@@ -243,7 +243,7 @@ class NodeListImpl : NodeList {
     }
 
     Location getLocation() {
-        if (!(loc is null))
+        if (loc !is null)
             return loc;
         else if (first)
             return first.getLocation();
@@ -1048,7 +1048,7 @@ class Type {
         if (!tok.isIdent())
             ctx.error(tok, 'Identifier expected for type name'.buffer);
         String name = {tok.getText()};
-        if (!(result is null))
+        if (result !is null)
             result.pushHead(Tok(tok));
 
         Array[Type] params;
@@ -1057,12 +1057,12 @@ class Type {
 
             # got a left bracket, parse the type parameters
             params = Array[Type]();
-            if (!(result is null))
+            if (result !is null)
                 result.pushHead(Tok(tok));
             while (true) {
                 params.append(Type.parse(ctx, result));
                 tok = ctx.getToken();
-                if (!(result is null))
+                if (result !is null)
                     result.pushHead(Tok(tok));
                 if (tok.isRBracket()) {
                     break;
@@ -1323,7 +1323,7 @@ void property(CrackContext ctx) {
             if (StaticString(tok.getText()) == "get") {
                 getter = readBlock(ctx);
             } else if (StaticString(tok.getText()) == "set") {
-                if (!(readonlyAttr is null)) {
+                if (readonlyAttr !is null) {
                     ctx.error(tok, "readonly properties cannot have setters defined".buffer);
                 }
                 setter = readBlock(ctx);
@@ -1440,21 +1440,21 @@ void interface(CrackContext ctx) {
         f `{
         @abstract Object oper from $(nameTok.getText())();
         @final oper bind() {
-            if (!(this is null))
+            if (this !is null)
                 this.oper from $(nameTok.getText())().oper bind();
         }
         @final oper release() {
-            if (!(this is null))
+            if (this !is null)
                 this.oper from $(nameTok.getText())().oper release();
         }
         @final oper to Object() {
-            if (!(this is null))
+            if (this !is null)
                 return this.oper from $(nameTok.getText())();
             else
                 return null;
         }
         @final oper to bool() {
-            return !(this is null) &&
+            return this !is null &&
                 this.oper from $(nameTok.getText())().isTrue();
         }
         `;
@@ -1616,7 +1616,7 @@ void token_str(CrackContext ctx) {
 NodeList deserializeNodeList(String tokens) {
     ser := TokSerializer(tokens.buffer, tokens.size);
     list := NodeListImpl(ser.getLocation());
-    while (!((tok := ser.getToken()) is null))
+    while ((tok := ser.getToken()) !is null)
         list.pushHead(Tok(tok));
     return list;
 }
@@ -1732,7 +1732,7 @@ XMacro deserializeXMac(String tokens) {
     TreeMap[String, _ArgDef] vars = {};
     bool gotDollar;
     int lastArgIndex;
-    while (!((tok := ser.getToken()) is null)) {
+    while ((tok := ser.getToken()) !is null) {
         if (gotDollar) {
             if (tok.isIdent()) {
 
@@ -1771,8 +1771,8 @@ TreeMap[String, uint] _getVarNames(NodeList nodes) {
     Token lastTok;
     for (node :in nodes) {
         tok := (t := Tok.cast(node, null)) ? t.tok : null;
-        if (!(tok is null) && tok.isDollar()) {
-            if (!(lastTok is null) && lastTok.isIdent())
+        if (tok !is null && tok.isDollar()) {
+            if (lastTok !is null && lastTok.isIdent())
                 result[String(lastTok.getText())] = 1;
             else
                 throw _ParseError(lastTok, "Identifier expected after '$'");

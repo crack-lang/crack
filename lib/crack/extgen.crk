@@ -573,7 +573,7 @@ class Errors : StringFormatter {
     oper del() {
         # null terminate
         this `\0`;
-        if (!(tok is null))
+        if (tok !is null)
             ctx.error(tok, string().buffer);
         else
             ctx.error(string().buffer);

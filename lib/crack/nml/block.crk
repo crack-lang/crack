@@ -245,7 +245,7 @@ class TextBlock {
 
                 } else {
                     result := block.find(blockType);
-                    if (!(result is null))
+                    if (result !is null)
                         return result;
                 }
             }
@@ -349,7 +349,7 @@ String getHeader(TextBlock block) {
                 return tmp.makeString();
             } else {
                 header := getHeader(childBlock);
-                if (!(header is null))
+                if (header !is null)
                     return header;
             }
         }

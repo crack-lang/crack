@@ -63,7 +63,7 @@ cln.send('to server', 0);
 poller.wait(null);
 PollEvent p;
 while (p = poller.nx()) {
-    if (!(p.pollable is accepted.sock)) {
+    if (p.pollable !is accepted.sock) {
         cout `fd = $(p.fd), events = $(p.events)\n`;
         die("didn't poll the server");
     } else {
@@ -82,7 +82,7 @@ accepted.sock.send('to client', 0);
 poller.wait(null);
 ok = false;
 while (p = poller.nx()) {
-    if (!(p.pollable is cln))
+    if (p.pollable !is cln)
         die("didn't poll the client");
     else
         ok = true;

@@ -42,7 +42,7 @@ class PathDispatcher : HashMap[String, RequestHandler]
                        @implements Functor1[bool, Request] {
     bool oper call(Request req) {
         handler := get(req.getParsedPath()[0], null);
-        if (!(handler is null)) {
+        if (handler !is null) {
             req.parsedPath.delete(0);
             return handler(req);
         } else {

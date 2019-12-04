@@ -910,9 +910,9 @@ class App {
         free(__lastEngineFrame);
 
         # Free the joystick array.
-        if (!(__joysticks is null)) {
+        if (__joysticks !is null) {
             for (int i = 0; i < 8; ++i) {
-                if (!(__joysticks[i] is null))
+                if (__joysticks[i] !is null)
                     SDL_JoystickClose(__joysticks[i]);
             }
             free(__joysticks);
@@ -946,10 +946,10 @@ class App {
             __joysticks = array[SDL_Joystick](8);
         if (deviceIndex > 7)
             return false;
-        if (!(__joysticks[deviceIndex] is null))
+        if (__joysticks[deviceIndex] !is null)
             return true;
         __joysticks[deviceIndex] = js := SDL_JoystickOpen(deviceIndex);
-        return !(js is null);
+        return js !is null;
     }
 
     int __getTimeDiff(TimeVal old, TimeVal new) {
@@ -1047,7 +1047,7 @@ class App {
         # get the current time
         __now.setToNow(null);
         diff := __getTimeDiff(__lastRenderFrame, __now);
-        if (!(renderFrameHandler is null))
+        if (renderFrameHandler !is null)
             renderFrameHandler.onRenderFrame(RenderFrameEvent(diff));
         __lastRenderFrame.secs = __now.secs;
         __lastRenderFrame.nsecs = __now.nsecs;

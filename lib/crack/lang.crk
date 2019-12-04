@@ -52,7 +52,7 @@ class Object : VTableBase {
     }
 
     oper bind() {
-        if (!(this is null))
+        if (this !is null)
             refCount += 1;
     }
 
@@ -81,7 +81,7 @@ class Object : VTableBase {
     }
 
     @final bool oper <(Object other) {
-        return this is null ? !(other is null) :
+        return this is null ? other !is null :
                               (other is null ? false : cmp(other) < 0);
     }
 
@@ -95,7 +95,7 @@ class Object : VTableBase {
     }
 
     @final bool oper !=(Object other) {
-        return this is null ? !(other is null) :
+        return this is null ? other !is null :
                               (other is null ? true : cmp(other) != 0);
     }
 
@@ -146,19 +146,19 @@ class Buffer;
 @define _iface_methods 1
     @abstract Object oper from $1();
     @final oper bind() {
-        if (!(this is null)) this.oper from $1().oper bind();
+        if (this !is null) this.oper from $1().oper bind();
     }
     @final oper release() {
-        if (!(this is null)) this.oper from $1().oper release();
+        if (this !is null) this.oper from $1().oper release();
     }
     @final oper to Object() {
-        if (!(this is null))
+        if (this !is null)
             return this.oper from $1();
         else
             return null;
     }
     @final oper to bool() {
-        return !(this is null) &&
+        return this !is null &&
                this.oper from $1().isTrue();
     }
 $$
@@ -538,7 +538,7 @@ class ManagedBuffer : WriteBuffer {
         }
 
         newBuffer := malloc(newCap);
-        if (!(buffer is null)) {
+        if (buffer !is null) {
             memcpy(newBuffer, buffer, size);
             free(buffer);
         }
@@ -547,7 +547,7 @@ class ManagedBuffer : WriteBuffer {
     }
 
     oper del() {
-        if (!(buffer is null))
+        if (buffer !is null)
             free(buffer);
     }
 };
@@ -1323,9 +1323,9 @@ void die() {
 int cmp(Object a, Object b) {
     if (a is b)
         return 0;
-    else if (!(a is null))
+    else if (a !is null)
         return a.cmp(b);
-    else if (!(b is null))
+    else if (b !is null)
         return -1;
     else
         return 1;

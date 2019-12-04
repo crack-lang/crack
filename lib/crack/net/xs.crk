@@ -274,7 +274,7 @@ class XsSocket {
     }
 
     oper del() {
-        if (!(_sock is null) && xs_sock_close(_sock) == -1)
+        if (_sock !is null && xs_sock_close(_sock) == -1)
             _handleError("close");
         _sock = null;
     }

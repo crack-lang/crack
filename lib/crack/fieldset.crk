@@ -80,7 +80,7 @@ class HashMapFieldSet @impl FieldSet {
 
         if (val is null && __map.hasKey(key)) {
             __map.delete(key);
-        } else if (!(val is null)) {
+        } else if (val !is null) {
             __map[key] = val;
         }
     }

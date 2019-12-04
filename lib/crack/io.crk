@@ -73,9 +73,9 @@ class FileHandle : Object {
 
     # Since we can't load crack.ann yet, add the interface plumbing manually
     @abstract Object oper from Seekable();
-    oper bind() { if (!(this is null)) this.oper from Seekable().oper bind(); }
+    oper bind() { if (this !is null) this.oper from Seekable().oper bind(); }
     oper release() {
-        if (!(this is null)) this.oper from Seekable().oper release();
+        if (this !is null) this.oper from Seekable().oper release();
     }
 }
 
@@ -146,9 +146,9 @@ class OwningFDWriter : FDWriter {
 
     # Since we can't load crack.ann yet, add the interface plumbing manually
     @abstract Object oper from Reader();
-    oper bind() { if (!(this is null)) this.oper from Reader().oper bind(); }
+    oper bind() { if (this !is null) this.oper from Reader().oper bind(); }
     oper release() {
-        if (!(this is null)) this.oper from Reader().oper release();
+        if (this !is null) this.oper from Reader().oper release();
     }
 };
 
@@ -306,7 +306,7 @@ class _SimpleFieldSet : _FieldSetNode, FieldSet {
         owner := findOwner(key);
         if (!owner) {
             # We don't currently have the key, create a new one.
-            if (!(val is null))
+            if (val !is null)
                 next = _FieldSetNode(key, val, next);
             return;
         }

@@ -18,7 +18,7 @@ class OID : ManagedBuffer {
 
     oper init(Buffer newdata) : ManagedBuffer(12) {
         size = 12;
-        if (!(newdata is null)) {
+        if (newdata !is null) {
             if (newdata.size != 12)
                 throw InvalidArgumentError("BSON OID objects must have size 12");
             memcpy(buffer, newdata.buffer, newdata.size);

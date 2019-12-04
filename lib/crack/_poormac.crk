@@ -50,8 +50,8 @@ void expand(CrackContext ctx) {
     }
 
     # push the tokens back into the stream with argument replacement
-    for (TokNode elem = m.first; !(elem is null); elem = elem.next)
-        if (!(elem.tok is null))
+    for (TokNode elem = m.first; elem !is null; elem = elem.next)
+        if (elem.tok !is null)
             ctx.putBack(elem.tok);
         else
             ctx.putBack(args[elem.arg]);

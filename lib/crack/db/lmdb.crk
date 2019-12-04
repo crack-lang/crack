@@ -183,11 +183,11 @@ class Iter {
     bool isTrue() { return _status == MDB_SUCCESS; }
 
     oper del() {
-        if (!(_cursor is null)) {
+        if (_cursor !is null) {
             mdb_cursor_close(_cursor);
         }
 
-        if (!(_txn is null)) {
+        if (_txn !is null) {
             mdb_txn_abort(_txn);
         }
         free(_ival);
@@ -276,7 +276,7 @@ class InnerDB {
     /// Commits a write transaction if one was started using startWriteTransaction
     bool endWriteTransaction() {
         if (writing) {
-            if (!(_writeTx is null)) {
+            if (_writeTx !is null) {
                 mdb_txn_commit(_writeTx);
                 _writeTx = null;
             }
@@ -687,7 +687,7 @@ class Lmdb {
 
     void close(String name) {
         InnerDB idb = _dbs.get(name, null);
-        if (!(idb is null)) {
+        if (idb !is null) {
             idb.close();
             _dbs.delete(name);
         }

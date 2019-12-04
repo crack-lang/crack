@@ -394,7 +394,7 @@ class TreeMap[KeyT, ValT] {
             }
 
             # move the contents of the new node to this node
-            if (!(node is this)) {
+            if (node !is this) {
                 key = node.key;
                 val = node.val;
             }

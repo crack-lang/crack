@@ -641,7 +641,7 @@ class Rectangle {
     oper init(cairo_rectangle_t rectangle0): rectangle = rectangle0 { }
 
     oper del(){
-        if (!(rectangle is null))
+        if (rectangle !is null)
             free(rectangle);
         rectangle = null;
     }
@@ -653,7 +653,7 @@ class RectangleList {
     oper init(cairo_rectangle_list_t rectangle_list0): rectangle_list = rectangle_list0 { }
 
     oper del(){
-        if (!(rectangle_list is null))
+        if (rectangle_list !is null)
             cairo_rectangle_list_destroy (rectangle_list);
         rectangle_list = null;
     }
@@ -663,7 +663,7 @@ class Path {
     cairo_path_t path;
     oper init (cairo_path_t path0): path = path0 { }
     oper del(){
-        if (!(path is null))
+        if (path !is null)
             cairo_path_destroy (path);
         path = null;
     }
@@ -685,7 +685,7 @@ class Matrix {
     }
 
     oper del(){
-        if (!(matrix is null))
+        if (matrix !is null)
             free(matrix);
         matrix = null;
     }
@@ -803,7 +803,7 @@ class Glyph {
     cairo_glyph_t glyph = null;
     oper init(cairo_glyph_t glyph0): glyph = glyph0 { }
 
-    oper del() { if (!(glyph is null)) cairo_glyph_free(glyph); }
+    oper del() { if (glyph !is null) cairo_glyph_free(glyph); }
 } // Glyph
 
 class TextExtents {
@@ -812,7 +812,7 @@ class TextExtents {
     oper init(cairo_text_extents_t extents0): extents = extents0 { }
 
     oper del(){
-        if (!(extents is null))
+        if (extents !is null)
             free(extents);
     }
 
@@ -824,7 +824,7 @@ class FontExtents {
     oper init(cairo_font_extents_t extents0): extents = extents0 { }
     oper del(){
 
-    if (!(extents is null))
+    if (extents !is null)
             free(extents);
     }
 
@@ -856,7 +856,7 @@ class FontOptions {
     void set_hint_metrics(uint hint_metrics) { cairo_font_options_set_hint_metrics(font_options, hint_metrics); }
     uint get_hint_metrics() { return cairo_font_options_get_hint_metrics(font_options); }
 
-    void del(){ if (!(font_options is null)) cairo_font_options_destroy(font_options);}
+    void del(){ if (font_options !is null) cairo_font_options_destroy(font_options);}
 
 } // FontOptions
 
@@ -873,7 +873,7 @@ class FontFace {
     uint cairo_toy_font_face_get_slant() { return cairo_toy_font_face_get_slant(font_face); }
     uint cairo_toy_font_face_get_weight() { return cairo_toy_font_face_get_weight(font_face); }
 
-    oper del() { if (!(font_face is null))  cairo_font_face_destroy(font_face); }
+    oper del() { if (font_face !is null)  cairo_font_face_destroy(font_face); }
 } // FontFace
 
 class ScaledFont {
@@ -937,7 +937,7 @@ class ScaledFont {
         return FontOptions(options_new);
     }
 
-    oper del() { if (!(scaled_font is null))  cairo_scaled_font_destroy(scaled_font); }
+    oper del() { if (scaled_font !is null)  cairo_scaled_font_destroy(scaled_font); }
 
 } // ScaledFont
 
@@ -948,7 +948,7 @@ class Device {
     oper init(cairo_device_t device0): device = device0 { }
 
     oper del(){
-        if (!(device is null)){
+        if (device !is null){
             cairo_device_destroy(device);
             device = null;
         }
@@ -971,7 +971,7 @@ class Pattern {
     }
 
     oper del(){
-        if (!(pattern is null))
+        if (pattern !is null)
             cairo_pattern_destroy(pattern);
     }
 
@@ -1010,7 +1010,7 @@ class Surface {
     oper init(cairo_surface_t surface0): surface = surface0 { }
 
     oper del(){
-        if (!(surface is null)){
+        if (surface !is null){
            cairo_surface_destroy(surface);
         }
     }
@@ -1099,7 +1099,7 @@ class Region {
     oper init(cairo_region_t region0): region = region0 { }
 
     oper del(){
-        if (!(region is null))
+        if (region !is null)
             cairo_region_destroy(region);
         region = null;
     }
@@ -1141,7 +1141,7 @@ class Cairo {
     }
 
     oper del(){
-        if (!(cr is null))
+        if (cr !is null)
             cairo_destroy(cr);
     }
 

@@ -841,11 +841,11 @@ $expected`);
                 throw AssertionError('head has a prev');
             Item last;
             while (cur) {
-                if (!(cur.prev is last))
+                if (cur.prev !is last)
                     throw AssertionError('Previous is not the last element');
 
                 index := __findSlot(cur._hash, cur.key);
-                if (!(_items[index] is cur))
+                if (_items[index] !is cur)
                     throw AssertionError('Item is not in its slot');
 
                 last = cur;

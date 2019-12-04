@@ -108,7 +108,7 @@ if (1) {
         rn := $r;
         opn := $op;
 
-        if (!(typeof(lv op rv) is t)) {
+        if (typeof(lv op rv) !is t) {
             tn := $t;
             cout `typeof($ln $opn $rn) != $tn\n`;
         }
@@ -121,7 +121,7 @@ if (1) {
 }
 
 @define cct(l, r, t) {
-    if (!(typeof(l + r) is t)) {
+    if (typeof(l + r) !is t) {
         ln := $l;
         rn := $r;
         tn := $t;

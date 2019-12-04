@@ -299,8 +299,8 @@ if ('foo=bar'.getSuffix('foo=') != 'bar')
 if ('foo='.getSuffix('foo=') != '')
     cout `Failed 'foo='.getSuffix('foo=') != ''\n`;
 
-if (!('foo='.getSuffix('bar=') is null))
-    cout `Failed !('foo='.getSuffix('bar=') is null)\n`;
+if ('foo='.getSuffix('bar=') !is null)
+    cout `Failed 'foo='.getSuffix('bar=') !is null\n`;
 
 String words = "this is a heading";
 capWords := capitalize(words);

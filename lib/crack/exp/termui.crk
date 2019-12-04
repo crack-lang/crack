@@ -529,7 +529,7 @@ class TermApp {
 
     ## Sets the focused window.  DON'T USE THIS DIRECTLY.
     void _setFocused(BaseWindow window) {
-        if (!(__focus is window)) {
+        if (__focus !is window) {
             if (__focus) __focus.setFocus(false);
             __focus = window;
         }

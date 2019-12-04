@@ -43,7 +43,7 @@ class _Environment: HashMap[String, String] {
         throw InvalidResourceError(FStr() `Error getting environment array\n`);
       else{
          uint i = 0;
-         while (!(e[i] is null)){
+         while (e[i] !is null){
             keyValString = String(e[i]);
             eqPos = keyValString.lfind(b"=");
             if (eqPos <= 0 )

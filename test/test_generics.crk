@@ -62,7 +62,7 @@ class C {
     oper init() : wrap(this) {}
 }
 C c = {};
-if (!(c.wrap.val is c))
+if (c.wrap.val !is c)
     puts('FAILED nested generic parameterized by outer class');
 
 # test parsing a generic derived from another generic parameterized by a
