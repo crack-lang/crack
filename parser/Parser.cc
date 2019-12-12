@@ -16,6 +16,7 @@
 #include <spug/Exception.h>
 #include <spug/StringFmt.h>
 #include "model/Annotation.h"
+#include "model/AttrDeref.h"
 #include "model/ArgDef.h"
 #include "model/AssignExpr.h"
 #include "model/Branchpoint.h"
@@ -896,6 +897,11 @@ ExprPtr Parser::parseDefine(const Token &ident) {
    ExprPtr val = parseExpression();
    checkForExternalOverload(val.get());
 
+   AttrDerefPtr deref = AttrDerefPtr::rcast(val);
+   if (deref && !deref->operGet)
+      context->error("Cannot create a variable from attribute with no "
+                     "getter.");
+
    // XXX We have to do this weird, inefficient two-step process of
    // defining the variable and then assigning it.  For some reason, if we
    // don't we end up breaking definitions in a 'while' condition: the
@@ -958,7 +964,7 @@ ExprPtr Parser::makeAssign(Expr *lvalue, const Token &tok, Expr *rvalue) {
 
    // At this point we should be able to do a straightforward assignment.
    if (Deref *deref = DerefPtr::rcast(lval)) {
-      if (deref->def->isConstant())
+      if (!AttrDerefPtr::rcast(lval) && deref->def->isConstant())
          error(tok, "You cannot assign to a constant, class or function.");
       return deref->makeAssignment(*context, rval.get());
    } else if (VarRef *ref = VarRefPtr::rcast(lval)) {
@@ -1058,6 +1064,9 @@ ExprPtr Parser::parseSecondary(const Primary &primary, unsigned precedence) {
 
    while (true) {
       if (tok.isDot()) {
+         AttrDerefPtr deref = AttrDerefPtr::rcast(expr);
+         if (deref && !deref->operGet)
+            context->error("Attempt to evaluate attribute with no getter.");
          TypeDefPtr type;
          parsePostDot(expr, type);
       } else if (tok.isScoping()) {
@@ -3256,6 +3265,29 @@ void Parser::parsePostOper(TypeDef *returnType) {
       parseFuncDef(returnType, tok, name, reversed ? reverseOp: normal,
                    numArgs
                    );
+   } else if (tok.isDot()) {
+      // setters & getters.
+      if (context->scope != Context::composite)
+         error(tok, "Setters and getters can only be defined in class scope.");
+
+      tok = getToken();
+      if (!tok.isIdent())
+         error(tok, "Identifer expected after 'oper .'");
+
+      Token tok2 = getToken();
+      if (tok2.isLParen()) {
+         if (!returnType)
+            error(tok, "Attribute getter requires a return type");
+
+         parseFuncDef(returnType, tok, "oper ." + tok.getData(), normal, 0);
+      } else if (tok2.isAssign()) {
+         // XXX make sure we're in instance context.
+         expectToken(Token::lparen, "Expected argument list");
+         parseFuncDef(returnType, tok, "oper ." + tok.getData() + "=", normal,
+                      1);
+      } else {
+         error(tok2, "Expected '=' or Argument list");
+      }
    } else {
       unexpected(tok, "identifier or symbol expected after 'oper' keyword");
    }
@@ -3876,25 +3908,44 @@ void Parser::parsePostDot(ExprPtr &expr, TypeDefPtr &type) {
    }
    VarDefPtr def = expr->type->lookUp(name);
 
-   // If we didn't get a def and the current target is a type, see if we
-   // can resolve the name by treating the dot as the scoping operator.
-   if (!def && type) {
-      def = type->lookUp(name);
-      if (def) {
-         if (!def->isUsableFrom(*context))
-            error(tok,
-                  SPUG_FSTR("Instance member " << name <<
-                           " is not usable from this context."
-                           )
-                  );
+   if (!def) {
+      FuncCall::ExprVec args;
+      FuncDefPtr getter;
 
-         // If we got an overload, convert it into an ExplicitlyScopedDef
-         if (OverloadDef *ovld = OverloadDefPtr::rcast(def))
-            def = new ExplicitlyScopedDef(ovld);
+      // If we didn't get a def, first check to see if there's a getter or
+      // setter for the field.  Note that we have to use an OverloadDef for
+      // the setter because we don't currently know the argument type.
+      getter = context->lookUp("oper ." + name, args, expr->type.get());
+      OverloadDefPtr setter =
+         context->lookUp("oper ." + name + "=", expr->type.get());
+      if (getter || setter) {
+         expr = new AttrDeref(expr.get(), setter.get(), getter.get(),
+                              context->construct->voidType.get()
+                              );
 
-         expr = context->createVarRef(def.get());
+         // If there's no getter, set the type to void.
+         if (getter)
+            type = context->construct->voidptrType.get();
+         return;
+      } else if (type) {
+         def = type->lookUp(name);
+         if (def) {
+            if (!def->isUsableFrom(*context))
+               error(tok,
+                     SPUG_FSTR("Instance member " << name <<
+                              " is not usable from this context."
+                              )
+                     );
+
+            // If we got an overload, convert it into an ExplicitlyScopedDef
+            if (OverloadDef *ovld = OverloadDefPtr::rcast(def))
+               def = new ExplicitlyScopedDef(ovld);
+
+            expr = context->createVarRef(def.get());
+         }
       }
-   } else if (def) {
+   } else {
+      // Found a def.
       if (TypeDefPtr::rcast(def))
          // Types are inherently static and don't need to be dereferenced.
          expr = context->createVarRef(def.get());

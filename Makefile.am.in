@@ -232,6 +232,7 @@ noinst_HEADERS = \
     model/Annotation.h \
     model/ArgDef.h \
     model/AssignExpr.h \
+    model/AttrDeref.h \
     model/BaseMetaClass.h \
     model/BinOpDef.h \
     model/Branchpoint.h \

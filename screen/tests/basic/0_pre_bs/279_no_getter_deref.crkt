@@ -1,0 +1,9 @@
+%%TEST%%
+attribute with no getter dereference
+%%ARGS%%
+%%FILE%%
+class A { int oper .foo=(int val) { return val } }
+A().foo.bar();
+%%EXPECT%%
+ParseError: %SCRIPTNAME%:2:8: Attempt to evaluate attribute with no getter.
+%%STDIN%%

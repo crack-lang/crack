@@ -26,6 +26,18 @@ SPUG_RCPTR(Deref);
  * The type of a Deref is the type of its definition.
  */
 class Deref : public Expr {
+    protected:
+        /**
+         * For use by AttrDeref, where we defer initialization of Expr's
+         * "type".
+         */
+        Deref(Expr *receiver);
+
+        /**
+         * Returns the dereferencing expression.
+         */
+        virtual ExprPtr createDeref(Context &context) const;
+
     public:
         ExprPtr receiver;
         VarDefPtr def;
@@ -43,12 +55,8 @@ class Deref : public Expr {
 
         /**
          * Convert the dereference to an assignment.
-         *
-         * Note that this is not virtual, unlike makeCall(), we don't have to
-         * do this for anything else so it makes more sense just to
-         * special-case it.
          */
-        ExprPtr makeAssignment(Context &context, Expr *val);
+        virtual ExprPtr makeAssignment(Context &context, Expr *val);
 };
 
 }

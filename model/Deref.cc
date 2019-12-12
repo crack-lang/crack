@@ -21,6 +21,16 @@
 using namespace model;
 using namespace std;
 
+Deref::Deref(Expr *receiver) :
+    Expr(0),
+    receiver(receiver),
+    squashVirtual(false) {
+}
+
+ExprPtr Deref::createDeref(Context &context) const {
+    return context.createFieldRef(receiver.get(), def.get());
+}
+
 Deref::Deref(Expr *receiver, VarDef *def) :
     Expr(def->type.get()),
     receiver(receiver),
@@ -50,7 +60,7 @@ void Deref::writeTo(ostream &out) const {
 ExprPtr Deref::makeCall(Context &context, FuncCall::ExprVec &args) const {
     OverloadDefPtr ovldDef = OverloadDefPtr::rcast(def);
     if (!ovldDef) {
-        VarRefPtr ref = context.createFieldRef(receiver.get(), def.get());
+        ExprPtr ref = createDeref(context);
         return ref->makeCall(context, args);
     }
 

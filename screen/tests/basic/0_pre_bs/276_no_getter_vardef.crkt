@@ -1,0 +1,9 @@
+%%TEST%%
+attribute with no getter in variable definition
+%%ARGS%%
+%%FILE%%
+class A { int oper .foo=(int val) { return val } }
+a := A().foo;
+%%EXPECT%%
+ParseError: %SCRIPTNAME%:2:13: Cannot create a variable from attribute with no getter.
+%%STDIN%%
