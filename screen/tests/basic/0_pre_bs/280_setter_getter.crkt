@@ -3,6 +3,10 @@ setters and getters
 %%ARGS%%
 %%FILE%%
 
+# make sure we aren't prohibited from shadowing global variables in
+# getter/setters
+int foo;
+
 class A {
     int __foo;
     function[int] __f;
@@ -22,6 +26,11 @@ class A {
     }
 
     function[int] oper .func() { return __f }
+
+    void ignore() {
+        # Verify that we can override a getter/setter from within a function.
+        int foo;
+    }
 }
 
 a := A();

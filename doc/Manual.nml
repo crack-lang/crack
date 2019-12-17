@@ -2660,6 +2660,17 @@ the form of its #oper .#/attr/ and #oper .#/attr/#=# methods:
 Note that operator overloading works on setters and can be used as a sort of
 implicit type conversion.
 
+It is an error to define both a member and a getter or setter for the member,
+for example:
+
+{{
+    class A {
+        int name;
+
+        int oper .name() { ... }  # ERROR: "name" already exists.
+    }
+}}
+
 While a lot of existing Crack library code still defines traditional
 "get" and "set" functions, this pattern is deprecated.  For consistency going
 forwards, use the new operator definitions for variable access.

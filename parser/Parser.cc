@@ -3274,6 +3274,12 @@ void Parser::parsePostOper(TypeDef *returnType) {
       if (!tok.isIdent())
          error(tok, "Identifer expected after 'oper .'");
 
+      // Make sure that the plain symbol isn't already defined.
+      if (context->parent->ns->lookUp(tok.getData()))
+         error(tok, SPUG_FSTR("Can not define getter/setter for " <<
+                              tok.getData() << " which is already defined.")
+               );
+
       Token tok2 = getToken();
       if (tok2.isLParen()) {
          if (!returnType)
@@ -3739,6 +3745,20 @@ void Parser::parseClassBody() {
 VarDefPtr Parser::checkForExistingDef(const Token &tok, const string &name,
                                       bool overloadOk
                                       ) {
+   // If this isn't an accessor, make sure we're not overriding an acccessor
+   // in this class or a base class (check to see if we're in a class def to
+   // future proof against the case where accessors may be defined in static
+   // scopes.
+   if (name.compare(0, 6, "oper .") &&
+       context->scope == Context::composite) {
+      if (context->parent->ns->lookUp("oper ." + name) ||
+          context->parent->ns->lookUp("oper ." + name + "=")
+          )
+         error(tok, SPUG_FSTR("Definition '" << name <<
+                               "' overrides getter/setter.")
+               );
+   }
+
    ContextPtr classContext;
    VarDefPtr existing = context->lookUp(name);
    if (existing) {
