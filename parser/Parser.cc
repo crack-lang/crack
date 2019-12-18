@@ -637,7 +637,7 @@ ExprPtr Parser::createAssign(Expr *container, const Token &ident,
 }
 
 // obj.oper <symbol>
-string Parser::parseOperSpec() {
+pair<string, string> Parser::parseOperSpec() {
    Token tok = getToken();
    const string &ident = tok.isIdent() ? tok.getData() : "";
    if (tok.isMinus() || tok.isTilde() || tok.isBang() ||
@@ -647,7 +647,7 @@ string Parser::parseOperSpec() {
        ident == "init" || ident == "release" || ident == "bind" ||
        ident == "del" || ident == "call" || tok.isAugAssign()
        ) {
-      return "oper " + tok.getData();
+      return make_pair("oper " + tok.getData(), tok.getData());
    } else if (tok.isIncr() || tok.isDecr()) {
 
       // make sure the next token is an "x"
@@ -659,11 +659,23 @@ string Parser::parseOperSpec() {
                               ).c_str()
                     );
 
-      return "oper " + tok.getData() + "x";
+      return make_pair("oper " + tok.getData() + "x", "x");
+   } else if (tok.isDot()) {
+      Token tok2 = getToken();
+      if (!tok2.isIdent())
+         unexpected(tok2, "Identifier expected after 'oper .'");
+      string attrName = tok2.getData();
+      string name = "oper ." + tok2.getData();
+      tok2 = getToken();
+      if (tok2.isAssign())
+         name += "=";
+      else
+         toker.putBack(tok2);
+      return make_pair(name, attrName);
    } else if (ident == "x") {
       tok = getToken();
       if (tok.isIncr() || tok.isDecr())
-         return "oper x" + tok.getData();
+         return make_pair("oper x" + tok.getData(), "x");
       else
          unexpected(tok,
                     "Expected an increment or decrement operator after oper x."
@@ -677,18 +689,18 @@ string Parser::parseOperSpec() {
       // see if this is "[]="
       tok = getToken();
       if (tok.isAssign()) {
-         return "oper []=";
+         return make_pair("oper []=", "x");
       } else {
          toker.putBack(tok);
-         return "oper []";
+         return make_pair("oper []", "x");
       }
    } else if (ident == "to" || ident == "from") {
       TypeDefPtr type = parseTypeSpec();
-      return "oper " + ident + " " + type->getFullName();
+      return make_pair("oper " + ident + " " + type->getFullName(), "x");
    } else if (ident == "r") {
       tok = getToken();
       if (tok.isBinOp())
-         return "oper r" + tok.getData();
+         return make_pair("oper r" + tok.getData(), "x");
       else
          error(tok, "Expected a binary operator after reverse designator");
    } else {
@@ -3913,11 +3925,13 @@ bool Parser::runCallbacks(Event event) {
 //         ^
 void Parser::parsePostDot(ExprPtr &expr, TypeDefPtr &type) {
    Token tok = getToken();
-   string name;
+   string name, access;
    if (tok.isIdent()) {
-      name = tok.getData();
+      name = access = tok.getData();
    } else if (tok.isOper()) {
-      name = parseOperSpec();
+      pair<string, string> nameAndAccess = parseOperSpec();
+      name = nameAndAccess.first;
+      access = nameAndAccess.second;
    } else if (tok.isClass()) {
       // "expr.class" is a special case because it is implicitly a
       // function call.  Emit and quit.
@@ -3939,6 +3953,11 @@ void Parser::parsePostDot(ExprPtr &expr, TypeDefPtr &type) {
       OverloadDefPtr setter =
          context->lookUp("oper ." + name + "=", expr->type.get());
       if (getter || setter) {
+         context->checkAccessible(getter ?
+                                    VarDefPtr::rcast(getter) :
+                                    VarDefPtr::rcast(setter),
+                                  name
+                                  );
          expr = new AttrDeref(expr.get(), setter.get(), getter.get(),
                               context->construct->voidType.get()
                               );
@@ -3993,7 +4012,7 @@ void Parser::parsePostDot(ExprPtr &expr, TypeDefPtr &type) {
                );
    }
 
-   context->checkAccessible(def.get(), name);
+   context->checkAccessible(def.get(), access);
    type = TypeDefPtr::rcast(def);
 }
 

@@ -1,0 +1,12 @@
+%%TEST%%
+getter/setter accessibility through "oper"
+%%ARGS%%
+%%FILE%%
+class A1 {
+    int oper .__foo() { return 123 }
+    void f() { this.__foo }  # OK: from within class.
+}
+A1().oper .__foo();
+%%EXPECT%%
+ParseError: %SCRIPTNAME%:5:17: __foo is private and not accessible in this context.
+%%STDIN%%

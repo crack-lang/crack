@@ -207,8 +207,13 @@ class Parser {
 
       /**
        * Parse the rest of an explicit "oper" name.
+       *
+       * Returns a pair consisting of the full "oper" name and a string
+       * intended to indicate visibility (if it begins with two underscores,
+       * its private, if it begins with one underscore, protected/module
+       * private).
        */
-      std::string parseOperSpec();
+      std::pair<std::string, std::string> parseOperSpec();
 
       /**
        * Parse an interpolated string.
