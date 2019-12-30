@@ -1,0 +1,65 @@
+%%TEST%%
+setters and getters
+%%ARGS%%
+%%FILE%%
+
+# make sure we aren't prohibited from shadowing global variables in
+# getter/setters
+int foo;
+
+class A {
+    int __foo;
+    function[int] __f;
+
+    int oper .foo() {
+        return __foo;
+    }
+
+    int oper .foo=(int val) {
+        __foo = val;
+        return val;
+    }
+
+    function[int] oper .func=(function[int] f) {
+        __f = f;
+        return f;
+    }
+
+    function[int] oper .func() { return __f }
+
+    void ignore() {
+        # Verify that we can override a getter/setter from within a function.
+        int foo;
+    }
+}
+
+a := A();
+a.foo = 100;
+if (a.foo != 100)
+    puts('FAILED attr set/get');
+
+a.func = lambda int() { return 123 };
+if (a.func() != 123)
+    puts('FAILED func call on getter result');
+
+class B {
+    int oper .foo=(int val) {
+        return val;
+    }
+}
+
+b := B();
+if ((b.foo = 100) != 100)
+    puts('FAILED setter with no getter');
+
+class C {
+    int oper .foo() { return 400 }
+}
+if (C().foo != 400)
+    puts('FAILED getter with no setter');
+
+puts('ok');
+
+%%EXPECT%%
+ok
+%%STDIN%%

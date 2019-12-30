@@ -99,7 +99,7 @@ class LineIter {
     String line;
 
     oper init(LineReader reader) : reader = reader, line = reader.readLine() {}
-    bool isTrue() { return !(line is null); }
+    bool isTrue() { return line !is null; }
     @final String elem() { return line; }
     @final void next() { line = reader.readLine(); }
 }

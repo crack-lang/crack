@@ -35,7 +35,7 @@ class Polygon {
     array[int16] __raw;
 
     void __invalidate() {
-        if (!(__raw is null)) {
+        if (__raw !is null) {
             free(__raw);
             __raw = null;
         }

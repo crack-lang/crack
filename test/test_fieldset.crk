@@ -36,7 +36,7 @@ if (Bar.get(fields).s != 'test value')
     cerr `FAILED Bar.get(fields).s != 'test value'\n`;
 
 Bar.deleteField(fields);
-if (!(Bar.get(fields) is null))
+if (Bar.get(fields) !is null)
     cerr `FAILED Bar.get(field) is null\n`;
 
 cerr `ok\n`;

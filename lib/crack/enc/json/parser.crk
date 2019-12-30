@@ -347,14 +347,14 @@ uint  JSON_value_en_main = 1;
             }
 
             res = parseFloat(p, pe);
-            if (!(res is null)) {
+            if (res !is null) {
                 result = res.result;
                 p = ( res.p) - 1; //EXEC
 
             }
 
             res = parseInteger(p, pe);
-            if (!(res is null)) {
+            if (res !is null) {
                 result = res.result;
                 p = ( res.p) - 1; //EXEC
 
@@ -1080,7 +1080,7 @@ uint  JSON_string_en_main = 1;
   # end of execute block
 # line 405 "opt/json.rl"
 
-        if (cs >= JSON_string_first_final && !(result is null)) {
+        if (cs >= JSON_string_first_final && result !is null) {
             return ParserResult(result, p + 1);
         } else {
             return null;
@@ -1551,7 +1551,7 @@ uint  JSON_object_en_main = 1;
 
 
             } else {
-                if (!(lastName is null))
+                if (lastName !is null)
                     result[lastName] = res.result;
                 else
                     throw ParseException(FStr() `No key for mapping`, line, col);

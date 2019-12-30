@@ -129,9 +129,9 @@ if (true) {
     fooTest.old.bar = Bar();
     fooTest.test();
 
-    @assert(!(fooTest.new.strField is null));
-    @assert(!(fooTest.new.bytesField is null));
-    @assert(!(fooTest.new.bar is null));
+    @assert(fooTest.new.strField !is null);
+    @assert(fooTest.new.bytesField !is null);
+    @assert(fooTest.new.bar !is null);
 }
 
 # Test formatting.
@@ -215,7 +215,7 @@ if (true) {
     @assert(foo == foo2);
 
     # Make sure that arrays get deep-copied.
-    @assert(!(foo.bar.name is foo2.bar.name));
+    @assert(foo.bar.name !is foo2.bar.name);
 
     # Test that it works with null messages.
     foo = Foo();
@@ -228,11 +228,11 @@ if (true) {
     bl.bars[0].name = StringArray!['a', 'b'];
     bl2 := bl.clone();
     @assert(bl == bl2);
-    @assert(!(bl.bars is bl2.bars));
+    @assert(bl.bars !is bl2.bars);
     @assert(bl.bars == bl2.bars);
-    @assert(!(bl.bars[0] is bl2.bars[0]));
+    @assert(bl.bars[0] !is bl2.bars[0]);
     @assert(bl.bars[0] == bl2.bars[0]);
-    @assert(!(bl.bars[0].name is bl2.bars[0].name));
+    @assert(bl.bars[0].name !is bl2.bars[0].name);
     @assert(bl.bars[0].name == bl2.bars[0].name);
 }
 

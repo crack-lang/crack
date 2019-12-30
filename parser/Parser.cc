@@ -16,6 +16,7 @@
 #include <spug/Exception.h>
 #include <spug/StringFmt.h>
 #include "model/Annotation.h"
+#include "model/AttrDeref.h"
 #include "model/ArgDef.h"
 #include "model/AssignExpr.h"
 #include "model/Branchpoint.h"
@@ -896,6 +897,11 @@ ExprPtr Parser::parseDefine(const Token &ident) {
    ExprPtr val = parseExpression();
    checkForExternalOverload(val.get());
 
+   AttrDerefPtr deref = AttrDerefPtr::rcast(val);
+   if (deref && !deref->operGet)
+      context->error("Cannot create a variable from attribute with no "
+                     "getter.");
+
    // XXX We have to do this weird, inefficient two-step process of
    // defining the variable and then assigning it.  For some reason, if we
    // don't we end up breaking definitions in a 'while' condition: the
@@ -958,7 +964,7 @@ ExprPtr Parser::makeAssign(Expr *lvalue, const Token &tok, Expr *rvalue) {
 
    // At this point we should be able to do a straightforward assignment.
    if (Deref *deref = DerefPtr::rcast(lval)) {
-      if (deref->def->isConstant())
+      if (!AttrDerefPtr::rcast(lval) && deref->def->isConstant())
          error(tok, "You cannot assign to a constant, class or function.");
       return deref->makeAssignment(*context, rval.get());
    } else if (VarRef *ref = VarRefPtr::rcast(lval)) {
@@ -1007,6 +1013,42 @@ void Parser::checkForRedefine(const Token &tok, VarDef *def) const {
       redefineError(tok, def);
 }
 
+ExprPtr Parser::parseBinOp(Expr *rawExpr, const Token &tok, 
+                           unsigned precedence
+                           ) {
+   ExprPtr expr = rawExpr;
+   // Parse the right-hand-side expression.
+   ExprPtr rhs = parseExpression(precedence);
+
+   FuncCall::ExprVec exprs(2);
+   exprs[0] = expr;
+   exprs[1] = rhs;
+
+   FuncDefPtr func = lookUpBinOp(tok.getData(), exprs);
+   if (!func)
+      error(tok,
+            SPUG_FSTR("Operator " << expr->getTypeDisplayName() << " " <<
+                     tok.getData() << " " << rhs->getTypeDisplayName() <<
+                     " undefined."
+                     )
+            );
+   BSTATS_GO(s1)
+   FuncCallPtr funcCall = context->builder.createFuncCall(func.get());
+   BSTATS_END
+   funcCall->args = exprs;
+   if (func->flags & FuncDef::method)
+      funcCall->receiver =
+         (func->flags & FuncDef::reverse) ? rhs : expr;
+   expr = funcCall;
+   try {
+      return expr->foldConstants();
+   } catch (DivZeroError &ex) {
+      warn(tok, "Division by zero.");
+      // expr should still be the func call.
+      return expr;
+   }
+}
+
 ExprPtr Parser::parseSecondary(const Primary &primary, unsigned precedence) {
    ExprPtr expr = primary.expr;
    Token tok = getToken();
@@ -1022,6 +1064,9 @@ ExprPtr Parser::parseSecondary(const Primary &primary, unsigned precedence) {
 
    while (true) {
       if (tok.isDot()) {
+         AttrDerefPtr deref = AttrDerefPtr::rcast(expr);
+         if (deref && !deref->operGet)
+            context->error("Attempt to evaluate attribute with no getter.");
          TypeDefPtr type;
          parsePostDot(expr, type);
       } else if (tok.isScoping()) {
@@ -1138,35 +1183,7 @@ ExprPtr Parser::parseSecondary(const Primary &primary, unsigned precedence) {
          if (newPrec <= precedence)
             break;
 
-         // parse the right-hand-side expression
-         ExprPtr rhs = parseExpression(newPrec);
-
-         FuncCall::ExprVec exprs(2);
-         exprs[0] = expr;
-         exprs[1] = rhs;
-
-         FuncDefPtr func = lookUpBinOp(tok.getData(), exprs);
-         if (!func)
-            error(tok,
-                  SPUG_FSTR("Operator " << expr->getTypeDisplayName() << " " <<
-                            tok.getData() << " " << rhs->getTypeDisplayName() <<
-                            " undefined."
-                            )
-                  );
-         BSTATS_GO(s1)
-         FuncCallPtr funcCall = context->builder.createFuncCall(func.get());
-         BSTATS_END
-         funcCall->args = exprs;
-         if (func->flags & FuncDef::method)
-            funcCall->receiver =
-               (func->flags & FuncDef::reverse) ? rhs : expr;
-         expr = funcCall;
-         try {
-            expr = expr->foldConstants();
-         } catch (DivZeroError &ex) {
-            warn(tok, "Division by zero.");
-            // expr should still be the func call.
-         }
+         expr = parseBinOp(expr.get(), tok, newPrec);
       } else if (tok.isIstrBegin()) {
          expr = parseIString(expr.get());
       } else if (tok.isQuest()) {
@@ -1174,21 +1191,59 @@ ExprPtr Parser::parseSecondary(const Primary &primary, unsigned precedence) {
             break;
          expr = parseTernary(expr.get());
       } else if (tok.isBang()) {
-         // this is special wacky collection syntax Type![1, 2, 3]
-         TypeDef *type = convertTypeRef(expr.get());
-         if (!type)
-            error(tok,
-                  "Exclamation point can not follow a non-type expression"
-                  );
+         // Check for the 'is' keyword to see if this is the "!is" sugar.
+         Token tok2 = toker.getToken();
+         if (tok2.getType() == Token::isKw) {
+            unsigned newPrec = getPrecedence(tok2.getData());
+            if (newPrec <= precedence)
+               break;
 
-         // check for a square bracket
-         tok = toker.getToken();
-         if (!tok.isLBracket())
-            error(tok,
-                  "Sequence initializer ('[ ... ]') expected after "
-                   "'type!'"
-                  );
-         expr = parseConstSequence(type);
+            // parse the full "is" operation.
+            expr = parseBinOp(expr.get(), tok2, newPrec);
+            
+            // Wrap it in a synthetic "not" operation
+            
+            // Look up the unary operator, first in the methods of the "is" 
+            // expression return type and then in the global context.
+            FuncCall::ExprVec args;
+            FuncDefPtr funcDef = context->lookUp(
+               "oper !", 
+               args,
+               expr->getType(*context).get()
+            );
+            if (!funcDef) {
+               args.push_back(expr);
+               funcDef = context->lookUp("oper !", args);
+            }
+            if (!funcDef)
+               error(tok, SPUG_FSTR("'oper !' is not defined for type " << 
+                                    expr->type->name));
+      
+            // Emit the function or method call.
+            BSTATS_GO(s1)
+            FuncCallPtr funcCall =
+               context->builder.createFuncCall(funcDef.get());
+            BSTATS_END
+            funcCall->args = args;
+            if (funcDef->flags & FuncDef::method)
+               funcCall->receiver = expr;
+            expr = funcCall->foldConstants();
+         } else {
+            // this is special wacky collection syntax Type![1, 2, 3]
+            TypeDef *type = convertTypeRef(expr.get());
+            if (!type)
+               error(tok,
+                     "Exclamation point can not follow a non-type expression"
+                     );
+   
+            // check for a square bracket
+            if (!tok2.isLBracket())
+               error(tok2,
+                     "Sequence initializer ('[ ... ]') expected after "
+                     "'type!'"
+                     );
+            expr = parseConstSequence(type);
+         }
       } else if (tok.isAssign() || tok.isAugAssign()) {
          ExprPtr val = parseExpression();
          expr = makeAssign(expr.get(), tok, val.get());
@@ -3210,6 +3265,35 @@ void Parser::parsePostOper(TypeDef *returnType) {
       parseFuncDef(returnType, tok, name, reversed ? reverseOp: normal,
                    numArgs
                    );
+   } else if (tok.isDot()) {
+      // setters & getters.
+      if (context->scope != Context::composite)
+         error(tok, "Setters and getters can only be defined in class scope.");
+
+      tok = getToken();
+      if (!tok.isIdent())
+         error(tok, "Identifer expected after 'oper .'");
+
+      // Make sure that the plain symbol isn't already defined.
+      if (context->parent->ns->lookUp(tok.getData()))
+         error(tok, SPUG_FSTR("Can not define getter/setter for " <<
+                              tok.getData() << " which is already defined.")
+               );
+
+      Token tok2 = getToken();
+      if (tok2.isLParen()) {
+         if (!returnType)
+            error(tok, "Attribute getter requires a return type");
+
+         parseFuncDef(returnType, tok, "oper ." + tok.getData(), normal, 0);
+      } else if (tok2.isAssign()) {
+         // XXX make sure we're in instance context.
+         expectToken(Token::lparen, "Expected argument list");
+         parseFuncDef(returnType, tok, "oper ." + tok.getData() + "=", normal,
+                      1);
+      } else {
+         error(tok2, "Expected '=' or Argument list");
+      }
    } else {
       unexpected(tok, "identifier or symbol expected after 'oper' keyword");
    }
@@ -3661,6 +3745,20 @@ void Parser::parseClassBody() {
 VarDefPtr Parser::checkForExistingDef(const Token &tok, const string &name,
                                       bool overloadOk
                                       ) {
+   // If this isn't an accessor, make sure we're not overriding an acccessor
+   // in this class or a base class (check to see if we're in a class def to
+   // future proof against the case where accessors may be defined in static
+   // scopes.
+   if (name.compare(0, 6, "oper .") &&
+       context->scope == Context::composite) {
+      if (context->parent->ns->lookUp("oper ." + name) ||
+          context->parent->ns->lookUp("oper ." + name + "=")
+          )
+         error(tok, SPUG_FSTR("Definition '" << name <<
+                               "' overrides getter/setter.")
+               );
+   }
+
    ContextPtr classContext;
    VarDefPtr existing = context->lookUp(name);
    if (existing) {
@@ -3830,25 +3928,44 @@ void Parser::parsePostDot(ExprPtr &expr, TypeDefPtr &type) {
    }
    VarDefPtr def = expr->type->lookUp(name);
 
-   // If we didn't get a def and the current target is a type, see if we
-   // can resolve the name by treating the dot as the scoping operator.
-   if (!def && type) {
-      def = type->lookUp(name);
-      if (def) {
-         if (!def->isUsableFrom(*context))
-            error(tok,
-                  SPUG_FSTR("Instance member " << name <<
-                           " is not usable from this context."
-                           )
-                  );
+   if (!def) {
+      FuncCall::ExprVec args;
+      FuncDefPtr getter;
 
-         // If we got an overload, convert it into an ExplicitlyScopedDef
-         if (OverloadDef *ovld = OverloadDefPtr::rcast(def))
-            def = new ExplicitlyScopedDef(ovld);
+      // If we didn't get a def, first check to see if there's a getter or
+      // setter for the field.  Note that we have to use an OverloadDef for
+      // the setter because we don't currently know the argument type.
+      getter = context->lookUp("oper ." + name, args, expr->type.get());
+      OverloadDefPtr setter =
+         context->lookUp("oper ." + name + "=", expr->type.get());
+      if (getter || setter) {
+         expr = new AttrDeref(expr.get(), setter.get(), getter.get(),
+                              context->construct->voidType.get()
+                              );
 
-         expr = context->createVarRef(def.get());
+         // If there's no getter, set the type to void.
+         if (getter)
+            type = context->construct->voidptrType.get();
+         return;
+      } else if (type) {
+         def = type->lookUp(name);
+         if (def) {
+            if (!def->isUsableFrom(*context))
+               error(tok,
+                     SPUG_FSTR("Instance member " << name <<
+                              " is not usable from this context."
+                              )
+                     );
+
+            // If we got an overload, convert it into an ExplicitlyScopedDef
+            if (OverloadDef *ovld = OverloadDefPtr::rcast(def))
+               def = new ExplicitlyScopedDef(ovld);
+
+            expr = context->createVarRef(def.get());
+         }
       }
-   } else if (def) {
+   } else {
+      // Found a def.
       if (TypeDefPtr::rcast(def))
          // Types are inherently static and don't need to be dereferenced.
          expr = context->createVarRef(def.get());

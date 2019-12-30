@@ -277,7 +277,7 @@ list.append("second");
 list.append("third");
 
 cout `Test curl_slist\n`;
-for (l := list.head; !(l is null); l = l.next)
+for (l := list.head; l !is null; l = l.next)
     cout `data: $(l.data)\n`;
 
 
@@ -321,7 +321,7 @@ for (int i=0; i< STRING_TEST_NAMES.count(); i++) {
         errMsg := CString(easy_strerror(res), false);
         exitError(errStr `Getting $(STRING_TEST_NAMES[i]) failed:  $errMsg\n`);
     }
-    if (!(info.resultPtr is null))
+    if (info.resultPtr !is null)
         cout I`$(STRING_TEST_NAMES[i]) = $(CString(byteptr(info.resultPtr),
                false))\n`;
 

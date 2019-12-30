@@ -4,6 +4,7 @@ ext/RCObj.cc
 ext/Type.cc
 model/Annotation.cc
 model/ArgDef.cc
+model/AttrDeref.cc
 model/BaseMetaClass.cc
 model/BinOpDef.cc
 model/Construct.cc

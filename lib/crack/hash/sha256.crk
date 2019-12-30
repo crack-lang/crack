@@ -180,7 +180,7 @@ class SHA256 : Hash {
 
     String digest() {
         # Finish if we haven't already.
-        if (!(__accum is null))
+        if (__accum !is null)
             __finish();
 
         AppendBuffer result = {32};

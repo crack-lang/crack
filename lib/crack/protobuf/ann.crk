@@ -247,7 +247,7 @@ class Message : Type {
             } else if (field.cardinality == REPEATED) {
                 # XXX need a test for this case.
                 out I`\
-                    if (!(this.$(field.name) is null)) {
+                    if (this.$(field.name) !is null) {
                         for (item :in this.$(field.name))
                             dst.write($(field.tag), item);
                     }
@@ -399,14 +399,14 @@ class Message : Type {
 String getFieldDefined(Field field, String fieldRef) {
     if (field.type.class is BuiltinType) {
         if (field.type.name == 'string' || field.type.name == 'bytes')
-            return FStr() `!($fieldRef is null)`;
+            return FStr() `$fieldRef !is null`;
         else
             # This covers all other Builtin cases and preserves existing
             # functionality for any users who may have (for whatever reason)
             # created their own Builtin types.
             return fieldRef;
     } else if (field.type.class is Message) {
-        return FStr() `!($fieldRef is null)`;
+        return FStr() `$fieldRef !is null`;
     } else {
         # Add this to cover any weird case where the user derives from 'Type'.
         return fieldRef;

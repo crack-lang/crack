@@ -24,7 +24,7 @@ if (String(t.b) != 'test')
     cout `string instance variable not set.\n`;
 
 MyType u;
-if (!(u is null))
+if (u !is null)
     cout `null test fails\n`;
 
 class MyAggType : Object, MyType {

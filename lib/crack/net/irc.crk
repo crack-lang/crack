@@ -199,7 +199,7 @@ class Client {
     void processOnce(TimeDelta timeout) {
         _poller.wait(timeout);
         e := _poller.nx();
-        if (!(e is null) && e.revents & POLLIN) {
+        if (e !is null && e.revents & POLLIN) {
             lr := LineReader(_sock);
             String s;
             while (s = lr.readLine()) {

@@ -131,7 +131,7 @@ class Date : Object, InternalDate {
     }
 
     oper init(InternalDate d) {
-        if (!(d is null)){
+        if (d !is null){
             tm_sec = d.tm_sec;
             tm_min = d.tm_min;
             tm_hour = d.tm_hour;

@@ -8,7 +8,7 @@ import crack.compiler CrackContext, Token, TOK_STRING;
 
 void def_names(CrackContext ctx) {
     def := ctx.getLocalDefs();
-    while (!(def is null)) {
+    while (def !is null) {
         name := Token(TOK_STRING, def.getName(), ctx.getLocation());
         @xmac* { $name, }.expand(ctx);
         def = def.getNext();

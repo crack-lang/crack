@@ -278,6 +278,17 @@ class Parser {
       void checkForRedefine(const Token &tok, model::VarDef *def) const;
 
       /**
+       * Parse a binary operator.
+       *
+       * @param expr the left-hand expression
+       * @param tok the operator token.
+       * @param precedence the precedence of the new operator.
+       */
+      model::ExprPtr parseBinOp(model::Expr *expr, const Token &tok,
+                                unsigned precedence
+                                );
+
+      /**
        * Parse a secondary expression.  Secondary expressions include a the
        * dot operator, binary operators and the bracket operators and their
        * associated expressions.

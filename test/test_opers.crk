@@ -130,7 +130,7 @@ if (1) {
     val = 1;
     g := val ? f : b;
     if (g is b) puts('failed on type generalization');
-    if (!(g is f)) puts('WTF?');
+    if (g !is f) puts('WTF?');
 
     bool isBool(voidptr j) { return 1==0; }
     bool isBool(bool j) { return 1==1; }

@@ -1,0 +1,11 @@
+%%TEST%%
+method overriding getter
+%%ARGS%%
+%%FILE%%
+class A {
+    int oper .foo() { return 1 }
+    void foo() {}
+}
+%%EXPECT%%
+ParseError: %SCRIPTNAME%:3:10: Definition 'foo' overrides getter/setter.
+%%STDIN%%

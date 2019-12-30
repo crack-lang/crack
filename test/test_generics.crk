@@ -24,6 +24,11 @@ class FakeFormatter {
     oper to bool() { return 1; }
 }
 
+# Make sure forward declared functions and classes don't cause an error if
+# undefined at the end of the generic module.
+void forwardFunc();
+class ForwardClass;
+
 bool gotStaticCalled;
 class A[T] {
     T val;
@@ -57,7 +62,7 @@ class C {
     oper init() : wrap(this) {}
 }
 C c = {};
-if (!(c.wrap.val is c))
+if (c.wrap.val !is c)
     puts('FAILED nested generic parameterized by outer class');
 
 # test parsing a generic derived from another generic parameterized by a
@@ -116,5 +121,9 @@ if (1) {
         G[__M] __carr;
     }
 }
+
+# Define these now that we're done.
+void forwardFunc() {}
+class ForwardClass {}
 
 puts('ok');

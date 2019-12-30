@@ -460,7 +460,7 @@ void Context::checkForUnresolvedForwards() {
                  fi != overload->endTopFuncs();
                  ++fi
                  )
-                if ((*fi)->flags & FuncDef::forward)
+                if ((*fi)->flags & FuncDef::forward && (*fi)->getOwner() == ns)
                     error(SPUG_FSTR("Forward declared function not defined at "
                                      "the end of the block: " <<
                                      (*fi)->getDisplayName()

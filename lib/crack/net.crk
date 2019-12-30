@@ -129,7 +129,7 @@ class UnixAddress : Address {
 Array[Address] resolve(CString hostname) {
     Array[Address] result = {};
     info := AddrInfo(hostname.buffer, null, null);
-    while (!(info is null)) {
+    while (info !is null) {
         if (info.ai_family == AF_INET) {
 
             # create an address instance

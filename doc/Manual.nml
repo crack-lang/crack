@@ -1272,6 +1272,11 @@ is::
     object on the right.  This isn't defined for numbers, only for aggregates
     and primitive pointer types.  It essentially checks for the equivalence of
     the pointers.
+!is::
+    True if the object on the left is not identical to the object on the
+    right.  This isn't a real operator, it is syntactic sugar that translates
+    to the negation of the #is# operator.  That is, #a !is b# is semantically
+    equivalent to #!(a is b)#.
 
 Basic Arithmetic
 ''''''''''''''''
@@ -2532,6 +2537,10 @@ The following operators can be overloaded:
     Array element access.
 #oper []=(#/type/ #index,# /type/ #value)#::
     Array element assignment.
+#oper .#/attr/#()#::
+    Attribute getter (see \X(Getters and Setters)).
+#oper .#/attr/#=(#/type/ #val)#::
+    Attribute setter (see \X(Getters and Setters)).
 #oper --()#::
     Unary pre-decrement (post-decrement, pre-increment and post-increment don't
     exist yet, not sure why this one does).
@@ -2614,6 +2623,63 @@ above in \X(Functions) and below in \X(Method Resolution in Classes).
 Unary operators also have a special resolution rule: the compiler checks for a
 unary method named for the operator with no arguments prior to checking for a
 function with a single argument in the enclosing namespaces.
+
+Getters and Setters
+'''''''''''''''''''
+
+A common pattern in object-oriented languages is to make instance variables
+private and accessible only through "get" and "set" methods.  This allows the
+introduction of more elaborate functionality around attribute access, like
+lazy construction, memoization and mutex protection.  The downsides of this
+are more elaborate and less intuitive syntax and also the impetus to follow
+this pattern consistently, even in cases where a simple instance variable
+would suffice.
+
+For this reason, many modern languages provide a way to overload instance
+variable access syntax, allowing getters and setters to look no different from
+accessing and assigning an instance variable.  Crack provides this feature in
+the form of its #oper .#/attr/ and #oper .#/attr/#=# methods:
+
+{{
+    class A {
+        ## Getter for "name"
+        String oper .name() { ... }
+
+        ## Setter for "name"
+        String oper .name=(String val) { ... }
+
+        ## Alternate setter for "name" that accepts an integer.
+        String oper .name(int val) { ... }
+    }
+
+    a := A();
+    a.name = 'foo';
+    cout `name is $(a.name)\n`;
+}}
+
+Note that operator overloading works on setters and can be used as a sort of
+implicit type conversion.
+
+It is an error to define both a member and a getter or setter for the member,
+for example:
+
+{{
+    class A {
+        int name;
+
+        int oper .name() { ... }  # ERROR: "name" already exists.
+    }
+}}
+
+While a lot of existing Crack library code still defines traditional
+"get" and "set" functions, this pattern is deprecated.  For consistency going
+forwards, use the new operator definitions for variable access.
+
+It should be noted that it is inappropriate to use these operators for
+purposes other than attribute access.  Users should be able to rely on
+the semantics being compatible with that of direct instance variable access,
+so for example if you set #a.name = 'foo'# it should be safe to assume that
+#a.name# will then return "foo".
 
 Functors
 ''''''''
@@ -3885,8 +3951,10 @@ it:
         fn := @FILE; ln := @LINE; fmt `
             $typeText __$varText;
 
-            $typeText get_$varText() { return __$varText; }
-            void set_$varText($typeText val) { __$varText = val; }
+            $typeText oper .$varText() { return __$varText }
+            $typeText oper .$varText=($typeText val) {
+                return __$varText = val;
+            }
 \0`;
         ctx.inject(fn, ln, fmt.createString().buffer);
 }}

@@ -425,7 +425,7 @@ class Process {
     // close the pipes. read/write operations on this class after a call to
     // close are undefined
     @final void close() {
-        if (!(_pd is null)) {
+        if (_pd !is null) {
             closeProcess(_pd);
             free(_pd);
             _pd = null;

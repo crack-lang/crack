@@ -133,7 +133,7 @@ class SHA1 : Hash {
 
     void _clear() {
         h := hash.buffer;
-        if (!(h is null) && hash.size >= 20) {
+        if (h !is null && hash.size >= 20) {
             for (uint32 i=0; i < 20; i++)
                 h[i] = 0;
         }
@@ -232,7 +232,7 @@ class SHA1 : Hash {
 
     // Return raw digest as a buffer of 20 bytes
     String digest() {
-        if (!(src is null))
+        if (src !is null)
             __finish();
         return String(hash, false);
     }

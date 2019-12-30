@@ -245,7 +245,7 @@ class BSON {
 
     void _initType() {
         c := bson_cursor_new(_b);
-        if (!(c is null)) {
+        if (c !is null) {
             _type = bson_cursor_type(c);
             bson_cursor_free(c);
         }
@@ -295,7 +295,7 @@ class BSON {
 
     // Free the memory associated with a BSON object.
     oper del() {
-        if (!(_b is null)) bson_free(_b);
+        if (_b !is null) bson_free(_b);
     }
 
     // Return the size of a finished BSON object.
@@ -520,7 +520,7 @@ class BSON {
         String getBinary() {
             String crackBuf;
             bufStruct b = bson_cursor_get_binary(_c);
-            if (!(b is null)) {
+            if (b !is null) {
                 crackBuf = String(b.data, b.size, true);
                 free(b); // Keep the data, not the container
             }
@@ -631,10 +631,10 @@ class MongoSync {
     }
 
     bool connect(CString address, int port, bool slaveOK) {
-        if (!(_m is null))
+        if (_m !is null)
             throw InvalidStateError("Already connected");
         _m = mongo_sync_connect(address.buffer, port, slaveOK);
-        return !(_m is null);
+        return _m !is null;
     }
 
     // Add a seed to an existing MongoDB connection.
@@ -651,7 +651,7 @@ class MongoSync {
 
     // Close and free a synchronous MongoDB connection.
     void disconnect() {
-        if (!(_m is null)) mongo_sync_disconnect(_m);
+        if (_m !is null) mongo_sync_disconnect(_m);
         _m = null;
     }
 
@@ -893,7 +893,7 @@ class MongoSync {
 
 
         oper del() {
-            if (!(_c is null))
+            if (_c !is null)
                 mongo_sync_cursor_free (_c);
         }
     }
@@ -932,7 +932,7 @@ class MongoSync {
                           BSON query, BSON sel) {
         bson bquery = query is null ? bson_new() : query.get_bson();
         bson bsel;
-        if (!(sel is null)) bsel =  sel.get_bson();
+        if (sel !is null) bsel =  sel.get_bson();
 
         p := mongo_sync_cmd_query (_m, ns.buffer, flags, skip, ret, bquery, bsel);
         if (query is null) bson_free(bquery);

@@ -1,0 +1,9 @@
+%%TEST%%
+attribute with no getter as argument
+%%ARGS%%
+%%FILE%%
+class A { int oper .foo=(int val) { return val } }
+puts(A().foo);
+%%EXPECT%%
+ParseError: %SCRIPTNAME%:2:13: Attempt to evaluate attribute with no getter.
+%%STDIN%%

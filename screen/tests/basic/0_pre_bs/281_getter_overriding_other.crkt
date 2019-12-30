@@ -1,0 +1,8 @@
+%%TEST%%
+getter overriding other member
+%%ARGS%%
+%%FILE%%
+class A { int foo = 100; int oper .foo() { return 123 } }
+%%EXPECT%%
+ParseError: %SCRIPTNAME%:1:36: Can not define getter/setter for foo which is already defined.
+%%STDIN%%

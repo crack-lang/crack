@@ -210,7 +210,7 @@ class sList {
                 return false;
 
             _node = _node.next;
-            return !(_node is null);
+            return _node !is null;
         }
 
         bool nx() {
@@ -221,10 +221,10 @@ class sList {
                 __first = false;
             else
                 _node = _node.next;
-            return !(_node is null);
+            return _node !is null;
         }
 
-        bool isTrue() { return !(_node is null); }
+        bool isTrue() { return _node !is null; }
     }
 
     Iter iter() {
@@ -376,14 +376,14 @@ class CurlEasy {
     }
 
     int saveHeaders() {
-        if (!(_headers is null))
+        if (_headers !is null)
             return easy_setopt_ptr(_handle, CURLOPT_HTTPHEADER, _headers.head);
         else
             return CURLE_OK;
     }
 
     oper del() {
-        if (!(_handle is null)) easy_cleanup(_handle);
+        if (_handle !is null) easy_cleanup(_handle);
     }
 }
 
