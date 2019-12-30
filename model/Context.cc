@@ -1305,7 +1305,7 @@ void Context::checkAccessible(VarDef *var, const string &name) {
             if (OverloadDef *ovld = OverloadDefPtr::cast(var)) {
                 if (!ovld->privateVisibleTo(ns.get()))
                     error(SPUG_FSTR(name <<
-                                    " is private and not acessible in this "
+                                    " is private and not accessible in this "
                                     "context."
                                     )
                           );
@@ -1318,7 +1318,7 @@ void Context::checkAccessible(VarDef *var, const string &name) {
                 return;
             if (!ns->isScopedTo(varClass))
                 error(SPUG_FSTR(name << " is private to class " <<
-                                 varClass->name << " and not acessible in this "
+                                 varClass->name << " and not accessible in this "
                                  "context."
                                 )
                       );

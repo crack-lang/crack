@@ -6,6 +6,6 @@ Error when using ancestor privates
 class A { int __var; }
      class B : A { void f() { __var; } }
 %%EXPECT%%
-ParseError: %OUTDIR%151_using_ancestor_privates.crk:2:31: __var is private to class A and not acessible in this context.
+ParseError: %OUTDIR%151_using_ancestor_privates.crk:2:31: __var is private to class A and not accessible in this context.
 %%STDIN%%
 

@@ -1,0 +1,15 @@
+%%TEST%%
+getter/setter accessibility
+%%ARGS%%
+%%FILE%%
+# Verify that accessors follow the same visibility rules of the underlying
+# variables.
+class A1 {
+    int oper .__foo() { return 123 }
+    void f() { this.__foo }  # OK: from within class.
+}
+A1().__foo
+
+%%EXPECT%%
+ParseError: %SCRIPTNAME%:7:1: __foo is private to class A1 and not accessible in this context.
+%%STDIN%%

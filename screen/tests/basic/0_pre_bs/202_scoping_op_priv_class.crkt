@@ -8,5 +8,5 @@ class A {
 c := A::__C();
 
 %%REXPECT%%
-ParseError: .*/202_scoping_op_priv_class.crk:4:9: __C is private to class A and not acessible in this context.
+ParseError: .*/202_scoping_op_priv_class.crk:4:9: __C is private to class A and not accessible in this context.
 %%STDIN%%
