@@ -133,7 +133,7 @@ void crack_ext__alsa_midi_cinit(crack::ext::Module *mod) {
                                 CRACK_OFFSET(snd_seq_event_t, tag));
         type_snd_seq_event_t->addInstVar(type_byte, "queue",
                                 CRACK_OFFSET(snd_seq_event_t, queue));
-f = type_snd_seq_event_t->addMethod(
+f = type_snd_seq_event_t->addStaticMethod(
     type_snd_seq_event_t,
     "oper new",
     (void *)snd_seq_event_alloc
@@ -252,7 +252,7 @@ f = type_snd_seq_event_t->addMethod(
 
 
     crack::ext::Type *type_snd_seq_port_subscribe_t = mod->addType("snd_seq_port_subscribe_t", sizeof(Undef));
-f = type_snd_seq_port_subscribe_t->addMethod(
+f = type_snd_seq_port_subscribe_t->addStaticMethod(
     type_snd_seq_port_subscribe_t,
     "oper new",
     (void *)crk_snd_seq_port_subscribe_malloc
@@ -329,7 +329,7 @@ f = type_snd_seq_port_subscribe_t->addMethod(
 
 
     crack::ext::Type *type_snd_seq_port_info_t = mod->addType("snd_seq_port_info_t", sizeof(Undef));
-f = type_snd_seq_port_info_t->addMethod(
+f = type_snd_seq_port_info_t->addStaticMethod(
     type_snd_seq_port_info_t,
     "oper new",
     (void *)crk_snd_seq_port_info_malloc
@@ -387,7 +387,7 @@ f = type_snd_seq_port_info_t->addMethod(
 
 
     crack::ext::Type *type_snd_seq_client_info_t = mod->addType("snd_seq_client_info_t", sizeof(Undef));
-f = type_snd_seq_client_info_t->addMethod(
+f = type_snd_seq_client_info_t->addStaticMethod(
     type_snd_seq_client_info_t,
     "oper new",
     (void *)crk_snd_seq_client_info_malloc
@@ -596,6 +596,32 @@ f = type_snd_seq_client_info_t->addMethod(
     );
     f->addArg(type_snd_seq_port_subscribe_t,
               "sub"
+              );
+
+
+    f = type_snd_seq_t->addMethod(
+        type_int,
+        "poll_descriptors_count",
+        (void *)snd_seq_poll_descriptors_count
+    );
+    f->addArg(type_int16,
+              "events"
+              );
+
+
+    f = type_snd_seq_t->addMethod(
+        type_int,
+        "poll_descriptors_vp",
+        (void *)snd_seq_poll_descriptors
+    );
+    f->addArg(type_voidptr,
+              "fds"
+              );
+    f->addArg(type_uint,
+              "cap"
+              );
+    f->addArg(type_int16,
+              "events"
               );
 
     type_snd_seq_t->finish();

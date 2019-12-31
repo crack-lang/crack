@@ -352,6 +352,16 @@
 
         @cname snd_seq_subscribe_port
         int subscribe_port(snd_seq_port_subscribe_t sub);
+
+        @cname snd_seq_poll_descriptors_count
+        int poll_descriptors_count(int16 events);
+
+        ## Fills in an array of poll descriptors.  The "_vp" suffix is because
+        ## this accepts a voidptr instead of a crack.runtime.PollSet like
+        ## it's supposed to.  When we fix this we can leave this around as an
+        ## untyped version of the function.
+        @cname snd_seq_poll_descriptors
+        int poll_descriptors_vp(voidptr fds, uint cap, int16 events);
     }
 
     int snd_seq_open(array[snd_seq_t] seqp, byteptr name, int streams,
