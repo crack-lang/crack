@@ -351,8 +351,17 @@ class Context : public spug::RCBase {
         /**
          * Create a variable reference from the context and check that the
          * variable is actually reachable from the context.
+         *
+         * @param errorIfUnreachable If true, raise an exception if the
+         *        variable is unreachable, otherwise return null.
          */
-        ExprPtr createVarRef(VarDef *def);
+        ExprPtr createVarRef(VarDef *def, bool errorIfUnreachable = true);
+
+        /**
+         * If 'primary's type has setters or getters for 'name', returns an
+         * AttribDeref object for them.  Returns null if not.
+         */
+        ExprPtr makeAccessor(Expr *primary, const std::string &name);
 
         /**
          * Create a field reference and check that the variable is actually in
@@ -402,10 +411,18 @@ class Context : public spug::RCBase {
          */
         BranchpointPtr getCatchBranchpoint();
 
+        /** Returns true if we are in a method. */
+        bool isMethod();
+
         /**
-         * Create a reference to the "this" variable, error if there is none.
+         * Create a reference to the "this" variable.
+         *
+         * If there is no this variable, emit en error or return null
+         * depending on the value of 'errorIfMissing'.
          */
-        model::ExprPtr makeThisRef(const std::string &memberName);
+        model::ExprPtr makeThisRef(const std::string &memberName,
+                                   bool errorIfMissing = true
+                                   );
 
         /**
          * Returns true if the context is in a method of /type/ and thus has

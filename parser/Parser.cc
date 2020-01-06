@@ -3943,28 +3943,9 @@ void Parser::parsePostDot(ExprPtr &expr, TypeDefPtr &type) {
    VarDefPtr def = expr->type->lookUp(name);
 
    if (!def) {
-      FuncCall::ExprVec args;
-      FuncDefPtr getter;
-
-      // If we didn't get a def, first check to see if there's a getter or
-      // setter for the field.  Note that we have to use an OverloadDef for
-      // the setter because we don't currently know the argument type.
-      getter = context->lookUp("oper ." + name, args, expr->type.get());
-      OverloadDefPtr setter =
-         context->lookUp("oper ." + name + "=", expr->type.get());
-      if (getter || setter) {
-         context->checkAccessible(getter ?
-                                    VarDefPtr::rcast(getter) :
-                                    VarDefPtr::rcast(setter),
-                                  name
-                                  );
-         expr = new AttrDeref(expr.get(), setter.get(), getter.get(),
-                              context->construct->voidType.get()
-                              );
-
-         // If there's no getter, set the type to void.
-         if (getter)
-            type = context->construct->voidptrType.get();
+      ExprPtr deref = context->makeAccessor(expr.get(), name);
+      if (deref) {
+         expr = deref;
          return;
       } else if (type) {
          def = type->lookUp(name);
@@ -4051,18 +4032,30 @@ Parser::Primary Parser::parsePrimary(Expr *implicitReceiver) {
          def = 0;
       }
 
-      if (!def)
-         return Primary(0, 0, tok);
+      if (!def) {
+         // No definition.  See if there's an implicit "this" and there are 
+         // getters or setters for the name.
+         if (context->isMethod())
+            expr = context->makeThisRef(tok.getData(), false);
+         if (expr)
+            expr = context->makeAccessor(expr.get(), tok.getData());
+         if (!expr)
+            return Primary(0, 0, tok);
+      }
 
-      context->checkAccessible(def.get(), tok.getData());
-      identLoc = tok.getLocation();
-      // XXX we need to do special stuff for OverloadDefs that may contain
-      // methods.  if they do, and there is a "this" we want to pass back a
-      // Deref binding the this to the OverloadDef.  May want to do this in
-      // createVarRef instead.
-      type = TypeDefPtr::rcast(def);
-      expr = createVarRef(/* container */ 0, def.get(), tok);
-      soleIdent = tok;
+      if (!expr) {
+         // We have a definition but no expression yet.  Dereference the 
+         // variable.
+         context->checkAccessible(def.get(), tok.getData());
+         identLoc = tok.getLocation();
+         // XXX we need to do special stuff for OverloadDefs that may contain
+         // methods.  if they do, and there is a "this" we want to pass back a
+         // Deref binding the this to the OverloadDef.  May want to do this in
+         // createVarRef instead.
+         type = TypeDefPtr::rcast(def);
+         expr = createVarRef(/* container */ 0, def.get(), tok);
+         soleIdent = tok;
+      }
    }
 
    while (true) {

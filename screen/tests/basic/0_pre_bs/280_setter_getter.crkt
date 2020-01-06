@@ -31,6 +31,12 @@ class A {
         # Verify that we can override a getter/setter from within a function.
         int foo;
     }
+
+    void checkMethodAccess() {
+        foo = 456;
+        if (foo != 456)
+            puts('FAILED setting or getting using unqualified accessors');
+    }
 }
 
 a := A();
@@ -41,6 +47,8 @@ if (a.foo != 100)
 a.func = lambda int() { return 123 };
 if (a.func() != 123)
     puts('FAILED func call on getter result');
+
+a.checkMethodAccess();
 
 class B {
     int oper .foo=(int val) {

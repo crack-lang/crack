@@ -1,0 +1,127 @@
+## Database and persistence code.
+
+import crack.cont.array Array;
+import crack.lang cmp, AppendBuffer, InvalidArgumentError;
+import crack.strutil StringArray;
+
+## Returns true if a field needs escaping to be used in a CSV file.
+## We escape fields containing commas, double-quotes and newlines - the latter
+## being inconsistent with general CSV implementation, but it still beats
+## literal newlines.
+bool needsEscaping(String value) {
+    for (int i; i < value.size; ++i) {
+        ch := value[i];
+        if (ch == b',' || ch == b'\n' || ch == b'"')
+            return true;
+    }
+    return false;
+}
+
+void writeEscaped(AppendBuffer out, String value) {
+    for (int i; i < value.size; ++i) {
+        ch := value[i];
+        if (ch == b'"') {
+            out.append(b'"');
+            out.append(ch);
+        } else if (ch == b'\n') {
+            out.extend('\\n');
+        } else {
+            out.append(ch);
+        }
+    }
+}
+
+String escape(String value) {
+    buf := AppendBuffer(value.count() * 2);
+    writeEscaped(buf, value);
+    return String(buf, true);
+}
+
+## Return 'value' converted to a single CSV column.
+String writeValue(String value) {
+    if (needsEscaping(value)) {
+        result := AppendBuffer(value.size + 2 + value.size / 10);
+        result.append(b'"');
+        writeEscaped(result, value);
+        result.append(b'"');
+        return String(result, true);
+    } else {
+        return value;
+    }
+}
+
+alias encodeValue = writeValue;
+
+
+## Return 'row' encoded as a CSV line (without a newline).
+String encodeRow(Array[String] row) {
+    buf := AppendBuffer(256);
+    for (col :in row) {
+        if (buf)
+            buf.append(b',');
+        buf.extend(encodeValue(col));
+    }
+    return String(buf, true);
+}
+
+## Parse a CSVish line into an array of strings.
+StringArray parseLine(String line) {
+    # state:
+    # 0 - base state
+    # 1 - quoted
+    # 2 - escaped
+    int state;
+    result := StringArray();
+    col := AppendBuffer(1024);
+
+    for (int i; i < line.size; ++i) {
+        ch := line[i];
+        if (state == 0) {
+            if (ch == b'"') {
+                state = 1;
+            } else if (ch == b',') {
+                result.append(String(col, true));
+                col = AppendBuffer(1024);
+                col.size = 0;
+            } else {
+                col.append(ch);
+            }
+        } else if (state == 1) {
+            if (ch == b'"')
+                state = 2;
+            else
+                col.append(ch);
+        } else if (state == 2) {
+            # Last character was a double-quote.
+
+            # deal with double-quote.
+            if (ch == b'"') {
+                col.append(b'"');
+                state = 1;
+
+            # Comma takes us back to base state.
+            } else if (ch == b',') {
+                result.append(String(col, true));
+                col = AppendBuffer(1024);
+                col.size = 0;
+                state = 0;
+
+            # Anything else means we got a single double-quote: take us out of quote escaping.
+            } else {
+                col.append(ch);
+                state = 0;
+            }
+        }
+    }
+
+    # If we closed on a paired double quote, close it off clean.
+    if (state == 2)
+        state = 0;
+
+    if (state == 0)
+        result.append(String(col, true));
+    else
+        throw InvalidArgumentError('Badly formed row.');
+
+    return result;
+}

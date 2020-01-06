@@ -1,0 +1,18 @@
+%%TEST%%
+error on unqualified setter
+%%ARGS%%
+%%FILE%%
+class A {
+    int __foo;
+
+    int oper .foo() { return __foo }
+    int oper .foo=(int val) { return __foo = val }
+
+    @static void f() {
+        foo = 123;
+    }
+}
+
+%%EXPECT%%
+ParseError: %SCRIPTNAME%:8:9: Unknown identifier foo
+%%STDIN%%

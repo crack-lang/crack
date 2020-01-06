@@ -20,6 +20,7 @@
 #include "parser/ParseError.h"
 #include "util/CacheFiles.h"
 #include "Annotation.h"
+#include "AttrDeref.h"
 #include "AssignExpr.h"
 #include "BuilderContextData.h"
 #include "CleanupFrame.h"
@@ -807,8 +808,31 @@ bool Context::inSameFunc(Namespace *varNS) {
         return false;
 }
 
+ExprPtr Context::makeAccessor(Expr *expr, const string &name) {
+    FuncCall::ExprVec args;
+    FuncDefPtr getter;
 
-ExprPtr Context::createVarRef(VarDef *varDef) {
+    // If we didn't get a def, first check to see if there's a getter or
+    // setter for the field.  Note that we have to use an OverloadDef for
+    // the setter because we don't currently know the argument type.
+    getter = lookUp("oper ." + name, args, expr->type.get());
+    OverloadDefPtr setter =
+        lookUp("oper ." + name + "=", expr->type.get());
+    if (getter || setter) {
+        checkAccessible(getter ? VarDefPtr::rcast(getter) :
+                                 VarDefPtr::rcast(setter),
+                        name
+                        );
+        return new AttrDeref(expr, setter.get(), getter.get(),
+                             construct->voidType.get()
+                             );
+
+    } else {
+        return 0;
+    }
+}
+
+ExprPtr Context::createVarRef(VarDef *varDef, bool errorIfUnreachable) {
 
     // is the variable a constant?
     ConstVarDefPtr constDef;
@@ -843,10 +867,13 @@ ExprPtr Context::createVarRef(VarDef *varDef) {
         return builder.createVarRef(varDef);
     }
 
-    error(SPUG_FSTR("Variable '" << varDef->name <<
-                     "' is not accessible from within this context."
-                    )
-          );
+    if (errorIfUnreachable)
+        error(SPUG_FSTR("Variable '" << varDef->name <<
+                        "' is not accessible from within this context."
+                        )
+            );
+    else
+        return 0;
 }
 
 VarRefPtr Context::createFieldRef(Expr *aggregate, VarDef *var) {
@@ -910,15 +937,23 @@ BranchpointPtr Context::getCatchBranchpoint() {
     return catchBranch;
 }
 
-ExprPtr Context::makeThisRef(const string &memberName) {
-   VarDefPtr thisVar = ns->lookUp("this");
-   if (!thisVar)
-      error(SPUG_FSTR("Instance member \"" << memberName <<
-                       "\" may not be used in a static context."
-                      )
-            );
+bool Context::isMethod() {
+    return getToplevel()->parent->scope == Context::composite;
+}
 
-   return createVarRef(thisVar.get());
+ExprPtr Context::makeThisRef(const string &memberName, bool errorIfMissing) {
+    VarDefPtr thisVar = ns->lookUp("this");
+    if (!thisVar) {
+        if (errorIfMissing)
+            error(SPUG_FSTR("Instance member \"" << memberName <<
+                            "\" may not be used in a static context."
+                            )
+                  );
+        else
+            return 0;
+    }
+
+    return createVarRef(thisVar.get(), errorIfMissing);
 }
 
 bool Context::hasInstanceOf(TypeDef *type) const {
