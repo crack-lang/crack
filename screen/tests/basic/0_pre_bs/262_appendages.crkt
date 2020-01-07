@@ -44,6 +44,33 @@ class G[T] = T {
 
 G[A](A(300)).putter();
 
+# Check that virtual functions work.
+
+if (1) {
+    class A : VTableBase {
+        void f() { puts('A.f()') }
+    }
+
+    class B : A {
+        void f() { puts('B.f()') }
+    }
+
+    class C = A {}
+
+    C c = C(B());
+    c.f();
+}
+
+# Check for a very specific bug that showed up when we were generating vtables
+# for appendages, something we don't need to do.
+if (1) {
+    class GenApp[T] = T {}
+    class B2 {}
+    class B : VTableBase, B2 {}
+    class X : B {}
+    GenApp[X] x;
+}
+
 %%EXPECT%%
 B.foo()
 100
@@ -52,4 +79,5 @@ B.foo()
 C.bar()
 200
 300
+B.f()
 %%STDIN%%

@@ -314,7 +314,7 @@ void BTypeDef::fixVTableSlots(int offset) {
 
 void BTypeDef::fixIncompletes(Context &context) {
     // construct the vtable if necessary
-    if (hasVTable) {
+    if (hasVTable && !appendage) {
         if (parents.size()) {
             int lastBaseVTableSlot =
                 BTypeDefPtr::rcast(parents[0])->nextVTableSlot;
