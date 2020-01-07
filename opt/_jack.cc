@@ -71,6 +71,34 @@ void crack_ext__jack_cinit(crack::ext::Module *mod) {
     type_JackPort->finish();
 
 
+    crack::ext::Type *type_JackPosition = mod->addType("JackPosition", sizeof(jack_position_t));
+        type_JackPosition->addInstVar(type_uint64, "usecs",
+                                CRACK_OFFSET(jack_position_t, usecs));
+        type_JackPosition->addInstVar(type_uint32, "frame_rate",
+                                CRACK_OFFSET(jack_position_t, frame_rate));
+        type_JackPosition->addInstVar(type_uint32, "frame",
+                                CRACK_OFFSET(jack_position_t, frame));
+        type_JackPosition->addInstVar(type_int, "valid",
+                                CRACK_OFFSET(jack_position_t, valid));
+        type_JackPosition->addInstVar(type_int32, "bar",
+                                CRACK_OFFSET(jack_position_t, bar));
+        type_JackPosition->addInstVar(type_int32, "beat",
+                                CRACK_OFFSET(jack_position_t, beat));
+        type_JackPosition->addInstVar(type_int32, "tick",
+                                CRACK_OFFSET(jack_position_t, tick));
+        type_JackPosition->addInstVar(type_float64, "bar_start_tick",
+                                CRACK_OFFSET(jack_position_t, bar_start_tick));
+        type_JackPosition->addInstVar(type_float32, "beats_per_bar",
+                                CRACK_OFFSET(jack_position_t, beats_per_bar));
+        type_JackPosition->addInstVar(type_float32, "beat_type",
+                                CRACK_OFFSET(jack_position_t, beat_type));
+        type_JackPosition->addInstVar(type_float64, "ticks_per_beat",
+                                CRACK_OFFSET(jack_position_t, ticks_per_beat));
+        type_JackPosition->addInstVar(type_float64, "beats_per_minute",
+                                CRACK_OFFSET(jack_position_t, beats_per_minute));
+    type_JackPosition->finish();
+
+
     crack::ext::Type *function = mod->getType("function");
 
     crack::ext::Type *function_pint_c_suint32_c_svoidptr_q;
@@ -182,6 +210,64 @@ void crack_ext__jack_cinit(crack::ext::Module *mod) {
               "flags"
               );
 
+
+    f = type_JackClient->addMethod(
+        type_uint32,
+        "frameTime",
+        (void *)jack_frame_time
+    );
+
+
+    f = type_JackClient->addMethod(
+        type_uint32,
+        "lastFrameTime",
+        (void *)jack_last_frame_time
+    );
+
+
+    f = type_JackClient->addMethod(
+        type_int,
+        "transportLocate",
+        (void *)jack_transport_locate
+    );
+    f->addArg(type_uint32,
+              "pos"
+              );
+
+
+    f = type_JackClient->addMethod(
+        type_int,
+        "transportStart",
+        (void *)jack_transport_start
+    );
+
+
+    f = type_JackClient->addMethod(
+        type_int,
+        "transportStop",
+        (void *)jack_transport_stop
+    );
+
+
+    f = type_JackClient->addMethod(
+        type_int,
+        "transportQuery",
+        (void *)jack_transport_query
+    );
+    f->addArg(type_JackPosition,
+              "pos"
+              );
+
+
+    f = type_JackClient->addMethod(
+        type_int,
+        "transportReposition",
+        (void *)jack_transport_reposition
+    );
+    f->addArg(type_JackPosition,
+              "pos"
+              );
+
     type_JackClient->finish();
 
 
@@ -254,5 +340,33 @@ void crack_ext__jack_cinit(crack::ext::Module *mod) {
 
     mod->addConstant(type_int, "JACK_PORT_IS_TERMINAL",
                      static_cast<int>(JackPortIsTerminal)
+                     );
+
+    mod->addConstant(type_int, "JACK_POSITION_BBT",
+                     static_cast<int>(JackPositionBBT)
+                     );
+
+    mod->addConstant(type_int, "JACK_POSITION_TIMECODE",
+                     static_cast<int>(JackPositionTimecode)
+                     );
+
+    mod->addConstant(type_int, "JACK_BBT_FRAME_OFFSET",
+                     static_cast<int>(JackBBTFrameOffset)
+                     );
+
+    mod->addConstant(type_int, "JACK_TRANSPORT_STOPPED",
+                     static_cast<int>(JackTransportStopped)
+                     );
+
+    mod->addConstant(type_int, "JACK_TRANSPORT_ROLLING",
+                     static_cast<int>(JackTransportRolling)
+                     );
+
+    mod->addConstant(type_int, "JACK_TRANSPORT_LOOPING",
+                     static_cast<int>(JackTransportLooping)
+                     );
+
+    mod->addConstant(type_int, "JACK_TRANSPORT_STARTING",
+                     static_cast<int>(JackTransportStarting)
                      );
 }
