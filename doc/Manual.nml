@@ -1391,9 +1391,20 @@ languages like C++ and Python. These can be dereferenced using the dot
 operator ("#.#").  Examples are:
 
 {{
-    xval := a.x; # Dereference attribute "x" in object "a".
+    xval := a.x;  # Dereference attribute "x" in object "a".
     a.foo(1, 2, 3);  # Call method "foo" on object "a".
 }}
+
+In fact, most of the operators are implemented as methods, even on primitive
+types, and can be expressed using the "#.oper# /op/" syntax:
+
+{{
+    result := 100.oper +(200);  # Equivalent to 100 + 200.
+}}
+
+It is important to note that the dot oeperator isn't a "first class" operator
+in the same sense as most of the others.  It can not be overriden and the
+"#oper#" syntax shown above doesn't work on it.
 
 
 Safe Navigation
@@ -1441,8 +1452,13 @@ The type of #xval# will be the same as the type of #a.x# (if #a.x# is of a
 primitive type, the result if #x# is null will be the appropriate "zero value"
 for the type).
 
-Likewise, the type of #yval# is the type of a.x.y;
+Likewise, the type of #yval# is the type of a.x.y.
 
+Safe navigation also works for method invocations:
+
+{{
+    foo?.bar(1, 2, 3)?.baz();
+}}
 
 Precedence
 ''''''''''
@@ -2243,7 +2259,7 @@ For examples, let's return to our #Coord# class:
 
          ## Returns true if the coordinate is non-null and not the origin.
          @final bool isNonOrigin() {
-            return !(this is null) && (x || y);
+            return this !is null && (x || y);
          }
 
          ## Returns the length of an x, y position, whether or not it's
