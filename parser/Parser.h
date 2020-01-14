@@ -459,6 +459,16 @@ class Parser {
 
       model::TypeDefPtr parseClassDef();
 
+      /**
+       * Wrap an expression in a check for null:
+       * !(primary is null) ? expr : null
+       *
+       * 'primary' may be null, in which case 'expr' is returned.  To get the
+       * ternary expression, assign 'primary' to a SetRegisterExpr and 'expr'
+       * to the corresponding GetRegsterExpr.
+       */
+      model::ExprPtr wrapInNullCheck(model::Expr *primary, model::Expr *expr);
+
    public:
 
       // XXX should be protected, once required functionality is migrated out.
@@ -549,8 +559,10 @@ class Parser {
        * @param type If the receiver is a type, this is it.  This is updated
        *             to the new type if .selector is a type, to null if it is
        *             not.
+       * @param isSafeNav true if it was the "?." safe navigation operator.
        */
-      void parsePostDot(model::ExprPtr &expr, model::TypeDefPtr &type);
+      void parsePostDot(model::ExprPtr &expr, model::TypeDefPtr &type,
+                        bool isSafeNav);
 
       /** Parse a "primary" */
       Primary parsePrimary(model::Expr *implicitReceiver);

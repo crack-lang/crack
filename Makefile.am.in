@@ -283,6 +283,7 @@ noinst_HEADERS = \
     model/PrimFuncAnnotation.h \
     model/ProtoBuf.h \
     model/ResultExpr.h \
+    model/SafeNavExpr.h \
     model/Serializer.h \
     model/SetRegisterExpr.h \
     model/StatState.h \

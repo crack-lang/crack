@@ -40,6 +40,7 @@
 #include "model/ModuleDef.h"
 #include "model/NullConst.h"
 #include "model/ResultExpr.h"
+#include "model/SafeNavExpr.h"
 #include "model/SetRegisterExpr.h"
 #include "model/StatState.h"
 #include "model/StrConst.h"
@@ -1080,7 +1081,7 @@ ExprPtr Parser::parseSecondary(const Primary &primary, unsigned precedence) {
          if (deref && !deref->operGet)
             context->error("Attempt to evaluate attribute with no getter.");
          TypeDefPtr type;
-         parsePostDot(expr, type);
+         parsePostDot(expr, type, false);
       } else if (tok.isScoping()) {
          VarRefPtr varRef = VarRefPtr::rcast(expr);
          NamespacePtr ns = NamespacePtr::rcast(varRef->def);
@@ -1199,9 +1200,20 @@ ExprPtr Parser::parseSecondary(const Primary &primary, unsigned precedence) {
       } else if (tok.isIstrBegin()) {
          expr = parseIString(expr.get());
       } else if (tok.isQuest()) {
-         if (precedence >= logOrPrec)
-            break;
-         expr = parseTernary(expr.get());
+         // See if this is the safe navigation operator "?.".
+         Token tok2 = getToken();
+         if (tok2.isDot()) {
+            AttrDerefPtr deref = AttrDerefPtr::rcast(expr);
+            if (deref && !deref->operGet)
+               context->error("Attempt to evaluate attribute with no getter.");
+            TypeDefPtr type;
+            parsePostDot(expr, type, true);
+         } else {
+            toker.putBack(tok2);
+            if (precedence >= logOrPrec)
+               break;
+            expr = parseTernary(expr.get());
+         }
       } else if (tok.isBang()) {
          // Check for the 'is' keyword to see if this is the "!is" sugar.
          Token tok2 = toker.getToken();
@@ -3628,6 +3640,27 @@ TypeDefPtr Parser::parseClassDef() {
    return type;
 }
 
+ExprPtr Parser::wrapInNullCheck(model::Expr *primary, model::Expr *expr) {
+   if (primary) {
+      // construct "primary is null" condition.
+      FuncCall::ExprVec args(2);
+      args[0] = primary;
+      args[1] = new NullConst(primary->type.get());
+      FuncDefPtr func = context->lookUp("oper is", args);
+      if (!func)
+         context->error("Expression can not be used for safe navigation "
+                         "operator '.?'");
+      FuncCallPtr cond = context->builder.createFuncCall(func.get());
+      cond->args = args;
+
+      return new SafeNavExpr(cond.get(), new NullConst(expr->type.get()), 
+                             expr
+                             );
+   } else {
+      return expr;
+   }
+}
+
 Parser::Parser(Toker &toker, model::Context *context) :
    toker(toker),
    nestID(0),
@@ -3923,9 +3956,23 @@ bool Parser::runCallbacks(Event event) {
 
 // <expr> . <ident|oper|class>
 //         ^
-void Parser::parsePostDot(ExprPtr &expr, TypeDefPtr &type) {
+void Parser::parsePostDot(ExprPtr &expr, TypeDefPtr &type, bool isSafeNav) {
    Token tok = getToken();
    string name, access;
+
+   // If this is the safe navigation operator we'll want to wrap in a null
+   // check if so. If we're doing the null check, 'primary' is defined to the
+   // "set register" expression and 'expr' is defined to be the "get
+   // register".
+   ExprPtr primary;
+   if (isSafeNav) {
+      // We're going to need to use the primary expression twice, so store it
+      // in a SetRegister.
+      GetRegisterExprPtr reg = new GetRegisterExpr(expr->type.get());
+      primary = new SetRegisterExpr(reg.get(), expr.get());
+      expr = reg;
+   }
+
    if (tok.isIdent()) {
       name = access = tok.getData();
    } else if (tok.isOper()) {
@@ -3935,7 +3982,9 @@ void Parser::parsePostDot(ExprPtr &expr, TypeDefPtr &type) {
    } else if (tok.isClass()) {
       // "expr.class" is a special case because it is implicitly a
       // function call.  Emit and quit.
-      expr = emitOperClass(expr.get(), tok);
+      expr = wrapInNullCheck(primary.get(),
+                             emitOperClass(expr.get(), tok).get()
+                             );
       return;
    } else {
       error(tok, "Identifier or 'oper' expected after '.'");
@@ -3961,16 +4010,21 @@ void Parser::parsePostDot(ExprPtr &expr, TypeDefPtr &type) {
             if (OverloadDef *ovld = OverloadDefPtr::rcast(def))
                def = new ExplicitlyScopedDef(ovld);
 
-            expr = context->createVarRef(def.get());
+            expr = wrapInNullCheck(primary.get(),
+                                   context->createVarRef(def.get()).get());
          }
       }
    } else {
       // Found a def.
       if (TypeDefPtr::rcast(def))
          // Types are inherently static and don't need to be dereferenced.
-         expr = context->createVarRef(def.get());
+         expr = wrapInNullCheck(primary.get(),
+                                context->createVarRef(def.get()).get()
+                                );
       else
-         expr = new Deref(expr.get(), def.get());
+         expr = wrapInNullCheck(primary.get(),
+                                new Deref(expr.get(), def.get())
+                                );
    }
 
    // XXX in order to handle value.Base::method(), we need to try
@@ -4071,7 +4125,7 @@ Parser::Primary Parser::parsePrimary(Expr *implicitReceiver) {
          expr = createVarRef(/* container */ 0, def.get(), lastName);
       } else if (tok.isDot()) {
          soleIdent = Token();
-         parsePostDot(expr, type);
+         parsePostDot(expr, type, false);
       } else if (tok.isLBracket()) {
          soleIdent = Token();
 
@@ -4129,6 +4183,18 @@ Parser::Primary Parser::parsePrimary(Expr *implicitReceiver) {
             funcCall->args = args;
          }
          expr = funcCall;
+      } else if (tok.isQuest()) {
+         // Check for "?." safe navigation operator.
+         Token tok2 = getToken();
+         if (tok2.isDot()) {
+            soleIdent = Token();
+            parsePostDot(expr, type, true);
+         } else {
+            // End of the primary, put the tokens back.
+            toker.putBack(tok2);
+            toker.putBack(tok);
+            break;
+         }
       } else {
          // Not a continuation token: end of the primary.
          toker.putBack(tok);

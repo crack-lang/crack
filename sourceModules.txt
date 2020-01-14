@@ -42,6 +42,7 @@ model/MultiExpr.cc
 model/NullConst.cc
 model/Namespace.cc
 model/ops.cc
+model/SafeNavExpr.cc
 model/Serializer.cc
 model/CleanupFrame.cc
 model/TernaryExpr.cc

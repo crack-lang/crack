@@ -1382,13 +1382,75 @@ first attempt to convert #d# to the #c#'s type.  That failing, it will attempt
 to convert #c# to #d#'s type.  If none of this works, it will finally give an
 error.
 
+Dereferencing
+'''''''''''''
+
+Certain types (particularly \X(Classes)) have fields and "methods" associated
+with them, in the same way that objects can have properties and methods in
+languages like C++ and Python. These can be dereferenced using the dot
+operator ("#.#").  Examples are:
+
+{{
+    xval := a.x; # Dereference attribute "x" in object "a".
+    a.foo(1, 2, 3);  # Call method "foo" on object "a".
+}}
+
+
+Safe Navigation
+'''''''''''''''
+
+As a language that supports "null", Crack programs frequently require the use
+of a null check prior to a dereference.  In fact, there are often cases where
+we want to check a whole sequence of references for null and finally either
+evaluate to the final value or null if any expresssion in the sequence was
+null.  The \X(Ternary Operator) lends itself to this sort of evaluation, for
+example if we wanted to check #a# before evaluating #a.x# and return null in
+either case, we could do:
+
+{{
+    xval := (a !is null) ? a.x : null;
+}}
+
+Unfortunately, this is rather verbose.  It also doesn't work for a sequence of
+dereferences, where we'd have to rely on intermediate variables:
+
+{{
+    # Safely get a.x.y:
+    xval := (a !is null) ? a.x : null;
+    yval := (xval !is null) xval.y : null;
+}}
+
+As a remedy for this, Crack provides the safe navigation operator common to
+many other modern languages.  Specifically, using "#?.#" will only evaluate
+the dereference if the expression is used on is not null.  If the expression
+is null, it evaluates to null of the type of the result.
+
+We could rewrite the first example above as:
+
+{{
+    xval := a?.x;
+}}
+
+And the second one as:
+
+{{
+    yval := a?.x?.y;
+}}
+
+The type of #xval# will be the same as the type of #a.x# (if #a.x# is of a
+primitive type, the result if #x# is null will be the appropriate "zero value"
+for the type).
+
+Likewise, the type of #yval# is the type of a.x.y;
+
+
 Precedence
 ''''''''''
 
 Operator precedence is the same as in C.  So the rules are (highest precedence
 first):
 
--   #() [] . ++ --# (right side operators)
+-   #() [] . ?. ++ --# (right side operators)
 -   #++ -- + - ! ~# (left side operators)
 -   #\* \/ %# (binary operators)
 -   #+ -# (binary operators)
