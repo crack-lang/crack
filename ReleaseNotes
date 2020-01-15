@@ -1,3 +1,12 @@
+1.6
+    -   Implemented the safe navigation operator ("?.").
+    -   Added support for user-defined getters and setters (letting you use
+        plain attribute access syntax like "y = a.x; a.x = 100")
+    -   Added the "!is" operator ("is not")
+    -   Made Box[T] part of crack.lang.
+    -   Added crack.enc.json2, a more flexible JSON parser.
+    -   Added unsafeCast to function types.
+    -   Various bug fixes and enhancements.
 1.5
     -   Added lambdas.
     -   Added SSL support to the comm2 communication library.
