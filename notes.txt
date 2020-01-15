@@ -593,6 +593,25 @@ Parsing Oddities:
                 expr = parsePrimary()
                 make sure expr is a typespec
 
+#generics_and_lazy_imports
+Inconsistencies in LazyImports:
+
+    Lazy imports can only be defined at the module level.  This is to keep the
+    caching format lean: if lazy imports could be defined in any context we'd
+    have to scatter them throughout the objects in the metadata files.
+
+    The set of lazy imports in a module is attached to the generic types in
+    the module when they are defined.  This single collection associated with
+    the module itself is shared across all generics in the module.
+
+    This means that, left unchecked, lazy imports could be defined after the
+    generics that use them - if the module were in the persistent cache,
+    another module could instantiate such a generic without issue.  but if the
+    module were freshly compiled, the import would not be available xxx I
+    don't quite get why this is right now, though I understood it enough to
+    foresee it before) doesn't the module need to be compiled (and all lazy
+    imports collected) before the other module can use it?
+
 Desired Grammer:
 
     This is going to be the 1.0 grammar description of the language.

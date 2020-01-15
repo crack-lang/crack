@@ -8,17 +8,19 @@
 # Script to launch gdb for crack.
 
 in_prog_args=false
-declare -A gdb_args
-declare -A prog_args
+declare -a gdb_args
+declare -a prog_args
 i=0
 
 for arg in "$@"; do
     if [ "$arg" = '--' ]; then
         in_prog_args=true
     elif $in_prog_args; then
-        prog_args[$((++i))]="$arg"
+        echo "setting program arg $i to [$arg]"
+        prog_args[$((i++))]="$arg"
+        echo "args are now ${prog_args[*]}"
     else
-        gdb_args[$((++i))]="$arg"
+        gdb_args[$((i++))]="$arg"
     fi
 done
 

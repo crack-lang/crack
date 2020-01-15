@@ -287,7 +287,7 @@ class _DocAccum {
 ## Usage:
 ##    import crack.cont.array Array;
 ##    import crack.exp.cmd ArgInfo, ArgInfoBase, ArgParser, ArgVal,
-##        CommandInterface, ConverterBase, ValueMap;
+##        CommandArgParser, CommandInterface, ConverterBase, ValueMap;
 ##    import crack.cont.treemap TreeMap;
 ##    import crack.strutil StringArray;
 ##    @import crack.ann impl;

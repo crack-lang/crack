@@ -7,12 +7,16 @@
 #   file, You can obtain one at http://mozilla.org/MPL/2.0/.
 #
 
-import crack.ascii strip, wsplit;
+import crack.ascii isDigit, isSpace, strip, wsplit;
+import crack.cont.array Array;
 import crack.cont.treemap TreeMap;
-import crack.io cin, cout, Formatter, FStr;
+import crack.io cerr, cin, cout, Formatter, FStr, Reader;
 import crack.io.readers LineReader;
+import crack.lang cmp, AppendBuffer, Exception;
 import crack.regex Regex;
 import crack.strutil StringArray;
+
+@import crack.ann cvars, struct, SCOPE_NAME;
 
 # This is currently just a hack.  It recognizes import statements, reorders
 # and reformats them.
@@ -41,26 +45,62 @@ int cmpi(String a, String b) {
     return (i < b.size) ? -int(b[i]) : 0;
 }
 
+## Tracks information on a single imported symbol.
+class Symbol {
+    @cvars {
+        ## Original name of the symbol in its own module.
+        String name;
+
+        ## Local context alias (name it will be imported under).  Null if the
+        ## symbol is not aliased
+        String aliasName;
+    }
+
+    void formatTo(Formatter out) {
+        if (aliasName)
+            out `$aliasName = $name`;
+        else
+            out `$name`;
+    }
+
+    ## Compare so we sort, cas insensitive, first by name and then alias
+    ## (making names imported under multiple aliases more visible).  Also
+    ## incorporate sorting rules (methods/vars first, then classes, then
+    ## constants).
+    int cmp(Symbol other) {
+        rc := cmp(name, other.name); if (rc) return rc;
+        rc = cmp(aliasName, other.aliasName);
+        return rc;
+    }
+
+    int cmp(Object other) {
+        if (o := Symbol.cast(other))
+            return cmp(o);
+        else
+            return Object.cmp(other);
+    }
+}
+
 class Import {
     String moduleName;
-    StringArray imports = {};
+    Array[Symbol] imports = {};
 
     oper init(String moduleName) : moduleName = moduleName {}
 
     ## Sorts the names that are imported.
     void sortNames() {
-        StringArray vars = {}, classes = {}, constants = {};
-        for (name :in imports) {
-            if (varRx.match(name))
-                vars.append(name);
-            else if (constRx.match(name))
-                constants.append(name);
+        Array[Symbol] vars = {}, classes = {}, constants = {};
+        for (sym :in imports) {
+            if (varRx.match(sym.name))
+                vars.append(sym);
+            else if (constRx.match(sym.name))
+                constants.append(sym);
             else
-                classes.append(name);
+                classes.append(sym);
         }
-        vars.sort(cmpi);
-        classes.sort(cmpi);
-        constants.sort(cmpi);
+        vars.sort();
+        classes.sort();
+        constants.sort();
         imports = vars;
         imports.extend(classes);
         imports.extend(constants);
@@ -76,71 +116,230 @@ class Import {
                 out `,`;
             else
                 first = false;
-            if (count + imp.size + 2 >= 80) {
+            impText := FStr() `$imp`;
+            if (count + impText.size + 2 >= 80) {
                 out `\n    $imp`;
-                count = 4 + imp.size;
+                count = 4 + impText.size;
             } else {
                 out ` $imp`;
-                count += imp.size + 2;
+                count += impText.size + 2;
             }
         }
         out `;\n`;
     }
 
-    ## Returns true if we got a trailing semicolon.
-    bool addImports(StringArray words) {
-        bool gotSemi;
-        for (word :in words) {
-            if (word[-1] == b',') {
-                word = word.slice(0, -1);
-                if (!word)
-                    continue;
-            } else if (word[-1] == b';') {
-                word = word.slice(0, -1);
-                if (!word)
-                    return true;
-                gotSemi = true;
+    void addSymbol(String name, String aliased) {
+        newSym := aliased ? Symbol(aliased, name) : Symbol(name, null);
+
+        # Ignore it if we've already got it.
+        for (sym :in imports) {
+            if (sym == newSym)
+                return;
+        }
+        imports.append(newSym);
+    }
+}
+
+const int
+    TOK_IDENT = 0,
+    TOK_COMMA = 1,
+    TOK_SEMI = 2,
+    TOK_EQUAL = 3,
+    TOK_PERIOD = 4,
+    TOK_IMPORT = 5,
+    TOK_EOF = 999;
+
+const int
+    ST_BASE = 0,
+    ST_IDENT = 1;
+
+class Token {
+    @cvars { int type; String text; }
+
+    void formatTo(Formatter out) {
+        out `Token($type:$text)`;
+    }
+}
+
+class MiniToker {
+    int pos;
+    @cvars { String data; }
+
+    Token __makeIdent(int start, bool atEnd) {
+
+        # If we're not at the end, back up one under the assumption that we've
+        # just read a character that isn't part of the identifier.
+        if (!atEnd)
+            --pos;
+
+        text := data.slice(start, pos);
+        if (text == 'import')
+            return Token(TOK_IMPORT, 'import');
+        else
+            return Token(TOK_IDENT, text);
+    }
+
+    Token getNext() {
+        int start = pos;
+        int state;
+        while (true) {
+            if (pos == data.size) {
+                if (state == ST_IDENT)
+                    return __makeIdent(start, true);
+                else
+                    return Token(TOK_EOF, '');
             }
 
-            imports.append(word);
+            byte ch = data[pos++];
+
+            if (isSpace(ch)) {
+                if (state == ST_IDENT)
+                    return __makeIdent(start, false);
+                ++start;
+                continue;
+            }
+
+            if (state == ST_BASE) {
+                if (ch == b'.')
+                    return Token(TOK_PERIOD, '.');
+                else if (ch == b',')
+                    return Token(TOK_COMMA, ',');
+                else if (ch == b';')
+                    return Token(TOK_SEMI, ';');
+                else if (ch == b'=')
+                    return Token(TOK_EQUAL, '=');
+                else
+                    state = ST_IDENT;
+            } else if (state == ST_IDENT) {
+                if (!(ch >= b'A' && ch <= b'Z' ||
+                      ch >= b'a' && ch <= b'z' ||
+                      isDigit(ch) ||
+                      ch == b'_'
+                      )
+                    )
+                    return __makeIdent(start, false);
+            } else {
+                throw Exception(FStr() `Invalid state: $state`);
+            }
         }
 
-        return gotSemi;
+        return null;
     }
 }
 
-Import lastImport;
-importStatements := TreeMap[String, Import]();
+const int
+    P_BASE = 0,
+    P_BEGIN_MOD = 1,
+    P_MOD_IDENT = 2,
+    P_MOD_POST_IDENT = 3,
+    P_POST_VAR = 4,
+    P_POST_EQ = 5,
+    P_POST_COMMA = 6,
+    P_END;
 
-for (line :in LineReader(cin)) {
-    if (lastImport) {
-        if (lastImport.addImports(wsplit(strip(line))))
-            lastImport = null;
-    } else if (m := importRx.match(line)) {
-        moduleName := m.group(1);
-        imports := m.group(2);
-        if (im := importStatements.get(moduleName))
-            lastImport = im;
-        else
-            importStatements[moduleName] = lastImport = Import(moduleName);
-        if (lastImport.addImports(wsplit(strip(imports))))
-            lastImport = null;
-    } else if (strip(line) && importStatements) {
-        # we got a non-import line, emit the imports.
+class Parser {
+    int state;
+    @cvars { TreeMap[String, Import] importStatements; }
+
+    bool parse(String line) { xxxxx
+        I was going here because the case of multi-line import statements
+        forces us to implement a push-parser.
+
+void format(Formatter out, Reader src) {
+    Import lastImport;
+    importStatements := TreeMap[String, Import]();
+    bool passedImports;
+    AppendBuffer accum = {};
+
+    for (line :in LineReader(src)) {
+        if (passedImports) {
+            out `$line`;
+            continue;
+        }
+
+        accum.extend(line);
+        toker := MiniToker(line);
+        tok := toker.getNext();
+        if (tok.type == TOK_IMPORT) {
+            cerr `got import for [$line]\n`;
+            # Parse the module name.
+            AppendBuffer moduleNameBuf = {32};
+            tok = toker.getNext();
+            if (tok.type == TOK_PERIOD) {
+                moduleNameBuf.extend(tok.text);
+                tok = toker.getNext();
+            }
+            while (true) {
+                if (tok.type == TOK_EOF)
+
+                if (tok.type != TOK_IDENT) {
+                    throw Exception(
+                        FStr() `Invalid token in module name: $(tok.text)`
+                    );
+                }
+                moduleNameBuf.extend(tok.text);
+                tok = toker.getNext();
+                if (tok.type != TOK_PERIOD)
+                    break;
+                moduleNameBuf.append(b'.');
+                tok = toker.getNext();
+            }
+
+            moduleName := String(moduleNameBuf, true);
+            if (mod := importStatements.get(moduleName))
+                lastImport = mod;
+            else
+                importStatements[moduleName] = lastImport = Import(moduleName);
+
+            # Parse the imports.
+            while (tok.type != TOK_SEMI) {
+                if (tok.type != TOK_IDENT)
+                    throw Exception(
+                        FStr() `Expected identifier, got $(tok.text)`
+                    );
+                String word = tok.text, aliased;
+
+                tok = toker.getNext();
+                if (tok.type == TOK_EQUAL) {
+                    tok = toker.getNext();
+                    if (tok.type != TOK_IDENT)
+                        throw Exception(
+                            FStr() `Identifier expected, got $(tok.text)`
+                        );
+                    aliased = tok.text;
+                    tok = toker.getNext();
+                }
+
+                # Check for semicolon or comma.
+                if (tok.type == TOK_COMMA)
+                    tok = toker.getNext();
+                else if (tok.type != TOK_SEMI)
+                    throw Exception(FStr() `Comma or semicolon expected.`);
+
+                lastImport.addSymbol(word, aliased);
+            }
+
+            tok = toker.getNext();
+            if (tok.type != TOK_EOF)
+                throw Exception(FStr() `More data after import statement`);
+        } else {
+            # we got a non-import line, emit the imports.
+            for (item :in importStatements) {
+                item.val.sortNames();
+                item.val.format(out);
+            }
+            importStatements.clear();
+            out.write(line);
+        }
+    }
+
+    if (importStatements) {
         for (item :in importStatements) {
             item.val.sortNames();
-            item.val.format(cout);
+            item.val.format(out);
         }
-        importStatements.clear();
-        cout.write(line);
-    } else {
-        cout.write(line);
     }
 }
 
-if (importStatements) {
-    for (item :in importStatements) {
-        item.val.sortNames();
-        item.val.format(cout);
-    }
-}
+if (@SCOPE_NAME == '.main')
+    format(cout, cin);

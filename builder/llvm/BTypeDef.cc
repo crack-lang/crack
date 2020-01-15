@@ -547,7 +547,7 @@ GlobalVariable *BTypeDef::createClassImpl(Context &context) {
         rootCount = countRootAncestors();
     }
     Type *voidptrArrayType = ArrayType::get(intPtrType, rootCount * 2);
-    if (hasVTable) {
+    if (hasVTable && !appendage) {
         GlobalVariable *vtablesGVar =
             new GlobalVariable(*llvmBuilder.module,
                                voidptrArrayType,

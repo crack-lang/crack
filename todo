@@ -4,6 +4,26 @@ Crack ToDo File & Project Plan
 
 Copyright 2009 Google Inc.
 
+-   When I distribute crack-lang.org (see "dist" in the repo) for some reason
+    everything's getting written umask 770.
+
+
+For crack.cmd
+-------------
+
+-   consider a "@command class ..." syntax, allowing for a larger number of
+    arguments/flags than can comfortably be specified in an argument list.
+
+auto-imports
+------------
+
+-   Need a trace option to show all of the things that get imported.
+    -   Need a command-line option to cause the module to not be run so we can
+        just generate this trace without running the module.
+
+Older Stuff
+-----------
+
 -   audit locations where token definitions are replicated, make sure that
     all tokens are represented in all locations.  Things I've found are:
     -   compiler.Token doesn't have "is" methods for the following:
@@ -18,6 +38,11 @@ Copyright 2009 Google Inc.
 -   Remove generic line information from the meta-digest
 -   Need to make Undef classes in extensions "final" so we don't try to
     inherit from them.
+-   Fixes to comm2:
+    -   Instead of having a CommHandlerFactory that creates the CommHandler,
+        we should have a UserHandlerFactory that creates the UserHandler and
+        accepts a CommHandler (this would allow the user handler to make any
+        necessary changes to the CommHandler without having to create one)
 
 Unassigned
 ----------

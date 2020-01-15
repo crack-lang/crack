@@ -235,6 +235,7 @@ class Waiter {
         }
 
         void run(EventManager eventMan, Log log) {
+            log.debug `Sync-sending $(__data.size) bytes to $__handler`;
             __handler.addResponder(__waiter);
             __handler.outBuf.extend(__data);
         }
@@ -373,16 +374,14 @@ class Waiter {
         }
 
         if (event.revents & POLLERR) {
-            log.error `got error on`;
-            __sock.close();
-            poller.remove(__sock);
+            log.error `got error on $__sock`;
+            removeFrom(poller);
             return 0;
         }
 
         if (event.revents & POLLHUP) {
             log.info `got HUP`;
-            __sock.close();
-            poller.remove(__sock);
+            removeFrom(poller);
             return 0;
         }
 
@@ -778,7 +777,12 @@ class _PollerThread : Thread {
     }
 
     void run() {
-        __sched.run();
+        try {
+            __sched.run();
+        } catch (Exception ex) {
+            import crack.logger error;
+            error `Got an exception in poller thread!!! $ex`;
+        }
     }
 }
 
