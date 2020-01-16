@@ -1,0 +1,61 @@
+%%TEST%%
+Test of the ?. safe navigation operator.
+%%ARGS%%
+%%FILE%%
+
+class A {
+    oper bind() { puts('bind A') }
+    oper release() { puts('release A') }
+}
+
+class B {
+    # test both non-productive and productive uses.
+    A aval;
+    A getA() { return A() }
+
+    int x = 123;
+    float f = 1.23;
+
+    oper bind() { puts('bind B') }
+    oper release() { puts('release B') }
+    bool oper to bool() { return this !is null }
+}
+
+B b;
+if (b?.aval !is null)
+    puts('FAILED basic null check');
+if (b?.getA() !is null)
+    puts('FAILED null check on method');
+if (b?.x != 0)
+    puts('Failed getting int type\n');
+if (b?.f != 0)
+    puts('Failed getting float type\n');
+
+bool flag;
+class C {
+    int getVal() { return 100 }
+    void setFlag() { flag = 1 }
+}
+
+if (C()?.getVal() != 100)
+    puts('Failed invoking on an expression.');
+
+# Make sure that safe navigation works for methods returning void.
+C c;
+c?.setFlag();
+if (flag)
+    puts('Failed, called a method on a null target when return type was '
+         'void.');
+C()?.setFlag();
+if (!flag)
+    puts('Failed, method with return type of void not called.');
+
+puts('ok');
+
+%%EXPECT%%
+bind B
+bind A
+release A
+ok
+release B
+%%STDIN%%
