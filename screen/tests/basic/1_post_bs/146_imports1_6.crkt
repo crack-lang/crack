@@ -1,10 +1,10 @@
 %%TEST%%
-import 1.5
+import 1.6
 %%ARGS%%
 %%FILE%%
 # Note that this test effectively imports most of the crack standard library.
 
-@import crack.imports1_5 auto_import; @auto_import;
+@import crack.imports1_6 auto_import; @auto_import;
 
 Heap;
 HeapPrim;
@@ -646,6 +646,7 @@ cmp;
 AppendBuffer;
 AssertionError;
 BadCastError;
+Box;
 Buffer;
 CString;
 Exception;
@@ -876,7 +877,6 @@ Time;
 TimeDelta;
 
 cout `ok\n`;
-
 %%EXPECT%%
 ok
 %%STDIN%%
