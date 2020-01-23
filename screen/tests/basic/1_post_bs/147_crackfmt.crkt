@@ -1,0 +1,64 @@
+%%TEST%%
+crackfmt
+%%ARGS%%
+%%FILE%%
+import crack.io cerr, cout, StringFormatter, StringReader;
+import crack.io.fmtutil Indenter;
+import tools.crackfmt format, icmp;
+
+out := Indenter.wrap(cerr);
+bool gotErrors;
+
+void check(String input, String expected) {
+    resultFormatter := StringFormatter();
+    format(resultFormatter, StringReader(input));
+    result := resultFormatter.string();
+    if (result != expected) {
+        ++out;
+        out `FAILED for:\n$input`;
+        --out;
+        out `\nexpected:`;
+        ++out;
+        out `\n$(expected.getRepr())`;
+        --out;
+        out `\ngot:`;
+        ++out;
+        out `\n$(result.getRepr())`;
+        --out;
+        out `\nwhich is:`;
+        ++out;
+        out `\n$result`;
+        --out;
+        out `\n`;
+        gotErrors = true;
+    }
+}
+
+# Verify that relative imports come after absolute imports.
+check('import test.mod x, y; import foo.bar hello, world;'
+      'import .rel nancy, barnabas;',
+      'import foo.bar hello, world;\nimport test.mod x, y;\n'
+      'import .rel barnabas, nancy;\n'
+      );
+
+# Sorted as varsAndMethods, Classes, CONSTANTS
+
+# Verify case normalization of symbols.
+check('import foo.bar Tom, TErry, TERRz;',
+      'import foo.bar TErry, TERRz, Tom;\012'
+      );
+
+
+# Verify line wraps and that they don't break aliased names, verify sorting
+# is by first element.
+check('import foo.bar able, baker, hotel, charlie, delta, echo, foxtrot, '
+      'julia, golf, india = kilo;',
+      'import foo.bar able, baker, charlie, delta, echo, foxtrot, golf, '
+      'hotel,\n    india = kilo, julia;\n'
+      );
+
+if (!gotErrors)
+    cout `ok\n`;
+%%EXPECT%%
+ok
+%%STDIN%%

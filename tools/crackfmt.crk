@@ -1,4 +1,5 @@
-# Script to reformat crack code to the standard style.
+# Script to reformat crack code to the standard style.  This currently only
+# works for blocks of import statements.
 #
 # Copyright 2013 Google Inc.
 #
@@ -10,9 +11,10 @@
 import crack.ascii isDigit, isSpace, strip, wsplit;
 import crack.cont.array Array;
 import crack.cont.treemap TreeMap;
-import crack.io cerr, cin, cout, Formatter, FStr, Reader;
+import crack.io cerr, cin, cout, readAll, Formatter, FStr, Reader;
 import crack.io.readers LineReader;
-import crack.lang cmp, AppendBuffer, Exception;
+import crack.lang AppendBuffer, Exception;
+import crack.math min;
 import crack.regex Regex;
 import crack.strutil StringArray;
 
@@ -45,6 +47,39 @@ int cmpi(String a, String b) {
     return (i < b.size) ? -int(b[i]) : 0;
 }
 
+byte normalize(byte val) {
+    return val >= b'a' && val <= b'z' ? val - 32 : val;
+}
+
+## Byte comparison (since crack's is broken!)
+int bcmp(byte a, byte b) {
+    return a > b ? 1 : (b > a ? -1 : 0);
+}
+
+## Case insensitive string comparison.
+int icmp(String a, String b) {
+
+    # Short circuit checks to protect us from null dereferences.
+    if (a is b)
+        return 0;
+    else if (b is null)
+        return 1;
+    else if (a is null)
+        return -1;
+
+    for (int i = 0; i < min(a.size, b.size); ++i) {
+        if (rc := bcmp(normalize(a[i]), normalize(b[i])))
+            return rc;
+    }
+
+    if (a.size > b.size)
+        return 1;
+    else if (a.size < b.size)
+        return -1;
+    else
+        return 0;
+}
+
 ## Tracks information on a single imported symbol.
 class Symbol {
     @cvars {
@@ -63,14 +98,17 @@ class Symbol {
             out `$name`;
     }
 
+    ## The name that the symbol is sorted by.
+    String oper .sortName() {
+        return aliasName ? aliasName : name;
+    }
+
     ## Compare so we sort, cas insensitive, first by name and then alias
     ## (making names imported under multiple aliases more visible).  Also
     ## incorporate sorting rules (methods/vars first, then classes, then
     ## constants).
     int cmp(Symbol other) {
-        rc := cmp(name, other.name); if (rc) return rc;
-        rc = cmp(aliasName, other.aliasName);
-        return rc;
+        return icmp(sortName, other.sortName);
     }
 
     int cmp(Object other) {
@@ -235,33 +273,17 @@ const int
     P_POST_VAR = 4,
     P_POST_EQ = 5,
     P_POST_COMMA = 6,
-    P_END;
-
-class Parser {
-    int state;
-    @cvars { TreeMap[String, Import] importStatements; }
-
-    bool parse(String line) { xxxxx
-        I was going here because the case of multi-line import statements
-        forces us to implement a push-parser.
+    P_END = 7;
 
 void format(Formatter out, Reader src) {
     Import lastImport;
     importStatements := TreeMap[String, Import]();
     bool passedImports;
-    AppendBuffer accum = {};
 
-    for (line :in LineReader(src)) {
-        if (passedImports) {
-            out `$line`;
-            continue;
-        }
-
-        accum.extend(line);
-        toker := MiniToker(line);
+    toker := MiniToker(readAll(src));
+    while (true) {
         tok := toker.getNext();
         if (tok.type == TOK_IMPORT) {
-            cerr `got import for [$line]\n`;
             # Parse the module name.
             AppendBuffer moduleNameBuf = {32};
             tok = toker.getNext();
@@ -270,8 +292,6 @@ void format(Formatter out, Reader src) {
                 tok = toker.getNext();
             }
             while (true) {
-                if (tok.type == TOK_EOF)
-
                 if (tok.type != TOK_IDENT) {
                     throw Exception(
                         FStr() `Invalid token in module name: $(tok.text)`
@@ -286,10 +306,18 @@ void format(Formatter out, Reader src) {
             }
 
             moduleName := String(moduleNameBuf, true);
-            if (mod := importStatements.get(moduleName))
+
+            # We want relative imports (beginning with a dot) to sort after
+            # absolute imports, so tack a \xff on the beginning of those keys.
+            # In fact, it is possible for an identifier to begin with \xff in
+            # crack, but it is an obscure enough case for us to ignore.
+            keyName := moduleName.startsWith('.') ? '\xff' + moduleName :
+                                                    moduleName;
+
+            if (mod := importStatements.get(keyName))
                 lastImport = mod;
             else
-                importStatements[moduleName] = lastImport = Import(moduleName);
+                importStatements[keyName] = lastImport = Import(moduleName);
 
             # Parse the imports.
             while (tok.type != TOK_SEMI) {
@@ -318,10 +346,6 @@ void format(Formatter out, Reader src) {
 
                 lastImport.addSymbol(word, aliased);
             }
-
-            tok = toker.getNext();
-            if (tok.type != TOK_EOF)
-                throw Exception(FStr() `More data after import statement`);
         } else {
             # we got a non-import line, emit the imports.
             for (item :in importStatements) {
@@ -329,7 +353,9 @@ void format(Formatter out, Reader src) {
                 item.val.format(out);
             }
             importStatements.clear();
-            out.write(line);
+
+            if (tok.type == TOK_EOF)
+                break;
         }
     }
 
