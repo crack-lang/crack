@@ -1,0 +1,151 @@
+## Language model objects.  Currently just for import statements to support
+## crack.lang.formatter.
+
+# Copyright 2020 Google Inc.
+#
+#   This Source Code Form is subject to the terms of the Mozilla Public
+#   License, v. 2.0. If a copy of the MPL was not distributed with this
+#   file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
+import crack.cont.array Array;
+import crack.io Formatter, FStr;
+import crack.math min;
+import crack.regex Regex;
+
+@import crack.ann cvars, struct, SCOPE_NAME;
+
+_VAR_RX := Regex(r'[a-z].*');
+_CONST_RX := Regex(r'[A-Z_]+[,;]?$');
+
+## Normalize alphebetic ascii characters in 'val' to upper-case.
+byte _normalize(byte val) {
+    return val >= b'a' && val <= b'z' ? val - 32 : val;
+}
+
+## Byte comparison (since crack's is broken!)
+int _bcmp(byte a, byte b) {
+    return a > b ? 1 : (b > a ? -1 : 0);
+}
+
+## Case insensitive string comparison.
+int _icmp(String a, String b) {
+
+    # Short circuit checks to protect us from null dereferences.
+    if (a is b)
+        return 0;
+    else if (b is null)
+        return 1;
+    else if (a is null)
+        return -1;
+
+    for (int i = 0; i < min(a.size, b.size); ++i) {
+        if (rc := _bcmp(_normalize(a[i]), _normalize(b[i])))
+            return rc;
+    }
+
+    if (a.size > b.size)
+        return 1;
+    else if (a.size < b.size)
+        return -1;
+    else
+        return 0;
+}
+
+## Tracks information on a single imported symbol.
+@final class Symbol {
+    @cvars {
+        ## Original name of the symbol in its own module.
+        String name;
+
+        ## Local context alias (name it will be imported under).  Null if the
+        ## symbol is not aliased
+        String aliasName;
+    }
+
+    void formatTo(Formatter out) {
+        if (aliasName)
+            out `$aliasName = $name`;
+        else
+            out `$name`;
+    }
+
+    ## The name that the symbol is sorted by.
+    String oper .sortName() {
+        return aliasName ? aliasName : name;
+    }
+
+    ## Compare so we sort, cas insensitive, first by name and then alias
+    ## (making names imported under multiple aliases more visible).  Also
+    ## incorporate sorting rules (methods/vars first, then classes, then
+    ## constants).
+    int cmp(Symbol other) {
+        return _icmp(sortName, other.sortName);
+    }
+
+    int cmp(Object other) {
+        if (o := Symbol.cast(other))
+            return cmp(o);
+        else
+            return Object.cmp(other);
+    }
+}
+
+## Tracks information on an import statement.
+@final class Import {
+    String moduleName;
+    Array[Symbol] imports = {};
+
+    oper init(String moduleName) : moduleName = moduleName {}
+
+    ## Sorts the names that are imported.
+    void sortNames() {
+        Array[Symbol] vars = {}, classes = {}, constants = {};
+        for (sym :in imports) {
+            if (_VAR_RX.match(sym.name))
+                vars.append(sym);
+            else if (_CONST_RX.match(sym.name))
+                constants.append(sym);
+            else
+                classes.append(sym);
+        }
+        vars.sort();
+        classes.sort();
+        constants.sort();
+        imports = vars;
+        imports.extend(classes);
+        imports.extend(constants);
+    }
+
+    void format(Formatter out) {
+        beginning := FStr() `import $(moduleName)`;
+        out.write(beginning);
+        count := beginning.size;
+        bool first = true;
+        for (imp :in imports) {
+            if (!first)
+                out `,`;
+            else
+                first = false;
+            impText := FStr() `$imp`;
+            if (count + impText.size + 2 >= 80) {
+                out `\n    $imp`;
+                count = 4 + impText.size;
+            } else {
+                out ` $imp`;
+                count += impText.size + 2;
+            }
+        }
+        out `;\n`;
+    }
+
+    void addSymbol(String name, String aliased) {
+        newSym := aliased ? Symbol(aliased, name) : Symbol(name, null);
+
+        # Ignore it if we've already got it.
+        for (sym :in imports) {
+            if (sym == newSym)
+                return;
+        }
+        imports.append(newSym);
+    }
+}
