@@ -1,0 +1,42 @@
+%%TEST%%
+math
+%%ARGS%%
+%%FILE%%
+import crack.io cout;
+import crack.math min, max;
+@import crack.ann assert, define;
+
+@define checkFunc(func, val, type) {
+  @assert((func) == val);
+  @assert(String(typeof(func).name) == $type);
+}
+
+@checkFunc(min(int(1), int(2)),  1, int);
+@checkFunc(min(int16(1), int16(2)),  1, int16);
+@checkFunc(min(int32(1), int32(2)),  1, int32);
+@checkFunc(min(uint16(1), uint16(2)),  1, uint16);
+@checkFunc(min(uint32(1), uint32(2)),  1, uint32);
+@checkFunc(min(int64(1), int64(2)),  1, int64);
+@checkFunc(min(uint64(1), uint64(2)),  1, uint64);
+@checkFunc(min(int(1), int(2)),  1, int);
+@checkFunc(min(uint(1), uint(2)),  1, uint);
+@checkFunc(min(float32(1), float32(2)),  1, float32);
+@checkFunc(min(float64(1), float64(2)),  1, float64);
+
+@checkFunc(max(int(2), int(1)),  2, int);
+@checkFunc(max(int16(2), int16(1)),  2, int16);
+@checkFunc(max(int32(2), int32(1)),  2, int32);
+@checkFunc(max(uint16(2), uint16(1)),  2, uint16);
+@checkFunc(max(uint32(2), uint32(1)),  2, uint32);
+@checkFunc(max(int64(2), int64(1)),  2, int64);
+@checkFunc(max(uint64(2), uint64(1)),  2, uint64);
+@checkFunc(max(int(2), int(1)),  2, int);
+@checkFunc(max(uint(2), uint(1)),  2, uint);
+@checkFunc(max(float32(2), float32(1)),  2, float32);
+@checkFunc(max(float64(2), float64(1)),  2, float64);
+
+cout `ok\n`;
+
+%%EXPECT%%
+ok
+%%STDIN%%
