@@ -1,0 +1,25 @@
+%%TEST%%
+exception matching
+%%ARGS%%
+%%FILE%%
+# This test was prone to failure on 32 bit platforms when
+# crack.lang.exceptionMatchFunc() returned bool (presumably because we were
+# leaking non-zero high bits when converting to int).
+import crack.io cerr;
+import crack.lang Exception;
+
+class MyError : Exception {}
+
+void f() { throw Exception(); }
+
+try {
+    f();
+} catch (MyError e) {
+    cerr `got MyError\n`;
+} catch (Exception e) {
+    cerr `got Exception\n`;
+}
+
+%%EXPECT%%
+got Exception
+%%STDIN%%
