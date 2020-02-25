@@ -280,6 +280,7 @@ Array[uint16] _makeArray(Coord size) {
 }
 
 @abstract class BaseWindow {
+    @abstract BaseWindow getParent();
     @abstract void paint();
     @abstract bool onEvent(Event event);
     @abstract void onResize(uint width, uint height);
@@ -346,8 +347,10 @@ class TermApp {
     }
 
     void onEvent(Event event) {
-        if (__focus)
-            __focus.onEvent(event);
+        if (__focus) {
+            cur := __focus;
+            while (!cur.onEvent(event) && (cur = cur.getParent())) ;
+        }
     }
 
     class EventHandler @impl PollEventCallback {
@@ -534,6 +537,11 @@ class TermApp {
             __focus = window;
         }
     }
+
+    ## Returns the currently focused window.
+    BaseWindow _getFocused() {
+        return __focus;
+    }
 }
 
 class GraphicsContext {
@@ -637,9 +645,15 @@ class Window : BaseWindow {
         this.y = y;
     }
 
+    ## Called when an event reaches the window.
+    ##
+    ## Event dispatching works like this: the window that has the focus gets
+    ## the event and its onEvent() method is called.  If the onEvent method
+    ## returns false, the event is then dispatched to the parent window, and
+    ## so on up to the root window unless one of the handlers returns true.
     bool onEvent(Event event) { return false; }
 
-    Window getParent() { return __parent; }
+    BaseWindow getParent() { return __parent; }
 
     ## Returns the absolute position of the window (relative to the root
     ## window).
@@ -680,9 +694,19 @@ class Window : BaseWindow {
         __focus = focus;
     }
 
-    ## Returns true if the window has the focus.
+    ## Returns true if the window or a descendant has the focus.
     @final bool getFocus() {
-        return __focus;
+        if (__focus)
+            return true;
+
+        # See if the focused window is a child.
+        cur := getApp()._getFocused();
+        while (cur) {
+            if (cur is this)
+                return true;
+            cur = cur.getParent();
+        }
+        return false;
     }
 
     # Returns true if the window can accept input focus.  Static windows (such
