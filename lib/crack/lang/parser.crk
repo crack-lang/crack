@@ -1,0 +1,104 @@
+## The Crack mini-parser (actually, currently this is just a very limited
+## tokenizer for a subset of the language).
+
+# Copyright 2020 Google Inc.
+#
+#   This Source Code Form is subject to the terms of the Mozilla Public
+#   License, v. 2.0. If a copy of the MPL was not distributed with this
+#   file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
+import crack.ascii isDigit, isSpace;
+import crack.io Formatter, FStr;
+import crack.lang Exception;
+
+@import crack.ann cvars, struct, SCOPE_NAME;
+
+# Token types.
+const int
+    TOK_IDENT = 0,
+    TOK_COMMA = 1,
+    TOK_SEMI = 2,
+    TOK_EQUAL = 3,
+    TOK_PERIOD = 4,
+    TOK_IMPORT = 5,
+    TOK_EOF = 999;
+
+# Tokenizer states.
+const int
+    ST_BASE = 0,
+    ST_IDENT = 1;
+
+class Token {
+    @cvars { int type; String text; }
+
+    void formatTo(Formatter out) {
+        out `Token($type:$text)`;
+    }
+}
+
+class MiniToker {
+    int pos;
+    @cvars { String data; }
+
+    Token __makeIdent(int start, bool atEnd) {
+
+        # If we're not at the end, back up one under the assumption that we've
+        # just read a character that isn't part of the identifier.
+        if (!atEnd)
+            --pos;
+
+        text := data.slice(start, pos);
+        if (text == 'import')
+            return Token(TOK_IMPORT, 'import');
+        else
+            return Token(TOK_IDENT, text);
+    }
+
+    Token getNext() {
+        int start = pos;
+        int state;
+        while (true) {
+            if (pos == data.size) {
+                if (state == ST_IDENT)
+                    return __makeIdent(start, true);
+                else
+                    return Token(TOK_EOF, '');
+            }
+
+            byte ch = data[pos++];
+
+            if (isSpace(ch)) {
+                if (state == ST_IDENT)
+                    return __makeIdent(start, false);
+                ++start;
+                continue;
+            }
+
+            if (state == ST_BASE) {
+                if (ch == b'.')
+                    return Token(TOK_PERIOD, '.');
+                else if (ch == b',')
+                    return Token(TOK_COMMA, ',');
+                else if (ch == b';')
+                    return Token(TOK_SEMI, ';');
+                else if (ch == b'=')
+                    return Token(TOK_EQUAL, '=');
+                else
+                    state = ST_IDENT;
+            } else if (state == ST_IDENT) {
+                if (!(ch >= b'A' && ch <= b'Z' ||
+                      ch >= b'a' && ch <= b'z' ||
+                      isDigit(ch) ||
+                      ch == b'_'
+                      )
+                    )
+                    return __makeIdent(start, false);
+            } else {
+                throw Exception(FStr() `Invalid state: $state`);
+            }
+        }
+
+        return null;
+    }
+}
+

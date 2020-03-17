@@ -1,0 +1,118 @@
+## Crack code formatter.  This currently only works for import statements.
+
+# Copyright 2020 Google Inc.
+#
+#   This Source Code Form is subject to the terms of the Mozilla Public
+#   License, v. 2.0. If a copy of the MPL was not distributed with this
+#   file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
+import crack.cont.treemap TreeMap;
+import crack.io readAll, Formatter, FStr, Reader;
+import crack.lang AppendBuffer, Exception;
+import .model Import, Symbol;
+import .parser MiniToker, TOK_COMMA, TOK_EOF, TOK_EQUAL, TOK_IDENT, TOK_IMPORT,
+    TOK_PERIOD, TOK_SEMI;
+
+const int
+    P_BASE = 0,
+    P_BEGIN_MOD = 1,
+    P_MOD_IDENT = 2,
+    P_MOD_POST_IDENT = 3,
+    P_POST_VAR = 4,
+    P_POST_EQ = 5,
+    P_POST_COMMA = 6,
+    P_END = 7;
+
+## Read a sequence of import statements from 'src', reformat them correctly
+## and write them to 'out'.
+void format(Formatter out, Reader src) {
+    Import lastImport;
+    importStatements := TreeMap[String, Import]();
+    bool passedImports;
+
+    toker := MiniToker(readAll(src));
+    while (true) {
+        tok := toker.getNext();
+        if (tok.type == TOK_IMPORT) {
+            # Parse the module name.
+            AppendBuffer moduleNameBuf = {32};
+            tok = toker.getNext();
+            if (tok.type == TOK_PERIOD) {
+                moduleNameBuf.extend(tok.text);
+                tok = toker.getNext();
+            }
+            while (true) {
+                if (tok.type != TOK_IDENT) {
+                    throw Exception(
+                        FStr() `Invalid token in module name: $(tok.text)`
+                    );
+                }
+                moduleNameBuf.extend(tok.text);
+                tok = toker.getNext();
+                if (tok.type != TOK_PERIOD)
+                    break;
+                moduleNameBuf.append(b'.');
+                tok = toker.getNext();
+            }
+
+            moduleName := String(moduleNameBuf, true);
+
+            # We want relative imports (beginning with a dot) to sort after
+            # absolute imports, so tack a \xff on the beginning of those keys.
+            # In fact, it is possible for an identifier to begin with \xff in
+            # crack, but it is an obscure enough case for us to ignore.
+            keyName := moduleName.startsWith('.') ? '\xff' + moduleName :
+                                                    moduleName;
+
+            if (mod := importStatements.get(keyName))
+                lastImport = mod;
+            else
+                importStatements[keyName] = lastImport = Import(moduleName);
+
+            # Parse the imports.
+            while (tok.type != TOK_SEMI) {
+                if (tok.type != TOK_IDENT)
+                    throw Exception(
+                        FStr() `Expected identifier, got $(tok.text)`
+                    );
+                String word = tok.text, aliased;
+
+                tok = toker.getNext();
+                if (tok.type == TOK_EQUAL) {
+                    tok = toker.getNext();
+                    if (tok.type != TOK_IDENT)
+                        throw Exception(
+                            FStr() `Identifier expected, got $(tok.text)`
+                        );
+                    aliased = tok.text;
+                    tok = toker.getNext();
+                }
+
+                # Check for semicolon or comma.
+                if (tok.type == TOK_COMMA)
+                    tok = toker.getNext();
+                else if (tok.type != TOK_SEMI)
+                    throw Exception(FStr() `Comma or semicolon expected.`);
+
+                lastImport.addSymbol(word, aliased);
+            }
+        } else {
+            # we got a non-import line, emit the imports.
+            for (item :in importStatements) {
+                item.val.sortNames();
+                item.val.format(out);
+            }
+            importStatements.clear();
+
+            if (tok.type == TOK_EOF)
+                break;
+        }
+    }
+
+    if (importStatements) {
+        for (item :in importStatements) {
+            item.val.sortNames();
+            item.val.format(out);
+        }
+    }
+}

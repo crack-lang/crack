@@ -1114,10 +1114,10 @@ class BadCastError : Exception {
     oper init(String text) : Exception(text) {}
 }
 
-bool exceptionMatchFunc(Class classObj, Object obj) {
+int exceptionMatchFunc(Class classObj, Object obj) {
     # if the class object is null, this is a "catch all" exception.  Otherwise
     # see if the exception object is an instance of the class.
-    return classObj is null || obj.isa(classObj);
+    return classObj is null || obj.isa(classObj) ? 1 : 0;
 }
 
 void badClassFunc(Class curType, Class newType) {
