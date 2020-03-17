@@ -56,10 +56,10 @@ alias encodeValue = writeValue;
 ## Return 'row' encoded as a CSV line (without a newline).
 String encodeRow(Array[String] row) {
     buf := AppendBuffer(256);
-    for (col :in row) {
-        if (buf)
+    for (iter :on row) {
+        if (iter.index)
             buf.append(b',');
-        buf.extend(encodeValue(col));
+        buf.extend(encodeValue(iter.elem()));
     }
     return String(buf, true);
 }
