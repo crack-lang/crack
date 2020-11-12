@@ -77,7 +77,7 @@ ExprPtr AttrDeref::makeAssignment(Context &context, Expr *val) {
         context.error(SPUG_FSTR("No setter sepecified for attribute with "));
 
     FuncCallPtr fc = context.builder.createFuncCall(setter.get(), false);
-    fc->args.push_back(val);
+    fc->args = args;
     fc->receiver = receiver;
 
     // Correct the return type to be that of the selected setter function.
