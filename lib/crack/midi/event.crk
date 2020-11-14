@@ -569,10 +569,14 @@ class Track {
 
     void writeTo(MidiWriter out) {
         writeEvents(out);
-        out.write(0);  # time from last event.
-        out.write(0xff);
-        out.write(0x2f);
-        out.write(0);
+
+        # Make sure we ended with an EndTrack event.
+        if (!__events || !EndTrack.cast(__events[-1], null)) {
+            out.write(0);  # time from last event.
+            out.write(0xff);
+            out.write(0x2f);
+            out.write(0);
+        }
     }
 
     void formatTo(Formatter out) {
