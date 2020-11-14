@@ -301,7 +301,7 @@ bool convertToBool(String val) {
             return cmd.parseArgs(args.subarray(1), parentVals);
         } else {
             # TODO: Show usage.
-            throw ArgError(FStr() `Unknonwn command $cmd`);
+            throw ArgError(FStr() `Unknonwn command $(args[0])`);
         }
     }
 
