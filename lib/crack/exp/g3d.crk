@@ -3,7 +3,7 @@
 
 import crack.cont.array Array;
 import crack.runtime free, malloc;
-import crack.lang cmp, die, Exception, WriteBuffer;
+import crack.lang cmp, die, Exception, IndexError, WriteBuffer;
 import crack.runtime open, close, O_RDONLY;
 import crack.io cout, cerr, FDReader, Formatter, FStr, Reader, Writer;
 import crack.time TimeDelta;
@@ -36,17 +36,19 @@ import crack.ext._gl glBegin, glBindTexture, glBlendFunc, glClear, glClearColor,
     glClearDepth, glColor3d, glColor3fv, glDepthFunc, glDepthMask, glFlush,
     glGenTextures, glGetError,
     glHint, glEnable, glEnd, glFrustum, glLightfv, glLoadIdentity,
-    glMatrixMode, glMultMatrixf, glNormal3f, glNormal3fv, glPolygonMode,
-    glShadeModel, glTexCoord2f, glTexImage2D, glTexParameteri, glTranslatef,
-    glVertex3d, glVertex3f, glVertex3fv, glViewport, GL_AMBIENT,
-    GL_BLEND, GL_COLOR_BUFFER_BIT, GL_CONSTANT_ATTENUATION, GL_DEPTH_BUFFER_BIT,
-    GL_DEPTH_TEST, GL_FILL, GL_DIFFUSE, GL_FRONT_AND_BACK, GL_LEQUAL,
-    GL_LIGHTING, GL_LIGHT0, GL_LINEAR, GL_LINEAR_ATTENUATION, GL_MODELVIEW,
-    GL_NICEST, GL_PERSPECTIVE_CORRECTION_HINT, GL_POLYGON, GL_POSITION,
-    GL_PROJECTION, GL_SPECULAR, GL_SRC_ALPHA, GL_TRIANGLES,
-    GL_ONE_MINUS_SRC_ALPHA, GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
-    GL_TEXTURE_MAG_FILTER, GL_QUADRATIC_ATTENUATION, GL_QUADS, GL_RGB,
-    GL_RGBA, GL_RGB8, GL_RGBA8, GL_SMOOTH, GL_UNSIGNED_BYTE;
+    glMaterialf, glMaterialfv, glMatrixMode, glMultMatrixf, glNormal3f,
+    glNormal3fv, glPolygonMode, glPopMatrix, glPushMatrix, glShadeModel,
+    glTexCoord2f, glTexImage2D, glTexParameteri, glTranslatef, glVertex3d,
+    glVertex3f, glVertex3fv, glViewport, GL_AMBIENT, GL_BLEND,
+    GL_COLOR_BUFFER_BIT, GL_CONSTANT_ATTENUATION, GL_DEPTH_BUFFER_BIT,
+    GL_DEPTH_TEST, GL_FILL, GL_DIFFUSE, GL_EMISSION, GL_FRONT,
+    GL_FRONT_AND_BACK, GL_LEQUAL, GL_LIGHTING, GL_LIGHT0, GL_LINEAR,
+    GL_LINEAR_ATTENUATION, GL_MODELVIEW, GL_NICEST,
+    GL_PERSPECTIVE_CORRECTION_HINT, GL_POLYGON, GL_POSITION, GL_PROJECTION,
+    GL_SPECULAR, GL_SRC_ALPHA, GL_TRIANGLES, GL_ONE_MINUS_SRC_ALPHA,
+    GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_TEXTURE_MAG_FILTER,
+    GL_QUADRATIC_ATTENUATION, GL_QUADS, GL_RGB, GL_RGBA, GL_RGB8, GL_RGBA8,
+    GL_SMOOTH, GL_UNSIGNED_BYTE;
 import crack.ext._png png_get_io_ptr, png_get_IHDR, png_get_rows,
     png_set_read_fn, png_struct, png_create_read_struct,
     png_create_info_struct, png_libpng_ver_string, png_read_png,
@@ -529,6 +531,64 @@ class ColorMaterial : Material {
     }
 }
 
+## Vector of 4 values (currently RGBA colors).  Immutable.
+class Vec4 {
+    array[float32] __raw;
+
+    oper init(float r, float g, float b, float a) :
+        __raw = array[float32]![float32(r), float32(g), float32(b),
+                                float32(a)] {
+    }
+
+    oper del() { free(__raw) }
+    @final float32 oper .x() { return __raw[0] }
+    @final float32 oper .y() { return __raw[1] }
+    @final float32 oper .z() { return __raw[2] }
+    @final float32 oper .a() { return __raw[3] }
+    @final float32 oper[](uint index) {
+        if (index > 3)
+            throw IndexError(FStr() `index $index out of range`);
+        return __raw[index];
+    }
+
+    ## Returns the underlying raw array.  Must not be modified or deleted by
+    ## caller.
+    @final array[float32] oper .raw() { return __raw }
+}
+
+const _VISIBLE_TEXTURE := Vec4(1, 1, 1, 1);
+const VEC4_BLACK := Vec4(0, 0, 0, 0);
+
+## A color material to be used when GL_LIGHTING is enabled.
+class LightedColorMaterial : Material {
+    Vec4 ambient, diffuse, specular, emission;
+
+    ## Simple constructor for setting just the ambient and diffuse colors.
+    oper init(float r, float g, float b, float a) {
+        vec := Vec4(r, g, b, a);
+        ambient = vec;
+        diffuse = vec;
+    }
+
+    ## Ambient and diffuse are not nullable, specular and emission both are.
+    oper init(Vec4 ambient, Vec4 diffuse, Vec4 specular, Vec4 emission) :
+        ambient = ambient,
+        diffuse = diffuse,
+        specular = specular,
+        emission = emission {
+    }
+
+    void makeCurrent() {
+        glBindTexture(GL_TEXTURE_2D, 0);
+        glMaterialfv(GL_FRONT, GL_AMBIENT, ambient.raw);
+        glMaterialfv(GL_FRONT, GL_DIFFUSE, diffuse.raw);
+        glMaterialfv(GL_FRONT, GL_SPECULAR,
+                     specular ? specular.raw : _VISIBLE_TEXTURE.raw);
+        glMaterialfv(GL_FRONT, GL_EMISSION,
+                     emission ? emission.raw : VEC4_BLACK.raw);
+    }
+}
+
 class TextureMaterial : Material {
     uint materialId;
 
@@ -539,6 +599,10 @@ class TextureMaterial : Material {
     void makeCurrent() {
         glColor3d(1, 1, 1);
         glBindTexture(GL_TEXTURE_2D, materialId);
+        glMaterialfv(GL_FRONT, GL_AMBIENT, _VISIBLE_TEXTURE.raw);
+        glMaterialfv(GL_FRONT, GL_DIFFUSE, _VISIBLE_TEXTURE.raw);
+        glMaterialfv(GL_FRONT, GL_SPECULAR, _VISIBLE_TEXTURE.raw);
+        glMaterialfv(GL_FRONT, GL_EMISSION, VEC4_BLACK.raw);
     }
 
     void pin(float s, float t) {
@@ -575,6 +639,10 @@ class Prim : Renderable {
 
     @final void vertex(Vector pos, Coord texturePos) {
         material.pin(texturePos.x, texturePos.y);
+        glVertex3f(float32(pos[0]), float32(pos[1]), float32(pos[2]));
+    }
+
+    @final void vertex(Vector pos) {
         glVertex3f(float32(pos[0]), float32(pos[1]), float32(pos[2]));
     }
 
@@ -673,7 +741,7 @@ class Light : Renderable {
     Vector pos, color;
     bool diffuse;
 
-    ## id: Must be one of GL_LIGHT0 - GL_LIGHT8
+    ## id: Must be one of GL_LIGHT0 - GL_LIGHT7
     oper init(uint id, Vector pos, Vector color, bool diffuse) :
         id = id,
         pos = pos,
@@ -686,20 +754,21 @@ class Light : Renderable {
         vals[0] = 1;
         vals[1] = 1;
         vals[2] = 1;
-        vals[3] = 1.0;
-        glLightfv(id, GL_SPECULAR, vals);
+        vals[3] = 1;
 
         # we need to copy these into the vals array because the fourth element
         # needs to be 1.
         color.copy(vals);
-        glLightfv(id, diffuse ? GL_DIFFUSE : GL_AMBIENT, vals);
+        glLightfv(id, GL_DIFFUSE, diffuse ? vals : VEC4_BLACK.raw);
+        glLightfv(id, GL_AMBIENT, diffuse ? VEC4_BLACK.raw : vals);
+        glLightfv(id, GL_SPECULAR, VEC4_BLACK.raw);
 
         pos.copy(vals);
         glLightfv(id, GL_POSITION, vals);
 
         vals[0] = 0;
         glLightfv(id, GL_CONSTANT_ATTENUATION, vals);
-        vals[0] = 0.0001;
+        vals[0] = 0.1;
         glLightfv(id, GL_LINEAR_ATTENUATION, vals);
         free(vals);
 
@@ -786,6 +855,12 @@ class Graphics {
     @static void rotate(RotMatrix rot) {
         glMultMatrixf(rot.matrix);
     }
+
+    ## Push the current matrix.
+    @static void pushMatrix() { glPushMatrix() }
+
+    ## Pop the current matrix.
+    @static void popMatrix() { glPopMatrix() }
 }
 
 class MouseMotionEvent {
@@ -1238,6 +1313,10 @@ class Tri @impl Poly {
 
     @static void end() {
         glEnd();
+    }
+
+    void formatTo(Formatter out) {
+        out `$(this.class.name)($coord0, $coord1, $coord2)`;
     }
 }
 
