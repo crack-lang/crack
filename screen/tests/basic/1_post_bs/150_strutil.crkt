@@ -1,0 +1,21 @@
+%%TEST%%
+strutil tests
+%%ARGS%%
+%%FILE%%
+
+import crack.io cout;
+import crack.strutil join, StringArray;
+@import crack.ann assert;
+
+@assert(join(StringArray!['foo', 'bar', 'baz'], '::') == 'foo::bar::baz');
+@assert(join(StringArray!['foo', 'bar', 'baz'], b'/') == 'foo/bar/baz');
+
+@assert(join(StringArray![], b'/') == '');
+@assert(join(StringArray!['foo'], b'/') == 'foo');
+@assert(join(StringArray!['foo', 'bar']) == 'foobar');
+
+cout `ok\n`;
+
+%%EXPECT%%
+ok
+%%STDIN%%
