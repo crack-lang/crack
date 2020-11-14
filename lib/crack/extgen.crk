@@ -11,6 +11,7 @@
 # annotation interface supports introspection of compile contexts.
 
 import crack.lang die, free, AppendBuffer, Exception, Formatter;
+import crack.rawptr RawPtr;
 import crack.strutil ljust;
 import crack.io cout, FStr, StandardFormatter, StringFormatter, Writer;
 import crack.compiler CrackContext, Token;
@@ -63,6 +64,15 @@ class AlreadyExists : Exception {
 
     bool isOpen(){
        return false;
+    }
+
+    void emitAdapters(Formatter out) {}
+
+    ## Returns the type in a form that can be emitted into the C code.
+    String oper .ctype() { return cname }
+
+    String asParameter(String paramName) {
+        return ctype + ' ' + paramName;
     }
 
     @abstract void emitInitializer(Formatter out);
@@ -132,6 +142,10 @@ class Func {
     Array[Arg] args;
     bool initialized;
     bool isOper;
+    bool isVirtual;
+
+    bool cpp;
+    RawPtr[Type] enclosingClass;
 
     oper init(Type retType, String name, String cname) :
         retType = retType,
@@ -162,6 +176,52 @@ class Func {
        return retType.isOpen();
     }
 
+    ## Returns the normalized name (adds "oper" for operators).
+    String getNormalName() {
+        if (isOper)
+            return 'oper ' + name;
+        else
+            return name;
+    }
+
+    ## Get the name of the C function to be registered.  This is either cname
+    ## or the name of a generated wrapper function.
+    String getCFuncName() {
+        if (cpp)
+            return getNormalName() == 'oper new' ?
+                   'crk_' + enclosingClass.name + '_new' :
+                   'crk_' + enclosingClass.name + '_' + name;
+        else
+            return cname;
+    }
+
+    ## Emit a function prototype.
+    ## This emits everything up to (and except for) the closing paren.
+    ## If 'emitThis' is true, emits a "this_" parameter of the class type as
+    ## the first parameter, before the defined parameters.
+    void emitProto(Formatter out, bool emitThis) {
+        className := retType.emit();
+        out I`\
+            static $(retType.ctype) $(getCFuncName())(
+            `;
+        if (emitThis)
+            out `    $(enclosingClass.cname) *this_$(args ? ',' : '')\n`;
+        for (i :on args) {
+            arg := i.elem();
+            s := (i.index == args.count() - 1) ? '' : ',';
+            out I`    $(arg.type.asParameter(arg.name))$s\n`;
+        }
+    }
+
+    ## Emit the argument list as it would be used in a function call.
+    void emitArgs(Formatter out) {
+        for (i :on args) {
+            arg := i.elem();
+            s := (i.index == args.count() - 1) ? '' : ', ';
+            out `$(arg.name)$s`;
+        }
+    }
+
     void emitInitializer(Formatter out) {
         if (initialized) return;
 
@@ -169,17 +229,32 @@ class Func {
                      (void *)$(cname)
                      );
 `;
+        if (isVirtual)
+            out `    f->setVirtual(true);\n`;
         for (arg :in args)
             out `       f->addArg($(arg.type.emit()), "$(arg.name)");\n`;
         out `\n`;
     }
 
-    ## Returns the normalized name (adds "oper" for operators).
-    String getNormalName() {
-        if (isOper)
-            return 'oper ' + name;
-        else
-            return name;
+    void emitAdapters(Formatter out) {
+        if (cpp) {
+            import crack.io cout;
+            if (getNormalName() == 'oper new') {
+                emitProto(out, false);
+                out I`\
+                    ) {
+                        return new $(enclosingClass.cname)(`;
+                emitArgs(out);
+            } else {
+                emitProto(out, true);
+                returnCmd := (retType.name == 'void') ? '' : 'return ';
+                out I`\
+                    ) {
+                        $returnCmd this_->$cname(`;
+                emitArgs(out);
+            }
+            out `);\n}\n`;
+        }
     }
 }
 
@@ -195,9 +270,11 @@ class IfdefFunc: Func{
 
 class BuiltInType : Type {
     String funcName;
-    oper init(String name, String funcName) :
+    String __ctypeName;
+    oper init(String name, String funcName, String ctypeName) :
         Type(name, name),
-        funcName = funcName {
+        funcName = funcName,
+        __ctypeName = ctypeName {
     }
 
     bool isBuiltIn() {
@@ -210,6 +287,8 @@ class BuiltInType : Type {
         out `    crack::ext::Type *$(emit()) = mod->get$(funcName)Type();\n`;
         initialized = true;
     }
+
+    String oper .ctype() { return __ctypeName }
 }
 
 class ExternalType : Type {
@@ -235,7 +314,7 @@ class ConstType : BuiltInType {
     String constCast;
 
     oper init(String name, String funcName, String constCast) :
-        BuiltInType(name, funcName),
+        BuiltInType(name, funcName, constCast),
         constCast = constCast {
     }
 
@@ -244,11 +323,15 @@ class ConstType : BuiltInType {
 
 class TypeImpl : Type {
     String emitted;
+    Array[Type] bases;
     Array[Func] methods;
     Array[Arg] members;
     TreeMap[String, Object] __names = {};
     uint numDecls;
     uint numEmitted;
+
+    # True for C++ types.
+    bool cpp;
 
     oper init(String name, String cname) :
         Type(name, cname),
@@ -282,7 +365,15 @@ class TypeImpl : Type {
         if ((m := __names.get(normalName)) && !m.isa(Func))
             throw AlreadyExists(FStr() `Name $(method.name) redefined`);
         __names[normalName] = method;
+        method.cpp = cpp;
+        method.enclosingClass = RawPtr[Type](this);
         methods.append(method);
+    }
+
+    void emitAdapters(Formatter out) {
+        for (method :in methods) {
+            method.emitAdapters(out);
+        }
     }
 
     void emitInitializer(Formatter out) {
@@ -310,6 +401,10 @@ class TypeImpl : Type {
             out `\n    crack::ext::Type *$typeVar = mod->addForwardType("$name", sizeof($cname));\n`;
 
         if (numDecls == 1 || numEmitted ==1) {
+            // Emit base classes.
+            for (base :in bases)
+                out `    $typeVar->addBase($(base.emit()));\n`;
+
             // emit member variables
             for (member :in members){
                if (member.type.isBuiltIn())
@@ -333,7 +428,7 @@ class TypeImpl : Type {
                             f = $typeVar->addStaticMethod(
                                 $typeVar,
                                 "oper $(method.name)",
-                                (void *)$(method.cname)
+                                (void *)$(method.getCFuncName())
                             );
                             `;
                     else
@@ -341,7 +436,7 @@ class TypeImpl : Type {
                             f = $typeVar->addMethod(
                                 $(method.retType.emit()),
                                 "oper $(method.name)",
-                                (void *)$(method.cname)
+                                (void *)$(method.getCFuncName())
                             );
                             `;
                 } else {
@@ -349,7 +444,7 @@ class TypeImpl : Type {
                         f = $typeVar->addMethod(
                             $(method.retType.emit()),
                             "$(method.name)",
-                            (void *)$(method.cname)
+                            (void *)$(method.getCFuncName())
                         );
                     `;
                 }
@@ -368,11 +463,23 @@ class TypeImpl : Type {
         }
         numEmitted++;
     }
+
+    String oper .ctype() { return cname + '*' }
+}
+
+@abstract class GenericTypeBase : TypeImpl {
+    oper init(String name, String cname, String emitted) :
+        TypeImpl(name, cname, emitted) {
+    }
+
+    @abstract String getCType(Array[Type] specializers);
+
+    @abstract String asParameter(String paramName, Array[Type] specializers);
 }
 
 class SpecializedType : TypeImpl {
 
-    Type generic;
+    GenericTypeBase generic;
     Array[Type] specializers = {};
 
     @static String _mangle(String name) {
@@ -399,13 +506,13 @@ class SpecializedType : TypeImpl {
 
     # specialized types look like builtins - we don't do the normal type
     # creation for them, instead we just get specializations for them.
-    oper init(String name, Type generic, Type specializer) :
+    oper init(String name, GenericTypeBase generic, Type specializer) :
         TypeImpl(name, name, _mangle(name)),
         generic = generic {
         specializers.append(specializer);
     }
 
-    oper init(String name, Type generic, Array[Type] specializers) :
+    oper init(String name, GenericTypeBase generic, Array[Type] specializers) :
         TypeImpl(name, name, _mangle(name)),
         generic = generic,
         specializers = specializers {
@@ -436,11 +543,17 @@ class SpecializedType : TypeImpl {
 `;
         initialized = true;
     }
+
+    String oper .ctype() { return generic.getCType(specializers) }
+
+    String asParameter(String paramName) {
+        return generic.asParameter(paramName, specializers);
+    }
 }
 
-@abstract class GenericType : TypeImpl {
+@abstract class GenericType : GenericTypeBase {
     oper init(String name, String emitted) :
-        TypeImpl(name, name, emitted) {
+        GenericTypeBase(name, name, emitted) {
     }
 
     Type getSpecialization(TreeMap[String, Type] types, StringArray typeNames,
@@ -497,6 +610,14 @@ class ArrayType : GenericType {
     }
 
     int getParamCount() { return 1; }
+
+    String getCType(Array[Type] specializers) {
+        return specializers[0].ctype + '*';
+    }
+
+    String asParameter(String paramName, Array[Type] specializers) {
+        return getCType(specializers) + ' ' + paramName;
+    }
 }
 
 class FunctionType : GenericType {
@@ -514,6 +635,29 @@ class FunctionType : GenericType {
     }
 
     int getParamCount() { return -1; }
+
+    String getCType(Array[Type] specializers) {
+        tmp := StringFormatter();
+        tmp `$(specializers[0].ctype)(*)(`;
+        for (i :on specializers.subarray(1)) {
+            s := i.index ? ', ' : '';
+            tmp `$s$(i.elem().ctype)`;
+        }
+        tmp `)`;
+        return tmp.string();
+    }
+
+    String asParameter(String paramName, Array[Type] specializers) {
+        tmp := StringFormatter();
+        tmp `$(specializers[0].ctype)(*$paramName)(`;
+        for (i :on specializers.subarray(1)) {
+            s := i.index ? ', ' : '';
+            tmp `$s$(i.elem().ctype)`;
+        }
+        tmp `)`;
+        return tmp.string();
+    }
+
 }
 
 class Const {
@@ -580,9 +724,9 @@ class Errors : StringFormatter {
     }
 }
 
-@define setBuiltinType(val, func) {
+@define setBuiltinType(val, func, ctype) {
     name = val;
-    types[name] = BuiltInType(name, func);
+    types[name] = BuiltInType(name, func, ctype);
     typeNames.append(name);
 }
 
@@ -626,15 +770,17 @@ class ExtensionData {
     bool inSrcDir;
     uint ifdefLevel = 0;
     String lastCName;
+    bool cppMode;
+    bool virtualMode;
 
     oper init() : types(), funcs() {
         String name;
-        @setBuiltinType('Class', 'Class');
-        @setBuiltinType('void', 'Void');
-        @setBuiltinType('voidptr', 'Voidptr');
-        @setBuiltinType('bool', 'Bool');
-        @setBuiltinType('byteptr', 'Byteptr');
-        @setBuiltinType('byte', 'Byte');
+        @setBuiltinType('Class', 'Class', 'Class');
+        @setBuiltinType('void', 'Void', 'void');
+        @setBuiltinType('voidptr', 'Voidptr', 'void*');
+        @setBuiltinType('bool', 'Bool', 'bool');
+        @setBuiltinType('byteptr', 'Byteptr', 'char*');
+        @setBuiltinType('byte', 'Byte', 'char');
         @setConstType('int16', 'Int16', 'int16_t');
         @setConstType('int32', 'Int32', 'int');
         @setConstType('int64', 'Int64', 'int64_t');
@@ -834,6 +980,10 @@ $(generic.getParamCount()) parameters.`;
                 externName := String(tok.getText());
                 types[externName] = ExternalType(externName);
                 typeNames.append(externName);
+            } else if (ann == 'cpp') {
+                cppMode = true;
+            } else if (ann == 'virtual') {
+                virtualMode = true;
             } else {
                 error(ctx, tok) `Unexpected annotation: $ann`;
             }
@@ -852,6 +1002,10 @@ $(generic.getParamCount()) parameters.`;
 
         f := Func(retType, name, lastCName ? lastCName : name, isOper);
         lastCName = null;
+        if (virtualMode){
+            f.isVirtual = true;
+            virtualMode = false;
+        }
 
         tok := __getToken(ctx);
         while (!tok.isRParen()) {
@@ -949,8 +1103,29 @@ $(generic.getParamCount()) parameters.`;
 
         String className = {tok.getText()};
 
-        # get a semicolon or left curly
+        # Check for a colon.
         tok = __getToken(ctx);
+        bases := Array[Type]();
+        if (tok.isColon()) {
+            while (true) {
+                tok = __getToken(ctx);
+                if (!tok.isIdent())
+                    error(ctx, tok) `Identifier expected in base class list`;
+                base := types.get(String(tok.getText()));
+                if (!base)
+                    error(ctx, tok) `Type $(tok.getText()) is not defined`;
+                bases.append(base);
+
+                # Get a comma or curly.
+                tok = __getToken(ctx);
+                if (tok.isLCurly())
+                    break;
+                else if (!tok.isComma())
+                    error(ctx, tok) `Comma or left curly brace expected`;
+            }
+        }
+
+        # get a semicolon or left curly
         if (tok.isSemi() || tok.isLCurly()){
             uint numDecl = 1;
             if (types.get(className))
@@ -959,6 +1134,9 @@ $(generic.getParamCount()) parameters.`;
             classType = TypeImpl(className, lastCName ? lastCName : className,
                                  numDecl
                                  );
+            classType.cpp = cppMode;
+            classType.bases = bases;
+            cppMode = false;
             types[className] = classType;
             lastCName = null;
         } else {
@@ -1170,21 +1348,24 @@ definition.`;
 
         if (!goodIfdefNesting(ta)) die();
 
-        o `
+        # Emit the adapters (that map non-standard functions to C functions)
+        for (typeName :in typeNames)
+            types[typeName].emitAdapters(o);
 
-#include $(header('Module'))
-#include $(header('Type'))
-#include $(header('Func'))
+        o I`
+            #include $(header('Module'))
+            #include $(header('Type'))
+            #include $(header('Func'))
 
-extern "C"
-void $(moduleName.join('_'))_rinit() {
-    return;
-}
+            extern "C"
+            void $(moduleName.join('_'))_rinit() {
+                return;
+            }
 
-extern "C"
-void $(moduleName.join('_'))_cinit(crack::ext::Module *mod) {
-    crack::ext::Func *f;
-`;
+            extern "C"
+            void $(moduleName.join('_'))_cinit(crack::ext::Module *mod) {
+                crack::ext::Func *f;
+            `;
 
         for (cString :in crackInject)
             o `    mod->inject(std::string("$(cString)"));\n`;
