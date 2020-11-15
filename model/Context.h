@@ -451,8 +451,13 @@ class Context : public spug::RCBase {
          * Looks up a symbol in the context.  Use this when looking up an
          * overload definition if you care about it including all possible
          * overloads accessible from the scope.
+         *
+         * If lazyImport is true, attempt to do a lazy import at the module
+         * context if the symbol isn't found.
          */
-        VarDefPtr lookUp(const std::string &varName, Namespace *srcNs = 0);
+        VarDefPtr lookUp(const std::string &varName, Namespace *srcNs = 0,
+                         bool lazyImport = true
+                         );
 
         /**
          * Looks up a function matching the given expression list.

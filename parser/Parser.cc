@@ -3805,7 +3805,7 @@ VarDefPtr Parser::checkForExistingDef(const Token &tok, const string &name,
    }
 
    ContextPtr classContext;
-   VarDefPtr existing = context->lookUp(name);
+   VarDefPtr existing = context->lookUp(name, 0, false);
    if (existing) {
       Namespace *existingNS = existing->getOwner();
       TypeDef *existingClass = 0;

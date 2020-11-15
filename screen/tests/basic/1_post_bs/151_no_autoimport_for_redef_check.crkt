@@ -1,0 +1,10 @@
+%%TEST%%
+autoimport is not invoked in the redefinition check
+%%ARGS%%
+%%FILE%%
+@import crack.imports1_6 auto_import; @auto_import;
+int readWave = 100;
+cout `$readWave\n`;
+%%EXPECT%%
+100
+%%STDIN%%
