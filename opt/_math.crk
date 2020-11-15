@@ -158,6 +158,8 @@ int64_t crk_usecs(void) {
     gettimeofday(&crk_timeval, NULL);
     return (int64_t)(crk_timeval.tv_sec*1000000 + crk_timeval.tv_usec); // Time in usecs
 }
+
+int crk_ilogb(double val) { return ilogb(val); }
 ';
     @crack_internal
 
@@ -194,9 +196,9 @@ int64_t crk_usecs(void) {
     @cname coshf float32 cosh(float32 angle);
     @cname crk_tanh float64 tanh(float64 angle);
     @cname tanhf float32 tanh(float32 angle);
-    @cname asin float64 asin(float64 angle);
+    @cname crk_asin float64 asin(float64 angle);
     @cname asinf float32 asin(float32 angle);
-    @cname acos float64 acos(float64 angle);
+    @cname crk_acos float64 acos(float64 angle);
     @cname acosf float32 acos(float32 angle);
     @cname crk_atan float64 atan(float64 angle);
     @cname atanf float32 atan(float32 angle);
@@ -210,7 +212,7 @@ int64_t crk_usecs(void) {
     @cname expf float32 exp(float32 angle);
     @cname crk_exp2 float64 exp2(float64 angle);
     @cname exp2f float32 exp2(float32 angle);
-    @cname log float64 log(float64 angle);
+    @cname crk_log float64 log(float64 angle);
     @cname logf float32 log(float32 angle);
     @cname crk_fabs float64 abs(float64 angle);
     @cname fabsf float32 abs(float32 angle);
@@ -246,7 +248,7 @@ int64_t crk_usecs(void) {
     @cname truncf float32 trunc(float32 val);
     @cname crk_expm1 float64 expm1(float64 val);
     @cname expm1f float32 expm1(float32 val);
-    @cname ilogb int ilogb(float32 val);
+    @cname crk_ilogb int ilogb(float32 val);
     @cname ilogbf int ilogb(float32 val);
 
     @cname crk_fpclassify32 int fpclassify(float32 val);
@@ -262,7 +264,7 @@ int64_t crk_usecs(void) {
     @cname crk_signbit32 int sign(float32 val);
     @cname crk_signbit64 int sign(float64 val);
 
-    @cname hypot float64 hypot(float64 x, float64 y);
+    @cname crk_hypot float64 hypot(float64 x, float64 y);
     @cname hypotf float32 hypot(float32 x, float32 y);
 
     @cname crk_fmod float64 fmod(float64 val);

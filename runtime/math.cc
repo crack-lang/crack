@@ -67,10 +67,6 @@ FUNC2(hypot)
 FUNC2(fdim)
 FUNC2(pow)
 
-int crk_ilogb(double x) {
-    return ilogb(x);
-}
-
 int crk_fpclassify32(float x) {
     return fpclassify(x);
 }
@@ -148,6 +144,7 @@ int64_t crk_usecs(void) {
     return (int64_t)(crk_timeval.tv_sec*1000000 + crk_timeval.tv_usec); // Time in usecs
 }
 
+int crk_ilogb(double val) { return ilogb(val); }
 
 #include "ext/Module.h"
 #include "ext/Type.h"
