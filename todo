@@ -4,6 +4,11 @@ Crack ToDo File & Project Plan
 
 Copyright 2009 Google Inc.
 
+-   I think we can safely remove the "master" parameter in getNestedTypeDefs,
+    getTypeDefs.
+-   crack.fs.Path.isLink() is incorrect.  It needs to use lstat() instead of
+    stat.  We should just create a Path2 or fs2 module that fixes this and
+    other things.
 -   When I distribute crack-lang.org (see "dist" in the repo) for some reason
     everything's getting written umask 770.
 
