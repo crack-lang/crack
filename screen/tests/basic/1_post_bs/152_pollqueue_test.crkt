@@ -1,0 +1,73 @@
+%%TEST%%
+pollqueue
+%%ARGS%%
+%%FILE%%
+import crack.cont.array Array;
+import crack.io cout;
+import crack.lang Box;
+import crack.net Poller;
+import crack.net.pollqueue PollQueue;
+import crack.threads Thread;
+import crack.time TimeDelta;
+
+@import crack.ann assert;
+
+results := Array[int]();
+
+void remove();
+
+void callback(Box[int] x) {
+    if (x.val == -1)
+        remove();
+    else
+        results.append(x.val);
+}
+
+poller := Poller();
+alias MyQueue = PollQueue[Box[int]];
+queue := MyQueue(MyQueue.Callback.Wrap(callback));
+queue.addTo(poller);
+
+void remove() {
+    queue.removeFrom(poller);
+}
+
+for (int i = 0; i < 10; ++i)
+    queue.add(Box[int](i));
+
+timeout := TimeDelta(5, 0);
+while (results.count() < 10)
+    poller.waitAndProcess(timeout);
+
+@assert(results == Array[int]![0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
+results.clear();
+
+# Try again from a background thread.
+class MyThread : Thread {
+    void run() {
+        for (int i = 0; i < 10; ++i)
+            queue.add(Box[int](i));
+    }
+}
+
+thread := MyThread();
+thread.start();
+while (results.count() < 10)
+    poller.waitAndProcess(timeout);
+@assert(results == Array[int]![0, 1, 2, 3, 4, 5, 6, 7, 8, 9]);
+thread.join();
+
+# make sure removeFrom() works.
+results.clear();
+queue.add(Box[int](-1));
+poller.waitAndProcess(timeout);
+
+queue.add(Box[int](1));
+poller.waitAndProcess(TimeDelta(0, 1));
+@assert(results == Array[int]());
+
+cout `ok\n`;
+
+%%EXPECT%%
+ok
+%%STDIN%%
