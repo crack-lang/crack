@@ -4,7 +4,7 @@ threads
 %%FILE%%
 # Tests the threads module.
 import crack.io cout, StandardFormatter, Writer;
-import crack.lang Buffer, ManagedBuffer;
+import crack.lang Buffer, ManagedBuffer, SystemError;
 import crack.threads Event, MutexLock, Thread, Queue, Queue2;
 
 @import crack.ann assert;
@@ -15,6 +15,7 @@ class MyThread : Thread {
     Queue[Object] queue = {};
 
     oper init() {}
+    oper init(bool detached) : Thread(detached) {}
 
     void getMsg() {
         m := queue.get();
@@ -103,6 +104,23 @@ if (true) {
     @assert(q.get() == 'baz');
 }
 
+# Verify "detached" works.
+if (true) {
+    t := MyThread(true);
+    t.queue.add('1');
+    t.queue.add('2');
+    t.queue.add('3');
+    t.start();
+    try {
+        t.join();
+        @assert(false && "Was able to join a detached thread");
+    } catch (SystemError ex) {
+    }
+    getMsg();
+    getMsg();
+    getMsg();
+}
+
 %%EXPECT%%
 main started
 thread started
@@ -113,4 +131,11 @@ main got t2
 thread got m3
 main got t3
 joined
+thread started
+thread got 1
+thread got 2
+thread got 3
+main got t1
+main got t2
+main got t3
 %%STDIN%%

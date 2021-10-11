@@ -9,9 +9,9 @@
 
 import crack.cont.array Array;
 import crack.ext._pthread pthread_cond_init, pthread_cond_signal,
-    pthread_cond_t, pthread_cond_wait, pthread_create, pthread_join,
-    pthread_mutex_destroy, pthread_mutex_init, pthread_mutex_lock,
-    pthread_mutex_t, pthread_mutex_unlock, pthread_t;
+    pthread_cond_t, pthread_cond_wait, pthread_create, pthread_detach,
+    pthread_join, pthread_mutex_destroy, pthread_mutex_init,
+    pthread_mutex_lock, pthread_mutex_t, pthread_mutex_unlock, pthread_t;
 import crack.io cerr;
 import crack.lang Exception, SystemError;
 
@@ -23,7 +23,14 @@ void _thread_main(voidptr thread);
 ## actually start the thread.  Once a thread is started, you should wait for
 ## its termination using the join() method.
 class Thread : Object, pthread_t {
+    bool __detached;
+
     oper init() {}
+
+    ## Create a new thread, optionally in detached mode (not joinable).
+    ## Detached threads are what are known as "daemon threads" in other
+    ## languages.
+    oper init(bool detached) : __detached = detached {}
 
     void run() {}
 
@@ -34,6 +41,8 @@ class Thread : Object, pthread_t {
         this.oper bind();
         if (rc := pthread_create(this, null, _thread_main, this))
             throw SystemError('Error starting thread', rc);
+        if (__detached && rc := pthread_detach(this))
+            throw SystemError('Error detaching thread', rc);
     }
 
     @final void join() {

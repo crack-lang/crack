@@ -4,6 +4,10 @@
         return pthread_join(*thread, retval);
     }
 
+    int crk_pthread_detach(pthread_t *thread, void **retval) {
+        return pthread_detach(*thread);
+    }
+
 
 #include "ext/Module.h"
 #include "ext/Type.h"
@@ -92,6 +96,11 @@ void crack_ext__pthread_cinit(crack::ext::Module *mod) {
                      );
        f->addArg(type_pthread_t, "thread");
        f->addArg(array_pvoidptr_q, "retval");
+
+    f = mod->addFunc(type_int, "pthread_detach",
+                     (void *)crk_pthread_detach
+                     );
+       f->addArg(type_pthread_t, "thread");
 
     f = mod->addFunc(type_int, "pthread_mutex_init",
                      (void *)pthread_mutex_init

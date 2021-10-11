@@ -19,6 +19,10 @@
         int crk_pthread_join(pthread_t *thread, void **retval) {
             return pthread_join(*thread, retval);
         }
+
+        int crk_pthread_detach(pthread_t *thread, void **retval) {
+            return pthread_detach(*thread);
+        }
     ';
 
     class pthread_t;
@@ -30,6 +34,9 @@
 
     @cname crk_pthread_join
     int pthread_join(pthread_t thread, array[voidptr] retval);
+
+    @cname crk_pthread_detach
+    int pthread_detach(pthread_t thread);
 
     class pthread_mutexattr_t;
     class pthread_mutex_t;
