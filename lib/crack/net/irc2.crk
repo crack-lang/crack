@@ -1,0 +1,334 @@
+## IRC Client module.  Compatible with crack.net.comm2 (and thus with SSL).
+
+import crack.ascii wsplit;
+import crack.cont.hashmap HashMap;
+import crack.eventmgr EventCallback;
+import crack.io cerr, FStr;
+import crack.lang Exception;
+import crack.logger error, warn;
+import crack.rawptr RawPtr;
+import crack.strutil StringArray;
+import crack.threads Thread;
+import crack.time time_add = add, Time, TimeDelta;
+import crack.net resolve, InetAddress;
+import crack.net.comm2 Comm, Connection, UserHandler;
+import crack.net.ssl SSLContext;
+import crack.regex Regex;
+import .irc User, Channel;
+
+@import crack.ann assert, cvars, impl, implements, interface;
+
+@export_symbols User, Channel;
+
+@interface IRCHandler {
+
+    ## Note that this gets called on the IRC connect (receipt of the "001"
+    ## command), not the TCP connect.
+    @abstract void onConnect();
+
+    @abstract void onDisconnect();
+
+    ## Called on a "names" reply with a channel name and a string of user
+    ## nicks.
+    @abstract void onNames(String channel, StringArray users);
+
+    ## Called when a user joins a channel that we're subscribed to (including
+    ## when the current user joins a new channel).  'source' is a user name of
+    ## the form nick!username@whatever.  'channel' is a channel name, omitting
+    ## the "#" (TODO: verify that)
+    @abstract void onJoin(String source, String channel);
+
+    ## Called when a user parts a channel.  See onJoin().
+    @abstract void onPart(String source, String channel);
+
+    ## Called when a private message is received. See onJoin() for 'source',
+    ## TODO: identify target)
+    @abstract void onPrivMsg(String source, String target, String msg);
+}
+
+const MSG_RX := Regex(r'^(:(?<prefix>\S+) )?(?<command>\S+)( (?!:)'
+                      r'(?<params>.+?))?( :(?<trail>.+))?$'
+                      );
+
+@final class ClientSideHandler @impl UserHandler {
+
+    @cvars {
+        IRCHandler __handler;
+    }
+
+    void __dispatch(Connection conn, String prefix, String command,
+                    StringArray params,
+                    String trail
+                    ) {
+        if (command == '001') {
+            __handler.onConnect();
+        } else if (command == '353') {
+            # NAMES reply (also happens on join).  Example:
+            # :irc.roadsend.com 353 crack| @ #crack-lang :crack| @GRiD
+            __handler.onNames(params[2], wsplit(trail));
+        } else if (command == 'PING') {
+            conn.write(FStr() `PONG :$trail`);
+        } else if (command == 'JOIN') {
+            if (params.count() > 0 &&
+                params[0].size > 0 &&
+                params[0][0] == b'#'
+                )
+                __handler.onJoin(prefix, params[0]);
+            else
+                __handler.onJoin(prefix, trail);
+        } else if (command == 'PART' && params) {
+            __handler.onPart(prefix, params[0]);
+        } else if (command == 'PRIVMSG' && params) {
+            __handler.onPrivMsg(prefix, params[0], trail);
+        } else {
+            warn I`Unknown command: $prefix $command $params \
+                   $(trail.getRepr())`;
+        }
+    }
+
+    void process(Connection conn) {
+
+        # Process all available lines of input.
+        while ((pos := conn.inBuf.lfind('\n')) != -1) {
+            line := String(conn.inBuf, pos + 1, false);
+            conn.inBuf.compact(pos + 1);
+            if (mx := MSG_RX.match(line)) {
+                __dispatch(conn, mx.group('prefix'), mx.group('command'),
+                           wsplit(mx.group('params')),
+                           mx.group('trail')
+                           );
+            } else {
+                error `Invalid line: $(line.getRepr())\n`;
+            }
+        }
+    }
+
+    void terminate(Connection conn) {
+        __handler.onDisconnect()
+    }
+
+    void addResponder(Object responder) {}
+}
+
+## IRC Client.  Provides a nice interface to IRC messages as well as dealing
+## with reconnects.
+##
+## To listen to events, set the "handler" to your own custom IRCHandler.
+@final class Client {
+
+    Connection __conn;
+    bool __connected;
+
+    HashMap[String, Channel] __channels = {};
+
+    ## User handler.  Set this up to get notifications on significant events.
+    IRCHandler handler;
+
+    ## Time (in seconds) to pause before attempting to reconnect after a
+    ## connect failure.
+    int32 reconnectInterval = 10;
+
+    @cvars {
+        Comm __comm;
+        String __serverName;
+        uint __port;
+        bool __ssl;
+        String __nick;
+        String __userName;
+        String __realName;
+    }
+
+    void __reconnect();
+
+    void start() {
+        @assert(!__conn)
+        __reconnect();
+    }
+
+    ## Join the specified channel (channel name should have a "#" prefix).
+    void join(String channel) {
+        __conn.write(FStr() `JOIN $channel\n`);
+    }
+
+    void part(String channel) {
+        __conn.write(FStr() `PART $channel\n`);
+    }
+
+    ## Send a message to a target.  'target' is presumed to be a channel if it
+    ## begins with a "#" prefix, a user nick otherwise.
+    void say(String target, String message) {
+        __conn.write(FStr() `PRIVMSG $target $message\n`);
+    }
+
+    @final bool oper .connected() { return __connected }
+
+    class __MyHandler @impl IRCHandler {
+        @cvars {
+            RawPtr[Client] client;
+        }
+
+        void onConnect() {
+            client.__connected = true;
+            if (client.handler)
+                client.handler.onConnect();
+        }
+
+        void onDisconnect() {
+            client.__connected = false;
+            client.__reconnect();
+            if (client.handler)
+                client.handler.onDisconnect();
+        }
+
+        ## Get the channel record, creating it if necessary.
+        Channel __getChannel(String name) {
+            channel := client.__channels.get(name);
+            if (!channel) {
+                channel = Channel(name);
+                client.__channels[name] = channel;
+            }
+            return channel;
+        }
+
+        void onNames(String channel, StringArray users) {
+            cerr `got names for $channel: $users\n`;
+
+            # Get or create the channel.
+            ch := __getChannel(channel);
+            ch.userList = HashMap[String, User]();
+            for (user :in users)
+                ch.addUser(User(user));
+
+            if (client.handler)
+                client.handler.onNames(channel, users);
+        }
+
+        void onJoin(String source, String channel) {
+            cerr `got join source = $source, channel = $channel\n`;
+
+            ch := __getChannel(channel);
+            ch.addUser(User.createFromRaw(source));
+
+            if (client.handler)
+                client.handler.onJoin(source, channel);
+        }
+
+        void onPart(String source, String channel) {
+            cerr `got part source = $source, channel = $channel\n`;
+            user := User.createFromRaw(source);
+            if (user.nick == client.__nick) {
+                client.__channels.delete(channel)
+            } else {
+                ch := __getChannel(channel);
+                ch.removeUser(user);
+            }
+
+            if (client.handler)
+                client.handler.onPart(source, channel);
+        }
+
+        void onPrivMsg(String source, String target, String msg) {
+            cerr `private message from $source, target is $target: $msg\n`;
+            if (client.handler)
+                client.handler.onPrivMsg(source, target, msg);
+        }
+    }
+
+    void __reconnect() {
+        log := __comm.getLog();
+        log.info `Reconnecting to $__serverName:$__port`;
+        addrs := resolve(__serverName);
+        for (addr :in addrs) {
+            inetAddr := InetAddress.cast(addr, null);
+            if (!inetAddr)
+                continue;
+            inetAddr = InetAddress(inetAddr, __port);
+
+            if (__ssl) {
+                context := SSLContext.make(__comm);
+                try {
+                    __conn = context.connect(
+                        inetAddr,
+                        ClientSideHandler(__MyHandler(RawPtr[Client](this)))
+                    );
+                } catch (Exception ex) {
+                    # We currently assume
+                    log.error I`Error connecting via ssl $__serverName:\
+                                $__port: $(ex.text)\n`
+                }
+            } else {
+                try {
+                    __conn = __comm.connect(
+                        inetAddr,
+                        ClientSideHandler(__MyHandler(RawPtr[Client](this)))
+                    );
+                } catch (Exception ex) {
+                    # We currently assume
+                    log.error I`Error connecting to $__serverName:$__port: \
+                                $(ex.text)\n`
+                }
+            }
+            if (__conn) break;
+        }
+
+        # If we've connected, send the initial NICK/USER commands.  Otherwise
+        # schedule a reconnect.
+        if (__conn) {
+            __conn.write(FStr() I`NICK $__nick
+                                  USER $__userName host server $__realName\n`);
+        } else {
+            log.warn I`Failed to connect to $__serverName:$__port.  Retrying \
+                       in $reconnectInterval seconds`;
+
+            # Unfortunately, you can't call "connect" in the event manager
+            # thread.  So we just make this both a thread and an event
+            # callback so it can spawn off the reconnect in a new thread.
+            class MyCallback : Thread @implements EventCallback {
+                Client client;
+
+                oper init(Client client) : Thread(true), client = client {}
+
+                void oper call() {
+                    this.start()
+                }
+
+                void run() {
+                    client.__reconnect();
+                }
+            }
+            Time oper +(Time t, TimeDelta d) {
+                return time_add(t, d);
+            }
+            __comm.scheduleEvent(Time.now() + TimeDelta(reconnectInterval, 0),
+                                 MyCallback(this)
+                                 );
+        }
+    }
+}
+
+class Monitor @impl IRCHandler {
+
+    void onConnect() {
+        cerr `connected\n`;
+    }
+
+    void onDisconnect() {
+        cerr `disconnected\n`;
+    }
+
+    void onNames(String channel, StringArray users) {
+        cerr `got names for $channel: $users\n`;
+    }
+
+    void onJoin(String source, String channel) {
+        cerr `got join source = $source, channel = $channel\n`;
+    }
+
+    void onPart(String source, String channel) {
+        cerr `got part source = $source, channel = $channel\n`;
+    }
+
+    void onPrivMsg(String source, String target, String msg) {
+        cerr `private message from $source, target is $target: $msg\n`;
+    }
+}
