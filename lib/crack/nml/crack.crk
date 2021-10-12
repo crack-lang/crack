@@ -1,0 +1,160 @@
+## Crack extensions to NML.  This adds the \crack.code{} block type which is a
+## preformatted literal that understands crack tokens and options to the HTML
+## formatter to render them with syntax highlighting.
+##
+## To use these with an NML parser, do something like this:
+##
+##     import crack.nml.crack addCrackFormatters, convertCrackCode,
+##         makeCrackBlock;
+##
+##     parser := DocParser(src.makeFullReader(), arg,
+##                         Function4[TextBlock, String, int, String, bool](
+##                             makeCrackBlock
+##                         ));
+##     doc := parser.parseDoc();
+##
+##     # Traverse the document, expand all "crack.code" blocks.
+##     convertCrackCode(doc);
+##
+##     formatter := HTMLFormatter(makePath(outFilename).writer());
+##     addCrackFormatters(formatter);
+##     formatter.formatAll(doc);
+
+import crack.cont.array Array;
+import crack.functor Function2, Functor2;
+import crack.io cerr, FStr;
+import crack.lang AssertionError;
+import crack.nml.block TextBlock;
+import crack.nml.html HTMLFormatter, HTML_ESCAPE, HTML_REFLOW;
+import crack.regex Regex;
+
+@import crack.ann impl;
+
+## Factory function that knows to create crack.code blocks with the correct
+## options.
+TextBlock makeCrackBlock(String sourceName, int lineNum, String blockType,
+                         bool tightLeft
+                         ) {
+    result := TextBlock(sourceName, lineNum, blockType, tightLeft);
+    if (blockType == 'crack.code')
+        result.preformatted = result.literal = true;
+    return result;
+}
+
+void formatCrackCode(HTMLFormatter formatter, TextBlock block) {
+    formatter.write('<PRE>', HTML_REFLOW);
+    for (word :in block.words) {
+        if (s := String.cast(word, null)) {
+            formatter.write(s, HTML_ESCAPE);
+        } else {
+            formatter.format(word);
+        }
+    }
+    formatter.write('</PRE>', HTML_REFLOW);
+}
+
+class LangElemFormatter @impl Functor2[void, HTMLFormatter, TextBlock] {
+    String name;
+    oper init(String name) : name = name {}
+    void oper call(HTMLFormatter formatter, TextBlock block) {
+        formatter.write(FStr() `<span class="$name">`, HTML_REFLOW);
+        formatter.write(String.cast(block.words[0]), HTML_ESCAPE);
+        formatter.write('</span>', HTML_REFLOW);
+    }
+}
+
+const Regex
+    WS_RX = {r'\s+'},
+    KW_RX = {r'(catch|class|continue|else|if|import|in|is|null|return|throw|'
+             r'try|while|on|oper|for|typeof|const|module|lambda|enum|alias|'
+             r'case|switch|do)(?!\w)'},
+    SYM_RX = {r'[~!@$%\^&\*\(\)\-\+\=\{\}\[\]\|\\\;\:<>,\.\?\/]+'},
+    NUMBER_RX = {r'\d+(\.\d*)?([Ee][+-]?\d+)?'},
+    COMMENT_RX = {r'(#.*)|(//.*)|(/\*.*\*/)'},
+    IDENT_RX = {r'[a-zA-Z_]\w*'},
+    STR_RX = {r'("([^"\\]|\\.)*")|' r"('([^'\\]|\\.)*')"},
+    ISTR_RX = {r'`([^`\\]|\\.)*`'};
+
+Array[Object] formatCrackCode(String code) {
+
+    TextBlock makeBlock(String type, String contents) {
+        result := TextBlock(null, 0, type, true);
+        result.words = Array[Object]![contents];
+        result.tightRight = true;
+        return result;
+    }
+
+    Array[Object] result = {};
+    String data = code;
+    while (data) {
+        if (m := WS_RX.match(data)) {
+            result.append(m.group());
+            data = data.substr(m.end());
+        } else if (m := COMMENT_RX.match(data)) {
+            result.append(makeBlock('crack.code.cmt', m.group()));
+            data = data.substr(m.end());
+        } else if (m := KW_RX.match(data)) {
+            result.append(makeBlock('crack.code.kw', m.group()));
+            data = data.substr(m.end());
+        } else if (m := SYM_RX.match(data)) {
+            result.append(makeBlock('crack.code.sym', m.group()));
+            data = data.substr(m.end());
+        } else if (m := NUMBER_RX.match(data)) {
+            result.append(makeBlock('crack.code.number', m.group()));
+            data = data.substr(m.end());
+        } else if (m := IDENT_RX.match(data)) {
+            result.append(makeBlock('crack.code.ident', m.group()));
+            data = data.substr(m.end());
+        } else if (m := STR_RX.match(data)) {
+            result.append(makeBlock('crack.code.str', m.group()));
+            data = data.substr(m.end());
+        } else if (m := ISTR_RX.match(data)) {
+            result.append(makeBlock('crack.code.istr', m.group()));
+            data = data.substr(m.end());
+        } else {
+            result.append(makeBlock('crack.code.unknown', data));
+            data = '';
+        }
+    }
+
+    return result;
+}
+
+## Expand all "crack.ccode" blocks in 'block' to syntax specific blocks.
+void convertCrackCode(TextBlock block) {
+    if (block.type == 'crack.code') {
+        result := Array[Object]();
+        for (word :in block.words) {
+            if (str := String.cast(word, null))
+                result.extend(formatCrackCode(str));
+            else
+                # Since code.crack is a preformatted literal, this should
+                # never happen.
+                throw AssertionError(
+                    FStr() `Nested block found in crack.code: $word`
+                );
+        }
+        block.words = result;
+    } else {
+        for (word :in block.words) {
+            if (block := TextBlock.cast(word, null))
+                convertCrackCode(block);
+        }
+    }
+}
+
+## Add formatters for all of the crack blocks to 'formatter'.
+void addCrackFormatters(HTMLFormatter formatter) {
+    formatter.addFormatter('crack.code',
+                           Function2[void, HTMLFormatter, TextBlock](
+                               formatCrackCode
+                           ));
+    formatter.addFormatter('crack.code.kw', LangElemFormatter('keyword'));
+    formatter.addFormatter('crack.code.number', LangElemFormatter('number'));
+    formatter.addFormatter('crack.code.sym', LangElemFormatter('symbol'));
+    formatter.addFormatter('crack.code.cmt', LangElemFormatter('comment'));
+    formatter.addFormatter('crack.code.ident', LangElemFormatter('ident'));
+    formatter.addFormatter('crack.code.str', LangElemFormatter('string'));
+    formatter.addFormatter('crack.code.istr', LangElemFormatter('istring'));
+    formatter.addFormatter('crack.code.unknown', LangElemFormatter('unknown'));
+}

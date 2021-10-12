@@ -1085,12 +1085,14 @@ void Context::expandIteration(const std::string &name, bool defineVar,
     afterBody = nextCall;
 }
 
-VarDefPtr Context::lookUp(const std::string &varName, Namespace *srcNs) {
+VarDefPtr Context::lookUp(const std::string &varName, Namespace *srcNs,
+                          bool lazyImport
+                          ) {
     if (!srcNs)
         srcNs = ns.get();
     VarDefPtr def = srcNs->lookUp(varName);
 
-    if (!def) {
+    if (!def && lazyImport) {
         // Try to do a lazy import.  Note that we have to get the toplevel
         // module context, as statements in the global module scope are also
         // in module contexts.  Toplevel module contexts are normally defined

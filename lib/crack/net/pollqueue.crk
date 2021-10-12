@@ -1,0 +1,104 @@
+# Copyright 2021 Google Inc.
+#
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at http://mozilla.org/MPL/2.0/.
+
+## Poller queue implementation.
+##
+## Usage example:
+##
+##  void callback(String elem) {
+##      cout `We got a $elem\n`;
+##  }
+##
+##  queue := PollQueue[String](PollQueue[String].Callback.Wrap(callback));
+##  queue.addTo(poller);
+##  queue.add('hello world!');
+
+import crack.io cerr;
+import crack.logger.ctx Log;
+import crack.functor Functor1;
+import crack.net Pipe, Poller, PollEvent, PollEventCallback, POLLERR,
+    POLLHUP, POLLIN;
+import crack.threads Queue2;
+
+@import crack.ann assert, impl;
+
+## A queue that can be read from a poller loop.
+@final class PollQueue[Elem] @impl PollEventCallback {
+
+    Pipe __pipe;
+    Log __log;
+    Queue2[Elem] __queue;
+    alias Callback = Functor1[void, Elem];
+    Callback __callback;
+
+    oper init(Log log, Callback callback) :
+        __pipe(),
+        __log = log,
+        __queue(),
+        __callback = callback {
+    }
+
+    ## Construct a PollQueue with the default logger (log all events to
+    ## standared error).
+    oper init(Callback callback) :
+        __pipe(),
+        __log(cerr, cerr, cerr, cerr, cerr, 'PollQueue'),
+        __queue(),
+        __callback = callback {
+    }
+
+    int oper call(Poller poller, PollEvent event) {
+        if (event.revents & POLLIN) {
+            __pipe.read(1024);
+            while ((elem := __queue.getNonBlocking()) !is null)
+                __callback(elem);
+        } else if (event.revents & POLLERR) {
+            __log.error `got error on control pipe handler`;
+            __pipe.close();
+            poller.remove(__pipe);
+            return 0;
+        } else if (event.revents & POLLHUP) {
+            __log.info `got HUP on control pipe handler`;
+            __pipe.close();
+            poller.remove(__pipe);
+            return 0;
+        }
+        return POLLIN | POLLERR | POLLHUP;
+    }
+
+    ## Add the queue to the poller.  This initiates event handling in the
+    ## poller loop.
+    void addTo(Poller poller) {
+        poller.add(__pipe, this);
+    }
+
+    ## Remove the queue from the poller.  Note that there may be elements in
+    ## the queue when this is called.
+    void removeFrom(Poller poller) {
+        poller.remove(__pipe);
+    }
+
+    ## Adds an element to the queue.
+    ##
+    ## 'elem' must not be null.
+    void add(Elem elem) {
+        @assert(elem !is null);
+        __queue.add(elem);
+        __pipe.write('x');
+    }
+
+    ## Returns the next element in the queue, returns null if there is none.
+    ##
+    ## Note that this generally should not be used, process elements from the
+    ## callback instead.
+    Elem getNonBlocking() { return __queue.getNonBlocking() }
+
+    ## Returns teh next element in the queue, blocking if none is available.
+    ##
+    ## Note that this generally should not be used, process elements from the
+    ## callback instead.
+    Elem get() { return __queue.get() }
+}

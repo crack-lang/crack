@@ -20,6 +20,8 @@
 
     void glMatrixMode(uint mode);
     void glLoadIdentity();
+    void glPushMatrix();
+    void glPopMatrix();
     void glFrustum(float64 left, float64 right, float64 bottom, float64 top,
                    float64 nearVal,
                    float64 farVal
@@ -181,6 +183,8 @@
                GL_LIGHT_MODEL_TWO_SIDE,
                GL_LIGHT_MODEL_LOCAL_VIEWER,
                GL_LIGHT_MODEL_AMBIENT,
+               GL_FRONT,
+               GL_BACK,
                GL_FRONT_AND_BACK,
                GL_SHADE_MODEL,
                GL_FLAT,
@@ -217,7 +221,6 @@
                GL_FASTEST,
                GL_NICEST;
 
-
     void glHint(uint target, uint mode);
 
     # textures
@@ -248,6 +251,9 @@
                        uint type,
                        voidptr pixels
                        );
+
+    void glMaterialfv(int side, int property, array[float32] value);
+    void glMaterialf(int side, int property, float32 value);
 
     # small subset of buffers, pixel drawing/reading
     const uint GL_RGB, GL_RGBA;
@@ -318,3 +324,5 @@
 
     void glBlendFunc(uint sfactor, uint dfactor);
 }
+
+import crack.io cout;

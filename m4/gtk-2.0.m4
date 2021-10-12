@@ -1,12 +1,16 @@
 # Configure paths for GTK+
 # Owen Taylor     1997-2001
 
+# Version number used by aclocal, see `info automake Serials`.
+# Increment on every change.
+#serial 1
+
 dnl AM_PATH_GTK_2_0([MINIMUM-VERSION, [ACTION-IF-FOUND [, ACTION-IF-NOT-FOUND [, MODULES]]]])
-dnl Test for GTK+, and define GTK_CFLAGS and GTK_LIBS, if gthread is specified in MODULES,
+dnl Test for GTK+, and define GTK_CFLAGS and GTK_LIBS, if gthread is specified in MODULES, 
 dnl pass to pkg-config
 dnl
 AC_DEFUN([AM_PATH_GTK_2_0],
-[dnl
+[dnl 
 dnl Get the cflags and libraries from pkg-config
 dnl
 AC_ARG_ENABLE(gtktest, [  --disable-gtktest       do not try to compile and run a test GTK+ program],
@@ -16,7 +20,7 @@ AC_ARG_ENABLE(gtktest, [  --disable-gtktest       do not try to compile and run 
   for module in . $4
   do
       case "$module" in
-         gthread)
+         gthread) 
              pkg_config_args="$pkg_config_args gthread-2.0"
          ;;
       esac
@@ -24,19 +28,8 @@ AC_ARG_ENABLE(gtktest, [  --disable-gtktest       do not try to compile and run 
 
   no_gtk=""
 
-  AC_PATH_PROG(PKG_CONFIG, pkg-config, no)
-
-  if test x$PKG_CONFIG != xno ; then
-    if pkg-config --atleast-pkgconfig-version 0.7 ; then
-      :
-    else
-      echo "*** pkg-config too old; version 0.7 or better required."
-      no_gtk=yes
-      PKG_CONFIG=no
-    fi
-  else
-    no_gtk=yes
-  fi
+  AC_REQUIRE([PKG_PROG_PKG_CONFIG])
+  PKG_PROG_PKG_CONFIG([0.7])
 
   min_gtk_version=ifelse([$1], ,2.0.0,$1)
   AC_MSG_CHECKING(for GTK+ - version >= $min_gtk_version)
@@ -79,7 +72,7 @@ dnl
 #include <stdio.h>
 #include <stdlib.h>
 
-int
+int 
 main ()
 {
   int major, minor, micro;
@@ -98,7 +91,7 @@ main ()
       (gtk_minor_version != $gtk_config_minor_version) ||
       (gtk_micro_version != $gtk_config_micro_version))
     {
-      printf("\n*** 'pkg-config --modversion gtk+-2.0' returned %d.%d.%d, but GTK+ (%d.%d.%d)\n",
+      printf("\n*** 'pkg-config --modversion gtk+-2.0' returned %d.%d.%d, but GTK+ (%d.%d.%d)\n", 
              $gtk_config_major_version, $gtk_config_minor_version, $gtk_config_micro_version,
              gtk_major_version, gtk_minor_version, gtk_micro_version);
       printf ("*** was found! If pkg-config was correct, then it is best\n");
@@ -108,7 +101,7 @@ main ()
       printf("*** required on your system.\n");
       printf("*** If pkg-config was wrong, set the environment variable PKG_CONFIG_PATH\n");
       printf("*** to point to the correct configuration files\n");
-    }
+    } 
   else if ((gtk_major_version != GTK_MAJOR_VERSION) ||
 	   (gtk_minor_version != GTK_MINOR_VERSION) ||
            (gtk_micro_version != GTK_MICRO_VERSION))
@@ -152,7 +145,7 @@ main ()
   fi
   if test "x$no_gtk" = x ; then
      AC_MSG_RESULT(yes (version $gtk_config_major_version.$gtk_config_minor_version.$gtk_config_micro_version))
-     ifelse([$2], , :, [$2])
+     ifelse([$2], , :, [$2])     
   else
      AC_MSG_RESULT(no)
      if test "$PKG_CONFIG" = "no" ; then

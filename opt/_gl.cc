@@ -1,6 +1,5 @@
 #include <GL/gl.h>
 
-
 #include "ext/Module.h"
 #include "ext/Type.h"
 #include "ext/Func.h"
@@ -87,6 +86,14 @@ void crack_ext__gl_cinit(crack::ext::Module *mod) {
 
     f = mod->addFunc(type_void, "glLoadIdentity",
                      (void *)glLoadIdentity
+                     );
+
+    f = mod->addFunc(type_void, "glPushMatrix",
+                     (void *)glPushMatrix
+                     );
+
+    f = mod->addFunc(type_void, "glPopMatrix",
+                     (void *)glPopMatrix
                      );
 
     f = mod->addFunc(type_void, "glFrustum",
@@ -538,6 +545,20 @@ void crack_ext__gl_cinit(crack::ext::Module *mod) {
        f->addArg(type_uint, "format");
        f->addArg(type_uint, "type");
        f->addArg(type_voidptr, "pixels");
+
+    f = mod->addFunc(type_void, "glMaterialfv",
+                     (void *)glMaterialfv
+                     );
+       f->addArg(type_int, "side");
+       f->addArg(type_int, "property");
+       f->addArg(array_pfloat32_q, "value");
+
+    f = mod->addFunc(type_void, "glMaterialf",
+                     (void *)glMaterialf
+                     );
+       f->addArg(type_int, "side");
+       f->addArg(type_int, "property");
+       f->addArg(type_float32, "value");
 
     f = mod->addFunc(type_void, "glTexParameterf",
                      (void *)glTexParameterf
@@ -1032,6 +1053,14 @@ void crack_ext__gl_cinit(crack::ext::Module *mod) {
 
     mod->addConstant(type_uint, "GL_LIGHT_MODEL_AMBIENT",
                      static_cast<int>(GL_LIGHT_MODEL_AMBIENT)
+                     );
+
+    mod->addConstant(type_uint, "GL_FRONT",
+                     static_cast<int>(GL_FRONT)
+                     );
+
+    mod->addConstant(type_uint, "GL_BACK",
+                     static_cast<int>(GL_BACK)
                      );
 
     mod->addConstant(type_uint, "GL_FRONT_AND_BACK",

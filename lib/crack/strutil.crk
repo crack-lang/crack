@@ -8,8 +8,69 @@
 //
 import crack.lang Formatter;
 import crack.lang Buffer, AppendBuffer, CString, InvalidArgumentError;
-import crack.io Writer, cout;
+import crack.io cout, Writer, StringFormatter;
 import crack.cont.array Array;
+
+## Use a JoinerOn[..., EmptySeparator] to join a collection with no separator.
+## It is not necessary to actually create one of these, just use the EMPTY_SEP
+## constant.
+class EmptySeparator {}
+
+## Lightweight constant that can be used as an empty separator for
+## JoinerOn[..., EmptySeparator].join().
+const EmptySeparator EMPTY_SEP = null;
+
+@final class ByteToCharFormatter : StringFormatter {
+    @final void format(byte b) {
+        buf := AppendBuffer![b];
+        _writer.write(buf);
+    }
+
+    @final void format(EmptySeparator sep) {}
+}
+
+## Joiner iterates over a collection and joins the elements based on the given
+## separator.
+class JoinerOn[Iterator, Separator] {
+    @static String join(Iterator iter, Separator sep) {
+        if (!iter)
+            return '';
+
+        result := ByteToCharFormatter();
+        result `$(iter.elem())`;
+        iter.next();
+        for (; iter; iter.next())
+            result `$sep$(iter.elem())`;
+        return result.string();
+    }
+}
+
+class Joiner[Iterator] {
+    @static String join(Iterator iter, byte b) {
+        return JoinerOn[Iterator, byte].join(iter, b);
+    }
+
+    @static String join(Iterator iter, Buffer b) {
+        return JoinerOn[Iterator, Buffer].join(iter, b);
+    }
+
+    ## Join with no separator.
+    @static String join(Iterator iter) {
+        return JoinerOn[Iterator, EmptySeparator].join(iter, EMPTY_SEP);
+    }
+}
+
+String join(Array[String] arr, String sep) {
+    return Joiner[Array[String].ArrayIter].join(arr.iter(), sep);
+}
+
+String join(Array[String] arr, byte sep) {
+    return Joiner[Array[String].ArrayIter].join(arr.iter(), sep);
+}
+
+String join(Array[String] arr) {
+    return Joiner[Array[String].ArrayIter].join(arr.iter());
+}
 
 class StringArray : Array[String] {
 

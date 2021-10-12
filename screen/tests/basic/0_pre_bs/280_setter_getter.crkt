@@ -44,6 +44,11 @@ a.foo = 100;
 if (a.foo != 100)
     puts('FAILED attr set/get');
 
+# Verify that conversion works.
+a.foo = 1.0;
+if (a.foo != 1)
+    puts('FAILED attr set conversion');
+
 a.func = lambda int() { return 123 };
 if (a.func() != 123)
     puts('FAILED func call on getter result');
