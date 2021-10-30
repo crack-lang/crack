@@ -1484,6 +1484,9 @@ ExprPtr Parser::parseExpression(unsigned precedence) {
       OverloadDefPtr ovldDef = context->lookUp(name.str());
       FuncDefPtr funcDef = ovldDef->getSingleFunction();
       expr = context->createVarRef(funcDef.get());
+   } else if (tok.isClass()) {
+      TypeDefPtr typeDef = parseClassDef();
+      return createVarRef(/* container */ 0, typeDef.get(), tok);
    } else if (tok.isLCurly()) {
       unexpected(tok, "blocks as expressions are not supported yet");
    } else {
