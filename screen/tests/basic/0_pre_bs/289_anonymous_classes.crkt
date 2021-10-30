@@ -1,0 +1,13 @@
+%%TEST%%
+anonymous classes
+%%ARGS%%
+%%FILE%%
+
+puts((class * {
+    byteptr data;
+    oper init(byteptr data) : data = data {}
+})('foo').data);
+
+%%EXPECT%%
+foo
+%%STDIN%%

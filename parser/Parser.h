@@ -469,6 +469,18 @@ class Parser {
        */
       model::ExprPtr wrapInNullCheck(model::Expr *primary, model::Expr *expr);
 
+      /**
+       * Return the next available anonymous name, constructed by appending
+       * the next nested identifier to the template.
+       *
+       * Anon names are generally of the form :prefix$nestId.
+       */
+      std::string makeAnonName(const char *templt) {
+         std::stringstream name;
+         name << templt << ++nestID;
+         return name.str();
+      }
+
    public:
 
       // XXX should be protected, once required functionality is migrated out.
