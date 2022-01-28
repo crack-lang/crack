@@ -22,6 +22,7 @@
 
     fluid_settings_t new_fluid_settings();
     fluid_synth_t new_fluid_synth(fluid_settings_t settings);
+    void delete_fluid_audio_driver (fluid_audio_driver_t driver);
     void delete_fluid_synth(fluid_synth_t synth);
     void delete_fluid_settings(fluid_settings_t settings);
 

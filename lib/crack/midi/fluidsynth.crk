@@ -9,9 +9,10 @@
 import crack.io cout;
 import crack.lang CString;
 import crack.ext._fluidsynth fluid_synth_t, fluid_settings_t,
-    fluid_audio_driver_t, delete_fluid_settings, delete_fluid_synth,
-    new_fluid_settings, new_fluid_synth, fluid_synth_all_notes_off, fluid_synth_noteon,
-    fluid_synth_noteoff, fluid_synth_pitch_bend, fluid_synth_program_change,
+    fluid_audio_driver_t, delete_fluid_audio_driver, delete_fluid_settings,
+    delete_fluid_synth, new_fluid_settings, new_fluid_synth,
+    fluid_synth_all_notes_off, fluid_synth_noteon, fluid_synth_noteoff,
+    fluid_synth_pitch_bend, fluid_synth_program_change,
     new_fluid_audio_driver, fluid_synth_sfload;
 
 class FluidSettings {
@@ -36,7 +37,7 @@ class FluidSynth {
     }
 
     oper del() {
-        # XXX delete driver
+        delete_fluid_audio_driver(__driver);
         delete_fluid_synth(__rep);
     }
 

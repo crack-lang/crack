@@ -54,6 +54,11 @@ void crack_ext__fluidsynth_cinit(crack::ext::Module *mod) {
                      );
        f->addArg(type_fluid_settings_t, "settings");
 
+    f = mod->addFunc(type_void, "delete_fluid_audio_driver",
+                     (void *)delete_fluid_audio_driver
+                     );
+       f->addArg(type_fluid_audio_driver_t, "driver");
+
     f = mod->addFunc(type_void, "delete_fluid_synth",
                      (void *)delete_fluid_synth
                      );
