@@ -10,11 +10,10 @@
 import crack.io cout;
 import crack.lang cmp;
 
-## Base class version of quick-sort, can be applied to primitive arrays.
-class QuickSortPrim[SeqT] {
+class QuickSortBase[SeqT, CmpFunc, Elem] {
 
-    alias Elem = typeof(SeqT(1)[0]);
-    alias CmpFunc = function[int, Elem, Elem];
+    alias CmpFunc = CmpFunc;
+    alias Elem = Elem;
 
     @static
     void _swap(SeqT A, uintz l, uintz r) {
@@ -96,6 +95,13 @@ class QuickSortPrim[SeqT] {
         _quickSort3(seq, l, j, cmp);
         _quickSort3(seq, i, r, cmp);
     }
+}
+
+## Base class version of quick-sort, can be applied to primitive arrays.
+class QuickSortPrim[SeqT] :
+    QuickSortBase[SeqT, function[int, typeof(SeqT(1)[0]), typeof(SeqT(1)[0])],
+                  typeof(SeqT(1)[0])
+                  ] {
 
     ## Sort the the array of the given size.
     @static void sort(SeqT seq, uintz count) {
@@ -108,7 +114,20 @@ class QuickSortPrim[SeqT] {
         if (count > 1)
             _quickSort3(A, 0, count - 1, cmp);
     }
+}
 
+## Variant on QuickSortPrim that can be used with a functor.
+##
+## This is separated out because we can't import crack.functor from here (it
+## requires crack.ann -> crack.cont.array -> crack.algorithm)
+class QuickSortPrimF[SeqT, CmpFunc] :
+    QuickSortBase[SeqT, CmpFunc, typeof(SeqT(1)[0])] {
+
+    ## Sort the array of the given size using the given comparison functor.
+    @static void sort(SeqT A, uintz count, CmpFunc cmp) {
+        if (count > 1)
+            _quickSort3(A, 0, count - 1, cmp);
+    }
 }
 
 ## Quick-sort.  SeqT must have [], []= and count()
@@ -117,6 +136,19 @@ class QuickSort[SeqT] : QuickSortPrim[SeqT] {
         if (seq.count() > 1)
             _quickSort3(seq, 0, seq.count() - 1, defaultCmp);
     }
+
+    @static void sort(SeqT seq, CmpFunc cmp) {
+        if (seq.count() > 1)
+            _quickSort3(seq, 0, seq.count() - 1, cmp);
+    }
+}
+
+## Variant on QuickSort that can be used with a functor.
+##
+## This is separated out because we can't import crack.functor from here (it
+## requires crack.ann -> crack.cont.array -> crack.algorithm)
+class QuickSortF[SeqT, CmpFunc] :
+    QuickSortBase[SeqT, CmpFunc, typeof(SeqT(1)[0])] {
 
     @static void sort(SeqT seq, CmpFunc cmp) {
         if (seq.count() > 1)

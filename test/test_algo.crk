@@ -8,11 +8,15 @@
 //   file, You can obtain one at http://mozilla.org/MPL/2.0/.
 //
 
-import crack.algorithm QuickSort, QuickSortPrim, InsertionSort,
-    InsertionSortPrim, HeapPrim, Heap, HeapSortPrim, HeapSort;
+import crack.algorithm QuickSort, QuickSortF, QuickSortPrim, QuickSortPrimF,
+    InsertionSort, InsertionSortPrim, HeapPrim, Heap, HeapSortPrim, HeapSort;
 import crack.cont.array Array;
 import crack.io cout, FStr;
+import crack.functor Functor2;
+import crack.lang cmp;
 import crack.runtime random;
+
+@import crack.ann impl;
 
 Array[uint] newRandomArray(uint n) {
     a := Array[uint](n);
@@ -52,6 +56,11 @@ class Printer[SeqT] {
     }
 }
 
+class CmpFunctor @impl Functor2[int, uint, uint] {
+    int oper call(uint a, uint b) {
+        return cmp(a, b);
+    }
+}
 
 ////////////////////////////////
 
@@ -60,6 +69,11 @@ uint nsize = 500;
 // QUICKSORT
 a := newRandomArray(nsize);
 QuickSort[Array[uint]].sort(a);
+Checker[Array[uint]].check(a);
+
+// Verify that we can use a functor for comparison.
+a = newRandomArray(nsize);
+QuickSortF[Array[uint], CmpFunctor].sort(a, CmpFunctor());
 Checker[Array[uint]].check(a);
 
 // INSERTION SORT
@@ -103,6 +117,11 @@ CheckerPrim[array[int]].check(sA2, 4);
 
 sI2 := array[uint]![3, 2, 1, 0];
 QuickSortPrim[array[uint]].sort(sI2, 4);
+CheckerPrim[array[uint]].check(sI2, 4);
+
+// Verify that we can use a functor for comparison.
+sI2 = array[uint]![3, 2, 1, 0];
+QuickSortPrimF[array[uint], CmpFunctor].sort(sI2, 4, CmpFunctor());
 CheckerPrim[array[uint]].check(sI2, 4);
 
 sH2 := array[uint]![3, 2, 1, 0];
