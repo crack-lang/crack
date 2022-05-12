@@ -5455,6 +5455,27 @@ For aggregate types, sorting relies on the comparison functions of #Object#,
 which in turn rely on the overridable #cmp()# method.  For primitive types,
 the type must define the comparison operators.
 
+You can use #QuickSort# with a primitive function comparator:
+
+{{
+
+    int myFooCmp(Foo a, Foo b) {
+        ...
+    }
+
+    QuickSort[Array[Foo]].sort(arr, myFooCmp);
+}}
+
+To compare using a Functor, use #QuickSortF# instead:
+
+{{
+    class MyFooCmp @impl Functor2[int, Foo, Foo] {
+        ...
+    }
+
+    QuickSort[Array[Foo]].sort(arr, MyFooCmp());
+}}
+
 The strutil Module
 ------------------
 

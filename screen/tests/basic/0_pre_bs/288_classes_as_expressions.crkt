@@ -1,0 +1,14 @@
+%%TEST%%
+classes as expressions
+%%ARGS%%
+%%FILE%%
+
+(class A {
+    int a;
+    oper init(int a) : a = a {}
+    void oper call(int b) { printint(a + b) }
+ })(100)(200);
+
+%%EXPECT%%
+300
+%%STDIN%%

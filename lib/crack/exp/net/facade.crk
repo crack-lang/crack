@@ -139,7 +139,8 @@ class ConnectionController @impl Functor2[int, Poller, PollEvent] {
     oper del() {
         # we don't have to remove from the poller in this case, the fact that
         # it's being deleted means that it's not managed by a poller.
-        _handle.close();
+        if (_handle)
+            _handle.close();
     }
 }
 

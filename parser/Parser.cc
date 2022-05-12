@@ -1471,19 +1471,21 @@ ExprPtr Parser::parseExpression(unsigned precedence) {
    } else if (tok.isLambda()) {
       TypeDefPtr returnType = parseTypeSpec(0);
 
-      stringstream name;
-      name << ":anonf" << ++nestID;
-      Token nameTok(Token::ident, name.str(), tok.getLocation());
+      string name = makeAnonName(":anonf");
+      Token nameTok(Token::ident, name, tok.getLocation());
 
       // Check for an lparen.
       Token tok = getToken();
       if (!tok.isLParen())
          unexpected(tok, "Parenthesis expected for lambda parameter list");
 
-      parseFuncDef(returnType.get(), nameTok, name.str(), normal, -1);
-      OverloadDefPtr ovldDef = context->lookUp(name.str());
+      parseFuncDef(returnType.get(), nameTok, name, normal, -1);
+      OverloadDefPtr ovldDef = context->lookUp(name);
       FuncDefPtr funcDef = ovldDef->getSingleFunction();
       expr = context->createVarRef(funcDef.get());
+   } else if (tok.isClass()) {
+      TypeDefPtr typeDef = parseClassDef();
+      return createVarRef(/* container */ 0, typeDef.get(), tok);
    } else if (tok.isLCurly()) {
       unexpected(tok, "blocks as expressions are not supported yet");
    } else {
@@ -3395,21 +3397,25 @@ void Parser::recordBlock(Generic *generic) {
 TypeDefPtr Parser::parseClassDef() {
    runCallbacks(classDef);
 
-   Token tok = getToken();
-   if (!tok.isIdent())
-      unexpected(tok, "Expected class name");
-   string className = tok.getData();
-   Token nameTok = tok;
+   Token nameTok = getToken();
+   string className;
+   if (nameTok.isAsterisk()) {
+      className = makeAnonName(":anonc");
+   } else if (nameTok.isIdent()) {
+      className = nameTok.getData();
+   } else {
+      unexpected(nameTok, "Expected class name");
+   }
 
    // check for an existing definition of the symbol
-   TypeDefPtr existing = checkForExistingDef(tok, className);
+   TypeDefPtr existing = checkForExistingDef(nameTok, className);
 
    // get any user flags
    TypeDef::Flags flags = context->nextClassFlags;
    context->nextClassFlags = TypeDef::noFlags;
 
    // check for a generic parameter list
-   tok = getToken();
+   Token tok = getToken();
    Generic *generic = 0;
    if (tok.isLBracket()) {
       if (existing)
@@ -3442,7 +3448,7 @@ TypeDefPtr Parser::parseClassDef() {
       if (tok.isEnd())
          error(nameTok,
                SPUG_FSTR("No opening bracket found for generic class " <<
-                         className
+                          (className[0] == ':' ? "<anonymous>" : className)
                          )
                );
 
