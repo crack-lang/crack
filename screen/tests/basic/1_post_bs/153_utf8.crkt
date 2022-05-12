@@ -1,0 +1,22 @@
+%%TEST%%
+utf8 module
+%%ARGS%%
+%%FILE%%
+import crack.utf8 utf8Char;
+
+@import crack.ann assert;
+
+@assert(utf8Char(1) == '\001');
+@assert(utf8Char(0x7f) == '\x7f');
+@assert(utf8Char(0x80) == '\xc2\x80');
+@assert(utf8Char(0x7ff) == '\xdf\xbf');
+@assert(utf8Char(0x800) == '\xe0\xa0\x80');
+@assert(utf8Char(0xffff) == '\xef\xbf\xbf');
+@assert(utf8Char(0x10000) == '\xf0\x90\x80\x80');
+@assert(utf8Char(0x10ffff) == '\xf4\x8f\xbf\xbf');
+
+print('ok\n')
+
+%%EXPECT%%
+ok
+%%STDIN%%

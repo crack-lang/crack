@@ -1,0 +1,33 @@
+## Module containing functions for dealing with UTF-8 strings.
+
+import crack.lang AppendBuffer, Buffer;
+
+class UTF8String = Buffer {
+}
+
+## Appends a UTF8 character to the buffer.  This is exposed mainly for
+## testing, don't import it as it's likely to move into a utf8 module.
+void appendUTF8Char(AppendBuffer buf, int char) {
+    if (char <= 0x7f) {
+        buf.append(byte(char));
+    } else if (char <= 0x7ff) {
+        buf.append(0xc0 | byte(char >> 6));
+        buf.append(0x80 | byte(char & 0x3f));
+    } else if (char <= 0xffff) {
+        buf.append(0xe0 | byte(char >> 12));
+        buf.append(0x80 | byte((char >> 6) & 0x3f));
+        buf.append(0x80 | byte(char & 0x3f));
+    } else {
+        buf.append(0xf0 | byte(char >> 18));
+        buf.append(0x80 | byte((char >> 12) & 0x3f));
+        buf.append(0x80 | byte((char >> 6) & 0x3f));
+        buf.append(0x80 | byte(char & 0x3f));
+    }
+}
+
+## Returns a utf8 string representation of the given unicode character.
+String utf8Char(int char) {
+    result := AppendBuffer(4);
+    appendUTF8Char(result, char);
+    return String(result);
+}

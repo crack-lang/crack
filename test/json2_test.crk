@@ -3,24 +3,9 @@ import crack.cont.array Array;
 import crack.io cerr, StringReader;
 import crack.lang AppendBuffer, Box;
 import crack.math abs;
-import crack.enc.json2 appendUTF8Char, parse, JSONObjectMap;
+import crack.enc.json2 parse, JSONObjectMap;
 
 @import crack.ann assert;
-
-String utf8Enc(int uchar) {
-    buf := AppendBuffer(16);
-    appendUTF8Char(buf, uchar);
-    return String(buf, true);
-}
-
-@assert(utf8Enc(1) == '\001');
-@assert(utf8Enc(0x7f) == '\x7f');
-@assert(utf8Enc(0x80) == '\xc2\x80');
-@assert(utf8Enc(0x7ff) == '\xdf\xbf');
-@assert(utf8Enc(0x800) == '\xe0\xa0\x80');
-@assert(utf8Enc(0xffff) == '\xef\xbf\xbf');
-@assert(utf8Enc(0x10000) == '\xf0\x90\x80\x80');
-@assert(utf8Enc(0x10ffff) == '\xf4\x8f\xbf\xbf');
 
 @assert(parse('"test string"') == 'test string');
 @assert(parse('  "test string"') == 'test string');
