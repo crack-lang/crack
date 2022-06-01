@@ -10,6 +10,7 @@
 
 #include "builder/BuilderOptions.h"
 #include "spug/StringFmt.h"
+#include "util/Hasher.h"
 
 #include <stdlib.h>
 #include <sys/stat.h>
@@ -127,6 +128,17 @@ string getCacheFilePath(BuilderOptions* options,
             return string();
         else
             i = options->optionMap.find("cachePath");
+    }
+
+    // Replace overly large filenames with an md5 hash of the base name.
+    int filenameSize = canonicalName.size() + destExt.size() + 1;
+    if (filenameSize >= NAME_MAX ||
+        filenameSize + i->second.size() + 1 > PATH_MAX) {
+        Hasher hasher;
+        hasher.add(canonicalName.data(), canonicalName.size());
+        return SPUG_FSTR(i->second << "/" << hasher.getDigest().asHex() <<
+                          "." << destExt
+                         );
     }
 
     return SPUG_FSTR(i->second << "/" << canonicalName << '.' << destExt);
