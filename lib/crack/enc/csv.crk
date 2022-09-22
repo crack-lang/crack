@@ -4,6 +4,13 @@ import crack.cont.array Array;
 import crack.lang cmp, AppendBuffer, InvalidArgumentError;
 import crack.strutil StringArray;
 
+@import crack.ann assert;
+
+class CSVStringArray : StringArray {
+    ## True if the last column is incomplete.
+    bool incomplete = false;
+}
+
 ## Returns true if a field needs escaping to be used in a CSV file.
 ## We escape fields containing commas, double-quotes and newlines - the latter
 ## being inconsistent with general CSV implementation, but it still beats
@@ -65,14 +72,27 @@ String encodeRow(Array[String] row) {
 }
 
 ## Parse a CSVish line into an array of strings.
-StringArray parseLine(String line) {
+##
+## 'existing' should be an incomplete last row (possibly empty) and 'line'
+## should contain the continuation of that row - so the first column of the
+## new line will be appended to the last column of 'existing'.
+void parseLine(CSVStringArray existing, String line) {
     # state:
     # 0 - base state
     # 1 - quoted
     # 2 - escaped
     int state;
-    result := StringArray();
+    CSVStringArray result;
     col := AppendBuffer(1024);
+    if (existing) {
+        # There is an existing row with at least one column.
+        @assert(existing.incomplete);
+        result = existing;
+        col.extend(result.pop());
+        state = 1;
+    } else {
+        result = existing;
+    }
 
     for (int i; i < line.size; ++i) {
         ch := line[i];
@@ -118,10 +138,24 @@ StringArray parseLine(String line) {
     if (state == 2)
         state = 0;
 
-    if (state == 0)
-        result.append(String(col, true));
-    else
-        throw InvalidArgumentError('Badly formed row.');
+    # If we ended up with an incomplete column, mark the result incomplete and
+    # append a newline to the last column.
+    if (state == 1) {
+        result.incomplete = true;
+        col.append(b'\n');
+    } else {
+        result.incomplete = false;
+    }
 
+    result.append(String(col, true));
+}
+
+## Parse a CSVish line into an array of strings.  Throws InvalidArgumentError
+## if the line is not a complete row.
+CSVStringArray parseLine(String line) {
+    result := CSVStringArray();
+    parseLine(result, line);
+    if (result.incomplete)
+        throw InvalidArgumentError('Badly formed row.');
     return result;
 }
