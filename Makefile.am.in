@@ -34,8 +34,8 @@ libCrackNativeRuntime_la_LDFLAGS = -version-info 6:0:1 $(AM_LDFLAGS)
 rtlibdir = $(libdir)/crack-$(VERSION)/crack
 rtlib_LTLIBRARIES = runtime.la compiler.la
 
-runtime_la_LDFLAGS = -avoid-version -module @LIBICONV@ $(AM_LDFLAGS)
-runtime_la_CPPFLAGS = @INCICONV@
+runtime_la_LDFLAGS = -avoid-version -module @LIBICONV@ $(AM_LDFLAGS)  -ltirpc
+runtime_la_CPPFLAGS = @INCICONV@ -I/usr/include/tirpc
 runtime_la_SOURCES = %libRuntimeSources%
 runtime_la_LIBADD = libCrackDebugTools.la
 
