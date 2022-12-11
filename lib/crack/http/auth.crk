@@ -244,8 +244,10 @@ class LoginHandler : MethodDispatcher {
         String userId, passwd;
         if (!(userId = parms.getSingle(req, 'user', true)) ||
             !(passwd = parms.getSingle(req, 'password', true))
-            )
+            ) {
+            onGet(req);
             return;
+        }
 
         # Verify the user id and password.
         user := authInfo.getUser(userId);
