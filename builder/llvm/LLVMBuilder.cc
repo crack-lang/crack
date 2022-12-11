@@ -2344,9 +2344,9 @@ void LLVMBuilder::cacheModule(Context &context, ModuleDef *module,
     string path = getCacheFilePath(options.get(),
                                    *context.construct,
                                    module->getNamespaceName(),
-                                   "bc"
+                                   "bc" + uniquifier
                                    );
-    tool_output_file out((path + uniquifier).c_str(), errors, 0);
+    tool_output_file out(path.c_str(), errors, 0);
     if (errors.size())
         throw spug::Exception(errors);
 
@@ -2373,12 +2373,12 @@ void LLVMBuilder::finishCachedModule(Context &context, ModuleDef *module,
                                      const string &uniquifier,
                                      bool retain
                                      ) {
-    string finalPath = getCacheFilePath(options.get(),
-                                        *context.construct,
-                                        module->getNamespaceName(),
-                                        "bc"
-                                        );
-    string tempPath = finalPath + uniquifier;
+    string tempPath = getCacheFilePath(options.get(),
+                                       *context.construct,
+                                       module->getNamespaceName(),
+                                       "bc" + uniquifier
+                                       );
+    string finalPath = tempPath.substr(0, tempPath.size() - uniquifier.size());
     if (retain)
         move(tempPath, finalPath);
     else

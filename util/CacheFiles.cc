@@ -133,7 +133,7 @@ string getCacheFilePath(BuilderOptions* options,
     // Replace overly large filenames with an md5 hash of the base name.
     int filenameSize = canonicalName.size() + destExt.size() + 1;
     if (filenameSize >= NAME_MAX ||
-        filenameSize + i->second.size() + 1 > PATH_MAX) {
+        filenameSize + i->second.size() + 1 > NAME_MAX) {
         Hasher hasher;
         hasher.add(canonicalName.data(), canonicalName.size());
         return SPUG_FSTR(i->second << "/" << hasher.getDigest().asHex() <<

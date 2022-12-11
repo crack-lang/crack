@@ -1,0 +1,9 @@
+%%TEST%%
+Long module name caching
+%%ARGS%%
+%%FILE%%
+import test.longnames;
+print('ok');
+%%EXPECT%%
+ok
+%%STDIN%%
