@@ -23,8 +23,9 @@ AC_DEFUN([AM_PATH_FLUIDSYNTH], [dnl
             #include <fluidsynth.h>
 
             int main() {
-                exit((FLUIDSYNTH_VERSION_MAJOR == 1 &&
-                      FLUIDSYNTH_VERSION_MINOR >= 1) ? 0 : 1);
+                exit(((FLUIDSYNTH_VERSION_MAJOR == 1 &&
+                       FLUIDSYNTH_VERSION_MINOR >= 1) ||
+                      (FLUIDSYNTH_VERSION_MAJOR > 1)) ? 0 : 1);
             }
         ], [
             got_fluidsynth=yes
