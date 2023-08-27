@@ -8,6 +8,13 @@
         return pthread_detach(*thread);
     }
 
+    int crk_pthread_mutex_destroy(pthread_mutex_t *mutex) {
+        return pthread_mutex_destroy(mutex);
+    }
+
+    int crk_pthread_mutex_unlock(pthread_mutex_t *mutex) {
+        return pthread_mutex_unlock(mutex);
+    }
 
 #include "ext/Module.h"
 #include "ext/Type.h"
@@ -109,7 +116,7 @@ void crack_ext__pthread_cinit(crack::ext::Module *mod) {
        f->addArg(type_pthread_mutexattr_t, "attrs");
 
     f = mod->addFunc(type_int, "pthread_mutex_destroy",
-                     (void *)pthread_mutex_destroy
+                     (void *)crk_pthread_mutex_destroy
                      );
        f->addArg(type_pthread_mutex_t, "mutext");
 
@@ -124,7 +131,7 @@ void crack_ext__pthread_cinit(crack::ext::Module *mod) {
        f->addArg(type_pthread_mutex_t, "mutex");
 
     f = mod->addFunc(type_int, "pthread_mutex_unlock",
-                     (void *)pthread_mutex_unlock
+                     (void *)crk_pthread_mutex_unlock
                      );
        f->addArg(type_pthread_mutex_t, "mutex");
 

@@ -23,6 +23,14 @@
         int crk_pthread_detach(pthread_t *thread, void **retval) {
             return pthread_detach(*thread);
         }
+
+        int crk_pthread_mutex_destroy(pthread_mutex_t *mutex) {
+            return pthread_mutex_destroy(mutex);
+        }
+
+        int crk_pthread_mutex_unlock(pthread_mutex_t *mutex) {
+            return pthread_mutex_unlock(mutex);
+        }
     ';
 
     class pthread_t;
@@ -43,9 +51,11 @@
     int pthread_mutex_init(pthread_mutex_t mutex,
                            pthread_mutexattr_t attrs
                            );
+    @cname crk_pthread_mutex_destroy
     int pthread_mutex_destroy(pthread_mutex_t mutext);
     int pthread_mutex_lock(pthread_mutex_t mutex);
     int pthread_mutex_trylock(pthread_mutex_t mutex);
+    @cname crk_pthread_mutex_unlock
     int pthread_mutex_unlock(pthread_mutex_t mutex);
 
     class pthread_cond_t;
