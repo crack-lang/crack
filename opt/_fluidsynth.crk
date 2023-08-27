@@ -48,4 +48,13 @@
                            int reset_presets
                            );
 
+    int fluid_settings_getstr_default(fluid_settings_t settings,
+                                      byteptr name,
+                                      array[byteptr] result
+                                      );
+    int fluid_settings_setstr(fluid_settings_t settings,
+                              byteptr name,
+                              byteptr value
+                              );
+
 }

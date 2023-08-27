@@ -1,7 +1,6 @@
 #include <fluidsynth.h>
 typedef int Undef;
 
-
 #include "ext/Module.h"
 #include "ext/Type.h"
 #include "ext/Func.h"
@@ -45,6 +44,15 @@ void crack_ext__fluidsynth_cinit(crack::ext::Module *mod) {
     crack::ext::Type *type_fluid_audio_driver_t = mod->addType("fluid_audio_driver_t", sizeof(Undef));
     type_fluid_audio_driver_t->finish();
 
+
+    crack::ext::Type *array = mod->getType("array");
+
+    crack::ext::Type *array_pbyteptr_q;
+    {
+        std::vector<crack::ext::Type *> params(1);
+        params[0] = type_byteptr;
+        array_pbyteptr_q = array->getSpecialization(params);
+    }
     f = mod->addFunc(type_fluid_settings_t, "new_fluid_settings",
                      (void *)new_fluid_settings
                      );
@@ -122,5 +130,19 @@ void crack_ext__fluidsynth_cinit(crack::ext::Module *mod) {
        f->addArg(type_fluid_synth_t, "synth");
        f->addArg(type_byteptr, "filename");
        f->addArg(type_int, "reset_presets");
+
+    f = mod->addFunc(type_int, "fluid_settings_getstr_default",
+                     (void *)fluid_settings_getstr_default
+                     );
+       f->addArg(type_fluid_settings_t, "settings");
+       f->addArg(type_byteptr, "name");
+       f->addArg(array_pbyteptr_q, "result");
+
+    f = mod->addFunc(type_int, "fluid_settings_setstr",
+                     (void *)fluid_settings_setstr
+                     );
+       f->addArg(type_fluid_settings_t, "settings");
+       f->addArg(type_byteptr, "name");
+       f->addArg(type_byteptr, "value");
 
 }
