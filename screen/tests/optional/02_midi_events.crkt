@@ -4,25 +4,122 @@ midi events
 %%FILE%%
 import crack.cont.array Array;
 import crack.io cerr;
-import crack.midi.event merge, NoteOn, Track;
+import crack.midi.event merge, ControlChange, EndTrack, Event, NoteOff, NoteOn,
+    PitchWheel, ProgramChange, SysEx, Track;
 
-Track t = {'1'}, u = {'2'};
+@import crack.ann assert;
 
-t.append(NoteOn(1, 0, 0, 0));
-t.append(NoteOn(10, 0, 0, 0));
-t.append(NoteOn(20, 0, 0, 0));
+# Track named "foo".  This has the advantage of a default constructor, so we
+# can create instances using the literal array notation.
+class Foo : Track {
+    oper init() : Track('foo') {}
+}
 
-u.append(NoteOn(5, 0, 0, 0));
-u.append(NoteOn(10, 0, 0, 0));
-u.append(NoteOn(15, 0, 0, 0));
+# Event comparison tests.
+if (true) {
+    @assert(NoteOn(0, 0, 0, 0) == NoteOn(0, 0, 0, 0));
+    @assert(NoteOn(1, 0, 0, 0) > NoteOn(0, 0, 0, 0));
+    @assert(NoteOn(0, 1, 0, 0) > NoteOn(0, 0, 0, 0));
+    @assert(NoteOn(0, 0, 1, 0) > NoteOn(0, 0, 0, 0));
+    @assert(NoteOn(0, 0, 0, 1) > NoteOn(0, 0, 0, 0));
 
-v := merge('result', Array[Track]![t, u]);
-Array[uint] result = [1, 5, 10, 10, 15, 20];
-i := v.iter();
-for (e :in result) {
-    if (i.elem().time != e)
-        cerr `FAILED after merge, expected $e, got $(i.elem().time)\n`;
-    i.next();
+    @assert(NoteOn(0, 0, 0, 0) != NoteOff(0, 0, 0, 0));
+
+    @assert(NoteOff(0, 0, 0, 0) == NoteOff(0, 0, 0, 0));
+    @assert(NoteOff(1, 0, 0, 0) > NoteOff(0, 0, 0, 0));
+    @assert(NoteOff(0, 1, 0, 0) > NoteOff(0, 0, 0, 0));
+    @assert(NoteOff(0, 0, 1, 0) > NoteOff(0, 0, 0, 0));
+    @assert(NoteOff(0, 0, 0, 1) > NoteOff(0, 0, 0, 0));
+
+    @assert(ProgramChange(0, 0, 0) == ProgramChange(0, 0, 0));
+    @assert(ProgramChange(1, 0, 0) > ProgramChange(0, 0, 0));
+    @assert(ProgramChange(0, 1, 0) > ProgramChange(0, 0, 0));
+    @assert(ProgramChange(0, 0, 1) > ProgramChange(0, 0, 0));
+
+    @assert(PitchWheel(0, 0, 0) == PitchWheel(0, 0, 0));
+    @assert(PitchWheel(1, 0, 0) > PitchWheel(0, 0, 0));
+    @assert(PitchWheel(0, 1, 0) > PitchWheel(0, 0, 0));
+    @assert(PitchWheel(0, 0, 1) > PitchWheel(0, 0, 0));
+
+    @assert(ControlChange(0, 0, 0, 0) == ControlChange(0, 0, 0, 0));
+    @assert(ControlChange(1, 0, 0, 0) > ControlChange(0, 0, 0, 0));
+    @assert(ControlChange(0, 1, 0, 0) > ControlChange(0, 0, 0, 0));
+    @assert(ControlChange(0, 0, 1, 0) > ControlChange(0, 0, 0, 0));
+    @assert(ControlChange(0, 0, 0, 1) > ControlChange(0, 0, 0, 0));
+
+    @assert(SysEx(0, 'alpha') == SysEx(0, 'alpha'));
+    @assert(SysEx(1, 'alpha') > SysEx(0, 'alpha'));
+    @assert(SysEx(0, 'bravo') > SysEx(0, 'alpha'));
+
+    @assert(EndTrack(0) == EndTrack(0));
+    @assert(EndTrack(1) > EndTrack(0));
+}
+
+# Empty tracks are falsey.
+if (true) {
+    @assert(!Foo());
+}
+
+if (true) {
+    t1 := Foo();
+    t2 := Foo();
+    t1.append(NoteOn(0, 0, 0, 0));
+    t2.append(NoteOn(0, 0, 0, 0));
+    @assert(t1 == t2);
+}
+
+if (true) {
+    t1 := Foo();
+    t2 := Foo();
+    t1.append(NoteOn(0, 0, 0, 0));
+    @assert(t1 != t2);
+}
+
+if (true) {
+    t1 := Foo();
+    t2 := Track('bar');
+    t1.append(NoteOn(0, 0, 0, 0));
+    t2.append(NoteOn(0, 0, 0, 0));
+    @assert(t1 != t2);
+}
+
+# Verify that EndTrack events are always added to the end of the track.
+if (true) {
+    track := Foo();
+    track.add(et := EndTrack(100));
+    track.add(no := NoteOn(100, 0, 0, 127));
+    @assert(track == Foo![no, et]);
+}
+
+# Verify that this also works for append.
+if (true) {
+    track := Foo();
+    track.append(et := EndTrack(100));
+    track.append(no := NoteOn(100, 0, 0, 127));
+    # We have to do the full initialization of Track with an event list,
+    # the Foo sequence constant would end up calling append.
+    @assert(track == Track('foo', Array[Event]![no, et]));
+}
+
+if (true) {
+    Track t = {'1'}, u = {'2'};
+
+    t.append(NoteOn(1, 0, 0, 0));
+    t.append(NoteOn(10, 0, 0, 0));
+    t.append(NoteOn(20, 0, 0, 0));
+
+    u.append(NoteOn(5, 0, 0, 0));
+    u.append(NoteOn(10, 0, 0, 0));
+    u.append(NoteOn(15, 0, 0, 0));
+
+    v := merge('result', Array[Track]![t, u]);
+    Array[uint] result = [1, 5, 10, 10, 15, 20];
+    i := v.iter();
+    for (e :in result) {
+        if (i.elem().time != e)
+            cerr `FAILED after merge, expected $e, got $(i.elem().time)\n`;
+        i.next();
+    }
 }
 
 cerr `ok\n`;

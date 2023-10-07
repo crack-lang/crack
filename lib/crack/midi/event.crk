@@ -17,7 +17,8 @@
 
 import crack.ascii hex, radix;
 import crack.cont.array Array;
-import crack.lang AssertionError, InvalidArgumentError, InvalidStateError, ManagedBuffer;
+import crack.lang cmp, AssertionError, InvalidArgumentError,
+    InvalidStateError, ManagedBuffer;
 import crack.io cerr, StandardFormatter, FStr, Formatter, StringFormatter,
     Reader, Writer;
 
@@ -122,6 +123,10 @@ class MidiWriter {
 
     ## Make a copy of the event object.
     @abstract Event clone();
+
+    @final int cmp(Event other) {
+        return cmp(time, other.time);
+    }
 }
 
 ## Abstract base class for all events that apply to a particular channel.
@@ -132,6 +137,12 @@ class MidiWriter {
     byte channel;
 
     oper init(uint time, byte channel) : Event(time), channel = channel {}
+
+    @final int cmp(ChannelEvent other) {
+        rc := cmp(channel, other.channel);
+        if (rc) return rc;
+        return Event.cmp(other);
+    }
 }
 
 ##  Base class for midi "note on" and "note off" events, both of which have
@@ -147,6 +158,14 @@ class MidiWriter {
         ChannelEvent(time, channel),
         note = note,
         velocity = velocity {
+    }
+
+    @final int cmp(NoteEvent other) {
+        rc := cmp(note, other.note);
+        if (rc) return rc;
+        rc = cmp(velocity, other.velocity);
+        if (rc) return rc;
+        return ChannelEvent.cmp(other);
     }
 }
 
@@ -178,6 +197,13 @@ class NoteOn : NoteEvent {
 
     void formatTo(Formatter f) {
         f `ch: $channel, note $note on, velocity $velocity`;
+    }
+
+    int cmp(Object other) {
+        if (o := NoteOn.cast(other, null))
+            return NoteEvent.cmp(o);
+        else
+            return Object.cmp(other);
     }
 }
 
@@ -222,6 +248,13 @@ class NoteOff : NoteEvent {
     void formatTo(Formatter f) {
         f `ch: $channel, note $note off, velocity $velocity`;
     }
+
+    int cmp(Object other) {
+        if (o := NoteOff.cast(other, null))
+            return NoteEvent.cmp(o);
+        else
+            return Object.cmp(other);
+    }
 }
 
 ##  Midi "program change" event.
@@ -256,6 +289,19 @@ class ProgramChange : ChannelEvent {
 
     void formatTo(Formatter f) {
         f `ch: $channel, change to program $program`;
+    }
+
+    @final int cmp(ProgramChange other) {
+        rc := cmp(program, other.program);
+        if (rc) return rc;
+        return ChannelEvent.cmp(other);
+    }
+
+    int cmp(Object other) {
+        if (o := ProgramChange.cast(other, null))
+            return cmp(o);
+        else
+            return Object.cmp(other);
     }
 }
 
@@ -306,6 +352,19 @@ class PitchWheel : ChannelEvent {
     void formatTo(Formatter f) {
         f `ch: $channel, pitch wheel to $value`;
     }
+
+    @final int cmp(PitchWheel other) {
+        rc := cmp(value, other.value);
+        if (rc) return rc;
+        return ChannelEvent.cmp(other);
+    }
+
+    int cmp(Object other) {
+        if (o := PitchWheel.cast(other, null))
+            return cmp(o);
+        else
+            return Object.cmp(other);
+    }
 }
 
 ##  Midi "control change" event.
@@ -348,6 +407,21 @@ class ControlChange : ChannelEvent {
     void formatTo(Formatter f) {
         f `ch: $channel, control $controller changed to $value`;
     }
+
+    @final int cmp(ControlChange other) {
+        rc := cmp(controller, other.controller);
+        if (rc) return rc;
+        rc = cmp(value, other.value);
+        if (rc) return rc;
+        return ChannelEvent.cmp(other);
+    }
+
+    int cmp(Object other) {
+        if (o := ControlChange.cast(other, null))
+            return cmp(o);
+        else
+            return Object.cmp(other);
+    }
 }
 
 ##  Midi "system exclusive" event.  Just a big bag of data passed into
@@ -386,6 +460,19 @@ class SysEx : Event {
         for (uintz i = 0; i < data.size; ++i)
             f `$(radix(data[i], 16))`;
     }
+
+    @final int cmp(SysEx other) {
+        rc := cmp(data, other.data);
+        if (rc) return rc;
+        return Event.cmp(other);
+    }
+
+    int cmp(Object other) {
+        if (o := SysEx.cast(other, null))
+            return cmp(o);
+        else
+            return Object.cmp(other);
+    }
 }
 
 ## Pseudo-event used as a marker for the end of the track.
@@ -412,6 +499,13 @@ class EndTrack : Event {
 
     void formatTo(Formatter f) {
         f `EndEvent`;
+    }
+
+    int cmp(Object other) {
+        if (o := EndTrack.cast(other, null))
+            return Event.cmp(o);
+        else
+            return Object.cmp(other);
     }
 }
 
@@ -473,7 +567,7 @@ class Track {
                            uint target) {
                 if (target <= events[bottom].time)
                     return bottom;
-                else if (bottom - top == 1)
+                else if (top - bottom == 1)
                     return top;
 
                 mid := bottom + (top - bottom) / 2;
@@ -516,13 +610,36 @@ class Track {
 
     oper init(String name) : name = name, __events() {}
 
+    int cmp(Track other) {
+        rc := name.cmp(other.name);
+        if (rc) return rc;
+        return __events.cmp(other.__events);
+    }
+
+    int cmp(Object other) {
+        if (o := Track.cast(other, null))
+            return cmp(o);
+        else
+            return Object.cmp(other);
+    }
+
+    bool isTrue() {
+        return __events;
+    }
+
     ## Add the event to the track at the correct location (with respect to the
     ## time of the other events).
     void add(Event event) {
         if (!__events) {
             __events.append(event);
-        } else if (event.time >= __events[-1].time) {
-            __events.append(event);
+        } else if (event.time >= (last := __events[-1]).time) {
+            # Special case if the last event is an end track event and the
+            # time is the same as the new event -- we don't want to go adding
+            # events _after_ the EndTrack.
+            if (last.isa(EndTrack) && last.time == event.time)
+                __events.insert(-1, event);
+            else
+                __events.append(event);
         } else {
             for (evtCur :on __events) {
                 evt := evtCur.elem();
@@ -540,12 +657,20 @@ class Track {
     ## be later than or equal to the time of the last event in the track,
     ## otherwise this throws InvalidArgumentError.
     void append(Event evt) {
-        if (__events && evt.time < __events[-1].time)
-            throw InvalidArgumentError(FStr()
-                                       I`Appending event $evt which is earlier \
-                                         than the last event of the track \
-                                         ($(__events[-1].time)).`
-                                       );
+        if (__events) {
+            last := __events[-1];
+            if (evt.time < last.time)
+                throw InvalidArgumentError(
+                    FStr() I`Appending event $evt which is earlier than the \
+                             last event of the track ($(__events[-1].time)).`
+                );
+
+            # Once again, special case if the last track is an end event.
+            if (last.isa(EndTrack) && last.time == evt.time) {
+                __events.insert(-1, evt);
+                return;
+            }
+        }
         __events.append(evt);
     }
 
