@@ -110,16 +110,25 @@ class Coord {
     @abstract void showCursor(bool show);
     @abstract void saveScreen();
     @abstract void restoreScreen();
-}
 
+    ## Returns the input reader which is a pollable source of terminal events.
+    @abstract FDReader getInput();
+}
 
 class ANSITermUI : SimpleTermUI {
     FDReader __src;
     FDWriter __dst;
+    String __device;
 
     oper init(FDWriter dst, FDReader src) :
         __src = src,
         __dst = dst {
+    }
+
+    oper init(FDWriter dst, FDReader src, String device) :
+        __src = src,
+        __dst = dst,
+        __device = device {
     }
 
     void clear(uint backgroundColor) {
@@ -161,11 +170,21 @@ class ANSITermUI : SimpleTermUI {
         __dst.write(text);
     }
 
+    StringArray __getSTTYCmd() {
+        result := StringArray!['/bin/stty'];
+        if (__device) {
+            result.append('-F');
+            result.append(__device);
+        }
+        return result;
+    }
+
     Coord getSize() {
         # TODO: we need to do this by repositioning far off-screen and then
         # getting the current cursor pos.
-        p := Process(StringArray!['/bin/stty', 'size'],
-                     CRK_PIPE_STDOUT | CRK_PIPE_STDERR);
+        cmd := __getSTTYCmd();
+        cmd.append('size');
+        p := Process(cmd, CRK_PIPE_STDOUT | CRK_PIPE_STDERR);
         data := p.getStdOut();
         fields := wsplit(data);
         return Coord(parseInt(fields[1]), parseInt(fields[0]));
@@ -174,7 +193,7 @@ class ANSITermUI : SimpleTermUI {
     Event getEvent() { return null; }
 
     void setRawMode(bool rawMode) {
-        StringArray cmd = ['/bin/stty'];
+        StringArray cmd = __getSTTYCmd();
         if (rawMode) {
             cmd.append('raw');
             cmd.append('-echo');
@@ -204,6 +223,7 @@ class ANSITermUI : SimpleTermUI {
         __dst.write('\033[?1047l\033[?1048l\0338');
     }
 
+    FDReader getInput() { return __src }
 }
 
 ## Terminal interface that writes information instead of escape sequences so
@@ -262,6 +282,9 @@ class TestTermUI : SimpleTermUI {
     void restoreScreen() {
         __out `restore screen\n`;
     }
+
+    # TODO: Implement using a pipe.
+    FDReader getInput() { return null }
 }
 
 # The number of unchanged characters in the buffer before we decide that a
@@ -291,7 +314,7 @@ Array[uint16] _makeArray(Coord size) {
 ANSITermUI getTermUI(String ttyName) {
     reader := makePath(ttyName).reader();
     writer := makePath(ttyName).writer();
-    return ANSITermUI(FDWriter.cast(writer), FDReader.cast(reader));
+    return ANSITermUI(FDWriter.cast(writer), FDReader.cast(reader), ttyName);
 }
 
 class TermApp {
@@ -358,8 +381,12 @@ class TermApp {
         oper init(TermApp app) : app = app {}
 
         int oper call(Poller poller, PollEvent event) {
-            if (event.revents & POLLIN)
-                app.onEvent(KeyEvent(cin.read(16)));
+            if (event.revents & POLLIN) {
+                data := app.__term.getInput().read(16);
+                if (!data)
+                    throw Exception('End of input stream.');
+                app.onEvent(KeyEvent(data));
+            }
             return POLLIN;
         }
     }
@@ -370,7 +397,7 @@ class TermApp {
     ## Run the event loop against a provided Poller.
     ##
     void run(Poller poller) {
-        poller.add(cin, EventHandler(this));
+        poller.add(__term.getInput(), EventHandler(this));
         try {
             while (!__terminate) {
                 for (toplevel :in __toplevels)
@@ -391,11 +418,11 @@ class TermApp {
 
             __toplevels = null;
         } catch (Exception ex) {
-            poller.remove(cin);
+            poller.remove(__term.getInput());
             throw ex;
         }
 
-        poller.remove(cin);
+        poller.remove(__term.getInput());
     }
 
     ## Run the event loop.
