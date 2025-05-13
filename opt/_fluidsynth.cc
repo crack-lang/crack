@@ -53,6 +53,20 @@ void crack_ext__fluidsynth_cinit(crack::ext::Module *mod) {
         params[0] = type_byteptr;
         array_pbyteptr_q = array->getSpecialization(params);
     }
+
+    crack::ext::Type *array_pfloat64_q;
+    {
+        std::vector<crack::ext::Type *> params(1);
+        params[0] = type_float64;
+        array_pfloat64_q = array->getSpecialization(params);
+    }
+
+    crack::ext::Type *array_pint_q;
+    {
+        std::vector<crack::ext::Type *> params(1);
+        params[0] = type_int;
+        array_pint_q = array->getSpecialization(params);
+    }
     f = mod->addFunc(type_fluid_settings_t, "new_fluid_settings",
                      (void *)new_fluid_settings
                      );
@@ -144,5 +158,33 @@ void crack_ext__fluidsynth_cinit(crack::ext::Module *mod) {
        f->addArg(type_fluid_settings_t, "settings");
        f->addArg(type_byteptr, "name");
        f->addArg(type_byteptr, "value");
+
+    f = mod->addFunc(type_int, "fluid_settings_getnum_default",
+                     (void *)fluid_settings_getnum_default
+                     );
+       f->addArg(type_fluid_settings_t, "settings");
+       f->addArg(type_byteptr, "name");
+       f->addArg(array_pfloat64_q, "result");
+
+    f = mod->addFunc(type_int, "fluid_settings_setnum",
+                     (void *)fluid_settings_setnum
+                     );
+       f->addArg(type_fluid_settings_t, "settings");
+       f->addArg(type_byteptr, "name");
+       f->addArg(type_float64, "value");
+
+    f = mod->addFunc(type_int, "fluid_settings_getint_default",
+                     (void *)fluid_settings_getint_default
+                     );
+       f->addArg(type_fluid_settings_t, "settings");
+       f->addArg(type_byteptr, "name");
+       f->addArg(array_pint_q, "result");
+
+    f = mod->addFunc(type_int, "fluid_settings_setint",
+                     (void *)fluid_settings_setint
+                     );
+       f->addArg(type_fluid_settings_t, "settings");
+       f->addArg(type_byteptr, "name");
+       f->addArg(type_int, "value");
 
 }

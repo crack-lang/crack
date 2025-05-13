@@ -13,9 +13,13 @@ import crack.ext._fluidsynth fluid_synth_t, fluid_settings_t,
     fluid_audio_driver_t, delete_fluid_audio_driver, delete_fluid_settings,
     delete_fluid_synth, new_fluid_settings, new_fluid_synth,
     fluid_settings_getstr_default, fluid_settings_setstr,
+    fluid_settings_getint_default, fluid_settings_setint,
+    fluid_settings_getnum_default, fluid_settings_setnum,
     fluid_synth_all_notes_off, fluid_synth_noteon, fluid_synth_noteoff,
     fluid_synth_pitch_bend, fluid_synth_program_change,
     new_fluid_audio_driver, fluid_synth_sfload;
+
+@import crack.ann define;
 
 class FluidSettings {
     fluid_settings_t _rep;
@@ -27,6 +31,30 @@ class FluidSettings {
         delete_fluid_settings(_rep);
     }
 
+    @define settingsFuncs(type, qualifier, sfx) {
+
+        ## Returns the default value for a setting.
+        type getDefault$$qualifier(String name) {
+            resultHolder := array[type](1);
+            nameCstr := name.toCString();
+            fluid_settings_get$$sfx$$_default(_rep, nameCstr.buffer, resultHolder);
+            result := resultHolder[0];
+            free(resultHolder);
+            return result;
+        }
+
+        ## Set the given settings parameter to the given value.
+        void set(String name, type value) {
+            nameCstr := name.toCString();
+            fluid_settings_set$$sfx(_rep, nameCstr.buffer, value);
+        }
+    }
+
+    @settingsFuncs(int, Int, int)
+    @settingsFuncs(float64, Float, num)
+
+    # Strings are special, we have to do value conversion.
+
     ## Returns the default value for a setting.
     String getDefault(String name) {
         resultHolder := array[byteptr](1);
@@ -36,6 +64,8 @@ class FluidSettings {
         free(resultHolder);
         return result;
     }
+
+    alias getDefaultStr = getDefault;
 
     ## Set the given settings parameter to the given value.
     void set(String name, String value) {
