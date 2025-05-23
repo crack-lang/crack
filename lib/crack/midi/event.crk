@@ -17,7 +17,7 @@
 
 import crack.ascii hex, radix;
 import crack.cont.array Array;
-import crack.lang cmp, AssertionError, InvalidArgumentError,
+import crack.lang cmp, AssertionError, Buffer, InvalidArgumentError,
     InvalidStateError, ManagedBuffer;
 import crack.io cerr, StandardFormatter, FStr, Formatter, StringFormatter,
     Reader, Writer;
@@ -54,6 +54,10 @@ class MidiWriter {
         if (buffer.size == 1024)
             flush();
         buffer.buffer[buffer.size++] = b;
+    }
+
+    @final void write(Buffer buf) {
+        out.write(buf);
     }
 
     ## Writes the status byte but only if it is not already the current status.
@@ -475,13 +479,59 @@ class SysEx : Event {
     }
 }
 
+# Midi meta event.
+class MetaEvent : Event {
+    byte action;
+    String contents;  # May be null for an empty string.
+
+    oper init(uint time, byte action, String contents) :
+        Event(time),
+        action = action,
+        contents = contents {
+    }
+
+    StatAndString toMidiString(byte status) {
+        return null;
+    }
+
+    void writeTo(MidiWriter out) {
+        out.write(0xFF);
+        out.write(action);
+        if (contents) {
+            out.write(byte(contents.count()));
+            out.write(contents);
+        } else {
+            out.write(0);
+        }
+    }
+
+    Event clone() {
+        return MetaEvent(time, action, contents);
+    }
+
+    void formatTo(Formatter f) {
+        f `MetaEvent $action $(contents ? contents.getRepr() : '')`;
+    }
+
+    int cmp(Object other) {
+        if (o := MetaEvent.cast(other, null)) {
+            rc := cmp(action, o.action);
+            if (rc) return rc;
+            rc = cmp(contents, o.contents);
+            return rc;
+        } else {
+            return Object.cmp(other);
+        }
+    }
+}
+
 ## Pseudo-event used as a marker for the end of the track.
 ## When a track is deserialized, the EndTrack is automatically added from the
 ## end track marker in the stream.  When a track is serialized, if it doesn't
 ## have an EndTrack event one will be written at the time of the last existing
 ## event on the track.
-class EndTrack : Event {
-    oper init(uint time) : Event(time) {}
+class EndTrack : MetaEvent {
+    oper init(uint time) : MetaEvent(time, 0x2F, null) {}
 
     typeof(EndTrack(0).toMidiString(0)) toMidiString(byte status) {
         return null;
@@ -867,8 +917,17 @@ class MidiReader {
                 @assert(readByte() == 0);
                 return EndTrack(0);
             } else {
-                return null;
+                # Other meta event.
+                import crack.lang AppendBuffer;
+                len := readVarLen();
+                buf := AppendBuffer(len);
+                for (int i; i < len; ++i)
+                    buf.append(readByte());
+                return MetaEvent(0, action, String(buf, true));
             }
+        } else if (status == 0xFE || status == 0xFC || status == 0xFB) {
+            # Active sensing, shouldn't be writing these.
+            return SysEx(0, '');
         } else {
             return readUserEvent();
         }
