@@ -19,8 +19,20 @@ import crack.lang cmp, free, makeHashVal, AssertionError, Formatter, IndexError,
 
 void _bind(Object obj) { obj.oper bind(); }
 void _release(Object obj) { obj.oper release(); }
-bool _isObject(Object obj) { return true; }
 bool _isNull(Object obj) { return (obj is null); }
+
+## This was originally _isObject(Object), which seemed to make more sense, but
+## for interfaces it results in a (more costly) implicit conversion to
+## Object at runtime and in the original implementation caused a bug because
+## it could have been invoked against an invalid pointer.
+##
+## Accepting VTableBase isn't entirely correct, but it's no worse than what we
+## had.  Attempting to pass a non-Object VTableBase caused a compile-time
+## error because _isObject() wasn't defined for it.  This implementation also
+## causes a compile-time error at the "oper del()" call (slightly less
+## elegant) but it has the additional advantage of working correctly for a
+## VTableBase that provides "oper del()".
+bool _isObject(VTableBase obj) { return true; }
 
 @define _nobind 1
     void _bind($1 i) { }
@@ -261,7 +273,7 @@ class Array[Elem] {
 
     oper del() {
         if (__rep !is null) {
-            if (__cap && _isObject(__rep[0])) {
+            if (__size && _isObject(__rep[0])) {
                 for (uint i = 0; i < __size; ++i) {
                     _release(__rep[i]);
                 }

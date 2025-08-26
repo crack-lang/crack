@@ -1,0 +1,24 @@
+%%TEST%%
+array of interfaces cleanup
+%%ARGS%%
+%%FILE%%
+# This checks for a specific bug, Array's hokey almost-static check for
+# whether to do cleanups was failing in the case of interfaces because they
+# can potentially attempt "oper to Object()" calls on undefined pointer values.
+
+import crack.cont.array Array;
+import crack.io cout;
+@import crack.ann impl, interface;
+
+@interface A {}
+class B @impl A {}
+
+if (true) {
+    arr := Array[A]![B()];
+    arr.delete(0);
+}
+cout `ok\n`;
+
+%%EXPECT%%
+ok
+%%STDIN%%
