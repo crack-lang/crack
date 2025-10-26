@@ -13,25 +13,25 @@ AC_DEFUN([AM_PATH_PTHREAD], [dnl
     PTHREAD_LDFLAGS=-pthread
     ac_save_LIBS="$LIBS"
     LIBS="$LIBS $PTHREAD_LIBS"
-    AC_TRY_RUN([
+    AC_RUN_IFELSE([AC_LANG_SOURCE([[
         #include <pthread.h>
 
         int main(int argc, const char **argv) {
             pthread_self();
             return 0;
         }
-    ], [
+    ]])],[
         got_pthread=yes
         AC_MSG_RESULT(yes)
         AC_SUBST(PTHREAD_LIBS)
         AC_SUBST(PTHREAD_CPPFLAGS)
         AC_SUBST(PTHREAD_LDFLAGS)
-    ], [
+    ],[
         AC_MSG_RESULT(no)
         PTHREAD_CPPFLAGS=
         PTHREAD_LDFLAGS=
         AC_SUBST(PTHREAD_CPPFLAGS)
         AC_SUBST(PTHREAD_LDFLAGS)
-    ])
+    ],[])
     LIBS="$ac_save_LIBS"
 ])

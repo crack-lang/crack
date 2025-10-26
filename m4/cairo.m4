@@ -19,21 +19,21 @@ AC_DEFUN([AM_PATH_CAIRO], [dnl
         ac_save_CPPFLAGS="$CPPFLAGS"
         LIBS="$LIBS $CAIRO_LIBS"
         CPPFLAGS="$CPPFLAGS $CAIRO_CPPFLAGS"
-        AC_TRY_RUN([
+        AC_RUN_IFELSE([AC_LANG_SOURCE([[
             #include <cairo/cairo.h>
 
             int main() {
                 cairo_version_string();
                 return CAIRO_VERSION < 11000 ? 1 : 0;
             }
-        ], [
+        ]])],[
             got_cairo=yes
             AC_MSG_RESULT(yes)
-        ], [
+        ],[
             AC_MSG_RESULT(no)
             CAIRO_LIBS=
             CAIRO_CPPFLAGS=
-        ])
+        ],[])
         LIBS="$ac_save_LIBS"
     else
         AC_MSG_WARN(cairo disabled)

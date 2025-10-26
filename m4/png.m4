@@ -11,7 +11,7 @@ AC_DEFUN([AM_PATH_PNG], [dnl
     PNG_LIBS=-lpng
     ac_save_LIBS="$LIBS"
     LIBS="$LIBS $PNG_LIBS"
-    AC_TRY_RUN([
+    AC_RUN_IFELSE([AC_LANG_SOURCE([[
         #include <png.h>
 
         int main(int argc, const char **argv) {
@@ -19,12 +19,12 @@ AC_DEFUN([AM_PATH_PNG], [dnl
             png_sig_cmp(header, 0, 8);
             return 0;
         }
-    ], [
+    ]])],[
         got_png=yes
         AC_MSG_RESULT(yes)
         AC_SUBST(PNG_LIBS)
-    ], [
+    ],[
         AC_MSG_RESULT(no)
-    ])
+    ],[])
     LIBS="$ac_save_LIBS"
 ])

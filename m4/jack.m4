@@ -12,7 +12,7 @@ AC_DEFUN([AM_PATH_JACK], [dnl
     JACK_CPPFLAGS=
     ac_save_LIBS="$LIBS"
     LIBS="$LIBS $JACK_LIBS"
-    AC_TRY_RUN([
+    AC_RUN_IFELSE([AC_LANG_SOURCE([[
         #include <jack/jack.h>
 
         int main(int argc, const char **argv) {
@@ -20,13 +20,13 @@ AC_DEFUN([AM_PATH_JACK], [dnl
             jack_client_name_size();
             return 0;
         }
-    ], [
+    ]])],[
         got_jack=yes
         AC_MSG_RESULT(yes)
         AC_SUBST(JACK_LIBS)
         AC_SUBST(JACK_CPPFLAGS)
-    ], [
+    ],[
         AC_MSG_RESULT(no)
-    ])
+    ],[])
     LIBS="$ac_save_LIBS"
 ])

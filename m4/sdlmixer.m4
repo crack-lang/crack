@@ -14,7 +14,7 @@ AC_DEFUN([AM_PATH_SDL_MIXER], [dnl
     ac_save_CPPFLAGS="$CPPFLAGS"
     LIBS="$LIBS $SDL_MIXER_LIBS"
     CPPFLAGS="$CPPFLAGS $SDL_MIXER_CPPFLAGS"
-    AC_TRY_RUN([
+    AC_RUN_IFELSE([AC_LANG_SOURCE([[
         #include <SDL_mixer.h>
 
         int main() {
@@ -26,14 +26,14 @@ AC_DEFUN([AM_PATH_SDL_MIXER], [dnl
                 return 0;
             }
         }
-    ], [
+    ]])],[
         got_sdl_mixer=yes
         AC_MSG_RESULT(yes)
         AC_SUBST(SDL_MIXER_LIBS)
         AC_SUBST(SDL_MIXER_CPPFLAGS)
-    ], [
+    ],[
         AC_MSG_RESULT(no)
-    ])
+    ],[])
     LIBS="$ac_save_LIBS"
     CPPFLAGS="$ac_save_CPPFLAGS"
 ])

@@ -14,21 +14,21 @@ AC_DEFUN([AM_PATH_OPENSSL], [dnl
         ac_save_CPPFLAGS="$CPPFLAGS"
         LIBS="$LIBS $SSL_LIBS"
         CPPFLAGS="$CPPFLAGS $SSL_CPPFLAGS"
-        AC_TRY_RUN([
+        AC_RUN_IFELSE([AC_LANG_SOURCE([[
             #include <openssl/ssl.h>
 
             int main() {
                 SSL_library_init();
                 return 0;
             }
-        ], [
+        ]])],[
             got_ssl=yes
             AC_MSG_RESULT(yes)
-        ], [
+        ],[
             AC_MSG_RESULT(no)
             SSL_LIBS=
             SSL_CPPFLAGS=
-        ])
+        ],[])
         LIBS="$ac_save_LIBS"
     else
         AC_MSG_WARN(ssl disabled)

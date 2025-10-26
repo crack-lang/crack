@@ -19,20 +19,20 @@ AC_DEFUN([AM_PATH_SDLGFX], [dnl
         ac_save_CPPFLAGS="$CPPFLAGS"
         LIBS="$LIBS $SDL_LIBS $SDLGFX_LIBS"
         CPPFLAGS="$CPPFLAGS $SDLGFX_CPPFLAGS"
-        AC_TRY_RUN([
+        AC_RUN_IFELSE([AC_LANG_SOURCE([[
             #include <SDL/SDL_gfxPrimitives.h>
 
             int main() {
                 exit(SDL_GFXPRIMITIVES_MAJOR < 2);
             }
-        ], [
+        ]])],[
             got_sdlgfx=yes
             AC_MSG_RESULT(yes)
-        ], [
+        ],[
             AC_MSG_RESULT(no)
             SDLGFX_LIBS=
             SDLGFX_CPPFLAGS=
-        ])
+        ],[])
         LIBS="$ac_save_LIBS"
     else
         AC_MSG_WARN(sdlgfx disabled)

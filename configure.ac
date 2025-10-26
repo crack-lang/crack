@@ -7,7 +7,7 @@
 #   file, You can obtain one at http://mozilla.org/MPL/2.0/.
 #
 
-AC_INIT(crack, 1.6)
+AC_INIT([crack],[1.6])
 AM_INIT_AUTOMAKE
 AC_CONFIG_SRCDIR([parser/Token.h])
 AC_CONFIG_MACRO_DIR([m4])
@@ -33,7 +33,6 @@ AC_CONFIG_HEADERS([config.h])
 AC_PROG_RANLIB
 
 # for my shared libs
-AC_PROG_LIBTOOL
 LT_INIT(dlopen)
 
 # external packages that we need

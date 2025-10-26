@@ -20,21 +20,21 @@ AC_DEFUN([AM_PATH_XS], [dnl
         ac_save_CFLAGS="$CFLAGS"
         LIBS="$LIBS $XS_LIBS"
         CFLAGS="$CFLAGS $XS_CFLAGS"
-        AC_TRY_RUN([
+        AC_RUN_IFELSE([AC_LANG_SOURCE([[
             #include <xs/xs.h>
             #include <stdio.h>
 
             int main() {
                 return XS_VERSION < 10200 ? 1 : 0;
             }
-        ], [
+        ]])],[
             got_xs=yes
             AC_MSG_RESULT(yes)
-        ], [
+        ],[
             AC_MSG_RESULT(no)
             XS_LIBS=
             XS_CFLAGS=
-        ])
+        ],[])
         LIBS="$ac_save_LIBS"
     else
         AC_MSG_WARN(xs disabled)

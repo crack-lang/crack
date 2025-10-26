@@ -11,20 +11,20 @@ AC_DEFUN([AM_PATH_READLINE], [dnl
         READLINE_LIBS=-lreadline
         ac_save_LIBS="$LIBS"
         LIBS="$LIBS $READLINE_LIBS"
-        AC_TRY_RUN([
+        AC_RUN_IFELSE([AC_LANG_SOURCE([[
             #include <readline/readline.h>
 
             int main() {
                 readline("");
                 return 0;
             }
-        ], [
+        ]])],[
             got_readline=yes
             AC_MSG_RESULT(yes)
-        ], [
+        ],[
             AC_MSG_RESULT(no)
             READLINE_LIBS=
-        ])
+        ],[])
         LIBS="$ac_save_LIBS"
     else
         AC_MSG_WARN(ssl disabled)

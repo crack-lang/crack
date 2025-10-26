@@ -19,7 +19,7 @@ AC_DEFUN([AM_PATH_FLUIDSYNTH], [dnl
         ac_save_CPPFLAGS="$CPPFLAGS"
         LIBS="$LIBS $SDL_LIBS $FLUIDSYNTH_LIBS"
         CPPFLAGS="$CPPFLAGS $FLUIDSYNTH_CPPFLAGS"
-        AC_TRY_RUN([
+        AC_RUN_IFELSE([AC_LANG_SOURCE([[
             #include <fluidsynth.h>
 
             int main() {
@@ -27,14 +27,14 @@ AC_DEFUN([AM_PATH_FLUIDSYNTH], [dnl
                        FLUIDSYNTH_VERSION_MINOR >= 1) ||
                       (FLUIDSYNTH_VERSION_MAJOR > 1)) ? 0 : 1);
             }
-        ], [
+        ]])],[
             got_fluidsynth=yes
             AC_MSG_RESULT(yes)
-        ], [
+        ],[
             AC_MSG_RESULT(no)
             FLUIDSYNTH_LIBS=
             FLUIDSYNTH_CPPFLAGS=
-        ])
+        ],[])
         LIBS="$ac_save_LIBS"
     else
         AC_MSG_WARN(fluidsynth disabled)
