@@ -50,6 +50,10 @@ const MSG_RX := Regex(r'^(:(?<prefix>\S+) )?(?<command>\S+)( (?!:)'
                       r'(?<params>.+?))?( :(?<trail>.+))?$'
                       );
 
+Time oper +(Time t, TimeDelta d) {
+    return time_add(t, d);
+}
+
 @final class ClientSideHandler @impl UserHandler {
 
     @cvars {
@@ -67,7 +71,13 @@ const MSG_RX := Regex(r'^(:(?<prefix>\S+) )?(?<command>\S+)( (?!:)'
             # :irc.roadsend.com 353 crack| @ #crack-lang :crack| @GRiD
             __handler.onNames(params[2], wsplit(trail));
         } else if (command == 'PING') {
-            conn.write(FStr() `PONG :$trail`);
+            conn.write(FStr() `PONG :$trail\n`);
+        } else if (command == 'KILL' || command == '433') {
+            # Close the connection.  This is likely because of a nick
+            # collision, and likely because somebody broke our connection
+            # without the IRC server's knowledge, so just let the outer code
+            # reconnect and hopefully things will be better next time.
+            conn.close();
         } else if (command == 'JOIN') {
             if (params.count() > 0 &&
                 params[0].size > 0 &&
@@ -139,10 +149,26 @@ const MSG_RX := Regex(r'^(:(?<prefix>\S+) )?(?<command>\S+)( (?!:)'
     }
 
     void __reconnect();
+    void __reconnectAsync();
 
     void start() {
-        @assert(!__conn)
+        @assert(!__conn);
         __reconnect();
+    }
+
+    ## Stop the client.  If 'synchronized' is specified, wait for the close to
+    ## complete (synchronized should not be used from a handler in a poller
+    ## thread).
+    ##
+    ## This is safe to use if the client is not currently connected.
+    void stop(bool synchronized) {
+        if (!__conn)
+            return;
+
+        if (synchronized)
+            __conn.closeSync();
+        else
+            __conn.close();
     }
 
     ## Join the specified channel (channel name should have a "#" prefix).
@@ -175,9 +201,10 @@ const MSG_RX := Regex(r'^(:(?<prefix>\S+) )?(?<command>\S+)( (?!:)'
 
         void onDisconnect() {
             client.__connected = false;
-            client.__reconnect();
+            client.__conn = null;
             if (client.handler)
                 client.handler.onDisconnect();
+            client.__reconnectAsync();
         }
 
         ## Get the channel record, creating it if necessary.
@@ -234,7 +261,49 @@ const MSG_RX := Regex(r'^(:(?<prefix>\S+) )?(?<command>\S+)( (?!:)'
         }
     }
 
+    ## This class can be run as a thread to do a reconnect asynchronously or
+    ## used as an EventCallback so you can use it to schedule a reconnect.
+    ##
+    ## When we want to reconnect from a poll event callback, we have to do the
+    ## reconnect from another thread.
+    class __Reconnecter : Thread @implements EventCallback {
+        Client client;
+
+        oper init(Client client) : Thread(true), client = client {}
+
+        void oper call() {
+            this.start()
+        }
+
+        void run() {
+            client.__comm.getLog().info `Reconnecting to IRC`;
+            client.__reconnect();
+        }
+    }
+
+    ## This gets scheduled for some interval after the "NICK" and "USER"
+    ## commands have been sent to verify that the "001" command has been sent
+    ## (indicating that we are now fully registered with the server)
+    class __FullConnectionChecker @impl EventCallback {
+        @cvars {
+            Client client;
+        }
+
+        void oper call() {
+            if (!client.__connected) {
+                client.__comm.getLog().warn
+                    I`not fully connected within time limit.  Will reconnect.`;
+                client.stop(false);
+                client.__comm.scheduleEvent(
+                    Time.now() + TimeDelta(client.reconnectInterval, 0),
+                    __Reconnecter(client)
+                );
+            }
+        }
+    }
+
     void __reconnect() {
+        @assert(__conn is null);
         log := __comm.getLog();
         log.info `Reconnecting to $__serverName:$__port`;
         addrs := resolve(__serverName);
@@ -265,7 +334,7 @@ const MSG_RX := Regex(r'^(:(?<prefix>\S+) )?(?<command>\S+)( (?!:)'
                 } catch (Exception ex) {
                     # We currently assume
                     log.error I`Error connecting to $__serverName:$__port: \
-                                $(ex.text)\n`
+                                $(ex.text)`;
                 }
             }
             if (__conn) break;
@@ -276,33 +345,23 @@ const MSG_RX := Regex(r'^(:(?<prefix>\S+) )?(?<command>\S+)( (?!:)'
         if (__conn) {
             __conn.write(FStr() I`NICK $__nick
                                   USER $__userName host server $__realName\n`);
+
+            # Make sure we get a timely response to NICK/USER.
+            __comm.scheduleEvent(Time.now() + TimeDelta(reconnectInterval, 0),
+                                 __FullConnectionChecker(this)
+                                 );
         } else {
             log.warn I`Failed to connect to $__serverName:$__port.  Retrying \
                        in $reconnectInterval seconds`;
 
-            # Unfortunately, you can't call "connect" in the event manager
-            # thread.  So we just make this both a thread and an event
-            # callback so it can spawn off the reconnect in a new thread.
-            class MyCallback : Thread @implements EventCallback {
-                Client client;
-
-                oper init(Client client) : Thread(true), client = client {}
-
-                void oper call() {
-                    this.start()
-                }
-
-                void run() {
-                    client.__reconnect();
-                }
-            }
-            Time oper +(Time t, TimeDelta d) {
-                return time_add(t, d);
-            }
             __comm.scheduleEvent(Time.now() + TimeDelta(reconnectInterval, 0),
-                                 MyCallback(this)
+                                 __Reconnecter(this)
                                  );
         }
+    }
+
+    void __reconnectAsync() {
+        __Reconnecter(this).start();
     }
 }
 
