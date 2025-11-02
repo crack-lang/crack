@@ -1,0 +1,128 @@
+// Copyright 2010-2012 Google Inc.
+// Copyright 2012 Conrad Steenberg <conrad.steenberg@gmail.com>
+//
+//   This Source Code Form is subject to the terms of the Mozilla Public
+//   License, v. 2.0. If a copy of the MPL was not distributed with this
+//   file, You can obtain one at http://mozilla.org/MPL/2.0/.
+//
+
+@import crack.extgen generateExtension;
+
+@generateExtension crack.ext._pcre2  {
+    @filename 'opt/_pcre2.cc'
+    @inject I'\
+        #define PCRE2_CODE_UNIT_WIDTH 8
+        #include <pcre2.h>
+        #include <iostream>
+
+        struct Undef {};
+        '
+    @crack_internal
+
+    const int
+        PCRE2_ANCHORED,
+        PCRE2_ALLOW_EMPTY_CLASS,
+        PCRE2_ALT_BSUX,
+        PCRE2_ALT_CIRCUMFLEX,
+        PCRE2_ALT_EXTENDED_CLASS,
+        PCRE2_ALT_VERBNAMES,
+        PCRE2_AUTO_CALLOUT,
+        PCRE2_CASELESS,
+        PCRE2_DOLLAR_ENDONLY,
+        PCRE2_DOTALL,
+        PCRE2_DUPNAMES,
+        PCRE2_ENDANCHORED,
+        PCRE2_EXTENDED,
+        PCRE2_EXTENDED_MORE,
+        PCRE2_FIRSTLINE,
+        PCRE2_LITERAL,
+        PCRE2_MATCH_INVALID_UTF,
+        PCRE2_MATCH_UNSET_BACKREF,
+        PCRE2_MULTILINE,
+        PCRE2_NEVER_BACKSLASH_C,
+        PCRE2_NEVER_UCP,
+        PCRE2_NEVER_UTF,
+        PCRE2_NO_AUTO_CAPTURE,
+        PCRE2_NO_AUTO_POSSESS,
+        PCRE2_NO_DOTSTAR_ANCHOR,
+        PCRE2_NO_START_OPTIMIZE,
+        PCRE2_NO_UTF_CHECK,
+        PCRE2_UCP,
+        PCRE2_UNGREEDY,
+        PCRE2_USE_OFFSET_LIMIT,
+        PCRE2_UTF,
+
+        PCRE2_EXTRA_ALLOW_LOOKAROUND_BSK,
+        PCRE2_EXTRA_ALLOW_SURROGATE_ESCAPES,
+        PCRE2_EXTRA_ALT_BSUX,
+        PCRE2_EXTRA_ASCII_BSD,
+        PCRE2_EXTRA_ASCII_BSS,
+        PCRE2_EXTRA_ASCII_BSW,
+        PCRE2_EXTRA_ASCII_DIGIT,
+        PCRE2_EXTRA_ASCII_POSIX,
+        PCRE2_EXTRA_BAD_ESCAPE_IS_LITERAL,
+        PCRE2_EXTRA_CASELESS_RESTRICT,
+        PCRE2_EXTRA_ESCAPED_CR_IS_LF,
+        PCRE2_EXTRA_MATCH_LINE,
+        PCRE2_EXTRA_MATCH_WORD,
+        PCRE2_EXTRA_NO_BS0,
+        PCRE2_EXTRA_PYTHON_OCTAL,
+        PCRE2_EXTRA_NEVER_CALLOUT,
+        PCRE2_EXTRA_TURKISH_CASING,
+
+        PCRE2_ERROR_NOSUBSTRING;
+
+    # All of these types are opaque, so we define them as Undef
+
+    # We don't currently do anything with the compile context, it's just
+    # always passed as null.  But reserving this here for future expansion.
+    @cname Undef class PCRECompileContext;
+    @cname Undef class PCRE2MatchContext;
+
+    class PCRE2Code;
+
+    @cname Undef class PCRE2MatchData {
+        @cname pcre2_match_data_create_from_pattern
+        oper new(PCRE2Code code, PCRE2MatchContext context);
+
+        @cname pcre2_match_data_free
+        oper del();
+
+        @cname pcre2_get_ovector_count
+        uint32 getOVectorCount();
+
+        @cname pcre2_get_ovector_pointer
+        array[intz] getOVectorPointer();
+    }
+
+    @cname Undef
+    class PCRE2Code {
+        @cname pcre2_compile
+        oper new(byteptr pattern,
+                 intz length,
+                 uint32 options,
+                 array[int] errorCode,
+                 array[intz] errorOffset,
+                 PCRECompileContext context);
+
+        @cname pcre2_code_free
+        oper del();
+
+        @cname pcre2_match
+        int match(byteptr subject,
+                  intz subjectLength,
+                  intz startOffset,
+                  uint32 options,
+                  PCRE2MatchData matchData,
+                  PCRE2MatchContext mcontext);
+
+        @cname pcre2_substring_number_from_name
+        int substringNumberFromName(byteptr name);
+
+    }
+
+    int pcre2_get_error_message(int errorcode, byteptr buffer, intz bufflen);
+
+    #void pcre_fullinfo(PCRE pcre, voidptr extra, int param, array[int] result);
+    #int pcre_get_stringnumber(PCRE pcre, byteptr name);
+}

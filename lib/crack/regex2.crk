@@ -1,0 +1,316 @@
+// Copyright 2025 Google Inc.
+//
+//   This Source Code Form is subject to the terms of the Mozilla Public
+//   License, v. 2.0. If a copy of the MPL was not distributed with this
+//   file, You can obtain one at http://mozilla.org/MPL/2.0/.
+//
+## Regular expressions (based on PCRE2)
+
+import crack.lang free, AppendBuffer, Buffer, CString, Exception, SubString,
+                  Formatter;
+import crack.io cerr, FStr, StringFormatter, StringWriter, Writer;
+import crack.exp.bindings ByteptrWrapper, Opaque;
+import crack.functor Functor2;
+@import crack.ann define;
+
+import crack.ext._pcre2 pcre2_get_error_message, PCRE2Code, PCRE2MatchData,
+    PCRE2_ANCHORED, PCRE2_ALLOW_EMPTY_CLASS, PCRE2_ALT_BSUX,
+    PCRE2_ALT_CIRCUMFLEX, PCRE2_ALT_EXTENDED_CLASS, PCRE2_ALT_VERBNAMES,
+    PCRE2_AUTO_CALLOUT, PCRE2_CASELESS, PCRE2_DOLLAR_ENDONLY, PCRE2_DOTALL,
+    PCRE2_DUPNAMES, PCRE2_ENDANCHORED, PCRE2_EXTENDED, PCRE2_EXTENDED_MORE,
+    PCRE2_FIRSTLINE, PCRE2_LITERAL, PCRE2_MATCH_INVALID_UTF,
+    PCRE2_MATCH_UNSET_BACKREF, PCRE2_MULTILINE, PCRE2_NEVER_BACKSLASH_C,
+    PCRE2_NEVER_UCP, PCRE2_NEVER_UTF, PCRE2_NO_AUTO_CAPTURE,
+    PCRE2_NO_AUTO_POSSESS, PCRE2_NO_DOTSTAR_ANCHOR, PCRE2_NO_START_OPTIMIZE,
+    PCRE2_NO_UTF_CHECK, PCRE2_UCP, PCRE2_UNGREEDY, PCRE2_USE_OFFSET_LIMIT,
+    PCRE2_UTF, PCRE2_EXTRA_ALLOW_LOOKAROUND_BSK,
+    PCRE2_EXTRA_ALLOW_SURROGATE_ESCAPES, PCRE2_EXTRA_ALT_BSUX,
+    PCRE2_EXTRA_ASCII_BSD, PCRE2_EXTRA_ASCII_BSS, PCRE2_EXTRA_ASCII_BSW,
+    PCRE2_EXTRA_ASCII_DIGIT, PCRE2_EXTRA_ASCII_POSIX,
+    PCRE2_EXTRA_BAD_ESCAPE_IS_LITERAL, PCRE2_EXTRA_CASELESS_RESTRICT,
+    PCRE2_EXTRA_ESCAPED_CR_IS_LF, PCRE2_EXTRA_MATCH_LINE,
+    PCRE2_EXTRA_MATCH_WORD, PCRE2_EXTRA_NO_BS0, PCRE2_EXTRA_PYTHON_OCTAL,
+    PCRE2_EXTRA_NEVER_CALLOUT, PCRE2_EXTRA_TURKISH_CASING,
+    PCRE2_ERROR_NOSUBSTRING;
+
+@export_symbols PCRE2_ANCHORED, PCRE2_ALLOW_EMPTY_CLASS,
+    PCRE2_ALT_BSUX, PCRE2_ALT_CIRCUMFLEX, PCRE2_ALT_EXTENDED_CLASS,
+    PCRE2_ALT_VERBNAMES, PCRE2_AUTO_CALLOUT, PCRE2_CASELESS,
+    PCRE2_DOLLAR_ENDONLY, PCRE2_DOTALL, PCRE2_DUPNAMES, PCRE2_ENDANCHORED,
+    PCRE2_EXTENDED, PCRE2_EXTENDED_MORE, PCRE2_FIRSTLINE, PCRE2_LITERAL,
+    PCRE2_MATCH_INVALID_UTF, PCRE2_MATCH_UNSET_BACKREF, PCRE2_MULTILINE,
+    PCRE2_NEVER_BACKSLASH_C, PCRE2_NEVER_UCP, PCRE2_NEVER_UTF,
+    PCRE2_NO_AUTO_CAPTURE, PCRE2_NO_AUTO_POSSESS, PCRE2_NO_DOTSTAR_ANCHOR,
+    PCRE2_NO_START_OPTIMIZE, PCRE2_NO_UTF_CHECK, PCRE2_UCP, PCRE2_UNGREEDY,
+    PCRE2_USE_OFFSET_LIMIT, PCRE2_UTF, PCRE2_EXTRA_ALLOW_LOOKAROUND_BSK,
+    PCRE2_EXTRA_ALLOW_SURROGATE_ESCAPES, PCRE2_EXTRA_ALT_BSUX,
+    PCRE2_EXTRA_ASCII_BSD, PCRE2_EXTRA_ASCII_BSS, PCRE2_EXTRA_ASCII_BSW,
+    PCRE2_EXTRA_ASCII_DIGIT, PCRE2_EXTRA_ASCII_POSIX,
+    PCRE2_EXTRA_BAD_ESCAPE_IS_LITERAL, PCRE2_EXTRA_CASELESS_RESTRICT,
+    PCRE2_EXTRA_ESCAPED_CR_IS_LF, PCRE2_EXTRA_MATCH_LINE,
+    PCRE2_EXTRA_MATCH_WORD, PCRE2_EXTRA_NO_BS0, PCRE2_EXTRA_PYTHON_OCTAL,
+    PCRE2_EXTRA_NEVER_CALLOUT, PCRE2_EXTRA_TURKISH_CASING;
+
+int _PCRE_INFO_CAPTURECOUNT = 2;
+
+## regex base class that we can store in a Match object.
+class _RegexBase {
+    PCRE2Code _rx;
+
+    oper init(PCRE2Code rx) : _rx = rx {}
+};
+
+## Raised for any error in the regex interface.
+class RegexError : Exception {
+    oper init(String text) : Exception(text) {}
+}
+
+## A regular expression match.
+@final class Match {
+    String subject;
+    _RegexBase regex;
+    PCRE2MatchData __rep;
+
+    oper init(_RegexBase regex, String subject, PCRE2MatchData matchData) :
+        regex = regex,
+        subject = subject,
+        __rep = matchData {
+    }
+
+    oper del() {
+        __rep.oper del();
+    }
+
+    void __checkGroupIndex(uint index) {
+        count := __rep.getOVectorCount();
+        if (index >= count)
+            throw RegexError(
+                FStr() `match out of bounds (index = $index, max = $count)`
+            );
+    }
+
+    ## Returns the match group by index.  Groups are indexed from left to
+    ## right by the position of the starting parenthesis.  Group 0 is the
+    ## entire expression.
+    String group(uint index) {
+        __checkGroupIndex(index);
+
+        i := index * 2;
+        ovec := __rep.getOVectorPointer();
+        start := ovec[i];
+        end := ovec[i + 1];
+        return SubString(subject, uint(start), uint(end - start));
+    }
+
+    String group() { return group(0); }
+
+    uint __getIndex(String name) {
+        int i = regex._rx.substringNumberFromName(name.toCString().buffer);
+        if (i == PCRE2_ERROR_NOSUBSTRING)
+            throw RegexError(FStr() `undefined group name $name`);
+        return uint(i);
+    }
+
+    ## Returns the index of the beginning of the indexed group.
+    uint begin(uint index) {
+        __checkGroupIndex(index);
+        ovec := __rep.getOVectorPointer();
+        return uint(ovec[index * 2]);
+    }
+
+    ## Returns the index of the beginning of the named group.
+    uint begin(String name) {
+        return begin(__getIndex(name));
+    }
+
+    uint begin() { return begin(0); }
+
+    ## Returns the index of the end of the indexed group.
+    uint end(uint index) {
+        __checkGroupIndex(index);
+        ovec := __rep.getOVectorPointer();
+        return uint(ovec[index * 2 + 1]);
+    }
+
+    uint end(String name) {
+        return end(__getIndex(name));
+    }
+
+    uint end() { return end(0); }
+
+    ## Returns the value of the named group.
+    String group(String name) {
+        i := __getIndex(name);
+        return group(i);
+    }
+
+    void formatTo(Formatter fmt) {
+        i := 0;
+        count := __rep.getOVectorCount();
+        while (i < count) {
+            fmt `Match $i: [$(group(i))]\n`;
+            i++;
+        }
+    }
+
+};
+
+## A compiled regular expression.
+@final class Regex : _RegexBase {
+
+    ## the original pattern
+    CString pattern;
+
+    ## regex compile options.
+    uint32 __options;
+
+    # the number of sub-expressions to capture.
+    uint __captureCount;
+
+    void __init() {
+        array[int] intReturns = {1};
+        array[intz] errorOffset = {1};
+        _rx = PCRE2Code(pattern.buffer, pattern.size, __options, intReturns,
+                        errorOffset, null);
+        if (_rx is null) {
+            # error compiling the regex.
+            tmp := AppendBuffer(1024);
+            tmp.size = pcre2_get_error_message(intReturns[0], tmp.buffer,
+                                               tmp.cap);
+            f := StringFormatter();
+            f I`Error compiling regular expression at position \
+                $(errorOffset[0]): $tmp`;
+            free(errorOffset);
+            free(intReturns);
+            throw RegexError(f.string());
+        }
+
+        # figure out how many capturing sub-patterns there are
+        #pcre_fullinfo(_rx, null, _PCRE_INFO_CAPTURECOUNT, intReturns);
+        #__captureCount = uint(intReturns[0]) + 1;
+        free(intReturns);
+        free(errorOffset);
+    }
+
+    ## Compile a regular expression from 'pattern'.  The regex library uses
+    ## PCRE, see the 'pcresyntax' man page for regular expression syntax.
+    oper init(CString pattern) : _RegexBase(null), pattern = pattern {
+        __init();
+    }
+
+    oper init(String pattern) : _RegexBase(null), pattern = CString(pattern) {
+        __init();
+    }
+
+    oper init(CString pattern, uint32 options) :
+        _RegexBase(null),
+        pattern = pattern,
+        __options = options {
+        __init();
+    }
+
+    oper init(String pattern, uint32 options) :
+        _RegexBase(null),
+        pattern = CString(pattern),
+        __options = options {
+        __init();
+    }
+
+    oper del() {
+        _rx.oper del();
+    }
+
+    ## Search 'subject' for the regular expression starting at 'start'.
+    ## Returns a Match object if it is found or null if not.
+    Match search(String subject, int start) {
+        matchData := PCRE2MatchData(_rx, null);
+        rc := _rx.match(subject.buffer, subject.size, start, 0, matchData, null);
+        if (rc >= 0)
+            return Match(this, subject, matchData);
+        else
+            return null;
+    }
+
+    ## Search 'subject' for the regular expression starting at the beginning
+    ## of the string.  Returns a Match object if it is found or null if not.
+    Match search(String subject) {
+        return search(subject, 0);
+    }
+
+    ## If 'subject' starts with a match for the regular expression, return the
+    ## match.  Otherwise return null.
+    Match match(String subject) {
+        m := search(subject, 0);
+        if (m && m.begin(0) == 0)
+            return m;
+        else
+            return null;
+    }
+
+    @define __subst(arg, action) {
+        String subst(String subject, arg, int count) {
+            mx := search(subject);
+            if (!mx)
+                return subject;
+
+            StringWriter result = {};
+            int last = 0;
+            while (mx && count--) {
+                result.write(subject.slice(last, mx.begin()));
+                action;
+                last = mx.end();
+                mx = search(subject, mx.end());
+            }
+
+            # write any remaining substring
+            if (last < subject.size)
+                result.write(subject.slice(last));
+
+            return result.string();
+        }
+    }
+
+    ## Replace the first 'count' instances of the regular expression in
+    ## 'subject' using the function.  If count >= 0, it is the number of
+    ## instances to replace.
+    @define __arg() { function[void, Match, Writer] func }
+    @__subst(@__arg(), func(mx, result));
+
+    ## Replace the first 'count' instances of the regular expression in
+    ## 'subject' using the functor.  If count >= 0, it is the number of
+    ## instances to replace.
+    @define __functorArg() { Functor2[void, Match, Writer] func }
+    @__subst(@__functorArg(), func(mx, result));
+
+    ## Replace the first 'count'instances of the regular expression in
+    ## 'subject' with the specified string.  If count >= 0, it is the number
+    ## of instances to replace.
+    @__subst(String replacement, result.write(replacement));
+
+    ## Replace all instances of the regular expression in 'subject' using the
+    ## function.
+    String subst(String subject, @__arg()) {
+        return subst(subject, func, -1);
+    }
+
+    ## Replace all instances of the regular expression in 'subject' with the
+    ## specified string.
+    String subst(String subject, String replacement) {
+        return subst(subject, replacement, -1);
+    }
+};
+
+## Escape all special characters in the pattern.
+String escape(String pattern) {
+    # since the pcre api doesn't seem to define a function to do this, we'll
+    # have to do it ourselves.
+    AppendBuffer result = {pattern.size};
+    for (int i = 0; i < pattern.size; ++i) {
+        ch := pattern[i];
+        if ('.?+*[\\{^$('.lfind(ch) != -1)
+            result.append(b'\\');
+        result.append(ch);
+    }
+
+    return String(result, true);
+}

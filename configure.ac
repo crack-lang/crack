@@ -50,6 +50,9 @@ AM_CONDITIONAL(HAVE_GTK, [test "x$got_gtk" = xyes])
 AX_PATH_LIB_PCRE(got_pcre=yes)
 AM_CONDITIONAL(HAVE_PCRE, [test "x$got_pcre" = xyes])
 
+PKG_CHECK_MODULES([PCRE2], [libpcre2-8], [got_pcre2="yes"], [got_pcre2="no"])
+AM_CONDITIONAL(HAVE_PCRE2, [test "x$got_pcre2" = xyes])
+
 AM_PATH_SDL(1.2.14, [got_sdl=yes])
 AM_CONDITIONAL(HAVE_SDL, [test "x$got_sdl" = xyes])
 

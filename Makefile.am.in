@@ -53,7 +53,7 @@ testext_la_SOURCES = test/testext.cc
 
 EXTENSIONS = _cairo _gl _gtk _pcre _sdl _sdl_mixer _alsa_midi _sdlgfx \
              _fluidsynth _cairosdl _xs _ssl _png _curl _jack _pthread _fuse \
-             _readline
+             _readline _pcre2
 
 if HAVE_GTK
 extlib_LTLIBRARIES += _gtk.la
@@ -67,6 +67,13 @@ extlib_LTLIBRARIES += _pcre.la
 _pcre_la_LDFLAGS = -avoid-version -module @PCRE_LIBS@ @PCRE_CFLAGS@ $(AM_LDFLAGS)
 _pcre_la_CXXFLAGS = @PCRE_CFLAGS@
 _pcre_la_SOURCES = opt/_pcre.cc
+endif
+
+if HAVE_PCRE2
+extlib_LTLIBRARIES += _pcre2.la
+_pcre2_la_LDFLAGS = -avoid-version -module @PCRE2_LIBS@ @PCRE2_CFLAGS@ $(AM_LDFLAGS)
+_pcre2_la_CXXFLAGS = @PCRE2_CFLAGS@
+_pcre2_la_SOURCES = opt/_pcre2.cc
 endif
 
 if HAVE_SDL
