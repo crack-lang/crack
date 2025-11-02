@@ -8,7 +8,7 @@ import crack.fs cwd, Path, makePath;
 import crack.io cout, cerr, FStr, StringFormatter;
 import crack.lang Buffer, FreeBase, Exception;
 import crack.net Poller;
-import crack.regex Regex;
+import crack.regex2 Regex;
 import crack.strutil StringArray;
 import crack.sys argv;
 import crack.process Process, ProcessHandler, ProcessHandlerImpl,

@@ -10,7 +10,7 @@
 import crack.cont.array Array;
 import crack.io Formatter, FStr;
 import crack.math min;
-import crack.regex Regex;
+import crack.regex2 Regex;
 
 @import crack.ann cvars, struct, SCOPE_NAME;
 

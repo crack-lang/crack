@@ -13,7 +13,7 @@ import crack.time time_add = add, Time, TimeDelta;
 import crack.net resolve, InetAddress;
 import crack.net.comm2 Comm, Connection, UserHandler;
 import crack.net.ssl SSLContext;
-import crack.regex Regex;
+import crack.regex2 Regex;
 import .irc User, Channel;
 
 @import crack.ann assert, cvars, impl, implements, interface;

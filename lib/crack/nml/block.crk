@@ -20,7 +20,7 @@ import crack.cont.hashmap HashMap;
 import crack.lang AppendBuffer, InvalidArgumentError;
 import crack.io cout, Formatter, FStr, Writer, StringFormatter, StringWriter;
 import crack.cont.array Array;
-import crack.regex Regex;
+import crack.regex2 Regex;
 
 ## Contains information about block types.
 class BlockType {

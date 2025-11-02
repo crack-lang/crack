@@ -11,7 +11,7 @@ import crack.io.fmtutil Indenter;
 import crack.lang AppendBuffer, Buffer, IndexError, SystemError;
 import crack.process Process, ProcessHandlerImpl, CRK_PIPE_STDIN,
     CRK_PIPE_STDOUT;
-import crack.regex Regex, PCRE_ANCHORED, PCRE_MULTILINE, PCRE_DOTALL;
+import crack.regex2 Regex, PCRE_ANCHORED, PCRE_MULTILINE, PCRE_DOTALL;
 import crack.runtime getenv;
 import crack.strutil StringArray;
 import crack.sys argv, exit;

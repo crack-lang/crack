@@ -13,7 +13,7 @@ import crack.sys argv, exit;
 import crack.io cout, cerr, FStr;
 import crack.fs makePath;
 import crack.cmdline CmdOptions, Option, CMD_BOOL, CMD_STR;
-import crack.regex escape, Regex;
+import crack.regex2 escape, Regex;
 
 int parseInt(String rep) {
     int i, sign = 1, val;

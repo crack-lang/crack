@@ -10,7 +10,7 @@
 
 import crack.fs Path;
 import crack.cont.array Array;
-import crack.regex Regex;
+import crack.regex2 Regex;
 
 class Config {
     String crackBin, libPath;

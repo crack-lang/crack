@@ -9,7 +9,7 @@
 
 import crack.io cerr;  # XXX DEBUG
 import crack.ascii isSpace;
-import crack.regex Regex;
+import crack.regex2 Regex;
 
 const _WSRX := Regex(r'\s+');
 

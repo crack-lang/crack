@@ -12,7 +12,7 @@ import crack.functor Functor2;
 import crack.io cout, Formatter, FStr, StringFormatter, StringWriter, Writer;
 import crack.io.readers FullReader;
 import crack.lang AssertionError;
-import crack.regex Match, Regex;
+import crack.regex2 Match, Regex;
 import crack.nml.block getTitle, TextBlock;
 import crack.nml.stdfmt StdFormatter;
 

@@ -13,7 +13,7 @@ import crack.logger debug, error, setLogLevel, DEBUG;
 import crack.http.core Abort, HandlerFunc, PostDataHandler, Request,
     RequestHandler;
 import crack.random MersenneTwister;
-import crack.regex Regex;
+import crack.regex2 Regex;
 import crack.strutil StringArray;
 import crack.sys argv;
 import crack.time Time;
@@ -451,6 +451,9 @@ QueryParmMap parseUnescapedQuery(Buffer contents, bool permissive) {
 
     return result;
 }
+
+#XXX The following two functions are broken for the case where a query value
+#has a nested '&' (if the variable name does, to, only not sure if that's legal)
 
 ## Parse an HTTP Query out of the (possibly escaped) query string.
 ##

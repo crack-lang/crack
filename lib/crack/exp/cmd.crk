@@ -13,7 +13,7 @@ import crack.cont.treemap TreeMap;
 import crack.functor Functor1;
 import crack.io cerr, FStr, Formatter;
 import crack.lang AppendBuffer, AssertionError, Exception, InvalidStateError;
-import crack.regex Regex;
+import crack.regex2 Regex;
 import crack.strutil split, StringArray;
 
 @import crack.ann assert, cvars, define, impl, implements, interface, struct;

@@ -26,7 +26,7 @@ import crack.io cerr, FStr;
 import crack.lang AssertionError;
 import crack.nml.block TextBlock;
 import crack.nml.html HTMLFormatter, HTML_ESCAPE, HTML_REFLOW;
-import crack.regex Regex;
+import crack.regex2 Regex;
 
 @import crack.ann impl;
 

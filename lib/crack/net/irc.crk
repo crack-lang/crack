@@ -13,7 +13,7 @@ import crack.io.readers LineReader;
 import crack.lang Formatter;
 import crack.net resolve, InetAddress, Poller, PollEvent, Socket, AF_INET,
     POLLIN, SOCK_STREAM;
-import crack.regex Regex;
+import crack.regex2 Regex;
 import crack.strutil split, StringArray;
 import crack.time TimeDelta;
 

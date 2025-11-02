@@ -11,7 +11,7 @@ import crack.io FStr, StandardFormatter, Writer;
 import crack.lang AppendBuffer, Buffer, Exception;
 import crack.logger debug, info, warn;
 import crack.net InetAddress;
-import crack.regex Regex;
+import crack.regex2 Regex;
 import crack.strutil split, StringArray;
 import crack.time Date;
 

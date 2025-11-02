@@ -10,7 +10,7 @@ import crack.fs Path;
 import crack.functor Functor2;
 import crack.io FStr, StringWriter, Writer;
 import crack.cont.hashmap HashMap;
-import crack.regex Match, Regex;
+import crack.regex2 Match, Regex;
 @import crack.ann implements;
 
 # variable pattern

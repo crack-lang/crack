@@ -16,7 +16,7 @@ import crack.strutil ljust;
 import crack.io cout, FStr, StandardFormatter, StringFormatter, Writer;
 import crack.compiler CrackContext, Token;
 import crack.exp.file File;
-import crack.regex Regex, Match;
+import crack.regex2 Regex, Match;
 import crack.cont.array Array;
 import crack.strutil StringArray;
 import crack.cont.treemap TreeMap;

@@ -11,7 +11,7 @@ import crack.io cout, FStr, StringFormatter, StringReader, Writer;
 import crack.io.readers LineReader;
 import crack.nml.block makeBlock, AnyBlockType, TextBlock, BlockType,
     ANY_BLOCK_TEMPLATE;
-import crack.regex escape, Match, Regex;
+import crack.regex2 escape, Match, Regex;
 import crack.process Process;
 import crack.cont.hashmap HashMap;
 import crack.strutil StringArray;

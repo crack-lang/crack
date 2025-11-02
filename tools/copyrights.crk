@@ -16,7 +16,7 @@ import crack.lang cmp, Buffer;
 import crack.process Process, ProcessHandler, ProcessHandlerImpl,
     CRK_PIPE_STDOUT;
 import crack.strutil StringArray;
-import crack.regex Regex;
+import crack.regex2 Regex;
 import crack.io cin, cout, Formatter, FStr, StringFormatter;
 import crack.io.readers LineReader;
 import crack.cont.array Array;

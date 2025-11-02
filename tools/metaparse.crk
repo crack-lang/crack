@@ -21,7 +21,7 @@ import crack.cont.hashmap HashMap;
 import crack.io cin, cout, FStr, StandardFormatter, StringReader, Writer;
 import crack.io.readers LineReader;
 import crack.lang Buffer, Exception;
-import crack.regex Regex;
+import crack.regex2 Regex;
 
 const fieldRx := Regex(r'\s*write (\S+) ([^:]+): (.*)\n');
 
