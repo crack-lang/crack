@@ -51,6 +51,22 @@ import crack.ext._pcre2 pcre2_get_error_message, PCRE2Code, PCRE2MatchData,
     PCRE2_EXTRA_MATCH_WORD, PCRE2_EXTRA_NO_BS0, PCRE2_EXTRA_PYTHON_OCTAL,
     PCRE2_EXTRA_NEVER_CALLOUT, PCRE2_EXTRA_TURKISH_CASING;
 
+# Alias PCRE options for backwards compatibility.
+const int
+    PCRE_ANCHORED = PCRE2_ANCHORED,
+    PCRE_AUTO_CALLOUT = PCRE2_AUTO_CALLOUT,
+    PCRE_CASELESS = PCRE2_CASELESS,
+    PCRE_DOLLAR_ENDONLY = PCRE2_DOLLAR_ENDONLY,
+    PCRE_DOTALL = PCRE2_DOTALL,
+    PCRE_EXTENDED = PCRE2_EXTENDED,
+    PCRE_EXTRA = 0,  # Doesn't exist and "wasn't much use" in pcre3.
+    PCRE_FIRSTLINE = PCRE2_FIRSTLINE,
+    PCRE_NO_AUTO_CAPTURE = PCRE2_NO_AUTO_CAPTURE,
+    PCRE_UNGREEDY = PCRE2_UNGREEDY,
+    PCRE_UTF8 = PCRE2_UTF,
+    PCRE_NO_UTF8_CHECK = PCRE2_NO_UTF_CHECK,
+    PCRE_MULTILINE = PCRE2_MULTILINE;
+
 int _PCRE_INFO_CAPTURECOUNT = 2;
 
 ## regex base class that we can store in a Match object.
@@ -298,7 +314,7 @@ class RegexError : Exception {
     String subst(String subject, String replacement) {
         return subst(subject, replacement, -1);
     }
-};
+}
 
 ## Escape all special characters in the pattern.
 String escape(String pattern) {
