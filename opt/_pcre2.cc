@@ -174,199 +174,199 @@ f = type_PCRE2Code->addMethod(
        f->addArg(type_intz, "bufflen");
 
 
-    mod->addConstant(type_int, "PCRE2_ANCHORED",
+    mod->addConstant(type_uint32, "PCRE2_ANCHORED",
                      static_cast<int>(PCRE2_ANCHORED)
                      );
 
-    mod->addConstant(type_int, "PCRE2_ALLOW_EMPTY_CLASS",
+    mod->addConstant(type_uint32, "PCRE2_ALLOW_EMPTY_CLASS",
                      static_cast<int>(PCRE2_ALLOW_EMPTY_CLASS)
                      );
 
-    mod->addConstant(type_int, "PCRE2_ALT_BSUX",
+    mod->addConstant(type_uint32, "PCRE2_ALT_BSUX",
                      static_cast<int>(PCRE2_ALT_BSUX)
                      );
 
-    mod->addConstant(type_int, "PCRE2_ALT_CIRCUMFLEX",
+    mod->addConstant(type_uint32, "PCRE2_ALT_CIRCUMFLEX",
                      static_cast<int>(PCRE2_ALT_CIRCUMFLEX)
                      );
 
-    mod->addConstant(type_int, "PCRE2_ALT_EXTENDED_CLASS",
+    mod->addConstant(type_uint32, "PCRE2_ALT_EXTENDED_CLASS",
                      static_cast<int>(PCRE2_ALT_EXTENDED_CLASS)
                      );
 
-    mod->addConstant(type_int, "PCRE2_ALT_VERBNAMES",
+    mod->addConstant(type_uint32, "PCRE2_ALT_VERBNAMES",
                      static_cast<int>(PCRE2_ALT_VERBNAMES)
                      );
 
-    mod->addConstant(type_int, "PCRE2_AUTO_CALLOUT",
+    mod->addConstant(type_uint32, "PCRE2_AUTO_CALLOUT",
                      static_cast<int>(PCRE2_AUTO_CALLOUT)
                      );
 
-    mod->addConstant(type_int, "PCRE2_CASELESS",
+    mod->addConstant(type_uint32, "PCRE2_CASELESS",
                      static_cast<int>(PCRE2_CASELESS)
                      );
 
-    mod->addConstant(type_int, "PCRE2_DOLLAR_ENDONLY",
+    mod->addConstant(type_uint32, "PCRE2_DOLLAR_ENDONLY",
                      static_cast<int>(PCRE2_DOLLAR_ENDONLY)
                      );
 
-    mod->addConstant(type_int, "PCRE2_DOTALL",
+    mod->addConstant(type_uint32, "PCRE2_DOTALL",
                      static_cast<int>(PCRE2_DOTALL)
                      );
 
-    mod->addConstant(type_int, "PCRE2_DUPNAMES",
+    mod->addConstant(type_uint32, "PCRE2_DUPNAMES",
                      static_cast<int>(PCRE2_DUPNAMES)
                      );
 
-    mod->addConstant(type_int, "PCRE2_ENDANCHORED",
+    mod->addConstant(type_uint32, "PCRE2_ENDANCHORED",
                      static_cast<int>(PCRE2_ENDANCHORED)
                      );
 
-    mod->addConstant(type_int, "PCRE2_EXTENDED",
+    mod->addConstant(type_uint32, "PCRE2_EXTENDED",
                      static_cast<int>(PCRE2_EXTENDED)
                      );
 
-    mod->addConstant(type_int, "PCRE2_EXTENDED_MORE",
+    mod->addConstant(type_uint32, "PCRE2_EXTENDED_MORE",
                      static_cast<int>(PCRE2_EXTENDED_MORE)
                      );
 
-    mod->addConstant(type_int, "PCRE2_FIRSTLINE",
+    mod->addConstant(type_uint32, "PCRE2_FIRSTLINE",
                      static_cast<int>(PCRE2_FIRSTLINE)
                      );
 
-    mod->addConstant(type_int, "PCRE2_LITERAL",
+    mod->addConstant(type_uint32, "PCRE2_LITERAL",
                      static_cast<int>(PCRE2_LITERAL)
                      );
 
-    mod->addConstant(type_int, "PCRE2_MATCH_INVALID_UTF",
+    mod->addConstant(type_uint32, "PCRE2_MATCH_INVALID_UTF",
                      static_cast<int>(PCRE2_MATCH_INVALID_UTF)
                      );
 
-    mod->addConstant(type_int, "PCRE2_MATCH_UNSET_BACKREF",
+    mod->addConstant(type_uint32, "PCRE2_MATCH_UNSET_BACKREF",
                      static_cast<int>(PCRE2_MATCH_UNSET_BACKREF)
                      );
 
-    mod->addConstant(type_int, "PCRE2_MULTILINE",
+    mod->addConstant(type_uint32, "PCRE2_MULTILINE",
                      static_cast<int>(PCRE2_MULTILINE)
                      );
 
-    mod->addConstant(type_int, "PCRE2_NEVER_BACKSLASH_C",
+    mod->addConstant(type_uint32, "PCRE2_NEVER_BACKSLASH_C",
                      static_cast<int>(PCRE2_NEVER_BACKSLASH_C)
                      );
 
-    mod->addConstant(type_int, "PCRE2_NEVER_UCP",
+    mod->addConstant(type_uint32, "PCRE2_NEVER_UCP",
                      static_cast<int>(PCRE2_NEVER_UCP)
                      );
 
-    mod->addConstant(type_int, "PCRE2_NEVER_UTF",
+    mod->addConstant(type_uint32, "PCRE2_NEVER_UTF",
                      static_cast<int>(PCRE2_NEVER_UTF)
                      );
 
-    mod->addConstant(type_int, "PCRE2_NO_AUTO_CAPTURE",
+    mod->addConstant(type_uint32, "PCRE2_NO_AUTO_CAPTURE",
                      static_cast<int>(PCRE2_NO_AUTO_CAPTURE)
                      );
 
-    mod->addConstant(type_int, "PCRE2_NO_AUTO_POSSESS",
+    mod->addConstant(type_uint32, "PCRE2_NO_AUTO_POSSESS",
                      static_cast<int>(PCRE2_NO_AUTO_POSSESS)
                      );
 
-    mod->addConstant(type_int, "PCRE2_NO_DOTSTAR_ANCHOR",
+    mod->addConstant(type_uint32, "PCRE2_NO_DOTSTAR_ANCHOR",
                      static_cast<int>(PCRE2_NO_DOTSTAR_ANCHOR)
                      );
 
-    mod->addConstant(type_int, "PCRE2_NO_START_OPTIMIZE",
+    mod->addConstant(type_uint32, "PCRE2_NO_START_OPTIMIZE",
                      static_cast<int>(PCRE2_NO_START_OPTIMIZE)
                      );
 
-    mod->addConstant(type_int, "PCRE2_NO_UTF_CHECK",
+    mod->addConstant(type_uint32, "PCRE2_NO_UTF_CHECK",
                      static_cast<int>(PCRE2_NO_UTF_CHECK)
                      );
 
-    mod->addConstant(type_int, "PCRE2_UCP",
+    mod->addConstant(type_uint32, "PCRE2_UCP",
                      static_cast<int>(PCRE2_UCP)
                      );
 
-    mod->addConstant(type_int, "PCRE2_UNGREEDY",
+    mod->addConstant(type_uint32, "PCRE2_UNGREEDY",
                      static_cast<int>(PCRE2_UNGREEDY)
                      );
 
-    mod->addConstant(type_int, "PCRE2_USE_OFFSET_LIMIT",
+    mod->addConstant(type_uint32, "PCRE2_USE_OFFSET_LIMIT",
                      static_cast<int>(PCRE2_USE_OFFSET_LIMIT)
                      );
 
-    mod->addConstant(type_int, "PCRE2_UTF",
+    mod->addConstant(type_uint32, "PCRE2_UTF",
                      static_cast<int>(PCRE2_UTF)
                      );
 
-    mod->addConstant(type_int, "PCRE2_EXTRA_ALLOW_LOOKAROUND_BSK",
+    mod->addConstant(type_uint32, "PCRE2_EXTRA_ALLOW_LOOKAROUND_BSK",
                      static_cast<int>(PCRE2_EXTRA_ALLOW_LOOKAROUND_BSK)
                      );
 
-    mod->addConstant(type_int, "PCRE2_EXTRA_ALLOW_SURROGATE_ESCAPES",
+    mod->addConstant(type_uint32, "PCRE2_EXTRA_ALLOW_SURROGATE_ESCAPES",
                      static_cast<int>(PCRE2_EXTRA_ALLOW_SURROGATE_ESCAPES)
                      );
 
-    mod->addConstant(type_int, "PCRE2_EXTRA_ALT_BSUX",
+    mod->addConstant(type_uint32, "PCRE2_EXTRA_ALT_BSUX",
                      static_cast<int>(PCRE2_EXTRA_ALT_BSUX)
                      );
 
-    mod->addConstant(type_int, "PCRE2_EXTRA_ASCII_BSD",
+    mod->addConstant(type_uint32, "PCRE2_EXTRA_ASCII_BSD",
                      static_cast<int>(PCRE2_EXTRA_ASCII_BSD)
                      );
 
-    mod->addConstant(type_int, "PCRE2_EXTRA_ASCII_BSS",
+    mod->addConstant(type_uint32, "PCRE2_EXTRA_ASCII_BSS",
                      static_cast<int>(PCRE2_EXTRA_ASCII_BSS)
                      );
 
-    mod->addConstant(type_int, "PCRE2_EXTRA_ASCII_BSW",
+    mod->addConstant(type_uint32, "PCRE2_EXTRA_ASCII_BSW",
                      static_cast<int>(PCRE2_EXTRA_ASCII_BSW)
                      );
 
-    mod->addConstant(type_int, "PCRE2_EXTRA_ASCII_DIGIT",
+    mod->addConstant(type_uint32, "PCRE2_EXTRA_ASCII_DIGIT",
                      static_cast<int>(PCRE2_EXTRA_ASCII_DIGIT)
                      );
 
-    mod->addConstant(type_int, "PCRE2_EXTRA_ASCII_POSIX",
+    mod->addConstant(type_uint32, "PCRE2_EXTRA_ASCII_POSIX",
                      static_cast<int>(PCRE2_EXTRA_ASCII_POSIX)
                      );
 
-    mod->addConstant(type_int, "PCRE2_EXTRA_BAD_ESCAPE_IS_LITERAL",
+    mod->addConstant(type_uint32, "PCRE2_EXTRA_BAD_ESCAPE_IS_LITERAL",
                      static_cast<int>(PCRE2_EXTRA_BAD_ESCAPE_IS_LITERAL)
                      );
 
-    mod->addConstant(type_int, "PCRE2_EXTRA_CASELESS_RESTRICT",
+    mod->addConstant(type_uint32, "PCRE2_EXTRA_CASELESS_RESTRICT",
                      static_cast<int>(PCRE2_EXTRA_CASELESS_RESTRICT)
                      );
 
-    mod->addConstant(type_int, "PCRE2_EXTRA_ESCAPED_CR_IS_LF",
+    mod->addConstant(type_uint32, "PCRE2_EXTRA_ESCAPED_CR_IS_LF",
                      static_cast<int>(PCRE2_EXTRA_ESCAPED_CR_IS_LF)
                      );
 
-    mod->addConstant(type_int, "PCRE2_EXTRA_MATCH_LINE",
+    mod->addConstant(type_uint32, "PCRE2_EXTRA_MATCH_LINE",
                      static_cast<int>(PCRE2_EXTRA_MATCH_LINE)
                      );
 
-    mod->addConstant(type_int, "PCRE2_EXTRA_MATCH_WORD",
+    mod->addConstant(type_uint32, "PCRE2_EXTRA_MATCH_WORD",
                      static_cast<int>(PCRE2_EXTRA_MATCH_WORD)
                      );
 
-    mod->addConstant(type_int, "PCRE2_EXTRA_NO_BS0",
+    mod->addConstant(type_uint32, "PCRE2_EXTRA_NO_BS0",
                      static_cast<int>(PCRE2_EXTRA_NO_BS0)
                      );
 
-    mod->addConstant(type_int, "PCRE2_EXTRA_PYTHON_OCTAL",
+    mod->addConstant(type_uint32, "PCRE2_EXTRA_PYTHON_OCTAL",
                      static_cast<int>(PCRE2_EXTRA_PYTHON_OCTAL)
                      );
 
-    mod->addConstant(type_int, "PCRE2_EXTRA_NEVER_CALLOUT",
+    mod->addConstant(type_uint32, "PCRE2_EXTRA_NEVER_CALLOUT",
                      static_cast<int>(PCRE2_EXTRA_NEVER_CALLOUT)
                      );
 
-    mod->addConstant(type_int, "PCRE2_EXTRA_TURKISH_CASING",
+    mod->addConstant(type_uint32, "PCRE2_EXTRA_TURKISH_CASING",
                      static_cast<int>(PCRE2_EXTRA_TURKISH_CASING)
                      );
 
-    mod->addConstant(type_int, "PCRE2_ERROR_NOSUBSTRING",
+    mod->addConstant(type_uint32, "PCRE2_ERROR_NOSUBSTRING",
                      static_cast<int>(PCRE2_ERROR_NOSUBSTRING)
                      );
 }

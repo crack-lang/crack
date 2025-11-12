@@ -19,7 +19,7 @@
         '
     @crack_internal
 
-    const int
+    const uint32
         PCRE2_ANCHORED,
         PCRE2_ALLOW_EMPTY_CLASS,
         PCRE2_ALT_BSUX,

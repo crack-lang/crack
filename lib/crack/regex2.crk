@@ -52,7 +52,7 @@ import crack.ext._pcre2 pcre2_get_error_message, PCRE2Code, PCRE2MatchData,
     PCRE2_EXTRA_NEVER_CALLOUT, PCRE2_EXTRA_TURKISH_CASING;
 
 # Alias PCRE options for backwards compatibility.
-const int
+const uint32
     PCRE_ANCHORED = PCRE2_ANCHORED,
     PCRE_AUTO_CALLOUT = PCRE2_AUTO_CALLOUT,
     PCRE_CASELESS = PCRE2_CASELESS,
