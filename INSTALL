@@ -10,9 +10,11 @@ you'll need to build it from source.
 Autoconf Install Instructions
 -----------------------------
 
-Build LLVM 3.3:
+Build LLVM 3.3 (you'll need to update the python code in it for distros that
+no longer support python2):
 
 $ tar -xvzf llvm-3.3.tgz
+$ patch -p0 <update_llvm_python.patch
 $ cd llvm-3.3.src
 $ ./configure
 $ make REQUIRES_RTTI=1

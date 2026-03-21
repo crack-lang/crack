@@ -1,0 +1,1734 @@
+diff -ur -x .git -x .svn -x '*.o' -x '*.a' -x '*.so' -x '*.pyc' org/llvm-3.3.src/bindings/python/llvm/__init__.py llvm-3.3.src/bindings/python/llvm/__init__.py
+--- org/llvm-3.3.src/bindings/python/llvm/__init__.py	2012-03-09 09:07:35.000000000 +0000
++++ llvm-3.3.src/bindings/python/llvm/__init__.py	2026-03-19 22:08:24.820718072 +0000
+@@ -0,0 +1 @@
++from __future__ import print_function
+diff -ur -x .git -x .svn -x '*.o' -x '*.a' -x '*.so' -x '*.pyc' org/llvm-3.3.src/bindings/python/llvm/common.py llvm-3.3.src/bindings/python/llvm/common.py
+--- org/llvm-3.3.src/bindings/python/llvm/common.py	2012-11-20 22:27:55.000000000 +0000
++++ llvm-3.3.src/bindings/python/llvm/common.py	2026-03-19 22:08:24.820718072 +0000
+@@ -7,6 +7,7 @@
+ #
+ #===------------------------------------------------------------------------===#
+ 
++from __future__ import print_function
+ from ctypes import POINTER
+ from ctypes import c_void_p
+ from ctypes import cdll
+diff -ur -x .git -x .svn -x '*.o' -x '*.a' -x '*.so' -x '*.pyc' org/llvm-3.3.src/bindings/python/llvm/core.py llvm-3.3.src/bindings/python/llvm/core.py
+--- org/llvm-3.3.src/bindings/python/llvm/core.py	2012-03-10 05:50:56.000000000 +0000
++++ llvm-3.3.src/bindings/python/llvm/core.py	2026-03-19 22:08:24.820718072 +0000
+@@ -7,6 +7,7 @@
+ #
+ #===------------------------------------------------------------------------===#
+ 
++from __future__ import print_function
+ from .common import LLVMObject
+ from .common import c_object_p
+ from .common import get_library
+diff -ur -x .git -x .svn -x '*.o' -x '*.a' -x '*.so' -x '*.pyc' org/llvm-3.3.src/bindings/python/llvm/disassembler.py llvm-3.3.src/bindings/python/llvm/disassembler.py
+--- org/llvm-3.3.src/bindings/python/llvm/disassembler.py	2012-12-01 21:57:30.000000000 +0000
++++ llvm-3.3.src/bindings/python/llvm/disassembler.py	2026-03-19 22:08:24.820718072 +0000
+@@ -7,6 +7,7 @@
+ #
+ #===------------------------------------------------------------------------===#
+ 
++from __future__ import print_function
+ from ctypes import CFUNCTYPE
+ from ctypes import POINTER
+ from ctypes import addressof
+diff -ur -x .git -x .svn -x '*.o' -x '*.a' -x '*.so' -x '*.pyc' org/llvm-3.3.src/bindings/python/llvm/enumerations.py llvm-3.3.src/bindings/python/llvm/enumerations.py
+--- org/llvm-3.3.src/bindings/python/llvm/enumerations.py	2012-03-10 05:50:56.000000000 +0000
++++ llvm-3.3.src/bindings/python/llvm/enumerations.py	2026-03-19 22:08:24.820718072 +0000
+@@ -7,6 +7,7 @@
+ #
+ #===------------------------------------------------------------------------===#
+ 
++from __future__ import print_function
+ r"""
+ LLVM Enumerations
+ =================
+diff -ur -x .git -x .svn -x '*.o' -x '*.a' -x '*.so' -x '*.pyc' org/llvm-3.3.src/bindings/python/llvm/object.py llvm-3.3.src/bindings/python/llvm/object.py
+--- org/llvm-3.3.src/bindings/python/llvm/object.py	2012-03-10 04:41:24.000000000 +0000
++++ llvm-3.3.src/bindings/python/llvm/object.py	2026-03-19 22:08:24.820718072 +0000
+@@ -7,6 +7,7 @@
+ #
+ #===------------------------------------------------------------------------===#
+ 
++from __future__ import print_function
+ r"""
+ Object File Interface
+ =====================
+@@ -58,22 +59,22 @@
+     # This is NOT OK. You perform a lookup after the object has expired.
+     symbols = list(obj.get_symbols())
+     for symbol in symbols:
+-        print symbol.name # This raises because the object has expired.
++        print(symbol.name # This raises because the object has expired.)
+ 
+     # In this example, we mix a working and failing scenario.
+     symbols = []
+     for symbol in obj.get_symbols():
+         symbols.append(symbol)
+-        print symbol.name
++        print(symbol.name)
+ 
+     for symbol in symbols:
+-        print symbol.name # OK
+-        print symbol.address # NOT OK. We didn't look up this property before.
++        print(symbol.name # OK)
++        print(symbol.address # NOT OK. We didn't look up this property before.)
+ 
+     # Cache everything up front.
+     symbols = list(obj.get_symbols(cache=True))
+     for symbol in symbols:
+-        print symbol.name # OK
++        print(symbol.name # OK)
+ 
+ """
+ 
+diff -ur -x .git -x .svn -x '*.o' -x '*.a' -x '*.so' -x '*.pyc' org/llvm-3.3.src/bindings/python/llvm/tests/__init__.py llvm-3.3.src/bindings/python/llvm/tests/__init__.py
+--- org/llvm-3.3.src/bindings/python/llvm/tests/__init__.py	2012-03-10 04:41:24.000000000 +0000
++++ llvm-3.3.src/bindings/python/llvm/tests/__init__.py	2026-03-19 22:08:24.820718072 +0000
+@@ -0,0 +1 @@
++from __future__ import print_function
+diff -ur -x .git -x .svn -x '*.o' -x '*.a' -x '*.so' -x '*.pyc' org/llvm-3.3.src/bindings/python/llvm/tests/base.py llvm-3.3.src/bindings/python/llvm/tests/base.py
+--- org/llvm-3.3.src/bindings/python/llvm/tests/base.py	2012-03-21 08:34:58.000000000 +0000
++++ llvm-3.3.src/bindings/python/llvm/tests/base.py	2026-03-19 22:08:24.820718072 +0000
+@@ -1,3 +1,4 @@
++from __future__ import print_function
+ import os.path
+ import unittest
+ 
+diff -ur -x .git -x .svn -x '*.o' -x '*.a' -x '*.so' -x '*.pyc' org/llvm-3.3.src/bindings/python/llvm/tests/test_core.py llvm-3.3.src/bindings/python/llvm/tests/test_core.py
+--- org/llvm-3.3.src/bindings/python/llvm/tests/test_core.py	2012-03-22 11:23:52.000000000 +0000
++++ llvm-3.3.src/bindings/python/llvm/tests/test_core.py	2026-03-19 22:08:24.820718072 +0000
+@@ -1,3 +1,4 @@
++from __future__ import print_function
+ from .base import TestBase
+ from ..core import OpCode
+ from ..core import MemoryBuffer
+diff -ur -x .git -x .svn -x '*.o' -x '*.a' -x '*.so' -x '*.pyc' org/llvm-3.3.src/bindings/python/llvm/tests/test_disassembler.py llvm-3.3.src/bindings/python/llvm/tests/test_disassembler.py
+--- org/llvm-3.3.src/bindings/python/llvm/tests/test_disassembler.py	2012-12-01 21:57:30.000000000 +0000
++++ llvm-3.3.src/bindings/python/llvm/tests/test_disassembler.py	2026-03-19 22:08:24.824718055 +0000
+@@ -1,3 +1,4 @@
++from __future__ import print_function
+ from .base import TestBase
+ 
+ from ..disassembler import Disassembler, Option_UseMarkup
+@@ -34,6 +35,6 @@
+         disassembler = Disassembler(triple)
+         disassembler.set_options(Option_UseMarkup)
+         count, s = disassembler.get_instruction(sequence)
+-        print s
++        print(s)
+         self.assertEqual(count, 4)
+         self.assertEqual(s, '\tpush\t{<reg:r4>, <reg:lr>}')
+diff -ur -x .git -x .svn -x '*.o' -x '*.a' -x '*.so' -x '*.pyc' org/llvm-3.3.src/bindings/python/llvm/tests/test_object.py llvm-3.3.src/bindings/python/llvm/tests/test_object.py
+--- org/llvm-3.3.src/bindings/python/llvm/tests/test_object.py	2012-03-10 04:41:24.000000000 +0000
++++ llvm-3.3.src/bindings/python/llvm/tests/test_object.py	2026-03-19 22:08:24.824718055 +0000
+@@ -1,3 +1,4 @@
++from __future__ import print_function
+ from .base import TestBase
+ from ..object import ObjectFile
+ from ..object import Relocation
+diff -ur -x .git -x .svn -x '*.o' -x '*.a' -x '*.so' -x '*.pyc' org/llvm-3.3.src/configure llvm-3.3.src/configure
+--- org/llvm-3.3.src/configure	2013-05-20 20:16:54.000000000 +0000
++++ llvm-3.3.src/configure	2026-03-19 22:24:02.896861046 +0000
+@@ -12338,8 +12338,8 @@
+ echo "$as_me: WARNING: specified python ($PYTHON) is not usable, searching path" >&2;}
+   fi
+ 
+-  # Extract the first word of "python python2 python26", so it can be a program name with args.
+-set dummy python python2 python26; ac_word=$2
++  # Extract the first word of "python3 python python2 python26", so it can be a program name with args.
++set dummy python3 python python2 python26; ac_word=$2
+ { echo "$as_me:$LINENO: checking for $ac_word" >&5
+ echo $ECHO_N "checking for $ac_word... $ECHO_C" >&6; }
+ if test "${ac_cv_path_PYTHON+set}" = set; then
+@@ -12365,11 +12365,7 @@
+ done
+ IFS=$as_save_IFS
+ 
+-  test -z "$ac_cv_path_PYTHON" && ac_cv_path_PYTHON="{ echo "$as_me:$LINENO: result: not found" >&5
+-echo "${ECHO_T}not found" >&6; }
+-                { { echo "$as_me:$LINENO: error: could not find python 2.5 or higher" >&5
+-echo "$as_me: error: could not find python 2.5 or higher" >&2;}
+-   { (exit 1); exit 1; }; }"
++  test -z "$ac_cv_path_PYTHON" && ac_cv_path_PYTHON="no"
+   ;;
+ esac
+ fi
+@@ -12385,30 +12381,25 @@
+ 
+ fi
+ 
+-{ echo "$as_me:$LINENO: checking for python >= 2.5" >&5
+-echo $ECHO_N "checking for python >= 2.5... $ECHO_C" >&6; }
+-ac_python_version=`$PYTHON -c 'import sys; print sys.version.split()[0]'`
++{ echo "$as_me:$LINENO: checking for python >= 3.0" >&5
++echo $ECHO_N "checking for python >= 3.0... $ECHO_C" >&6; }
++ac_python_version=`$PYTHON -c 'import sys; print(sys.version.split()[0])' 2>/dev/null`
+ ac_python_version_major=`echo $ac_python_version | cut -d'.' -f1`
+ ac_python_version_minor=`echo $ac_python_version | cut -d'.' -f2`
+ ac_python_version_patch=`echo $ac_python_version | cut -d'.' -f3`
+-if   test "$ac_python_version_major" -eq "2" \
+-   && test "$ac_python_version_minor" -ge "5" ; then
++if   test -n "$ac_python_version_major" && test "$ac_python_version_major" -ge "3" ; then
+   { echo "$as_me:$LINENO: result: $PYTHON ($ac_python_version)" >&5
+ echo "${ECHO_T}$PYTHON ($ac_python_version)" >&6; }
+ else
+   { echo "$as_me:$LINENO: result: not found" >&5
+ echo "${ECHO_T}not found" >&6; }
+-  { { echo "$as_me:$LINENO: error: found python $ac_python_version ($PYTHON); required >= 2.5
++  { { echo "$as_me:$LINENO: error: found python $ac_python_version ($PYTHON); required >= 3.0
+ See \`config.log' for more details." >&5
+-echo "$as_me: error: found python $ac_python_version ($PYTHON); required >= 2.5
++echo "$as_me: error: found python $ac_python_version ($PYTHON); required >= 3.0
+ See \`config.log' for more details." >&2;}
+    { (exit 1); exit 1; }; }
+ fi
+-
+-
+-
+-{ echo "$as_me:$LINENO: checking for sin in -lm" >&5
+-echo $ECHO_N "checking for sin in -lm... $ECHO_C" >&6; }
++{ echo $ECHO_N "checking for sin in -lm... $ECHO_C" >&6; }
+ if test "${ac_cv_lib_m_sin+set}" = set; then
+   echo $ECHO_N "(cached) $ECHO_C" >&6
+ else
+diff -ur -x .git -x .svn -x '*.o' -x '*.a' -x '*.so' -x '*.pyc' org/llvm-3.3.src/docs/conf.py llvm-3.3.src/docs/conf.py
+--- org/llvm-3.3.src/docs/conf.py	2013-01-01 10:00:19.000000000 +0000
++++ llvm-3.3.src/docs/conf.py	2026-03-19 22:08:24.824718055 +0000
+@@ -10,6 +10,7 @@
+ # All configuration values have a default; values that are commented out
+ # serve to show the default.
+ 
++from __future__ import print_function
+ import sys, os
+ 
+ # If extensions (or modules to document with autodoc) are in another directory,
+@@ -231,11 +232,11 @@
+         header = f.readline().rstrip('\n')
+ 
+         if len(header) != len(title):
+-            print >>sys.stderr, (
++            print((, file=sys.stderr)
+                 "error: invalid header in %r (does not match title)" % (
+                     file_subpath,))
+         if ' - ' not in title:
+-            print >>sys.stderr, (
++            print((, file=sys.stderr)
+                 ("error: invalid title in %r "
+                  "(expected '<name> - <description>')") % (
+                     file_subpath,))
+diff -ur -x .git -x .svn -x '*.o' -x '*.a' -x '*.so' -x '*.pyc' org/llvm-3.3.src/test/tools/llvm-readobj/Inputs/relocs.py llvm-3.3.src/test/tools/llvm-readobj/Inputs/relocs.py
+--- org/llvm-3.3.src/test/tools/llvm-readobj/Inputs/relocs.py	2013-04-12 04:02:23.000000000 +0000
++++ llvm-3.3.src/test/tools/llvm-readobj/Inputs/relocs.py	2026-03-19 22:08:24.828718036 +0000
+@@ -1,4 +1,4 @@
+-#!/usr/bin/env python
++#!/usr/bin/python3
+ 
+ # Generates ELF, COFF and MachO object files for different architectures
+ # containing all relocations:
+@@ -12,6 +12,7 @@
+ # number of relocations through repeated instructions. Afterwards, the
+ # relocations in the object file are patched to their proper value.
+ 
++from __future__ import print_function
+ import operator
+ import shutil
+ import StringIO
+@@ -43,17 +44,17 @@
+ 
+   # Not supported (Enums are immutable).
+   def __setattr__(self, name, value):
+-    raise NotSupportedException, self.__setattr__
++    raise NotSupportedException(self.__setattr__)
+ 
+   # Not supported (Enums are immutable).
+   def __delattr__(self, name):
+-    raise NotSupportedException, self.__delattr__
++    raise NotSupportedException(self.__delattr__)
+ 
+   # Gets the enum symbol for the specified value.
+   def __getitem__(self, value):
+     symbol = self._map.get(value)
+     if symbol is None:
+-      raise KeyError, value
++      raise KeyError(value)
+     return symbol
+ 
+   # Gets the enum symbol for the specified value or none.
+@@ -63,18 +64,18 @@
+ 
+   # Not supported (Enums are immutable).
+   def __setitem__(self, value, symbol):
+-    raise NotSupportedException, self.__setitem__
++    raise NotSupportedException(self.__setitem__)
+ 
+   # Not supported (Enums are immutable).
+   def __delitem__(self, value):
+-    raise NotSupportedException, self.__delitem__
++    raise NotSupportedException(self.__delitem__)
+ 
+   def entries(self):
+     # sort by (value, name)
+     def makeKey(item):
+       return (item[1], item[0])
+     e = []
+-    for pair in sorted(self._nameMap.iteritems(), key=makeKey):
++    for pair in sorted(self._nameMap.items(), key=makeKey):
+       e.append(pair)
+     return e
+ 
+@@ -100,7 +101,7 @@
+   def read(self, N):
+     data = self.file.read(N)
+     if len(data) != N:
+-      raise ValueError, "Out of data!"
++      raise ValueError("Out of data!")
+     return data
+ 
+   def int8(self):
+@@ -266,7 +267,7 @@
+   elif fileclass == 2:
+     f.is64Bit = True
+   else:
+-    raise ValueError, "Unknown file class %x" % fileclass
++    raise ValueError("Unknown file class %x" % fileclass)
+ 
+   byteordering = f.uint8()
+   if byteordering == 1:
+@@ -274,7 +275,7 @@
+   elif byteordering == 2:
+       f.isLSB = False
+   else:
+-      raise ValueError, "Unknown byte ordering %x" % byteordering
++      raise ValueError("Unknown byte ordering %x" % byteordering)
+ 
+   f.seek(18)
+   e_machine = f.uint16()
+@@ -371,7 +372,7 @@
+   elif magic == '\xCF\xFA\xED\xFE':
+     f.isLSB, f.is64Bit = True, True
+   else:
+-    raise ValueError,"Not a Mach-O object file: %r (bad magic)" % path
++    raise ValueError("Not a Mach-O object file: %r (bad magic)" % path)
+ 
+   cputype = f.uint32()
+   cpusubtype = f.uint32()
+@@ -388,7 +389,7 @@
+     patchMachoLoadCommand(f, relocs)
+ 
+   if f.tell() - start != loadCommandsSize:
+-    raise ValueError,"%s: warning: invalid load commands size: %r" % (
++    raise ValueError("%s: warning: invalid load commands size: %r" % ()
+       sys.argv[0], loadCommandsSize)
+ 
+ def patchMachoLoadCommand(f, relocs):
+@@ -404,7 +405,7 @@
+     f.read(cmdSize - 8)
+ 
+   if f.tell() - start != cmdSize:
+-    raise ValueError,"%s: warning: invalid load command size: %r" % (
++    raise ValueError("%s: warning: invalid load command size: %r" % ()
+       sys.argv[0], cmdSize)
+ 
+ def patchMachoSegmentLoadCommand(f, relocs):
+diff -ur -x .git -x .svn -x '*.o' -x '*.a' -x '*.so' -x '*.pyc' org/llvm-3.3.src/utils/DSAclean.py llvm-3.3.src/utils/DSAclean.py
+--- org/llvm-3.3.src/utils/DSAclean.py	2005-10-13 17:31:30.000000000 +0000
++++ llvm-3.3.src/utils/DSAclean.py	2026-03-19 22:08:24.828718036 +0000
+@@ -1,4 +1,4 @@
+-#! /usr/bin/python
++#!/usr/bin/python3
+ 
+ #changelog: 
+ #10/13/2005b: replaced the # in tmp(.#*)* with alphanumeric and _, this will then remove
+@@ -8,10 +8,11 @@
+ #the comments
+ #10/12/2005: now it only removes nodes and edges for which the label is %tmp.# rather
+ #than removing all lines for which the lable CONTAINS %tmp.#
++from __future__ import print_function
+ import re
+ import sys
+ if( len(sys.argv) < 3 ):
+-	print 'usage is: ./DSAclean <dot_file_to_be_cleaned> <out_put_file>'
++	print('usage is: ./DSAclean <dot_file_to_be_cleaned> <out_put_file>')
+ 	sys.exit(1)
+ #get a file object
+ input = open(sys.argv[1], 'r')
+diff -ur -x .git -x .svn -x '*.o' -x '*.a' -x '*.so' -x '*.pyc' org/llvm-3.3.src/utils/DSAextract.py llvm-3.3.src/utils/DSAextract.py
+--- org/llvm-3.3.src/utils/DSAextract.py	2012-09-27 10:14:43.000000000 +0000
++++ llvm-3.3.src/utils/DSAextract.py	2026-03-19 22:08:24.828718036 +0000
+@@ -1,4 +1,4 @@
+-#! /usr/bin/python
++#!/usr/bin/python3
+ 
+ #this is a script to extract given named nodes from a dot file, with
+ #the associated edges.  An edge is kept iff for edge x -> y
+@@ -25,13 +25,14 @@
+ #currently the script prints the names it is searching for
+ #to STDOUT, so you can check to see if they are what you intend
+ 
++from __future__ import print_function
+ import re
+ import string
+ import sys
+ 
+ 
+ if len(sys.argv) < 3:
+-	print 'usage is ./DSAextract <dot_file_to_modify> \
++	print('usage is ./DSAextract <dot_file_to_modify> \)
+ 			<output_file> [list of nodes to extract]'
+ 
+ #open the input file
+@@ -73,7 +74,7 @@
+ #test code
+ #print '\n'
+ 
+-print node_name_set
++print(node_name_set)
+ 
+ #print node_set
+ 	
+diff -ur -x .git -x .svn -x '*.o' -x '*.a' -x '*.so' -x '*.pyc' org/llvm-3.3.src/utils/Target/ARM/analyze-match-table.py llvm-3.3.src/utils/Target/ARM/analyze-match-table.py
+--- org/llvm-3.3.src/utils/Target/ARM/analyze-match-table.py	2011-01-11 19:06:26.000000000 +0000
++++ llvm-3.3.src/utils/Target/ARM/analyze-match-table.py	2026-03-19 22:08:24.844717967 +0000
+@@ -1,5 +1,6 @@
+-#!/usr/bin/env python
++#!/usr/bin/python3
+ 
++from __future__ import print_function
+ def analyze_match_table(path):
+     # Extract the instruction table.
+     data = open(path).read()
+@@ -37,9 +38,9 @@
+     condcode_mnemonics = set(m for m in mnemonics
+                              if 'MCK_CondCode' in mnemonic_flags[m])
+     noncondcode_mnemonics = mnemonics - condcode_mnemonics
+-    print ' || '.join('Mnemonic == "%s"' % m
++    print(' || '.join('Mnemonic == "%s"' % m)
+                       for m in ccout_mnemonics)
+-    print ' || '.join('Mnemonic == "%s"' % m
++    print(' || '.join('Mnemonic == "%s"' % m)
+                       for m in noncondcode_mnemonics)
+ 
+ def main():
+diff -ur -x .git -x .svn -x '*.o' -x '*.a' -x '*.so' -x '*.pyc' org/llvm-3.3.src/utils/lint/common_lint.py llvm-3.3.src/utils/lint/common_lint.py
+--- org/llvm-3.3.src/utils/lint/common_lint.py	2009-02-20 23:44:54.000000000 +0000
++++ llvm-3.3.src/utils/lint/common_lint.py	2026-03-19 22:08:24.828718036 +0000
+@@ -1,7 +1,8 @@
+-#!/usr/bin/python
++#!/usr/bin/python3
+ #
+ # Common lint functions applicable to multiple types of files.
+ 
++from __future__ import print_function
+ import re
+ 
+ def VerifyLineLength(filename, lines, max_length):
+@@ -89,7 +90,7 @@
+   for filename in filenames:
+     file = open(filename, 'r')
+     if not file:
+-      print 'Cound not open %s' % filename
++      print('Cound not open %s' % filename)
+       continue
+     lines = file.readlines()
+     lint.extend(linter.RunOnFile(filename, lines))
+diff -ur -x .git -x .svn -x '*.o' -x '*.a' -x '*.so' -x '*.pyc' org/llvm-3.3.src/utils/lint/cpp_lint.py llvm-3.3.src/utils/lint/cpp_lint.py
+--- org/llvm-3.3.src/utils/lint/cpp_lint.py	2009-02-20 23:44:54.000000000 +0000
++++ llvm-3.3.src/utils/lint/cpp_lint.py	2026-03-19 22:08:24.828718036 +0000
+@@ -1,4 +1,4 @@
+-#!/usr/bin/python
++#!/usr/bin/python3
+ #
+ # Checks C++ files to make sure they conform to LLVM standards, as specified in
+ # http://llvm.org/docs/CodingStandards.html .
+@@ -6,6 +6,7 @@
+ # TODO: add unittests for the verifier functions:
+ # http://docs.python.org/library/unittest.html .
+ 
++from __future__ import print_function
+ import common_lint
+ import re
+ import sys
+@@ -86,7 +87,7 @@
+ def CppLintMain(filenames):
+   all_lint = common_lint.RunLintOverAllFiles(CppLint(), filenames)
+   for lint in all_lint:
+-    print '%s:%d:%s' % (lint[0], lint[1], lint[2])
++    print('%s:%d:%s' % (lint[0], lint[1], lint[2]))
+   return 0
+ 
+ 
+diff -ur -x .git -x .svn -x '*.o' -x '*.a' -x '*.so' -x '*.pyc' org/llvm-3.3.src/utils/lint/generic_lint.py llvm-3.3.src/utils/lint/generic_lint.py
+--- org/llvm-3.3.src/utils/lint/generic_lint.py	2009-01-02 21:15:30.000000000 +0000
++++ llvm-3.3.src/utils/lint/generic_lint.py	2026-03-19 22:08:24.828718036 +0000
+@@ -1,8 +1,9 @@
+-#!/usr/bin/python
++#!/usr/bin/python3
+ #
+ # Checks files to make sure they conform to LLVM standards which can be applied
+ # to any programming language: at present, line length and trailing whitespace.
+ 
++from __future__ import print_function
+ import common_lint
+ import sys
+ 
+diff -ur -x .git -x .svn -x '*.o' -x '*.a' -x '*.so' -x '*.pyc' org/llvm-3.3.src/utils/lit/lit/LitConfig.py llvm-3.3.src/utils/lit/lit/LitConfig.py
+--- org/llvm-3.3.src/utils/lit/lit/LitConfig.py	2013-01-31 18:04:38.000000000 +0000
++++ llvm-3.3.src/utils/lit/lit/LitConfig.py	2026-03-19 22:13:55.383417649 +0000
+@@ -1,3 +1,4 @@
++from __future__ import print_function
+ class LitConfig:
+     """LitConfig - Configuration data for a 'lit' test runner instance, shared
+     across all tests.
+@@ -115,8 +116,8 @@
+         file,line,_,_,_ = inspect.getframeinfo(f)
+         location = '%s:%d' % (os.path.basename(file), line)
+ 
+-        print >>sys.stderr, '%s: %s: %s: %s' % (self.progname, location,
+-                                                kind, message)
++        print('%s: %s: %s: %s' % (self.progname, location,
++                                                kind, message), file=sys.stderr)
+ 
+     def note(self, message):
+         self._write_message('note', message)
+diff -ur -x .git -x .svn -x '*.o' -x '*.a' -x '*.so' -x '*.pyc' org/llvm-3.3.src/utils/lit/lit/LitTestCase.py llvm-3.3.src/utils/lit/lit/LitTestCase.py
+--- org/llvm-3.3.src/utils/lit/lit/LitTestCase.py	2010-03-25 07:10:01.000000000 +0000
++++ llvm-3.3.src/utils/lit/lit/LitTestCase.py	2026-03-19 22:08:24.828718036 +0000
+@@ -1,3 +1,4 @@
++from __future__ import print_function
+ import unittest
+ import Test
+ 
+diff -ur -x .git -x .svn -x '*.o' -x '*.a' -x '*.so' -x '*.pyc' org/llvm-3.3.src/utils/lit/lit/ProgressBar.py llvm-3.3.src/utils/lit/lit/ProgressBar.py
+--- org/llvm-3.3.src/utils/lit/lit/ProgressBar.py	2011-03-15 21:07:44.000000000 +0000
++++ llvm-3.3.src/utils/lit/lit/ProgressBar.py	2026-03-19 22:08:24.832718020 +0000
+@@ -1,8 +1,9 @@
+-#!/usr/bin/env python
++#!/usr/bin/python3
+ 
+ # Source: http://code.activestate.com/recipes/475116/, with
+ # modifications by Daniel Dunbar.
+ 
++from __future__ import print_function
+ import sys, re, time
+ 
+ class TerminalController:
+diff -ur -x .git -x .svn -x '*.o' -x '*.a' -x '*.so' -x '*.pyc' org/llvm-3.3.src/utils/lit/lit/ShCommands.py llvm-3.3.src/utils/lit/lit/ShCommands.py
+--- org/llvm-3.3.src/utils/lit/lit/ShCommands.py	2009-12-26 22:58:23.000000000 +0000
++++ llvm-3.3.src/utils/lit/lit/ShCommands.py	2026-03-19 22:08:24.832718020 +0000
+@@ -1,3 +1,4 @@
++from __future__ import print_function
+ class Command:
+     def __init__(self, args, redirects):
+         self.args = list(args)
+@@ -20,20 +21,20 @@
+             elif '"' not in arg and '$' not in arg:
+                 quoted = '"%s"' % arg
+             else:
+-                raise NotImplementedError,'Unable to quote %r' % arg
+-            print >>file, quoted,
++                raise NotImplementedError('Unable to quote %r' % arg)
++            print(quoted, end=' ', file=file)
+ 
+             # For debugging / validation.
+             import ShUtil
+             dequoted = list(ShUtil.ShLexer(quoted).lex())
+             if dequoted != [arg]:
+-                raise NotImplementedError,'Unable to quote %r' % arg
++                raise NotImplementedError('Unable to quote %r' % arg)
+ 
+         for r in self.redirects:
+             if len(r[0]) == 1:
+-                print >>file, "%s '%s'" % (r[0][0], r[1]),
++                print("%s '%s'" % (r[0][0], r[1]), end=' ', file=file)
+             else:
+-                print >>file, "%s%s '%s'" % (r[0][1], r[0][0], r[1]),
++                print("%s%s '%s'" % (r[0][1], r[0][0], r[1]), end=' ', file=file)
+ 
+ class Pipeline:
+     def __init__(self, commands, negate=False, pipe_err=False):
+@@ -54,13 +55,13 @@
+ 
+     def toShell(self, file, pipefail=False):
+         if pipefail != self.pipe_err:
+-            raise ValueError,'Inconsistent "pipefail" attribute!'
++            raise ValueError('Inconsistent "pipefail" attribute!')
+         if self.negate:
+-            print >>file, '!',
++            print('!', end=' ', file=file)
+         for cmd in self.commands:
+             cmd.toShell(file)
+             if cmd is not self.commands[-1]:
+-                print >>file, '|\n ',
++                print('|\n ', end=' ', file=file)
+ 
+ class Seq:
+     def __init__(self, lhs, op, rhs):
+@@ -81,5 +82,5 @@
+ 
+     def toShell(self, file, pipefail=False):
+         self.lhs.toShell(file, pipefail)
+-        print >>file, ' %s\n' % self.op
++        print(' %s\n' % self.op, file=file)
+         self.rhs.toShell(file, pipefail)
+diff -ur -x .git -x .svn -x '*.o' -x '*.a' -x '*.so' -x '*.pyc' org/llvm-3.3.src/utils/lit/lit/ShUtil.py llvm-3.3.src/utils/lit/lit/ShUtil.py
+--- org/llvm-3.3.src/utils/lit/lit/ShUtil.py	2013-01-31 20:51:17.000000000 +0000
++++ llvm-3.3.src/utils/lit/lit/ShUtil.py	2026-03-19 22:08:24.832718020 +0000
+@@ -1,3 +1,4 @@
++from __future__ import print_function
+ import itertools
+ 
+ import Util
+@@ -116,9 +117,9 @@
+         reference = self.lex_arg_slow(c)
+         if res is not None:
+             if res != reference:
+-                raise ValueError,"Fast path failure: %r != %r" % (res, reference)
++                raise ValueError("Fast path failure: %r != %r" % (res, reference))
+             if self.pos != end:
+-                raise ValueError,"Fast path failure: %r != %r" % (self.pos, end)
++                raise ValueError("Fast path failure: %r != %r" % (self.pos, end))
+         return reference
+         
+     def lex_arg(self, c):
+@@ -185,9 +186,9 @@
+     def parse_command(self):
+         tok = self.lex()
+         if not tok:
+-            raise ValueError,"empty command!"
++            raise ValueError("empty command!")
+         if isinstance(tok, tuple):
+-            raise ValueError,"syntax error near unexpected token %r" % tok[0]
++            raise ValueError("syntax error near unexpected token %r" % tok[0])
+         
+         args = [tok]
+         redirects = []
+@@ -212,7 +213,7 @@
+             op = self.lex()
+             arg = self.lex()
+             if not arg:
+-                raise ValueError,"syntax error near token %r" % op[0]
++                raise ValueError("syntax error near token %r" % op[0])
+             redirects.append((op, arg))
+ 
+         return Command(args, redirects)
+@@ -234,7 +235,7 @@
+             assert isinstance(operator, tuple) and len(operator) == 1
+ 
+             if not self.look():
+-                raise ValueError, "missing argument to operator %r" % operator[0]
++                raise ValueError("missing argument to operator %r" % operator[0])
+             
+             # FIXME: Operator precedence!!
+             lhs = Seq(lhs, operator[0], self.parse_pipeline())
+diff -ur -x .git -x .svn -x '*.o' -x '*.a' -x '*.so' -x '*.pyc' org/llvm-3.3.src/utils/lit/lit/Test.py llvm-3.3.src/utils/lit/lit/Test.py
+--- org/llvm-3.3.src/utils/lit/lit/Test.py	2013-02-07 21:34:34.000000000 +0000
++++ llvm-3.3.src/utils/lit/lit/Test.py	2026-03-19 22:08:24.832718020 +0000
+@@ -1,3 +1,4 @@
++from __future__ import print_function
+ import os
+ 
+ # Test results.
+diff -ur -x .git -x .svn -x '*.o' -x '*.a' -x '*.so' -x '*.pyc' org/llvm-3.3.src/utils/lit/lit/TestFormats.py llvm-3.3.src/utils/lit/lit/TestFormats.py
+--- org/llvm-3.3.src/utils/lit/lit/TestFormats.py	2013-03-13 06:16:33.000000000 +0000
++++ llvm-3.3.src/utils/lit/lit/TestFormats.py	2026-03-19 22:08:24.832718020 +0000
+@@ -1,3 +1,4 @@
++from __future__ import print_function
+ import os
+ import sys
+ 
+diff -ur -x .git -x .svn -x '*.o' -x '*.a' -x '*.so' -x '*.pyc' org/llvm-3.3.src/utils/lit/lit/TestRunner.py llvm-3.3.src/utils/lit/lit/TestRunner.py
+--- org/llvm-3.3.src/utils/lit/lit/TestRunner.py	2013-03-20 23:32:14.000000000 +0000
++++ llvm-3.3.src/utils/lit/lit/TestRunner.py	2026-03-19 22:14:15.919337470 +0000
+@@ -1,3 +1,4 @@
++from __future__ import print_function
+ import os, signal, subprocess, sys
+ import StringIO
+ 
+@@ -66,7 +67,7 @@
+                 res = executeShCmd(cmd.rhs, cfg, cwd, results)
+             return res
+ 
+-        raise ValueError,'Unknown shell command: %r' % cmd.op
++        raise ValueError('Unknown shell command: %r' % cmd.op)
+ 
+     assert isinstance(cmd, ShUtil.Pipeline)
+     procs = []
+@@ -256,7 +257,7 @@
+     results = []
+     try:
+         exitCode = executeShCmd(cmd, test.config, cwd, results)
+-    except InternalShellError,e:
++    except InternalShellError as e:
+         exitCode = 127
+         results.append((e.command, '', e.message, exitCode))
+ 
+@@ -433,22 +434,22 @@
+ 
+ def formatTestOutput(status, out, err, exitCode, script):
+     output = StringIO.StringIO()
+-    print >>output, "Script:"
+-    print >>output, "--"
+-    print >>output, '\n'.join(script)
+-    print >>output, "--"
+-    print >>output, "Exit Code: %r" % exitCode,
+-    print >>output
++    print("Script:", file=output)
++    print("--", file=output)
++    print('\n'.join(script), file=output)
++    print("--", file=output)
++    print("Exit Code: %r" % exitCode, end=' ', file=output)
++    print(file=output)
+     if out:
+-        print >>output, "Command Output (stdout):"
+-        print >>output, "--"
++        print("Command Output (stdout):", file=output)
++        print("--", file=output)
+         output.write(out)
+-        print >>output, "--"
++        print("--", file=output)
+     if err:
+-        print >>output, "Command Output (stderr):"
+-        print >>output, "--"
++        print("Command Output (stderr):", file=output)
++        print("--", file=output)
+         output.write(err)
+-        print >>output, "--"
++        print("--", file=output)
+     return (status, output.getvalue())
+ 
+ def executeShTest(test, litConfig, useExternalSh,
+diff -ur -x .git -x .svn -x '*.o' -x '*.a' -x '*.so' -x '*.pyc' org/llvm-3.3.src/utils/lit/lit/TestingConfig.py llvm-3.3.src/utils/lit/lit/TestingConfig.py
+--- org/llvm-3.3.src/utils/lit/lit/TestingConfig.py	2012-10-19 20:29:30.000000000 +0000
++++ llvm-3.3.src/utils/lit/lit/TestingConfig.py	2026-03-19 22:08:24.832718020 +0000
+@@ -1,3 +1,4 @@
++from __future__ import print_function
+ import os
+ import sys
+ 
+@@ -61,7 +62,7 @@
+                 exec f in cfg_globals
+                 if litConfig.debug:
+                     litConfig.note('... loaded config %r' % path)
+-            except SystemExit,status:
++            except SystemExit as status:
+                 # We allow normal system exit inside a config file to just
+                 # return control without error.
+                 if status.args:
+diff -ur -x .git -x .svn -x '*.o' -x '*.a' -x '*.so' -x '*.pyc' org/llvm-3.3.src/utils/lit/lit/Util.py llvm-3.3.src/utils/lit/lit/Util.py
+--- org/llvm-3.3.src/utils/lit/lit/Util.py	2012-09-08 12:07:24.000000000 +0000
++++ llvm-3.3.src/utils/lit/lit/Util.py	2026-03-19 22:13:10.835591490 +0000
+@@ -1,3 +1,4 @@
++from __future__ import print_function
+ import os, sys
+ 
+ def detectCPUs():
+@@ -34,7 +35,7 @@
+ 
+     try:
+         os.mkdir(path)
+-    except OSError,e:
++    except OSError as e:
+         # Ignore EEXIST, which may occur during a race condition.
+         if e.errno != errno.EEXIST:
+             raise
+@@ -115,27 +116,27 @@
+ 
+     barW = 40
+     hr = '-' * (barW + 34)
+-    print '\nSlowest %s:' % title
+-    print hr
++    print('\nSlowest %s:' % title)
++    print(hr)
+     for name,value in items[-20:]:
+-        print '%.2fs: %s' % (value, name)
+-    print '\n%s Times:' % title
+-    print hr
++        print('%.2fs: %s' % (value, name))
++    print('\n%s Times:' % title)
++    print(hr)
+     pDigits = int(math.ceil(math.log(maxValue, 10)))
+     pfDigits = max(0, 3-pDigits)
+     if pfDigits:
+         pDigits += pfDigits + 1
+     cDigits = int(math.ceil(math.log(len(items), 10)))
+-    print "[%s] :: [%s] :: [%s]" % ('Range'.center((pDigits+1)*2 + 3),
++    print("[%s] :: [%s] :: [%s]" % ('Range'.center((pDigits+1)*2 + 3),
+                                     'Percentage'.center(barW),
+-                                    'Count'.center(cDigits*2 + 1))
+-    print hr
++                                    'Count'.center(cDigits*2 + 1)))
++    print(hr)
+     for i,row in enumerate(histo):
+         pct = float(len(row)) / len(items)
+         w = int(barW * pct)
+-        print "[%*.*fs,%*.*fs)" % (pDigits, pfDigits, i*barH,
+-                                   pDigits, pfDigits, (i+1)*barH),
+-        print ":: [%s%s] :: [%*d/%*d]" % ('*'*w, ' '*(barW-w),
++        print("[%*.*fs,%*.*fs)" % (pDigits, pfDigits, i*barH,
++                                   pDigits, pfDigits, (i+1)*barH), end=' ')
++        print(":: [%s%s] :: [%*d/%*d]" % ('*'*w, ' '*(barW-w),
+                                           cDigits, len(row),
+-                                          cDigits, len(items))
++                                          cDigits, len(items)))
+ 
+diff -ur -x .git -x .svn -x '*.o' -x '*.a' -x '*.so' -x '*.pyc' org/llvm-3.3.src/utils/lit/lit/__init__.py llvm-3.3.src/utils/lit/lit/__init__.py
+--- org/llvm-3.3.src/utils/lit/lit/__init__.py	2012-11-28 00:06:11.000000000 +0000
++++ llvm-3.3.src/utils/lit/lit/__init__.py	2026-03-19 22:08:24.828718036 +0000
+@@ -1,3 +1,4 @@
++from __future__ import print_function
+ """'lit' Testing Tool"""
+ 
+ from main import main
+diff -ur -x .git -x .svn -x '*.o' -x '*.a' -x '*.so' -x '*.pyc' org/llvm-3.3.src/utils/lit/lit/discovery.py llvm-3.3.src/utils/lit/lit/discovery.py
+--- org/llvm-3.3.src/utils/lit/lit/discovery.py	2013-04-12 19:09:09.000000000 +0000
++++ llvm-3.3.src/utils/lit/lit/discovery.py	2026-03-19 22:08:24.828718036 +0000
+@@ -1,3 +1,4 @@
++from __future__ import print_function
+ """
+ Test discovery functions.
+ """
+@@ -215,7 +216,7 @@
+ 
+     # If there were any errors during test discovery, exit now.
+     if lit_config.numErrors:
+-        print >>sys.stderr, '%d errors, exiting.' % lit_config.numErrors
++        print('%d errors, exiting.' % lit_config.numErrors, file=sys.stderr)
+         sys.exit(2)
+ 
+     return tests
+diff -ur -x .git -x .svn -x '*.o' -x '*.a' -x '*.so' -x '*.pyc' org/llvm-3.3.src/utils/lit/lit/main.py llvm-3.3.src/utils/lit/lit/main.py
+--- org/llvm-3.3.src/utils/lit/lit/main.py	2013-04-11 00:31:27.000000000 +0000
++++ llvm-3.3.src/utils/lit/lit/main.py	2026-03-19 22:12:52.347663601 +0000
+@@ -1,5 +1,6 @@
+-#!/usr/bin/env python
++#!/usr/bin/python3
+ 
++from __future__ import print_function
+ """
+ lit - LLVM Integrated Tester.
+ 
+@@ -59,14 +60,14 @@
+         if self.progressBar:
+             self.progressBar.clear()
+ 
+-        print '%s: %s (%d of %d)' % (test.result.name, test.getFullName(),
+-                                     self.completed, self.numTests)
++        print('%s: %s (%d of %d)' % (test.result.name, test.getFullName(),
++                                     self.completed, self.numTests))
+ 
+         if test.result.isFailure and self.opts.showOutput:
+-            print "%s TEST '%s' FAILED %s" % ('*'*20, test.getFullName(),
+-                                              '*'*20)
+-            print test.output
+-            print "*" * 20
++            print("%s TEST '%s' FAILED %s" % ('*'*20, test.getFullName(),
++                                              '*'*20))
++            print(test.output)
++            print("*" * 20)
+ 
+         sys.stdout.flush()
+ 
+@@ -115,7 +116,7 @@
+         except KeyboardInterrupt:
+             # This is a sad hack. Unfortunately subprocess goes
+             # bonkers with ctrl-c and we start forking merrily.
+-            print '\nCtrl-C detected, goodbye.'
++            print('\nCtrl-C detected, goodbye.')
+             os.kill(0,9)
+         except:
+             if self.litConfig.debug:
+@@ -286,13 +287,13 @@
+                 suitesAndTests[t.suite] = []
+             suitesAndTests[t.suite].append(t)
+ 
+-        print '-- Test Suites --'
++        print('-- Test Suites --')
+         suitesAndTests = suitesAndTests.items()
+         suitesAndTests.sort(key = lambda (ts,_): ts.name)
+         for ts,ts_tests in suitesAndTests:
+-            print '  %s - %d tests' %(ts.name, len(ts_tests))
+-            print '    Source Root: %s' % ts.source_root
+-            print '    Exec Root  : %s' % ts.exec_root
++            print('  %s - %d tests' %(ts.name, len(ts_tests)))
++            print('    Source Root: %s' % ts.source_root)
++            print('    Exec Root  : %s' % ts.exec_root)
+ 
+     # Select and order the tests.
+     numTotalTests = len(tests)
+@@ -338,10 +339,10 @@
+                 tc = ProgressBar.TerminalController()
+                 progressBar = ProgressBar.ProgressBar(tc, header)
+             except ValueError:
+-                print header
++                print(header)
+                 progressBar = ProgressBar.SimpleProgressBar('Testing: ')
+         else:
+-            print header
++            print(header)
+ 
+     startTime = time.time()
+     display = TestingProgressDisplay(opts, len(tests), progressBar)
+@@ -350,7 +351,7 @@
+     display.finish()
+ 
+     if not opts.quiet:
+-        print 'Testing Time: %.2fs'%(time.time() - startTime)
++        print('Testing Time: %.2fs'%(time.time() - startTime))
+ 
+     # Update results for any tests which weren't run.
+     for t in tests:
+@@ -373,11 +374,11 @@
+         elts = byCode.get(code)
+         if not elts:
+             continue
+-        print '*'*20
+-        print '%s (%d):' % (title, len(elts))
++        print('*'*20)
++        print('%s (%d):' % (title, len(elts)))
+         for t in elts:
+-            print '    %s' % t.getFullName()
+-        print
++            print('    %s' % t.getFullName())
++        print()
+ 
+     if opts.timeTests:
+         # Collate, in case we repeated tests.
+@@ -401,16 +402,16 @@
+             continue
+         N = len(byCode.get(code,[]))
+         if N:
+-            print '  %s: %d' % (name,N)
++            print('  %s: %d' % (name,N))
+ 
+     # If we encountered any additional errors, exit abnormally.
+     if litConfig.numErrors:
+-        print >>sys.stderr, '\n%d error(s), exiting.' % litConfig.numErrors
++        print('\n%d error(s), exiting.' % litConfig.numErrors, file=sys.stderr)
+         sys.exit(2)
+ 
+     # Warn about warnings.
+     if litConfig.numWarnings:
+-        print >>sys.stderr, '\n%d warning(s) in tests.' % litConfig.numWarnings
++        print('\n%d warning(s) in tests.' % litConfig.numWarnings, file=sys.stderr)
+ 
+     if hasFailures:
+         sys.exit(1)
+diff -ur -x .git -x .svn -x '*.o' -x '*.a' -x '*.so' -x '*.pyc' org/llvm-3.3.src/utils/lit/lit.py llvm-3.3.src/utils/lit/lit.py
+--- org/llvm-3.3.src/utils/lit/lit.py	2009-12-26 22:58:23.000000000 +0000
++++ llvm-3.3.src/utils/lit/lit.py	2026-03-19 22:08:24.828718036 +0000
+@@ -1,5 +1,6 @@
+-#!/usr/bin/env python
++#!/usr/bin/python3
+ 
++from __future__ import print_function
+ if __name__=='__main__':
+     import lit
+     lit.main()
+diff -ur -x .git -x .svn -x '*.o' -x '*.a' -x '*.so' -x '*.pyc' org/llvm-3.3.src/utils/lit/setup.py llvm-3.3.src/utils/lit/setup.py
+--- org/llvm-3.3.src/utils/lit/setup.py	2011-04-15 05:18:47.000000000 +0000
++++ llvm-3.3.src/utils/lit/setup.py	2026-03-19 22:08:24.836718002 +0000
+@@ -1,3 +1,4 @@
++from __future__ import print_function
+ import lit
+ 
+ # FIXME: Support distutils?
+diff -ur -x .git -x .svn -x '*.o' -x '*.a' -x '*.so' -x '*.pyc' org/llvm-3.3.src/utils/lit/tests/Inputs/discovery/subdir/test-three.py llvm-3.3.src/utils/lit/tests/Inputs/discovery/subdir/test-three.py
+--- org/llvm-3.3.src/utils/lit/tests/Inputs/discovery/subdir/test-three.py	2013-01-31 00:21:51.000000000 +0000
++++ llvm-3.3.src/utils/lit/tests/Inputs/discovery/subdir/test-three.py	2026-03-19 22:08:24.836718002 +0000
+@@ -1 +1,2 @@
+ # RUN: true
++from __future__ import print_function
+diff -ur -x .git -x .svn -x '*.o' -x '*.a' -x '*.so' -x '*.pyc' org/llvm-3.3.src/utils/lit/tests/discovery.py llvm-3.3.src/utils/lit/tests/discovery.py
+--- org/llvm-3.3.src/utils/lit/tests/discovery.py	2013-04-12 19:09:09.000000000 +0000
++++ llvm-3.3.src/utils/lit/tests/discovery.py	2026-03-19 22:08:24.836718002 +0000
+@@ -94,3 +94,4 @@
+ # CHECK-ASEXEC-INTREE-NEXT:     Exec Root  : {{.*/exec-discovery-in-tree/obj$}}
+ # CHECK-ASEXEC-INTREE-NEXT: -- Testing: 1 tests, 1 threads --
+ # CHECK-ASEXEC-INTREE-NEXT: PASS: exec-discovery-in-tree-suite :: test-one
++from __future__ import print_function
+diff -ur -x .git -x .svn -x '*.o' -x '*.a' -x '*.so' -x '*.pyc' org/llvm-3.3.src/utils/lit/tests/progress-bar.py llvm-3.3.src/utils/lit/tests/progress-bar.py
+--- org/llvm-3.3.src/utils/lit/tests/progress-bar.py	2013-04-11 00:05:37.000000000 +0000
++++ llvm-3.3.src/utils/lit/tests/progress-bar.py	2026-03-19 22:08:24.836718002 +0000
+@@ -11,3 +11,4 @@
+ # CHECK: FAIL: shtest-shell :: test-3.txt (3 of 4)
+ # CHECK: Testing: 0 .. 10.. 20.. 30.. 40.. 50.. 60.. 70.. 80.. 90.. 
+ # CHECK: FAIL: shtest-shell :: test-4.txt (4 of 4)
++from __future__ import print_function
+diff -ur -x .git -x .svn -x '*.o' -x '*.a' -x '*.so' -x '*.pyc' org/llvm-3.3.src/utils/lit/tests/shell-parsing.py llvm-3.3.src/utils/lit/tests/shell-parsing.py
+--- org/llvm-3.3.src/utils/lit/tests/shell-parsing.py	2013-01-31 01:23:26.000000000 +0000
++++ llvm-3.3.src/utils/lit/tests/shell-parsing.py	2026-03-19 22:08:24.836718002 +0000
+@@ -1,3 +1,4 @@
+ # Just run the ShUtil unit tests.
+ #
+ # RUN: python -m lit.ShUtil
++from __future__ import print_function
+diff -ur -x .git -x .svn -x '*.o' -x '*.a' -x '*.so' -x '*.pyc' org/llvm-3.3.src/utils/lit/tests/shtest-format.py llvm-3.3.src/utils/lit/tests/shtest-format.py
+--- org/llvm-3.3.src/utils/lit/tests/shtest-format.py	2013-01-31 18:05:01.000000000 +0000
++++ llvm-3.3.src/utils/lit/tests/shtest-format.py	2026-03-19 22:08:24.836718002 +0000
+@@ -41,3 +41,4 @@
+ # CHECK: Unresolved Tests   : 1
+ # CHECK: Unexpected Passes  : 1
+ # CHECK: Unexpected Failures: 2
++from __future__ import print_function
+diff -ur -x .git -x .svn -x '*.o' -x '*.a' -x '*.so' -x '*.pyc' org/llvm-3.3.src/utils/lit/tests/shtest-shell.py llvm-3.3.src/utils/lit/tests/shtest-shell.py
+--- org/llvm-3.3.src/utils/lit/tests/shtest-shell.py	2013-01-31 22:15:20.000000000 +0000
++++ llvm-3.3.src/utils/lit/tests/shtest-shell.py	2026-03-19 22:08:24.836718002 +0000
+@@ -31,3 +31,4 @@
+ # CHECK: PASS: shtest-shell :: sequencing-0.txt
+ # CHECK: XFAIL: shtest-shell :: sequencing-1.txt
+ # CHECK: Failing Tests (3)
++from __future__ import print_function
+diff -ur -x .git -x .svn -x '*.o' -x '*.a' -x '*.so' -x '*.pyc' org/llvm-3.3.src/utils/lit/tests/unittest-adaptor.py llvm-3.3.src/utils/lit/tests/unittest-adaptor.py
+--- org/llvm-3.3.src/utils/lit/tests/unittest-adaptor.py	2013-01-31 01:23:39.000000000 +0000
++++ llvm-3.3.src/utils/lit/tests/unittest-adaptor.py	2026-03-19 22:08:24.836718002 +0000
+@@ -6,6 +6,7 @@
+ # CHECK: unittest-adaptor :: test-one.txt ... ok
+ # CHECK: unittest-adaptor :: test-two.txt ... FAIL
+ 
++from __future__ import print_function
+ import unittest
+ import sys
+ 
+diff -ur -x .git -x .svn -x '*.o' -x '*.a' -x '*.so' -x '*.pyc' org/llvm-3.3.src/utils/lit/tests/usage.py llvm-3.3.src/utils/lit/tests/usage.py
+--- org/llvm-3.3.src/utils/lit/tests/usage.py	2013-01-31 00:21:39.000000000 +0000
++++ llvm-3.3.src/utils/lit/tests/usage.py	2026-03-19 22:08:24.836718002 +0000
+@@ -4,3 +4,4 @@
+ # RUN: FileCheck < %t.out %s
+ #
+ # CHECK: Usage: lit.py [options] {file-or-path}
++from __future__ import print_function
+diff -ur -x .git -x .svn -x '*.o' -x '*.a' -x '*.so' -x '*.pyc' org/llvm-3.3.src/utils/lldbDataFormatters.py llvm-3.3.src/utils/lldbDataFormatters.py
+--- org/llvm-3.3.src/utils/lldbDataFormatters.py	2012-11-10 09:45:32.000000000 +0000
++++ llvm-3.3.src/utils/lldbDataFormatters.py	2026-03-19 22:08:24.836718002 +0000
+@@ -1,3 +1,4 @@
++from __future__ import print_function
+ """
+ Load into LLDB with:
+ script import lldbDataFormatters
+diff -ur -x .git -x .svn -x '*.o' -x '*.a' -x '*.so' -x '*.pyc' org/llvm-3.3.src/utils/llvm-build/llvmbuild/__init__.py llvm-3.3.src/utils/llvm-build/llvmbuild/__init__.py
+--- org/llvm-3.3.src/utils/llvm-build/llvmbuild/__init__.py	2011-11-03 17:56:03.000000000 +0000
++++ llvm-3.3.src/utils/llvm-build/llvmbuild/__init__.py	2026-03-21 15:28:54.010187901 +0000
+@@ -1 +1,2 @@
+-from main import main
++from __future__ import print_function
++from .main import main
+diff -ur -x .git -x .svn -x '*.o' -x '*.a' -x '*.so' -x '*.pyc' org/llvm-3.3.src/utils/llvm-build/llvmbuild/componentinfo.py llvm-3.3.src/utils/llvm-build/llvmbuild/componentinfo.py
+--- org/llvm-3.3.src/utils/llvm-build/llvmbuild/componentinfo.py	2012-05-15 18:44:17.000000000 +0000
++++ llvm-3.3.src/utils/llvm-build/llvmbuild/componentinfo.py	2026-03-21 16:33:45.949003549 +0000
+@@ -1,12 +1,16 @@
++from __future__ import print_function
+ """
+ Descriptor objects for entities that are part of the LLVM project.
+ """
+ 
+-import ConfigParser
+-import StringIO
++try:
++    import configparser as ConfigParser
++except ImportError:
++    import ConfigParser
++import io
+ import sys
+ 
+-from util import *
++from .util import *
+ 
+ class ParseError(Exception):
+     pass
+@@ -29,7 +33,7 @@
+ 
+     def __init__(self, subpath, name, dependencies, parent):
+         if not subpath.startswith('/'):
+-            raise ValueError,"invalid subpath: %r" % subpath
++            raise ValueError("invalid subpath: %r" % subpath)
+         self.subpath = subpath
+         self.name = name
+         self.dependencies = list(dependencies)
+@@ -100,10 +104,10 @@
+         ComponentInfo.__init__(self, subpath, name, [], parent)
+ 
+     def get_llvmbuild_fragment(self):
+-        result = StringIO.StringIO()
+-        print >>result, 'type = %s' % self.type_name
+-        print >>result, 'name = %s' % self.name
+-        print >>result, 'parent = %s' % self.parent
++        result = io.StringIO()
++        print('type = %s' % self.type_name, file=result)
++        print('name = %s' % self.name, file=result)
++        print('parent = %s' % self.parent, file=result)
+         return result.getvalue()
+ 
+ class LibraryComponentInfo(ComponentInfo):
+@@ -152,20 +156,20 @@
+             yield ('library group', r)
+ 
+     def get_llvmbuild_fragment(self):
+-        result = StringIO.StringIO()
+-        print >>result, 'type = %s' % self.type_name
+-        print >>result, 'name = %s' % self.name
+-        print >>result, 'parent = %s' % self.parent
++        result = io.StringIO()
++        print('type = %s' % self.type_name, file=result)
++        print('name = %s' % self.name, file=result)
++        print('parent = %s' % self.parent, file=result)
+         if self.library_name is not None:
+-            print >>result, 'library_name = %s' % self.library_name
++            print('library_name = %s' % self.library_name, file=result)
+         if self.required_libraries:
+-            print >>result, 'required_libraries = %s' % ' '.join(
+-                self.required_libraries)
++            print('required_libraries = %s' % ' '.join(
++                self.required_libraries), file=result)
+         if self.add_to_library_groups:
+-            print >>result, 'add_to_library_groups = %s' % ' '.join(
+-                self.add_to_library_groups)
++            print('add_to_library_groups = %s' % ' '.join(
++                self.add_to_library_groups), file=result)
+         if not self.installed:
+-            print >>result, 'installed = 0'
++            print('installed = 0', file=result)
+         return result.getvalue()
+ 
+     def get_library_name(self):
+@@ -237,16 +241,16 @@
+             yield ('library group', r)
+ 
+     def get_llvmbuild_fragment(self):
+-        result = StringIO.StringIO()
+-        print >>result, 'type = %s' % self.type_name
+-        print >>result, 'name = %s' % self.name
+-        print >>result, 'parent = %s' % self.parent
++        result = io.StringIO()
++        print('type = %s' % self.type_name, file=result)
++        print('name = %s' % self.name, file=result)
++        print('parent = %s' % self.parent, file=result)
+         if self.required_libraries and not self._is_special_group:
+-            print >>result, 'required_libraries = %s' % ' '.join(
+-                self.required_libraries)
++            print('required_libraries = %s' % ' '.join(
++                self.required_libraries), file=result)
+         if self.add_to_library_groups:
+-            print >>result, 'add_to_library_groups = %s' % ' '.join(
+-                self.add_to_library_groups)
++            print('add_to_library_groups = %s' % ' '.join(
++                self.add_to_library_groups), file=result)
+         return result.getvalue()
+ 
+     def get_llvmconfig_component_name(self):
+@@ -309,20 +313,20 @@
+             yield ('library group', r)
+ 
+     def get_llvmbuild_fragment(self):
+-        result = StringIO.StringIO()
+-        print >>result, 'type = %s' % self.type_name
+-        print >>result, 'name = %s' % self.name
+-        print >>result, 'parent = %s' % self.parent
++        result = io.StringIO()
++        print('type = %s' % self.type_name, file=result)
++        print('name = %s' % self.name, file=result)
++        print('parent = %s' % self.parent, file=result)
+         if self.required_libraries:
+-            print >>result, 'required_libraries = %s' % ' '.join(
+-                self.required_libraries)
++            print('required_libraries = %s' % ' '.join(
++                self.required_libraries), file=result)
+         if self.add_to_library_groups:
+-            print >>result, 'add_to_library_groups = %s' % ' '.join(
+-                self.add_to_library_groups)
++            print('add_to_library_groups = %s' % ' '.join(
++                self.add_to_library_groups), file=result)
+         for bool_key in ('has_asmparser', 'has_asmprinter', 'has_disassembler',
+                          'has_jit'):
+             if getattr(self, bool_key):
+-                print >>result, '%s = 1' % (bool_key,)
++                print('%s = 1' % (bool_key,), file=result)
+         return result.getvalue()
+ 
+     def get_llvmconfig_component_name(self):
+@@ -352,12 +356,12 @@
+             yield ('required library', r)
+ 
+     def get_llvmbuild_fragment(self):
+-        result = StringIO.StringIO()
+-        print >>result, 'type = %s' % self.type_name
+-        print >>result, 'name = %s' % self.name
+-        print >>result, 'parent = %s' % self.parent
+-        print >>result, 'required_libraries = %s' % ' '.join(
+-            self.required_libraries)
++        result = io.StringIO()
++        print('type = %s' % self.type_name, file=result)
++        print('name = %s' % self.name, file=result)
++        print('parent = %s' % self.parent, file=result)
++        print('required_libraries = %s' % ' '.join(
++            self.required_libraries), file=result)
+         return result.getvalue()
+ 
+ class BuildToolComponentInfo(ToolComponentInfo):
+@@ -455,12 +459,13 @@
+             info = type_class.parse(subpath,
+                                     IniFormatParser(parser.items(section)))
+         except TypeError:
+-            print >>sys.stderr, "error: invalid component %r in %r: %s" % (
+-                section, path, "unable to instantiate: %r" % type_name)
++            print("error: invalid component %r in %r: %s" % (
++                section, path, "unable to instantiate: %r" % type_name),
++                file=sys.stderr)
+             import traceback
+             traceback.print_exc()
+-            raise SystemExit, 1
+-        except ParseError,e:
++            raise SystemExit(1)
++        except ParseError as e:
+             fatal("unable to load component %r in %r: %s" % (
+                     section, path, e.message))
+ 
+diff -ur -x .git -x .svn -x '*.o' -x '*.a' -x '*.so' -x '*.pyc' org/llvm-3.3.src/utils/llvm-build/llvmbuild/configutil.py llvm-3.3.src/utils/llvm-build/llvmbuild/configutil.py
+--- org/llvm-3.3.src/utils/llvm-build/llvmbuild/configutil.py	2011-11-11 00:24:00.000000000 +0000
++++ llvm-3.3.src/utils/llvm-build/llvmbuild/configutil.py	2026-03-19 22:08:24.840717983 +0000
+@@ -1,3 +1,4 @@
++from __future__ import print_function
+ """
+ Defines utilities useful for performing standard "configuration" style tasks.
+ """
+diff -ur -x .git -x .svn -x '*.o' -x '*.a' -x '*.so' -x '*.pyc' org/llvm-3.3.src/utils/llvm-build/llvmbuild/main.py llvm-3.3.src/utils/llvm-build/llvmbuild/main.py
+--- org/llvm-3.3.src/utils/llvm-build/llvmbuild/main.py	2013-01-02 09:10:48.000000000 +0000
++++ llvm-3.3.src/utils/llvm-build/llvmbuild/main.py	2026-03-21 17:21:28.930833108 +0000
+@@ -1,11 +1,12 @@
+-import StringIO
++from __future__ import print_function
++import io
+ import os
+ import sys
+ 
+-import componentinfo
+-import configutil
++import llvmbuild.componentinfo as componentinfo
++import llvmbuild.configutil as configutil
+ 
+-from util import *
++from llvmbuild.util import *
+ 
+ ###
+ 
+@@ -186,7 +187,7 @@
+             set(self.component_infos),
+             key = lambda c: c.name)
+         while components_to_visit:
+-            visit_component_info(iter(components_to_visit).next(), [], set())
++            visit_component_info(next(iter(components_to_visit)), [], set())
+ 
+         # Canonicalize children lists.
+         for c in self.ordered_component_infos:
+@@ -194,7 +195,7 @@
+ 
+     def print_tree(self):
+         def visit(node, depth = 0):
+-            print '%s%-40s (%s)' % ('  '*depth, node.name, node.type_name)
++            print('%s%-40s (%s)' % ('  '*depth, node.name, node.type_name))
+             for c in node.children:
+                 visit(c, depth + 1)
+         visit(self.component_info_map['$ROOT'])
+@@ -283,8 +284,7 @@
+             header_name = '.' + os.path.join(subpath, 'LLVMBuild.txt')
+             header_pad = '-' * (80 - len(header_fmt % (header_name, '')))
+             header_string = header_fmt % (header_name, header_pad)
+-            print >>f, """\
+-%s
++            print("""%s
+ ;
+ ;                     The LLVM Compiler Infrastructure
+ ;
+@@ -300,17 +300,17 @@
+ ;   http://llvm.org/docs/LLVMBuild.html
+ ;
+ ;===------------------------------------------------------------------------===;
+-""" % header_string
++""" % header_string, file=f)
+ 
+             # Write out each fragment.each component fragment.
+             for name,fragment in fragments:
+                 comment = comments_map.get(name)
+                 if comment is not None:
+                     f.write(comment)
+-                print >>f, "[%s]" % name
++                print("[%s]" % name, file=f)
+                 f.write(fragment)
+                 if fragment is not fragments[-1][1]:
+-                    print >>f
++                    print(file=f)
+ 
+             f.close()
+ 
+@@ -363,7 +363,7 @@
+                                is_installed)
+ 
+         # Convert to a list of entries and sort by name.
+-        entries = entries.values()
++        entries = list(entries.values())
+ 
+         # Create an 'all' pseudo component. We keep the dependency list small by
+         # only listing entries that have no other dependents.
+@@ -382,40 +382,38 @@
+         # Write out the library table.
+         make_install_dir(os.path.dirname(output_path))
+         f = open(output_path, 'w')
+-        print >>f, """\
+-//===- llvm-build generated file --------------------------------*- C++ -*-===//
++        print("""//===- llvm-build generated file --------------------------------*- C++ -*-===//
+ //
+ // Component Library Depenedency Table
+ //
+ // Automatically generated file, do not edit!
+ //
+ //===----------------------------------------------------------------------===//
+-"""
+-        print >>f, 'struct AvailableComponent {'
+-        print >>f, '  /// The name of the component.'
+-        print >>f, '  const char *Name;'
+-        print >>f, ''
+-        print >>f, '  /// The name of the library for this component (or NULL).'
+-        print >>f, '  const char *Library;'
+-        print >>f, ''
+-        print >>f, '  /// Whether the component is installed.'
+-        print >>f, '  bool IsInstalled;'
+-        print >>f, ''
+-        print >>f, '\
+-  /// The list of libraries required when linking this component.'
+-        print >>f, '  const char *RequiredLibraries[%d];' % (
+-            max_required_libraries)
+-        print >>f, '} AvailableComponents[%d] = {' % len(entries)
++""", file=f)
++        print('struct AvailableComponent {', file=f)
++        print('  /// The name of the component.', file=f)
++        print('  const char *Name;', file=f)
++        print('', file=f)
++        print('  /// The name of the library for this component (or NULL).', file=f)
++        print('  const char *Library;', file=f)
++        print('', file=f)
++        print('  /// Whether the component is installed.', file=f)
++        print('  bool IsInstalled;', file=f)
++        print('', file=f)
++        print('  /// The list of libraries required when linking this component.', file=f)
++        print('  const char *RequiredLibraries[%d];' % (
++            max_required_libraries), file=f)
++        print('} AvailableComponents[%d] = {' % len(entries), file=f)
+         for name,library_name,required_names,is_installed in entries:
+             if library_name is None:
+                 library_name_as_cstr = '0'
+             else:
+                 library_name_as_cstr = '"lib%s.a"' % library_name
+-            print >>f, '  { "%s", %s, %d, { %s } },' % (
++            print('  { "%s", %s, %d, { %s } },' % (
+                 name, library_name_as_cstr, is_installed,
+                 ', '.join('"%s"' % dep
+-                          for dep in required_names))
+-        print >>f, '};'
++                          for dep in required_names)), file=f)
++        print('};', file=f)
+         f.close()
+ 
+     def get_required_libraries_for_component(self, ci, traverse_groups = False):
+@@ -512,7 +510,7 @@
+         header_name = os.path.basename(output_path)
+         header_pad = '-' * (80 - len(header_fmt % (header_name, '')))
+         header_string = header_fmt % (header_name, header_pad)
+-        print >>f, """\
++        print("""\
+ %s
+ #
+ #                     The LLVM Compiler Infrastructure
+@@ -528,10 +526,10 @@
+ # This file is autogenerated by llvm-build, do not edit!
+ #
+ #===------------------------------------------------------------------------===#
+-""" % header_string
++""" % header_string, file=f)
+ 
+         # Write the dependency information in the best way we can.
+-        print >>f, """
++        print("""
+ # LLVMBuild CMake fragment dependencies.
+ #
+ # CMake has no builtin way to declare that the configuration depends on
+@@ -541,30 +539,31 @@
+ # CMake.
+ #
+ # FIXME: File a CMake RFE to get a properly supported version of this
+-# feature."""
++# feature.""", file=f)
+         for dep in dependencies:
+-            print >>f, """\
++            print("""\
+ configure_file(\"%s\"
+                ${CMAKE_CURRENT_BINARY_DIR}/DummyConfigureOutput)""" % (
+-                cmake_quote_path(dep),)
++                cmake_quote_path(dep),), file=f)
+ 
+         # Write the properties we use to encode the required library dependency
+         # information in a form CMake can easily use directly.
+-        print >>f, """
++        print("""
+ # Explicit library dependency information.
+ #
+ # The following property assignments effectively create a map from component
+-# names to required libraries, in a way that is easily accessed from CMake."""
++# names to required libraries, in a way that is easily accessed from CMake.""", file=f)
+         for ci in self.ordered_component_infos:
+             # We only write the information for libraries currently.
+             if ci.type_name != 'Library':
+                 continue
+ 
+-            print >>f, """\
++            print("""\
+ set_property(GLOBAL PROPERTY LLVMBUILD_LIB_DEPS_%s %s)""" % (
+                 ci.get_prefixed_library_name(), " ".join(sorted(
+                      dep.get_prefixed_library_name()
+-                     for dep in self.get_required_libraries_for_component(ci))))
++                     for dep in self.get_required_libraries_for_component(ci)))),
++                  file=f)
+ 
+         f.close()
+ 
+@@ -590,7 +589,7 @@
+         header_name = os.path.basename(output_path)
+         header_pad = '-' * (80 - len(header_fmt % (header_name, '')))
+         header_string = header_fmt % (header_name, header_pad)
+-        print >>f, """\
++        print("""\
+ %s
+ #
+ #                     The LLVM Compiler Infrastructure
+@@ -606,30 +605,30 @@
+ # This file is autogenerated by llvm-build, do not edit!
+ #
+ #===------------------------------------------------------------------------===#
+-""" % header_string
++""" % header_string, file=f)
+ 
+         # Write the dependencies for the fragment.
+         #
+         # FIXME: Technically, we need to properly quote for Make here.
+-        print >>f, """\
++        print("""\
+ # Clients must explicitly enable LLVMBUILD_INCLUDE_DEPENDENCIES to get
+ # these dependencies. This is a compromise to help improve the
+-# performance of recursive Make systems.""" 
+-        print >>f, 'ifeq ($(LLVMBUILD_INCLUDE_DEPENDENCIES),1)'
+-        print >>f, "# The dependencies for this Makefile fragment itself."
+-        print >>f, "%s: \\" % (mk_quote_string_for_target(output_path),)
++# performance of recursive Make systems.""", file=f)
++        print('ifeq ($(LLVMBUILD_INCLUDE_DEPENDENCIES),1)', file=f)
++        print("# The dependencies for this Makefile fragment itself.", file=f)
++        print("%s: \\" % (mk_quote_string_for_target(output_path),), file=f)
+         for dep in dependencies:
+-            print >>f, "\t%s \\" % (dep,)
+-        print >>f
++            print("\t%s \\" % (dep,), file=f)
++        print(file=f)
+ 
+         # Generate dummy rules for each of the dependencies, so that things
+         # continue to work correctly if any of those files are moved or removed.
+-        print >>f, """\
++        print("""\
+ # The dummy targets to allow proper regeneration even when files are moved or
+-# removed."""
++# removed.""", file=f)
+         for dep in dependencies:
+-            print >>f, "%s:" % (mk_quote_string_for_target(dep),)
+-        print >>f, 'endif'
++            print("%s:" % (mk_quote_string_for_target(dep),), file=f)
++        print('endif', file=f)
+ 
+         f.close()
+ 
+diff -ur -x .git -x .svn -x '*.o' -x '*.a' -x '*.so' -x '*.pyc' org/llvm-3.3.src/utils/llvm-build/llvmbuild/util.py llvm-3.3.src/utils/llvm-build/llvmbuild/util.py
+--- org/llvm-3.3.src/utils/llvm-build/llvmbuild/util.py	2011-11-11 00:24:00.000000000 +0000
++++ llvm-3.3.src/utils/llvm-build/llvmbuild/util.py	2026-03-19 22:08:24.844717967 +0000
+@@ -1,9 +1,10 @@
++from __future__ import print_function
+ import os
+ import sys
+ 
+ def _write_message(kind, message):
+     program = os.path.basename(sys.argv[0])
+-    print >>sys.stderr, '%s: %s: %s' % (program, kind, message)
++    print('%s: %s: %s' % (program, kind, message), file=sys.stderr)
+ 
+ note = lambda message: _write_message('note', message)
+ warning = lambda message: _write_message('warning', message)
+diff -ur -x .git -x .svn -x '*.o' -x '*.a' -x '*.so' -x '*.pyc' org/llvm-3.3.src/utils/release/findRegressions-nightly.py llvm-3.3.src/utils/release/findRegressions-nightly.py
+--- org/llvm-3.3.src/utils/release/findRegressions-nightly.py	2012-04-20 20:31:44.000000000 +0000
++++ llvm-3.3.src/utils/release/findRegressions-nightly.py	2026-03-19 22:08:24.844717967 +0000
+@@ -1,4 +1,5 @@
+-#!/usr/bin/env python
++#!/usr/bin/python3
++from __future__ import print_function
+ import re, string, sys, os, time
+ 
+ DEBUG = 0
+@@ -22,12 +23,12 @@
+   fname = ''
+   for t in r:
+     if DEBUG:
+-      print t
++      print(t)
+     if t[0] == 'PASS' or t[0] == 'FAIL' :
+       tmp = t[2].split(testDirName)
+       
+       if DEBUG:
+-        print tmp
++        print(tmp)
+       
+       if len(tmp) == 2:
+         fname = tmp[1].strip('\r\n')
+@@ -41,26 +42,26 @@
+         test[fname][k] = 'NA'
+         test[fname][t[1]] = t[0]
+         if DEBUG:
+-          print test[fname][t[1]]
++          print(test[fname][t[1]])
+     else :
+       try:
+         n = t[0].split('RESULT-')[1]
+         
+         if DEBUG:
+-          print n;
++          print(n;)
+         
+         if n == 'llc' or n == 'jit-comptime' or n == 'compile':
+           test[fname][tp + n] = float(t[2].split(' ')[2])
+           if DEBUG:
+-            print test[fname][tp + n]
++            print(test[fname][tp + n])
+         
+         elif n.endswith('-time') :
+             test[fname][exp + n] = float(t[2].strip('\r\n'))
+             if DEBUG:
+-              print test[fname][exp + n]
++              print(test[fname][exp + n])
+         
+         else :
+-          print "ERROR!"
++          print("ERROR!")
+           sys.exit(1)
+       
+       except:
+@@ -73,7 +74,7 @@
+ 
+   for t in sorted(d_old.keys()) :
+     if DEBUG:
+-      print t
++      print(t)
+         
+     if d_new.has_key(t) :
+     
+@@ -83,41 +84,41 @@
+           if d_new[t].has_key(x):
+             if d_old[t][x] == 'PASS':
+               if d_new[t][x] != 'PASS':
+-                print t + " *** REGRESSION (" + x + ")\n"
++                print(t + " *** REGRESSION (" + x + ")\n")
+             else:
+               if d_new[t][x] == 'PASS':
+-                print t + " * NEW PASS (" + x + ")\n"
++                print(t + " * NEW PASS (" + x + ")\n")
+                 
+           else :
+-            print t + "*** REGRESSION (" + x + ")\n"
++            print(t + "*** REGRESSION (" + x + ")\n")
+         
+         # For execution time, if there is no result, its a fail.
+         for x in exectime:
+           if d_old[t].has_key(tp + x):
+             if not d_new[t].has_key(tp + x):
+-              print t + " *** REGRESSION (" + tp + x + ")\n"
++              print(t + " *** REGRESSION (" + tp + x + ")\n")
+                 
+           else :
+             if d_new[t].has_key(tp + x):
+-              print t + " * NEW PASS (" + tp + x + ")\n"
++              print(t + " * NEW PASS (" + tp + x + ")\n")
+ 
+        
+         for x in comptime:
+           if d_old[t].has_key(exp + x):
+             if not d_new[t].has_key(exp + x):
+-              print t + " *** REGRESSION (" + exp + x + ")\n"
++              print(t + " *** REGRESSION (" + exp + x + ")\n")
+                 
+           else :
+             if d_new[t].has_key(exp + x):
+-              print t + " * NEW PASS (" + exp + x + ")\n"
++              print(t + " * NEW PASS (" + exp + x + ")\n")
+               
+     else :
+-      print t + ": Removed from test-suite.\n"
++      print(t + ": Removed from test-suite.\n")
+     
+ 
+ #Main
+ if len(sys.argv) < 3 :
+-    print 'Usage:', sys.argv[0], \
++    print('Usage:', sys.argv[0], \)
+           '<old log> <new log>'
+     sys.exit(-1)
+ 
+diff -ur -x .git -x .svn -x '*.o' -x '*.a' -x '*.so' -x '*.pyc' org/llvm-3.3.src/utils/release/findRegressions-simple.py llvm-3.3.src/utils/release/findRegressions-simple.py
+--- org/llvm-3.3.src/utils/release/findRegressions-simple.py	2012-04-20 20:31:44.000000000 +0000
++++ llvm-3.3.src/utils/release/findRegressions-simple.py	2026-03-19 22:08:24.844717967 +0000
+@@ -1,4 +1,5 @@
+-#!/usr/bin/env python
++#!/usr/bin/python3
++from __future__ import print_function
+ import re, string, sys, os, time, math
+ 
+ DEBUG = 0
+@@ -18,13 +19,13 @@
+   fname = ''
+   for t in r:
+     if DEBUG:
+-      print t
++      print(t)
+ 
+     if t[0] == 'PASS' or t[0] == 'FAIL' :
+       tmp = t[2].split('llvm-test/')
+       
+       if DEBUG:
+-        print tmp
++        print(tmp)
+ 
+       if len(tmp) == 2:
+         fname = tmp[1].strip('\r\n')
+@@ -41,7 +42,7 @@
+         n = t[0].split('RESULT-')[1]
+ 
+         if DEBUG:
+-          print "n == ", n;
++          print("n == ", n;)
+         
+         if n == 'compile-success':
+           test[fname]['compile time'] = float(t[2].split('program')[1].strip('\r\n'))
+@@ -49,7 +50,7 @@
+         elif n == 'exec-success':
+           test[fname]['exec time'] = float(t[2].split('program')[1].strip('\r\n'))
+           if DEBUG:
+-            print test[fname][string.replace(n, '-success', '')]
++            print(test[fname][string.replace(n, '-success', '')])
+ 
+         else :
+           # print "ERROR!"
+@@ -120,36 +121,36 @@
+       removed += t + "\n"
+ 
+   if len(regressions['compile state']) != 0:
+-    print 'REGRESSION: Compilation Failed'
+-    print regressions['compile state']
++    print('REGRESSION: Compilation Failed')
++    print(regressions['compile state'])
+ 
+   if len(regressions['exec state']) != 0:
+-    print 'REGRESSION: Execution Failed'
+-    print regressions['exec state']
++    print('REGRESSION: Execution Failed')
++    print(regressions['exec state'])
+ 
+   if len(regressions['compile time']) != 0:
+-    print 'REGRESSION: Compilation Time'
+-    print regressions['compile time']
++    print('REGRESSION: Compilation Time')
++    print(regressions['compile time'])
+ 
+   if len(regressions['exec time']) != 0:
+-    print 'REGRESSION: Execution Time'
+-    print regressions['exec time']
++    print('REGRESSION: Execution Time')
++    print(regressions['exec time'])
+ 
+   if len(passes['compile state']) != 0:
+-    print 'NEW PASSES: Compilation'
+-    print passes['compile state']
++    print('NEW PASSES: Compilation')
++    print(passes['compile state'])
+ 
+   if len(passes['exec state']) != 0:
+-    print 'NEW PASSES: Execution'
+-    print passes['exec state']
++    print('NEW PASSES: Execution')
++    print(passes['exec state'])
+ 
+   if len(removed) != 0:
+-    print 'REMOVED TESTS'
+-    print removed
++    print('REMOVED TESTS')
++    print(removed)
+ 
+ # Main
+ if len(sys.argv) < 3 :
+-  print 'Usage:', sys.argv[0], '<old log> <new log>'
++  print('Usage:', sys.argv[0], '<old log> <new log>')
+   sys.exit(-1)
+ 
+ d_old = parse(sys.argv[1])
+diff -ur -x .git -x .svn -x '*.o' -x '*.a' -x '*.so' -x '*.pyc' org/llvm-3.3.src/utils/sort_includes.py llvm-3.3.src/utils/sort_includes.py
+--- org/llvm-3.3.src/utils/sort_includes.py	2012-12-21 18:00:08.000000000 +0000
++++ llvm-3.3.src/utils/sort_includes.py	2026-03-19 22:08:24.844717967 +0000
+@@ -1,5 +1,6 @@
+-#!/usr/bin/env python
++#!/usr/bin/python3
+ 
++from __future__ import print_function
+ """Script to sort the top-most block of #include lines.
+ 
+ Assumes the LLVM coding conventions.
+diff -ur -x .git -x .svn -x '*.o' -x '*.a' -x '*.so' -x '*.pyc' org/llvm-3.3.src/utils/wciia.py llvm-3.3.src/utils/wciia.py
+--- org/llvm-3.3.src/utils/wciia.py	2012-11-17 06:38:44.000000000 +0000
++++ llvm-3.3.src/utils/wciia.py	2026-03-19 22:08:24.844717967 +0000
+@@ -1,5 +1,6 @@
+-#!/usr/bin/env python
++#!/usr/bin/python3
+ 
++from __future__ import print_function
+ """
+ wciia - Whose Code Is It Anyway
+ 
+@@ -97,7 +98,7 @@
+ import sys
+ 
+ if len(sys.argv) < 2:
+-	print "usage " + sys.argv[0] + " file_or_folder"  
++	print("usage " + sys.argv[0] + " file_or_folder")
+ 	exit(-1)
+ 	
+ # the path we are checking
+@@ -105,13 +106,13 @@
+ 
+ # check if this is real path
+ if not os.path.exists(path):
+-	print "path (" + path + ") does not exist"
++	print("path (" + path + ") does not exist")
+ 	exit(-1)
+ 	
+ owners_name = find_owners(path)
+ 
+ # be gramatically correct
+-print "The owner(s) of the (" + path + ") is(are) : " + str(owners_name)
++print("The owner(s) of the (" + path + ") is(are) : " + str(owners_name))
+ 
+ exit(0)
+ 
+@@ -119,7 +120,7 @@
+ # not yet used 
+ root = "."
+ for dir,subdirList,fileList in os.walk( root , topdown=False ) :
+-   print "dir :" , dir
++   print("dir :" , dir)
+    for fname in fileList :
+-      print "-" , fname
+-   print
++      print("-" , fname)
++   print()
