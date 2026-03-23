@@ -7,10 +7,10 @@
 #   file, You can obtain one at http://mozilla.org/MPL/2.0/.
 #
 
-AC_INIT([crack],[1.6])
-AM_INIT_AUTOMAKE
+AC_INIT([crack],[1.7a],[mmuller@enduden.com])
+AM_INIT_AUTOMAKE([foreign -Wall -Werror subdir-objects])
 AC_CONFIG_SRCDIR([parser/Token.h])
-AC_CONFIG_MACRO_DIR([m4])
+AC_CONFIG_MACRO_DIRS([m4])
 
 # include cppunit
 #AM_PATH_CPPUNIT(1.12.0)
@@ -19,25 +19,31 @@ AC_CONFIG_MACRO_DIR([m4])
 AC_PROG_CXX
 
 # Checks for typedefs, structures, and compiler characteristics.
-AC_HEADER_STDBOOL
-AC_C_CONST
 
 AC_CHECK_HEADERS([malloc.h])
 AC_CHECK_FUNCS(ppoll)
 
-# automake advised me to add this...
-AC_CONFIG_FILES([Makefile])
-AC_CONFIG_HEADERS([config.h])
-
 # ... and also this (when I switched to a library)
-AC_PROG_RANLIB
+AC_CONFIG_HEADERS([config.h])
+AM_PROG_AR
 
 # for my shared libs
 LT_INIT(dlopen)
 
 # external packages that we need
 AM_PATH_LLVM
-AM_ICONV
+
+# Modern iconv detection
+AC_CHECK_HEADERS([iconv.h])
+AC_SEARCH_LIBS([iconv], [iconv], [
+    AC_DEFINE([HAVE_ICONV], [1], [Define if you have iconv()])
+    if test "$ac_cv_search_iconv" != "none required"; then
+        LIBICONV="$ac_cv_search_iconv"
+    fi
+], [
+    AC_MSG_ERROR([iconv is required but was not found])
+])
+AC_SUBST([LIBICONV])
 
 # determine if we're 64 bit.
 AC_CHECK_SIZEOF([void *])
@@ -101,4 +107,5 @@ AM_CONDITIONAL(HAVE_FUSE, [test "x$got_fuse" = xyes])
 AM_PATH_READLINE
 AM_CONDITIONAL(HAVE_READLINE, [test "x$got_readline" = xyes])
 
+AC_CONFIG_FILES([Makefile])
 AC_OUTPUT

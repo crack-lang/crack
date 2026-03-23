@@ -10,7 +10,7 @@
 
 # --- embedded python ---
 # generate Makefile.am from Makefile.am.in
-python <<__eof__
+python3 <<__eof__
 import re
 
 varRx = re.compile(r'(.*)%(\w+)%(.*)', re.DOTALL)
