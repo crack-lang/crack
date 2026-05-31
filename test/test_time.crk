@@ -12,7 +12,7 @@ import crack.lang ManagedBuffer;
 import crack.runtime ctime, strftime, asctime, epoch, strlen, strptime,
     InternalDate;
 import crack.sys argv, env;
-import crack.time add, Date, Time, TimeDelta;
+import crack.time add, Date, Time, TimeDelta, TimeValNanos;
 
 @import crack.ann assert;
 
@@ -160,6 +160,15 @@ if (true) {
     @assert(add(Time(2, 2), TimeDelta(-1, -1)) == Time(1, 1));
     @assert(add(Time(1, 500000000), TimeDelta(1, 500000001)) == Time(3, 1));
     @assert(add(Time(1, 1), TimeDelta(-1, -2)) == Time(0, -1));
+}
+
+# TimeValNanos tests
+if (true) {
+    @assert(TimeValNanos(Time(11, 22)).toNanos() == 11000000022);
+    t := TimeValNanos(Time());
+    t.fromNanos(11000000022);
+    @assert(t.secs == 11);
+    @assert(t.nsecs == 22);
 }
 
 cout `ok\n`;

@@ -29,6 +29,19 @@ void _minus(TimeVal a, TimeVal b, TimeVal result) {
     result.nsecs = nsdiff;
 }
 
+## Extension to allow conversion to/from nanoseconds.
+class TimeValNanos = TimeVal {
+    ## Returns the secs/nanosecs of the TimeVal as a single value in nanoseconds.
+    uint64 toNanos() {
+        return uint64(secs) * BILLION + uint64(nsecs);
+    }
+
+    ## Sets the secs/nanosecs values TimeVal from a single value in nanoseconds.
+    void fromNanos(uint64 nanos) {
+        secs = int32(nanos / BILLION);
+        nsecs = int32(nanos % BILLION);
+    }
+}
 
 ## A difference in time.
 class TimeDelta : Object, TimeVal {
@@ -71,7 +84,6 @@ class Time : Object, TimeVal {
         t.setToNow(null);
         return t;
     }
-
 
     TimeDelta oper -(Time other) {
         result := TimeDelta();
