@@ -5,7 +5,7 @@ import crack.cont.array Array;
 import crack.functor Functor0, Function0;
 import crack.cont.treemap TreeMap;
 import crack.net Poller;
-import crack.time Time;
+import crack.time Time, TimeDelta, TimeValNanos;
 
 alias EventCallback = Functor0[void];
 # Deprecated.  Use EventCallback.Wrap.
@@ -29,8 +29,8 @@ class EventManager : Object, EventManagerBackRef {
     ## The associated poller.
     Poller poller = {};
 
-    # Ths sequence of upcoming events.
-    TreeMap[Time, Array[Functor0[void]]] __schedule = {};
+    # Ths sequence of upcoming events.  The key is unix time in nanoseconds.
+    TreeMap[uint64, Array[Functor0[void]]] __schedule = {};
 
     bool __done;
 
@@ -42,10 +42,11 @@ class EventManager : Object, EventManagerBackRef {
     ## Schedule an event to be executed at the given time.  If the time is in
     ## the past, it will be executed on the next iteration.
     void scheduleEvent(Time time, EventCallback callback) {
-        if (events := __schedule.get(time))
+        t := TimeValNanos(time).toNanos();
+        if (events := __schedule.get(t))
             events.append(callback);
         else
-            __schedule[time] = Array[EventCallback]![callback];
+            __schedule[t] = Array[EventCallback]![callback];
     }
 
     ## Stop the event manager run() function.  This must be called from either
@@ -57,17 +58,23 @@ class EventManager : Object, EventManagerBackRef {
     ## poller is empty or scheduler is terminated.
     void run() {
 
-        now := Time.now();
+        nowTime := TimeValNanos(Time.now());
+        now := nowTime.toNanos();
 
         # Get the first event time.
-        Time nextTime;
+        uint64 nextTime;
         if (__schedule)
             nextTime = __schedule.iter().elem().key;
 
         while (!__done) {
-            import crack.io cerr;
-            poller.waitAndProcess(nextTime ? nextTime - now : null);
-            now.setToNow(null);
+            TimeDelta td(uint64 t) {
+                result := TimeDelta();
+                TimeValNanos(result).fromNanos(t);
+                return result;
+            }
+            poller.waitAndProcess(nextTime ? td(nextTime - now) : null);
+            nowTime.setToNow(null);
+            now = nowTime.toNanos();
 
             # Get the next scheduled event.
             while (__schedule) {

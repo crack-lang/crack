@@ -4,7 +4,7 @@ import crack.eventmgr EventCallbackFunc, EventManager;
 import crack.functor Function2, Functor0;
 import crack.io cerr;
 import crack.net Pipe, Poller, PollEvent, POLLIN;
-import crack.time add, Time, TimeDelta;
+import crack.time add, Time, TimeDelta, TimeValNanos;
 
 @import crack.ann assert, impl;
 
@@ -39,8 +39,13 @@ const TENTHS := 100000000;
 
 # Schedule a later event and two earlier events at the same time.
 now := Time.now();
-em.scheduleEvent(add(now, TimeDelta(0, 3 * TENTHS)), Event('third'));
-t := add(now, TimeDelta(0, 2 * TENTHS));
+t := add(now, TimeDelta(0, 3 * TENTHS));
+em.scheduleEvent(t, Event('third'));
+
+# Schedule the next one one tenth of a second before the last one.
+# Reuse the time object, as doing so would have triggered a fixed bug.
+tvn := TimeValNanos(t);
+tvn.fromNanos(tvn.toNanos() - 1 * TENTHS);
 em.scheduleEvent(t, Event('first'));
 em.scheduleEvent(t, Event('second'));
 
