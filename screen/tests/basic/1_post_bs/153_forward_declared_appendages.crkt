@@ -1,0 +1,12 @@
+%%TEST%%
+Forward declared appendages
+%%ARGS%%
+%%FILE%%
+# This was failing with a link error because the "appendage" flag wasn't being
+# propagated to the existing TypeDef during the class definition.
+class A;
+class A = Object {}
+print('ok');
+%%EXPECT%%
+ok
+%%STDIN%%

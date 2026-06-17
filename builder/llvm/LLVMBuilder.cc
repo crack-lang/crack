@@ -1842,6 +1842,7 @@ TypeDefPtr LLVMBuilder::emitBeginClass(Context &context,
             baseWithVTable ? baseWithVTable->nextVTableSlot : 0;
         type->firstVTableSlot = type->nextVTableSlot;
         type->forward = false;
+        type->appendage = flags & TypeDef::appendageFlag;
     }
 
     // add all of the base classes to the type
