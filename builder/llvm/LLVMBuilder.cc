@@ -1775,13 +1775,11 @@ TypeDefPtr LLVMBuilder::createGenericClass(Context &context,
                                            const string &name,
                                            bool weak
                                            ) {
-    BTypeDefPtr metaType = createMetaClass(context, name);
     BTypeDefPtr result = new BTypeDef(context.construct->classType.get(),
                                       name,
                                       /* rep */ 0,
                                       true
                                       );
-    result->type = metaType;
 
     if (weak) {
         result->setOwner(context.ns.get());
@@ -1794,6 +1792,7 @@ TypeDefPtr LLVMBuilder::createGenericClass(Context &context,
         ContextPtr classCtx = context.createSubContext(Context::instance,
                                                        result.get()
                                                        );
+        result->type = createMetaClass(*classCtx, name);
 
         // Create a class implementation unless this is a weak class - weak
         // classes will have their instances generated when they are used.

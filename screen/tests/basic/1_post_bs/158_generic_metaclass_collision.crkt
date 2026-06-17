@@ -1,0 +1,15 @@
+%%TEST%%
+generic metaclass collisions
+%%ARGS%%
+%%FILE%%
+# test to verify fix in the namespacing of generic metaclasses, which caused a
+# naming collision between generics in different modules with the same name.
+# Test in native compile mode.
+
+import test.generic_collision1;
+import test.generic_collision2;
+
+print('ok');
+%%EXPECT%%
+ok
+%%STDIN%%
