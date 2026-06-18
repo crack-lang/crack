@@ -29,8 +29,17 @@ void _minus(TimeVal a, TimeVal b, TimeVal result) {
     result.nsecs = nsdiff;
 }
 
+## Base class for time representations.
+class _TimeBase : Object, TimeVal {
+    oper init() : TimeVal(0, 0) {}
+
+    oper init(int32 secs, int32 nsecs) :
+        TimeVal(secs, nsecs) {
+    }
+}
+
 ## Extension to allow conversion to/from nanoseconds.
-class TimeValNanos = TimeVal {
+class TimeValNanos = _TimeBase {
     ## Returns the secs/nanosecs of the TimeVal as a single value in nanoseconds.
     uint64 toNanos() {
         return uint64(secs) * BILLION + uint64(nsecs);
@@ -44,12 +53,12 @@ class TimeValNanos = TimeVal {
 }
 
 ## A difference in time.
-class TimeDelta : Object, TimeVal {
+class TimeDelta : _TimeBase {
 
-    oper init() : TimeVal(0, 0) {}
+    oper init() : _TimeBase(0, 0) {}
 
     oper init(int32 secs, int32 nsecs) :
-        TimeVal(secs, nsecs) {
+        _TimeBase(secs, nsecs) {
     }
 
     void formatTo(Formatter out) {
@@ -72,11 +81,11 @@ class TimeDelta : Object, TimeVal {
 ## Public variables (from TimeVal):
 ##   int32 secs;   // Seconds since the epoch.
 ##   int32 nsecs;  // nanoseconds since the last whole second.
-class Time : Object, TimeVal {
+class Time : _TimeBase {
 
-    oper init() : TimeVal(0, 0) {}
+    oper init() : _TimeBase(0, 0) {}
     oper init(int32 secs, int32 nsecs) :
-        TimeVal(secs, nsecs) {
+        _TimeBase(secs, nsecs) {
     }
 
     @static Time now() {
