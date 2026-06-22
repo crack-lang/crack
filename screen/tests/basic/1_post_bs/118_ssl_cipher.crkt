@@ -7,17 +7,17 @@ import crack.fs makePath;
 import crack.io cout, FStr, StringWriter, StringReader, Reader, Writer;
 import crack.lang free, AppendBuffer, Buffer, InvalidArgumentError, InvalidStateError,
     ManagedBuffer, WriteBuffer;
-import crack.crypt.ssl.cipher EVPCipher, EncryptWriter, DecryptWriter,
-    EVP_enc_null, EVP_aes_128_cbc, EVP_aes_128_ecb, EVP_aes_128_cfb,
-    EVP_aes_128_ofb, EVP_aes_192_cbc, EVP_aes_192_ecb, EVP_aes_192_cfb,
-    EVP_aes_192_ofb, EVP_aes_256_cbc, EVP_aes_256_ecb, EVP_aes_256_cfb,
-    EVP_aes_256_ofb, EVP_des_cbc, EVP_des_ecb, EVP_des_cfb, EVP_des_ofb,
-    EVP_des_ede_cbc, EVP_des_ede, EVP_des_ede_ofb, EVP_des_ede_cfb,
-    EVP_des_ede3_cbc, EVP_des_ede3, EVP_des_ede3_ofb, EVP_des_ede3_cfb,
-    EVP_desx_cbc, EVP_rc4, EVP_rc4_40, EVP_rc2_cbc, EVP_rc2_ecb, EVP_rc2_cfb,
-    EVP_rc2_ofb, EVP_rc2_40_cbc, EVP_rc2_64_cbc, EVP_bf_cbc, EVP_bf_ecb,
-    EVP_bf_cfb, EVP_bf_ofb, EVP_cast5_cbc, EVP_cast5_ecb, EVP_cast5_cfb,
-    EVP_cast5_ofb, EVP_CIPH_VARIABLE_LENGTH;
+import crack.crypt.ssl.cipher CipherContext, EVPCipher, EncryptWriter,
+    DecryptWriter, EVP_enc_null, EVP_aes_128_cbc, EVP_aes_128_ecb,
+    EVP_aes_128_cfb, EVP_aes_128_ofb, EVP_aes_192_cbc, EVP_aes_192_ecb,
+    EVP_aes_192_cfb, EVP_aes_192_ofb, EVP_aes_256_cbc, EVP_aes_256_ecb,
+    EVP_aes_256_cfb, EVP_aes_256_ofb, EVP_des_cbc, EVP_des_ecb, EVP_des_cfb,
+    EVP_des_ofb, EVP_des_ede_cbc, EVP_des_ede, EVP_des_ede_ofb,
+    EVP_des_ede_cfb, EVP_des_ede3_cbc, EVP_des_ede3, EVP_des_ede3_ofb,
+    EVP_des_ede3_cfb, EVP_desx_cbc, EVP_rc4, EVP_rc4_40, EVP_rc2_cbc,
+    EVP_rc2_ecb, EVP_rc2_cfb, EVP_rc2_ofb, EVP_rc2_40_cbc, EVP_rc2_64_cbc,
+    EVP_bf_cbc, EVP_bf_ecb, EVP_bf_cfb, EVP_bf_ofb, EVP_cast5_cbc,
+    EVP_cast5_ecb, EVP_cast5_cfb, EVP_cast5_ofb, EVP_CIPH_VARIABLE_LENGTH;
 
 import crack.random MersenneTwister;
 
@@ -47,7 +47,11 @@ const KEY := '123456asdLKJSDCoimn09234olkjmsdcklh23498ulksdc0982342';
 
 @define c(cipher) { NamedCipher($cipher, cipher()) }
 
-void testRoundTrip(NamedCipher nc) {
+int testRoundTrip(NamedCipher nc) {
+    # Skip unimplemented ciphers.
+    if (CipherContext().encryptInit(nc.cipher, null, null, null) <= 0)
+        return 0;
+
     String key;
     if (nc.cipher.getFlags() & EVP_CIPH_VARIABLE_LENGTH)
         key = KEY;
@@ -69,6 +73,8 @@ void testRoundTrip(NamedCipher nc) {
     dec.close();
     if (backing.string() != DATA)
         cout `FAILED round trip: $(nc.name)\n`;
+
+    return 1;
 }
 
 const CIPHERS := Array[NamedCipher]![
@@ -87,8 +93,12 @@ const CIPHERS := Array[NamedCipher]![
     @c(EVP_cast5_ofb)
 ];
 
+cipherCount := 0;
 for (nc :in CIPHERS)
-    testRoundTrip(nc);
+    cipherCount += testRoundTrip(nc);
+
+if (!cipherCount)
+    cout `FAILED no ciphers found.`;
 
 cout `ok\n`;
 %%EXPECT%%
