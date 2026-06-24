@@ -692,6 +692,29 @@ Parser Refactor:
     need to return a special kind of field reference that accepts "oper call"
     and translates it to the underlying method invocation.
 
+Uncaught Exceptions:
+
+    In a "catch" clause, we check to see if the exception thrown matches that
+    of the clause by comparing against a pointer to the global class body
+    structure (the "class instance").  For catch clauses that need to catch
+    everything, we used to use a null pointer.  The code that determined
+    whether the exception matched (in the crack.lang module) would always
+    return true, indicating a match, if the class pointer was null and would
+    otherwise check the exception object's class to see if it was an instance
+    of the class.
+
+    This stopped working at some point.  It turns out that a null constant
+    provided in the generated LLVM IR code is converted into a non-zero value
+    (0x400000000, specifically).  I believe this to be due to a bug in LLVM,
+    as the code called to extract the value from the DWARF exception handling
+    structures ends up being the same for both global variable addresses and
+    constants, and the code works fine for global variable addresses.
+
+    To work around this, we currently use the VTableBase class instance
+    instead of a null constant.  This is probably safe, as we can't do
+    anything with exceptions not derived from Exception, anyway, though it is
+    a bit of a wart.
+
 Glossary of terms in the code:
 
     master/slave: When modules have a cyclic relationship (as in the case of

@@ -268,7 +268,7 @@ void createMain(llvm::Module *mod, const BuilderOptions *o,
         ptr_argv->setName("argv");
 
         BasicBlock* label_13 = BasicBlock::Create(mod->getContext(), "entry",
-                                                  func_main,0);
+                                                  func_main);
         BasicBlock *cleanupBlock = BasicBlock::Create(mod->getContext(),
                                                       "cleanup",
                                                       func_main
@@ -326,11 +326,14 @@ void createMain(llvm::Module *mod, const BuilderOptions *o,
                                func_main
                                );
 
-        // first landing pad does cleanups
+        // first landing pad does cleanups.  The "clauses" of the instruction
+        // are the classes that the landing pad matches.  We use VTableBase as
+        // a catch-all, see "Uncaught Exceptions" in notes.txt for an
+        // explanation.
         builder.SetInsertPoint(lpBlock);
         LandingPadInst *lp =
           builder.CreateLandingPad(exStructType, crkExFunc, 1);
-        lp->addClause(Constant::getNullValue(i8PtrType));
+        lp->addClause(vtableBaseTypeBody);
         builder.CreateInvoke(mainCleanup, uncaughtHandlerBlock,
                              lpPostCleanupBlock
                              );
@@ -343,10 +346,10 @@ void createMain(llvm::Module *mod, const BuilderOptions *o,
             mod->getOrInsertFunction("__CrackUncaughtException", funcType);
         Function *uncaughtFunc = cast<Function>(uncaughtFuncConst);
 
-        // post cleanup landing pad
+        // post cleanup landing pad (also VTableBase, see above)
         builder.SetInsertPoint(lpPostCleanupBlock);
         lp = builder.CreateLandingPad(exStructType, crkExFunc, 1);
-        lp->addClause(Constant::getNullValue(i8PtrType));
+        lp->addClause(vtableBaseTypeBody);
         builder.CreateBr(uncaughtHandlerBlock);
 
         // uncaught exception handler

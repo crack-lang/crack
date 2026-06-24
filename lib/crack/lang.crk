@@ -1115,9 +1115,10 @@ class BadCastError : Exception {
 }
 
 int exceptionMatchFunc(Class classObj, Object obj) {
-    # if the class object is null, this is a "catch all" exception.  Otherwise
-    # see if the exception object is an instance of the class.
-    return classObj is null || obj.isa(classObj) ? 1 : 0;
+    # if the class object is VTableBase, this is a "catch all" exception.
+    # Otherwise see if the exception object is an instance of the class.
+    # See "Uncaught Exceptions" in notes.txt for an explanation.
+    return classObj is VTableBase || obj.isa(classObj) ? 1 : 0;
 }
 
 void badClassFunc(Class curType, Class newType) {
