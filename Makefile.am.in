@@ -453,6 +453,7 @@ check: testbed
 	BUILD_ROOT=`pwd` $(srcdir)/test/screen -d screen/tests/caching
 	BUILD_ROOT=`pwd` $(srcdir)/test/screen -d screen/tests/caching
 	BUILD_ROOT=`pwd` $(srcdir)/test/screen -d screen/tests/compound
+	BUILD_ROOT=`pwd` $(srcdir)/test/screen -n
 
 # Remove everything that's not a .crk file from lib
 dist-hook:

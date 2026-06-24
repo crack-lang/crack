@@ -1,0 +1,10 @@
+# Test mode annotations for AOT.
+
+import crack.ann Macro, MacroDeserializer;
+import crack.compiler CrackContext;
+import crack.io StringReader;
+
+@import crack.ann define, export;
+
+@define ifjit(code) {}
+@export ifjit;

@@ -27,6 +27,7 @@ echo
 
 lib_paths="$root/lib:$root/screen:$builddir/lib"
 builders="-bjit"
+testmode_libs=":$root/test/jit"
 test_dir="$root/screen/tests/basic"
 opts="--diff"
 screen_jit=false
@@ -44,7 +45,7 @@ fi
 run_screen() {
     if $screen_jit; then
         $builddir/crack -l "$lib_paths" $root/screen/screen.crk \
-            -t "$builddir" -l "$lib_paths" \
+            -t "$builddir" -l "$lib_paths$testmode_libs" \
             -c "$builddir/crack" -s "$root" -o "$builddir/screen/output" \
             "$builders" \
             $opts "$@"
@@ -57,8 +58,12 @@ run_screen() {
             -b out=$builddir/test/screen.bin $root/screen/screen.crk
     fi
 
-    $builddir/test/screen.bin -c "$builddir/crack" -s "$root" -l "$lib_paths" \
-        -t "$builddir" -o "$builddir/screen/output" "$builders" $opts "$@"
+    echo $builddir/test/screen.bin -c "$builddir/crack" -s "$root" \
+        -l "$lib_paths$testmode_libs" -t "$builddir" \
+        -o "$builddir/screen/output" "$builders" $opts "$@"
+    $builddir/test/screen.bin -c "$builddir/crack" -s "$root" \
+        -l "$lib_paths$testmode_libs" -t "$builddir" \
+        -o "$builddir/screen/output" "$builders" $opts "$@"
 }
 
 args=$(getopt 'fnrjvd:' "$@")
@@ -68,7 +73,7 @@ eval set -- "$args"
 while true; do
 
     case "$1" in
-        -n) builders='-bnative' ;;
+        -n) builders='-bnative'; testmode_libs=":$root/test/aot" ;;
         -f) opts="$opts --stop-on-fail" ;;
         -r) screen_recompile=true ;;
         -j) screen_jit=true ;;

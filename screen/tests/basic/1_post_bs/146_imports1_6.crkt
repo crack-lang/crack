@@ -5,6 +5,7 @@ import 1.6
 # Note that this test effectively imports most of the crack standard library.
 
 @import crack.imports1_6 auto_import; @auto_import;
+@import testmode ifjit;
 
 Heap;
 HeapPrim;
@@ -47,6 +48,7 @@ wsplit;
 CmdOption;
 CmdOptions;
 
+@ifjit(
 # Fun fact: The crack.compiler imports only work in AOT mode if the crack
 # libraries are installed on the system and I have no idea why.
 Annotation;
@@ -162,6 +164,7 @@ FUNCFLAG_STATIC;
 FUNCFLAG_FINAL;
 FUNCFLAG_ABSTRACT;
 CLASSFLAG_ABSTRACT;
+) # ifjit
 
 Array;
 HashMap;
