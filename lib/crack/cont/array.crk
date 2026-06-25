@@ -31,7 +31,7 @@ bool _isNull(Object obj) { return (obj is null); }
 ## error because _isObject() wasn't defined for it.  This implementation also
 ## causes a compile-time error at the "oper del()" call (slightly less
 ## elegant) but it has the additional advantage of working correctly for a
-## VTableBase that provides "oper del()".
+## VTableBase that does provide "oper del()".
 bool _isObject(VTableBase obj) { return true; }
 
 @define _nobind 1
