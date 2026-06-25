@@ -768,9 +768,9 @@ class _PollerThread : Thread {
 
     # Our control pipe. Safely send messages from other threads.
     _CommPipeHandler control;
-    EventManager __sched = {};
+    EventManager __sched;
 
-    oper init(Log log) {
+    oper init(EventManager sched, Log log) : __sched = sched {
         pipe := Pipe();
         control = _CommPipeHandler(pipe, log, __sched);
         __sched.poller.add(pipe, control);
@@ -837,12 +837,15 @@ class _PollerThread : Thread {
 @final class Comm {
     _PollerThread __thread;
     Log __log;
+    EventManager sched;
 
-    oper init(Log log) : __log = log {}
+    oper init(Log log) : __log = log, sched() {}
+
+    oper init(EventManager sched, Log log) : __log = log, sched = sched {}
 
     void start() {
         @assert(!__thread);
-        __thread = _PollerThread(__log);
+        __thread = _PollerThread(sched, __log);
         __thread.start();
     }
 
