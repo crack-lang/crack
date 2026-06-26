@@ -1,0 +1,45 @@
+## crack.net.comm2 HTTP Server
+
+import crack.http.core HandlerArray;
+import crack.net InetAddress;
+import crack.net.comm2 Connection, ConnectionFactory, NewConnection, UserHandler;
+import .server RequestProcessor;
+
+@import crack.ann impl, implements;
+
+class ClientHandler : RequestProcessor @implements UserHandler {
+
+    oper init(InetAddress addr, HandlerArray handlers) :
+        RequestProcessor(addr, handlers) {
+    }
+
+    void process(Connection conn) {
+        parseNext(conn.inBuf);
+
+        while (outQueue) {
+            conn.log.debug `writing $(outQueue[0].getRepr())`;
+            conn.write(outQueue[0]);
+            outQueue.delete(0);
+        }
+    }
+
+    void terminate(Connection conn) {
+        conn.log.info `Connection terminated`;
+    }
+
+    void addResponder(Object responder) {}
+}
+
+class HTTPConnectionFactory @impl ConnectionFactory {
+    HandlerArray __handlers;
+
+    oper init(HandlerArray handlers) : __handlers = handlers {}
+
+    Connection makeConnection(NewConnection conn) {
+        return Connection(
+            conn.log,
+            ClientHandler(InetAddress.cast(conn.accepted.addr), __handlers),
+        );
+    }
+}
+

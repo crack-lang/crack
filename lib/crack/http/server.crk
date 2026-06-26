@@ -33,30 +33,228 @@ const int _ST_REQUEST = 0;
 const int _ST_HEADERS= 1;
 const int _ST_BODY = 2;
 
-## An HTTP Server.
+## Processor for HTTP requests that dispatches completed requests to a list of
+## handlers.
 ##
-## TODO: make this class proactor based.
+## This is currently used both by the legacy Server class (below) and
+## crack.http.comm2srv.
+class RequestProcessor {
+    Request request;
+    HandlerArray handlers;
+    InetAddress addr;
+    int state;
+
+    OutQueue outQueue = {};
+
+    ## the index of the first byte in the buffer that has been read but
+    ## not processed.
+    uint pos;
+
+    oper init(InetAddress addr, HandlerArray handlers) :
+        addr = addr,
+        handlers = handlers {
+    }
+
+    @final void compressBuffer(ManagedBuffer inbuf, uintz start) {
+        inbuf.compact(start);
+        pos = 0;
+    }
+
+    @final void __badRequest() {
+        warn `Invalid request from $(this)\n`;
+    }
+
+    @final void processRequestLine(ManagedBuffer inbuf, uintz start, uintz end) {
+        request = Request(outQueue, addr);
+
+        # find the first space
+        methodEnd := inbuf.lfind(b' ', start);
+        if (methodEnd == -1 || methodEnd >= end) {
+            __badRequest();
+            return;
+        }
+        request.method = String(inbuf.buffer + start, methodEnd, false);
+
+        # find the next non-space
+        pathStart := methodEnd;
+        while (inbuf.buffer[pathStart] == b' ' && pathStart < end)
+            ++pathStart;
+        if (pathStart == end) {
+            __badRequest();
+            return;
+        }
+
+        # find the path end
+        pathEnd := inbuf.lfind(b' ', pathStart);
+        if (pathEnd == -1 || pathEnd > end) {
+            __badRequest();
+            return
+        }
+
+        # find the protocol version
+        request.path = String(inbuf.buffer + pathStart,
+                              pathEnd - pathStart,
+                              false
+                              );
+
+        # deal with HTTP 1.0
+        if (pathEnd == end) {
+            state = _ST_REQUEST;
+            return;
+        }
+
+        # find the next non-space
+        verStart := pathEnd;
+        while ((c := inbuf.buffer[verStart]) == b' ' && verStart < end)
+            ++verStart;
+        if (verStart == end) {
+            __badRequest();
+            return;
+        }
+        request.version = String(inbuf.buffer + verStart,
+                                 end - verStart,
+                                 false
+                                 );
+        debug `got header $(request.version)`;
+        state = _ST_HEADERS;
+    }
+
+    @final void processRequest() {
+        try {
+            for (handler :in handlers) {
+                if (handler(request))
+                    break;
+            }
+        } catch (Abort ex) {
+            warn `request terminated with abort: $(ex.code) $(ex.text)`;
+            request.sendReply(ex.code, 'text/plain', ex.text);
+        } catch (Exception ex) {
+            error `Exception caught in handler: $ex`;
+        }
+
+        if (request.method != 'POST' && request.method != 'PUT') {
+            state = _ST_REQUEST;
+            request = Request(outQueue, addr);
+        }
+    }
+
+    @final void processHeaderLine(ManagedBuffer inbuf, uintz start, uintz end) {
+        line := String(inbuf.buffer + start, end - start, false);
+        debug `processing header line: $(line.getRepr())`;
+        if (!line) {
+            state = _ST_BODY;
+            if (request.method == 'POST' || request.method == 'PUT') {
+                # For requests with a body, get the content-length.
+                contentLength := request.headers.get('content-length',
+                                                     null
+                                                     );
+                if (contentLength)
+                    request.remainingPostData = parseInt(contentLength[-1]);
+                else
+                    request.remainingPostData = 0xFFFFFFFF;
+
+                # Discard the request line and headers.  'inbuf' now
+                # contains only the body.
+                compressBuffer(inbuf, end + (inbuf.buffer[end] == b'\r' ? 2 : 1));
+            }
+            processRequest();
+            return;
+        }
+        # find the first colon
+        sep := line.lfind(b':');
+        debug `adding $(line.slice(0, sep)) $(line.slice(sep + 1))`;
+        request.headers[toLower(line.slice(0, sep))] =
+            StringArray![strip(line.slice(sep + 1))];
+    }
+
+    @final void parseNext(ManagedBuffer inbuf) {
+        end := inbuf.size;
+        while (true) {
+            if (state == _ST_REQUEST || state == _ST_HEADERS) {
+
+                # find the first newline
+                int p;
+                for (p = pos; inbuf.buffer[p] != b'\n' && p < end; ++p);
+
+                # if we got one, process the request line
+                if (p < end) {
+
+                    start := pos;
+                    pos = p + 1;
+
+                    # ignore a carrriage-return
+                    if (p > 1 && inbuf.buffer[p - 1] == b'\r')
+                        --p;
+
+                    if (state == _ST_REQUEST)
+                        processRequestLine(inbuf, start, p);
+                    else
+                        processHeaderLine(inbuf, start, p);
+
+                } else {
+                    # XXX verify that we haven't yet exceeded the maximum
+                    # request line length
+                    # no complete line yet
+                    break;
+                }
+            } else {
+                void callPostData(Request request, Buffer buf) {
+                    try {
+                        request.postDataHandler(request, buf);
+                    } catch (Abort ex) {
+                        warn I`request terminated with abort: $(ex.code) \
+                               $(ex.text)`;
+                    } catch (Exception ex) {
+                        error `Exception caught in post handler: $ex`;
+                    }
+                }
+
+                # State is _ST_BODY.  Deal with the "end of parcel"
+                # condition correctly and if the handler has defined a post
+                # data handler, call it.
+                if (request.remainingPostData >= inbuf.size) {
+                    if (request.postDataHandler) {
+                        debug I`calling post data handler with inbuf \
+                                [$inbuf]`;
+                        callPostData(request, inbuf);
+                    }
+                    request.remainingPostData -= inbuf.size;
+                    compressBuffer(inbuf, inbuf.size);
+                } else {
+                    # The inbuf contains more than the contents (it
+                    # overlaps the beginning of the next request)
+                    if (request.postDataHandler)
+                        callPostData(
+                            request,
+                            Buffer(inbuf.buffer, request.remainingPostData)
+                        );
+                    compressBuffer(inbuf, request.remainingPostData);
+                    request.remainingPostData = 0;
+                }
+
+                # Begin the new request if we're done with post data.
+                if (!request.remainingPostData) {
+                    state = _ST_REQUEST;
+                    request = Request(outQueue, addr);
+                }
+                return;
+            }
+        }
+
+        compressBuffer(inbuf, pos);
+    }
+}
+
+## An HTTP Server.
 class Server {
 
-    class Client {
+    class Client : RequestProcessor {
         ManagedBuffer inbuf = {1024};
-        Server server;
-        Request request;
-        HandlerArray handlers;
         Socket sock;
-        InetAddress addr;
-        int state;
-
-        OutQueue outQueue = {};
-
-        ## the index of the first byte in the buffer that has been read but
-        ## not processed.
-        uint pos;
 
         oper init(Socket sock, InetAddress addr, HandlerArray handlers) :
-            sock = sock,
-            addr = addr,
-            handlers = handlers {
+            RequestProcessor(addr, handlers),
+            sock = sock {
         }
 
         void formatTo(Formatter fmt) {
@@ -72,194 +270,8 @@ class Server {
             return inbuf.buffer + pos;
         }
 
-        @final void compressBuffer(uintz start) {
-            inbuf.compact(start);
-            pos = 0;
-        }
-
         @final void __badRequest() {
             warn `Invalid request from $(this)\n`;
-        }
-
-        @final void processRequestLine(uintz start, uintz end) {
-            request = Request(outQueue, addr);
-
-            # find the first space
-            methodEnd := inbuf.lfind(b' ', start);
-            if (methodEnd == -1 || methodEnd >= end) {
-                __badRequest();
-                return;
-            }
-            request.method = String(inbuf.buffer + start, methodEnd, false);
-
-            # find the next non-space
-            pathStart := methodEnd;
-            while (inbuf.buffer[pathStart] == b' ' && pathStart < end)
-                ++pathStart;
-            if (pathStart == end) {
-                __badRequest();
-                return;
-            }
-
-            # find the path end
-            pathEnd := inbuf.lfind(b' ', pathStart);
-            if (pathEnd == -1 || pathEnd > end) {
-                __badRequest();
-                return
-            }
-
-            # find the protocol version
-            request.path = String(inbuf.buffer + pathStart,
-                                  pathEnd - pathStart,
-                                  false
-                                  );
-
-            # deal with HTTP 1.0
-            if (pathEnd == end) {
-                state = _ST_REQUEST;
-                return;
-            }
-
-            # find the next non-space
-            verStart := pathEnd;
-            while ((c := inbuf.buffer[verStart]) == b' ' && verStart < end)
-                ++verStart;
-            if (verStart == end) {
-                __badRequest();
-                return;
-            }
-            request.version = String(inbuf.buffer + verStart,
-                                     end - verStart,
-                                     false
-                                     );
-            debug `got header $(request.version)`;
-            state = _ST_HEADERS;
-        }
-
-        @final void processRequest() {
-            try {
-                for (handler :in handlers) {
-                    if (handler(request))
-                        break;
-                }
-            } catch (Abort ex) {
-                warn `request terminated with abort: $(ex.code) $(ex.text)`;
-                request.sendReply(ex.code, 'text/plain', ex.text);
-            } catch (Exception ex) {
-                error `Exception caught in handler: $ex`;
-            }
-
-            if (request.method != 'POST' && request.method != 'PUT') {
-                state = _ST_REQUEST;
-                request = Request(outQueue, addr);
-            }
-        }
-
-        @final void processHeaderLine(uintz start, uintz end) {
-            line := String(inbuf.buffer + start, end - start, false);
-            debug `processing header line: $(line.getRepr())`;
-            if (!line) {
-                state = _ST_BODY;
-                if (request.method == 'POST' || request.method == 'PUT') {
-                    # For requests with a body, get the content-length.
-                    contentLength := request.headers.get('content-length',
-                                                         null
-                                                         );
-                    if (contentLength)
-                        request.remainingPostData = parseInt(contentLength[-1]);
-                    else
-                        request.remainingPostData = 0xFFFFFFFF;
-
-                    # Discard the request line and headers.  'inbuf' now
-                    # contains only the body.
-                    compressBuffer(end + (inbuf.buffer[end] == b'\r' ? 2 : 1));
-                }
-                processRequest();
-                return;
-            }
-            # find the first colon
-            sep := line.lfind(b':');
-            debug `adding $(line.slice(0, sep)) $(line.slice(sep + 1))`;
-            request.headers[toLower(line.slice(0, sep))] =
-                StringArray![strip(line.slice(sep + 1))];
-        }
-
-        @final void parseNext(uint amtRead) {
-            end := inbuf.size + amtRead;
-            inbuf.size += amtRead;
-            while (true) {
-                if (state == _ST_REQUEST || state == _ST_HEADERS) {
-
-                    # find the first newline
-                    int p;
-                    for (p = pos; inbuf.buffer[p] != b'\n' && p < end; ++p);
-
-                    # if we got one, process the request line
-                    if (p < end) {
-
-                        start := pos;
-                        pos = p + 1;
-
-                        # ignore a carrriage-return
-                        if (p > 1 && inbuf.buffer[p - 1] == b'\r')
-                            --p;
-
-                        if (state == _ST_REQUEST)
-                            processRequestLine(start, p);
-                        else
-                            processHeaderLine(start, p);
-
-                    } else {
-                        # XXX verify that we haven't yet exceeded the maximum
-                        # request line length
-                        # no complete line yet
-                        break;
-                    }
-                } else {
-                    void callPostData(Request request, Buffer buf) {
-                        try {
-                            request.postDataHandler(request, buf);
-                        } catch (Abort ex) {
-                            warn I`request terminated with abort: $(ex.code) \
-                                   $(ex.text)`;
-                        } catch (Exception ex) {
-                            error `Exception caught in post handler: $ex`;
-                        }
-                    }
-
-                    # State is _ST_BODY.  Deal with the "end of parcel"
-                    # condition correctly and if the handler has defined a post
-                    # data handler, call it.
-                    if (request.remainingPostData >= inbuf.size) {
-                        if (request.postDataHandler) {
-                            debug I`calling post data handler with inbuf \
-                                    [$inbuf]`;
-                            callPostData(request, inbuf);
-                        }
-                        request.remainingPostData -= inbuf.size;
-                        compressBuffer(inbuf.size);
-                    } else {
-                        # The inbuf contains more than the contents (it
-                        # overlaps the beginning of the next request)
-                        if (request.postDataHandler)
-                            callPostData(
-                                request,
-                                Buffer(inbuf.buffer, request.remainingPostData)
-                            );
-                        compressBuffer(request.remainingPostData);
-                        request.remainingPostData = 0;
-                    }
-
-                    # Begin the new request if we're done with post data.
-                    if (!request.remainingPostData) {
-                        state = _ST_REQUEST;
-                        request = Request(outQueue, addr);
-                    }
-                    return;
-                }
-            }
-
-            compressBuffer(pos);
         }
 
         @final bool readChunk() {
@@ -273,7 +285,8 @@ class Server {
             if (!amtRead) {
                 return false;
             } else {
-                parseNext(amtRead);
+                inbuf.size += amtRead;
+                parseNext(inbuf);
                 return true;
             }
         }

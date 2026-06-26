@@ -1,0 +1,58 @@
+%%TEST%%
+HTTP comm2srv
+%%ARGS%%
+%%FILE%%
+import crack.http.core HandlerArray, Request, RequestHandler;
+import crack.http.comm2srv HTTPConnectionFactory;
+import crack.io cerr, cout;
+import crack.net InetAddress, Socket, SocketApd, AF_INET, SOCK_STREAM;
+import crack.net.comm2 Comm, Connection, UserHandler;
+import crack.logger.ctx Log;
+import crack.runtime sleep;
+
+@import crack.ann impl;
+
+bool helloHandler(Request req) {
+    req.sendReply(200, 'text/plain', 'hello world!');
+    return true;
+}
+
+handlers := HandlerArray![RequestHandler.Wrap(helloHandler)];
+
+addr := InetAddress(127, 0, 0, 1, 0);
+
+# Hack to get an unused port.
+if (true) {
+    s := Socket(AF_INET, SOCK_STREAM, 0);
+    s.setReuseAddr(true);
+    s.bind(addr);
+    SocketApd(s).getSocketAddress(addr);
+    s.close();
+}
+
+comm := Comm(Log(null, null, cerr, cerr, cerr, 'service'));
+comm.start();
+comm.startServer(addr, HTTPConnectionFactory(handlers), true);
+
+class ClientHandler @impl UserHandler {
+    void process(Connection conn) {}
+    void terminate(Connection conn) {}
+    void addResponder(Object responder) {}
+}
+
+conn := comm.connect(addr, ClientHandler());
+conn.write('GET / HTTP/1.1\r\n\r\n');
+sleep(1);
+comm.stop();
+
+expected := 'HTTP/1.1 200 Stat\012Content-type: text/plain\012'
+            'Content-length: 12\012\012hello world!';
+if (conn.inBuf != expected) {
+    cerr `Expected: $(expected.getRepr())\n`;
+    cerr `Got: $(conn.inBuf.getRepr())\n`;
+} else {
+    cout `ok`;
+}
+%%EXPECT%%
+ok
+%%STDIN%%

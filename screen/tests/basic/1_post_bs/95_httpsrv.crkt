@@ -177,9 +177,9 @@ if (true) {
         here is some data'
     );
 
-    client.parseNext(0);
+    client.parseNext(inbuf);
     inbuf.extend(', dude');
-    client.parseNext(0);
+    client.parseNext(inbuf);
     @assert(contents == 'here is some data, dude');
 }
 
