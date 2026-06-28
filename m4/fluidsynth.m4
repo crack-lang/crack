@@ -21,6 +21,7 @@ AC_DEFUN([AM_PATH_FLUIDSYNTH], [dnl
         CPPFLAGS="$CPPFLAGS $FLUIDSYNTH_CPPFLAGS"
         AC_RUN_IFELSE([AC_LANG_SOURCE([[
             #include <fluidsynth.h>
+            #include <stdlib.h>
 
             int main() {
                 exit(((FLUIDSYNTH_VERSION_MAJOR == 1 &&
