@@ -354,6 +354,7 @@ extern "C" void crack_runtime_cinit(Module *mod) {
     f->addArg(uintzType, "size");
 
     mod->addConstant(uintzType, "PATH_MAX", PATH_MAX);
+    mod->addConstant(uintzType, "NAME_MAX", NAME_MAX);
 
     f = mod->addFunc(intType, "chdir", (void *)chdir);
     f->addArg(byteptrType, "path");
