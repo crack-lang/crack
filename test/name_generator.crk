@@ -1,0 +1,25 @@
+
+import crack.ann deserializeXMac;
+import crack.compiler CrackContext, Token, TOK_IDENT;
+import crack.runtime NAME_MAX;
+
+@import crack.ann xmac;
+
+const FIRST := NAME_MAX - 50;
+const LAST := NAME_MAX + 1;
+
+## Expands a range of generic classnames that will be both shorter than and
+## longer than the maximum filename size.
+void expandNames(CrackContext ctx) {
+    for (int i = FIRST; i < LAST; ++i) {
+        name := Token(TOK_IDENT, (String(i, b'x') + '\0').buffer,
+                      ctx.getLocation()
+                      );
+        @xmac* {
+            class $name[T] {}
+            if (true) {
+                $name[int] a;
+            }
+        }.expand(ctx);
+    }
+}

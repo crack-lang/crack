@@ -1,0 +1,5 @@
+# Generates a number of generic classes to exercise the boundary between names
+# that are small enough to be stored on the filesystem verbatim and those that
+# aren't.
+@import test.name_generator expandNames;
+@expandNames
