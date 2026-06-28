@@ -74,6 +74,7 @@ Ubuntu\/Debian
 
 Basic requirements for building:
     build-essential
+    pkg-config
     libpcre2-dev (required for tests and documentation generation)
     libtirpc-dev (required for XDR in the runtime module)
     LLVM 3.3 from source (see above)
