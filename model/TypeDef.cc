@@ -1333,6 +1333,10 @@ bool TypeDef::needsReceiver() const {
 bool TypeDef::isSerializable() const {
     if (meta)
         return false;
+    else if (name.substr(0, 6) == string_view(":anonc"))
+        // VarDef excludes names beginning with ":" as these are normally
+        // internal variables, but we want to serialize anonymous classes.
+        return true;
     else
         return VarDef::isSerializable();
 }

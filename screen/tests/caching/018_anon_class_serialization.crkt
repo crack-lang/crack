@@ -1,0 +1,9 @@
+%%TEST%%
+anonymous class serialization
+%%ARGS%%
+%%FILE%%
+c := (class * { }) ();
+puts('ok');
+%%EXPECT%%
+ok
+%%STDIN%%
