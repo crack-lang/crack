@@ -1,0 +1,30 @@
+%%TEST%%
+closures
+%%ARGS%%
+%%FILE%%
+import crack.functor Functor1;
+import crack.io cout;
+import crack.lang Box;
+
+@import crack.ann assert, impl;
+@import crack.closures closure;
+
+a := 1;
+x := @closure(a, b := a + 1) (int c) : int { return a + b + c };
+@assert(x(3) == 6);
+
+# Silly to use a closure for this, but it should still work.
+y := @closure() (int c) : int { return c };
+@assert(y(10) == 10);
+
+# Void closure.
+b := Box[int](0);
+z := @closure(b) (int newVal) { b.val = newVal };
+z(10);
+
+@assert(b.val == 10);
+
+cout `ok\n`;
+%%EXPECT%%
+ok
+%%STDIN%%

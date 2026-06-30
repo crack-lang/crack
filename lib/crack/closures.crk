@@ -8,14 +8,15 @@
 ##  c := @closure(a, b := a + 10) (int c): int { return a + b + c }
 ##  c(200);  # Returns 100 + 110 + 200.
 
-import crack.ann deserializeXMac, parseTok, readDelimited, NodeList,
-    NodeListImpl, NodeListNode, Type, Tok;
+import crack.ann deserializeNodeList, deserializeXMac, parseTok,
+    readDelimited, NodeList, NodeListImpl, NodeListNode, Type, Tok;
 import crack.cont.array Array;
-import crack.io cerr, FStr;
+import crack.io cerr, FStr, StringFormatter;
 import crack.compiler CrackContext, Token, TOK_COMMA, TOK_IDENT,
-    TOK_LBRACKET, TOK_LCURLY, TOK_LPAREN, TOK_RCURLY, TOK_RBRACKET, TOK_RPAREN;
+    TOK_LBRACKET, TOK_LCURLY, TOK_LPAREN, TOK_POPERRCTX, TOK_RCURLY,
+    TOK_RBRACKET, TOK_RPAREN;
 
-@import crack.ann xmac;
+@import crack.ann struct, tokens, xmac;
 
 class Closure {
     class Capture {
@@ -30,7 +31,16 @@ class Closure {
         oper init(Token var) : var = var {}
     }
 
+    @struct Parm {
+        NodeList type;
+        Token var;
+    }
+
     Array[Capture] captures = Array[Capture]();
+    Array[Parm] parms = Array[Parm]();
+
+    ## Closure return type and function body.
+    NodeList returnType, body;
 
     NodeList parseExpression(CrackContext ctx) {
         result := NodeListImpl();
@@ -80,38 +90,87 @@ class Closure {
             gotComma = true;
         }
 
-        if (tok.isRParen()) {
-            cerr `xxx got a paren\n`;
+        if (tok.isRParen())
             return false;
-        } else if (!gotComma)
+        else if (!gotComma)
             ctx.error(
                 FStr() `Comma or closing paren expected, got $(Tok(tok))\0`
                     .buffer
             );
 
         # Since it's not a paren, The current token is part of the next capture.
-        cerr `xxx putting back $(Tok(tok))\n`;
         ctx.putBack(tok);
 
         return true;
     }
 
     void parseCaptureList(CrackContext ctx) {
+        tok := ctx.getToken();
+        if (tok.isRParen())
+            return;
+        else
+            ctx.putBack(tok);
         while (parseCapture(ctx)) ;
-        cerr `xxx passed captures\n`;
+    }
+
+    Parm parseParm(CrackContext ctx) {
+        type := NodeListImpl();
+        Type.parse(ctx, type);
+
+        tok := ctx.getToken();
+        if (!tok.isIdent())
+            ctx.error(tok,
+                      FStr() `Identifier expected, got $(Tok(tok))\0`.buffer);
+
+        return Parm(type, tok);
+    }
+
+    void parseParmList(CrackContext ctx) {
+        parseTok(ctx, TOK_LPAREN);
+
+        tok := ctx.getToken();
+        while (!tok.isRParen()) {
+            ctx.putBack(tok);
+            parms.append(parseParm(ctx));
+
+            tok = ctx.getToken();
+            if (tok.isComma())
+                tok = ctx.getToken();
+            else if (!tok.isRParen())
+                ctx.error(
+                    tok,
+                    FStr() `Comma or closing paren expected, got $(Tok(tok))\0`
+                        .buffer,
+                );
+        }
     }
 
     void parse(CrackContext ctx) {
         parseTok(ctx, TOK_LPAREN);
         parseCaptureList(ctx);
-        cerr `xxx finished parsing\n`;
+        parseParmList(ctx);
+
+        # Check for a colon followed by a return type.
+        tok := ctx.getToken();
+        if (tok.isColon()) {
+            returnType = NodeListImpl();
+            Type.parse(ctx, returnType);
+        } else {
+            # No colon.  Assume a return type of void.
+            returnType = NodeListImpl![
+                Tok(Token(TOK_IDENT, 'void'.buffer, tok.getLocation())),
+            ];
+            ctx.putBack(tok);
+        }
+
+        body = readDelimited(ctx, TOK_LCURLY, TOK_RCURLY, true);
     }
 }
 
 void closure(CrackContext ctx) {
     closure := Closure();
+    loc := ctx.getLocation();
     closure.parse(ctx);
-    cerr `xxx past closure parse\n`;
 
     # Expand aliases for the types, first.  We alias the types because a
     # variable could be defined in a capture
@@ -119,10 +178,10 @@ void closure(CrackContext ctx) {
     captureVars := NodeListImpl();
     constructorParms := NodeListImpl();
     constructorArgs := NodeListImpl();
-    initializers := NodeListImpl();
+    initializers := closure.captures ? @tokens [:] : NodeListImpl();
     initSep := NodeListImpl();
     comma :=
-        NodeListImpl![Tok(Token(TOK_COMMA, ',\0'.buffer, ctx.getLocation()))];
+        NodeListImpl![Tok(Token(TOK_COMMA, ',\0'.buffer, loc))];
     for (capture :in closure.captures) {
         var := capture.var;
 
@@ -169,14 +228,39 @@ void closure(CrackContext ctx) {
                                  );
     }
 
+    # Expand the parm list.
+    NodeList parmList = NodeListImpl();
+    NodeList parmTypes = NodeListImpl();
+    for (parm :in closure.parms) {
+        type := parm.type;
+        var := parm.var;
+        parmList = @xmac* [ $parmList $type $var, ].expand();
+        parmTypes = @xmac* [ $parmTypes , $type ].expand();
+    }
+    functorClass := Token(TOK_IDENT,
+                          FStr() `Functor$(closure.parms.count())\0`.buffer,
+                          loc);
+    returnType := closure.returnType;
+    body := closure.body;
+
     result := @xmac* [(
-        class * {
+        class * @impl $functorClass[$returnType $parmTypes] {
             $typedefs
             $captureVars
-            oper init($constructorParms) : $initializers {}
+            oper init($constructorParms) $initializers {}
+
+            $returnType oper call ($parmList)
+                $body
         })($constructorArgs)
     ];
-    cerr `xxx result is $(result.expand())\n`;
-    cerr `xxx constructor args is $constructorArgs\n`;
+
+    # expand
+    ctx.putBack(Token(TOK_POPERRCTX, '[pop error context]'.buffer,
+                            loc
+                            )
+                        );
     result.expand(ctx);
+    StringFormatter fmt = {};
+    fmt `expanded from closure at $(loc.getName()):$(loc.getLineNumber())`;
+    ctx.pushErrorContext(fmt.cString().buffer);
 }
