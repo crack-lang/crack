@@ -611,6 +611,7 @@ void init(Module *mod) {
 
     // constants
     mod->addConstant(mod->getIntType(), "TOK_", 0);
+    mod->addConstant(mod->getIntType(), "TOK_ALIASKW", parser::Token::aliasKw);
     mod->addConstant(mod->getIntType(), "TOK_ANN", parser::Token::ann);
     mod->addConstant(mod->getIntType(), "TOK_BITAND", parser::Token::bitAnd);
     mod->addConstant(mod->getIntType(), "TOK_BITLSH", parser::Token::bitLSh);

@@ -1,0 +1,182 @@
+## Annotations for defining closures.  Usage:
+##
+##  import crack.functors Functor2;
+##  @import crack.closures closure;
+##
+##  a := 100;
+##  # Create a closure (an instance of a class derived from Functor2).
+##  c := @closure(a, b := a + 10) (int c): int { return a + b + c }
+##  c(200);  # Returns 100 + 110 + 200.
+
+import crack.ann deserializeXMac, parseTok, readDelimited, NodeList,
+    NodeListImpl, NodeListNode, Type, Tok;
+import crack.cont.array Array;
+import crack.io cerr, FStr;
+import crack.compiler CrackContext, Token, TOK_COMMA, TOK_IDENT,
+    TOK_LBRACKET, TOK_LCURLY, TOK_LPAREN, TOK_RCURLY, TOK_RBRACKET, TOK_RPAREN;
+
+@import crack.ann xmac;
+
+class Closure {
+    class Capture {
+        Token var;
+        NodeList expression;
+
+        oper init(Token var, NodeList expression) :
+            var = var,
+            expression = expression {
+        }
+
+        oper init(Token var) : var = var {}
+    }
+
+    Array[Capture] captures = Array[Capture]();
+
+    NodeList parseExpression(CrackContext ctx) {
+        result := NodeListImpl();
+        while (true) {
+            tok := ctx.getToken();
+
+            # Check for terminating comma or rparen.
+            if (tok.isComma() || tok.isRParen()) {
+                ctx.putBack(tok);
+                break;
+            }
+
+            # Anything else we want to keep.
+            result.pushHead(Tok(tok));
+
+            if (tok.isLCurly())
+                readDelimited(ctx, TOK_LCURLY, TOK_RCURLY, true, result);
+            else if (tok.isLBracket())
+                readDelimited(ctx, TOK_LBRACKET, TOK_RBRACKET, true, result);
+            else if (tok.isLParen())
+                readDelimited(ctx, TOK_LPAREN, TOK_RPAREN, true, result);
+        }
+        return result;
+    }
+
+    bool parseCapture(CrackContext ctx) {
+        var := ctx.getToken();
+        if (!var.isIdent())
+            ctx.error(var,
+                      FStr() `Identifier expected, got $(Tok(var))\0`.buffer
+                      );
+
+        tok := ctx.getToken();
+        NodeList expr;
+        if (tok.isDefine()) {
+            expr = parseExpression(ctx);
+            tok = ctx.getToken();
+        }
+        captures.append(Capture(var, expr));
+
+        # Check for a comma, then check for a right paren to allow ",)"
+        # sequences.
+
+        bool gotComma;
+        if (tok.isComma()) {
+            tok = ctx.getToken();
+            gotComma = true;
+        }
+
+        if (tok.isRParen()) {
+            cerr `xxx got a paren\n`;
+            return false;
+        } else if (!gotComma)
+            ctx.error(
+                FStr() `Comma or closing paren expected, got $(Tok(tok))\0`
+                    .buffer
+            );
+
+        # Since it's not a paren, The current token is part of the next capture.
+        cerr `xxx putting back $(Tok(tok))\n`;
+        ctx.putBack(tok);
+
+        return true;
+    }
+
+    void parseCaptureList(CrackContext ctx) {
+        while (parseCapture(ctx)) ;
+        cerr `xxx passed captures\n`;
+    }
+
+    void parse(CrackContext ctx) {
+        parseTok(ctx, TOK_LPAREN);
+        parseCaptureList(ctx);
+        cerr `xxx finished parsing\n`;
+    }
+}
+
+void closure(CrackContext ctx) {
+    closure := Closure();
+    closure.parse(ctx);
+    cerr `xxx past closure parse\n`;
+
+    # Expand aliases for the types, first.  We alias the types because a
+    # variable could be defined in a capture
+    typedefs := NodeListImpl();
+    captureVars := NodeListImpl();
+    constructorParms := NodeListImpl();
+    constructorArgs := NodeListImpl();
+    initializers := NodeListImpl();
+    initSep := NodeListImpl();
+    comma :=
+        NodeListImpl![Tok(Token(TOK_COMMA, ',\0'.buffer, ctx.getLocation()))];
+    for (capture :in closure.captures) {
+        var := capture.var;
+
+        # Create an anonymous type.  The ":" prefix is guaranteed not to clash
+        # with user defined names.  It could potentially collide with other
+        # generated typenames, but these only need to be valid during the
+        # definition.
+        # It is possible to define an annotation that breaks this.  If the
+        # annotation defines the variable :TypeOf_$var in the typeof
+        # expression, this triggers a bug which can cause the variable to be
+        # redefined in the same context (this is a bug because definitions in
+        # a typeof expression should be ignored).  Fortunately, this would
+        # trigger an error.
+        typename := Token(TOK_IDENT, FStr() `:TypeOf_$var\0`.buffer,
+                          var.getLocation()
+                          );
+        typeofExpr := capture.expression ?
+                      capture.expression :
+                      NodeListImpl![Tok(var)];
+        typedef := @xmac* [ alias $typename = typeof($typeofExpr); ].expand();
+        typedefs.pushHead(NodeListNode(typedef, var.getLocation()));
+
+        # Create the variable definition.
+        captureVarDef := @xmac* [ $typename $var; ].expand();
+        captureVars.pushHead(NodeListNode(captureVarDef, var.getLocation()));
+
+        # Create the constructor parameter.
+        constructorParm := @xmac* [ $typename $var, ].expand();
+        constructorParms.pushHead(NodeListNode(constructorParm,
+                                               var.getLocation()
+                                               )
+                                  );
+
+        # Create the instance variable initializers.
+        initializer := @xmac* [ $initSep $var = $var ].expand();
+        initSep = comma;
+        initializers.pushHead(NodeListNode(initializer, var.getLocation()));
+
+        # Create the constructor argument.
+        constructorArg := @xmac* [$typeofExpr,].expand();
+        constructorArgs.pushHead(NodeListNode(constructorArg,
+                                              var.getLocation()
+                                              )
+                                 );
+    }
+
+    result := @xmac* [(
+        class * {
+            $typedefs
+            $captureVars
+            oper init($constructorParms) : $initializers {}
+        })($constructorArgs)
+    ];
+    cerr `xxx result is $(result.expand())\n`;
+    cerr `xxx constructor args is $constructorArgs\n`;
+    result.expand(ctx);
+}

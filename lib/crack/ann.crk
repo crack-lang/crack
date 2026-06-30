@@ -23,16 +23,17 @@
 #   common case.
 
 import crack.compiler CrackContext, Location, Token, TokSerializer,
-    TOK_BREAKKW, TOK_CLASSKW, TOK_COMMA, TOK_CONTINUEKW, TOK_ELSEKW, TOK_FORKW,
-    TOK_IFKW, TOK_IMPORTKW, TOK_INKW, TOK_ISKW, TOK_LBRACKET, TOK_LCURLY,
-    TOK_LPAREN, TOK_NULLKW, TOK_ONKW, TOK_OPERKW, TOK_POPERRCTX, TOK_RBRACKET,
-    TOK_RCURLY, TOK_RETURNKW, TOK_RPAREN, TOK_STRING, TOK_WHILEKW;
+    TOK_ALIASKW, TOK_BREAKKW, TOK_CLASSKW, TOK_COMMA, TOK_CONTINUEKW,
+    TOK_ELSEKW, TOK_FORKW, TOK_IFKW, TOK_IMPORTKW, TOK_INKW, TOK_ISKW,
+    TOK_LBRACKET, TOK_LCURLY, TOK_LPAREN, TOK_NULLKW, TOK_ONKW, TOK_OPERKW,
+    TOK_POPERRCTX, TOK_RBRACKET, TOK_RCURLY, TOK_RETURNKW, TOK_RPAREN,
+    TOK_TYPEOFKW, TOK_STRING, TOK_WHILEKW;
 import crack.cont.array Array;
 import crack.cont.treemap TreeMap;
 import crack.io cerr, FStr, Reader, StandardFormatter, StringFormatter,
     StringWriter, Writer;
-import crack.lang die, AssertionError, CString, Exception, Formatter,
-    IndexError, InvalidArgumentError, InvalidStateError;
+import crack.lang die, AppendBuffer, AssertionError, CString, Exception,
+    Formatter, IndexError, InvalidArgumentError, InvalidStateError;
 import crack.runtime free;
 import crack.serial SerialReader, SerialWriter;
 
@@ -115,6 +116,9 @@ class NodeIter;
     String toString(Array[NodeList] args) {return null;}
     @abstract Location getLocation();
     @abstract void writeTo(MacroSerializer dst);
+
+    ## Shallow copy the contents of the node but not the next pointer.
+    @abstract Node copy();
 }
 
 class NodeIter {
@@ -197,8 +201,9 @@ class NodeListImpl : NodeList {
     }
 
     void __write(Formatter fmt, Node node) {
-        if (node.next)
-            __write(fmt, node.next);
+        if (!node)
+            return;
+        __write(fmt, node.next);
         node.formatTo(fmt);
     }
 
@@ -267,6 +272,8 @@ class Tok : Node {
         type := tok.getType();
         if (tok.isString()) {
             return String(tok.getText()).getRepr();
+        } else if (type == TOK_ALIASKW) {
+            return 'alias';
         } else if (type == TOK_BREAKKW) {
             return 'break';
         } else if (type == TOK_CLASSKW) {
@@ -293,10 +300,12 @@ class Tok : Node {
             return 'oper';
         } else if (type == TOK_RETURNKW) {
             return 'return';
+        } else if (type == TOK_TYPEOFKW) {
+            return 'typeof';
         } else if (type == TOK_WHILEKW) {
             return 'while';
         } else {
-            return String(tok.getText());
+            return StaticString(tok.getText());
         }
     }
 
@@ -305,13 +314,8 @@ class Tok : Node {
     }
 
     void formatTo(Formatter fmt) {
-        if (tok.isString()) {
-            fmt.format(' ');
-            fmt.format(String(tok.getText()).getRepr());
-        } else {
-            fmt.format(' ');
-            fmt.format(StaticString(tok.getText()));
-        }
+        fmt.format(' ');
+        fmt.format(toString(null));
     }
 
     void writeTo(Writer out) {
@@ -336,6 +340,8 @@ class Tok : Node {
 
         dst.writeLocation(tok.getLocation());
     }
+
+    Node copy() { return Tok(tok) }
 
     oper init(MacroDeserializer src) {
         type := int(src.readUInt());
@@ -409,6 +415,8 @@ class Arg : Node {
         dst.write(argIndex);
         dst.writeLocation(loc);
     }
+
+    Node copy() { return Arg(loc, argIndex) }
 }
 
 ## Concat nodes concatenate a set of tokens into a single token.  The type and
@@ -457,6 +465,12 @@ class Concat : Node {
         dst.write(uint(type));
         dst.writeLocation(loc);
     }
+
+    Node copy() {
+        result := Concat(list, loc);
+        result.type = type;
+        return result;
+    }
 }
 
 ## A Node that converts its arguments to a string.
@@ -492,6 +506,57 @@ class Stringify : Node {
 
         node.writeTo(dst);
     }
+
+    Node copy() { return Stringify(node) }
+}
+
+## A node that contains a NodeList.
+class NodeListNode : Node {
+    NodeList list;
+    Location loc;
+
+    oper init(NodeList list, Location loc) :
+        list = list,
+        loc = loc {
+    }
+
+    void expand(CrackContext ctx, Array[NodeList] args) {
+        for (item :in list)
+            item.expand(ctx, args);
+    }
+
+    String toString(Array[NodeList] args) {
+        result := AppendBuffer(1024);
+        for (item :in list)
+            result.extend(item.toString(args));
+        return String(result, true);
+    }
+
+    Location getLocation() {
+        return loc;
+    }
+
+    void expandInto(NodeList other) {
+        for (item :in list)
+            other.append(item.copy());
+    }
+
+    oper init(MacroDeserializer src) {
+        list = NodeListImpl(src);
+        loc = src.readLocation();
+    }
+
+    void writeTo(MacroSerializer dst) {
+        dst.write(4);
+        list.writeTo(dst);
+        dst.writeLocation(loc);
+    }
+
+    void formatTo(Formatter out) {
+        out `$list`;
+    }
+
+    Node copy() { return NodeListNode(list, loc) }
 }
 
 Node _readNode(MacroDeserializer src) {
@@ -505,6 +570,8 @@ Node _readNode(MacroDeserializer src) {
         node = Concat(src);
     else if (type == 3)
         node = Stringify(src);
+    else if (type == 4)
+        node = NodeListNode(src);
     else
         throw AssertionError(FStr() `bogus node $type\n`);
 
@@ -1018,6 +1085,8 @@ class _InjectionNode : Node {
     void writeTo(MacroSerializer dst) {
         throw Exception('Unsupported operation');
     }
+
+    Node copy() { return _InjectionNode(__loc, __code) }
 }
 
 ## Represents an arbitrary type.
@@ -1712,10 +1781,21 @@ class _ParseError : Exception {
         __checkArgsDefined();
         for (node :in __nodes) {
             if (arg := Arg.cast(node, null)) {
-                # An arg value must be comprised entirely of Tok nodes, add
-                # then to the result.
-                for (child :in __args[arg.argIndex])
-                    result.append(Tok(Tok.cast(child).tok));
+                # An arg value must be comprised entirely of Tok or
+                # NodeListNode nodes, add them to the result.
+                for (child :in __args[arg.argIndex]) {
+                    tok := Tok.cast(child, null)?.tok;
+                    if (tok !is null)
+                        result.append(Tok(tok));
+                    else if (nln := NodeListNode.cast(child, null)) {
+                        nln.expandInto(result);
+                    } else
+                        throw Exception(
+                            FStr() I`Element in node list is neither a \
+                                     token nor a NodeListNode, it's a \
+                                     $(child.class.name)`
+                        );
+                }
             } else {
                 result.append(Tok(Tok.cast(node).tok));
             }
@@ -1972,6 +2052,67 @@ void auto_imports(CrackContext ctx) {
                );
 }
 
+String getTokenName(int type) {
+    if (type == TOK_BREAKKW)
+        return '"break"';
+    else if (type == TOK_CLASSKW)
+        return '"class"';
+    else if (type == TOK_COMMA)
+        return 'comma';
+    else if (type == TOK_CONTINUEKW)
+        return '"continue"';
+    else if (type == TOK_ELSEKW)
+        return '"else"';
+    else if (type == TOK_FORKW)
+        return '"for"';
+    else if (type == TOK_IFKW)
+        return '"if"';
+    else if (type == TOK_IMPORTKW)
+        return '"import"';
+    else if (type == TOK_INKW)
+        return '"in"';
+    else if (type == TOK_ISKW)
+        return '"is"';
+    else if (type == TOK_LBRACKET)
+        return 'left square bracket';
+    else if (type == TOK_LCURLY)
+        return 'left curly bracket';
+    else if (type == TOK_LPAREN)
+        return 'left paren';
+    else if (type == TOK_NULLKW)
+        return '"null"';
+    else if (type == TOK_ONKW)
+        return '"on"';
+    else if (type == TOK_OPERKW)
+        return '"oper"';
+    else if (type == TOK_POPERRCTX)
+        return '<pop error context>';
+    else if (type == TOK_RBRACKET)
+        return 'right square bracket';
+    else if (type == TOK_RCURLY)
+        return 'right curly bracket';
+    else if (type == TOK_RETURNKW)
+        return '"return"';
+    else if (type == TOK_RPAREN)
+        return 'right paren';
+    else if (type == TOK_STRING)
+        return 'string';
+    else if (type == TOK_WHILEKW)
+        return '"while"';
+    else
+        return FStr() `token type $type`;
+}
+
+## Parse the next token and verify that it is of the specified type.
+void parseTok(CrackContext ctx, int type) {
+    tok := ctx.getToken();
+    if (tok.getType() != type) {
+        text :=
+            (FStr() `$(getTokenName(type)) expected, got $(Tok(tok))\0`).buffer;
+        ctx.error(tok, text);
+    }
+}
+
 ## Expands the sanitized scope name as a string.
 ## This converts the "main script" scope name to simply ".main".
 void SCOPE_NAME(CrackContext ctx) {
@@ -1986,3 +2127,13 @@ void REAL_SCOPE_NAME(CrackContext ctx) {
     result := CString(ctx.getNamespaceName(), true);
     ctx.putBack(Token(TOK_STRING, result.buffer, ctx.getLocation()));
 }
+
+# These annotations are currently just visual indicators, their semantics is
+# not enforced by the compiler.  Ideally, they should be.
+
+## Indicates that that parameter/variable definition following can be null.
+void nullable(CrackContext ctx) {}
+
+## Indicates that the method definition following should be an override of a
+## method in a base class.
+void override(CrackContext ctx) {}
