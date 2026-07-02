@@ -48,7 +48,7 @@ class Closure {
             tok := ctx.getToken();
 
             # Check for terminating comma or rparen.
-            if (tok.isComma() || tok.isRParen()) {
+            if (tok.isComma() || tok.isRBracket()) {
                 ctx.putBack(tok);
                 break;
             }
@@ -90,11 +90,11 @@ class Closure {
             gotComma = true;
         }
 
-        if (tok.isRParen())
+        if (tok.isRBracket())
             return false;
         else if (!gotComma)
             ctx.error(
-                FStr() `Comma or closing paren expected, got $(Tok(tok))\0`
+                FStr() `Comma or closing bracket expected, got $(Tok(tok))\0`
                     .buffer
             );
 
@@ -106,7 +106,7 @@ class Closure {
 
     void parseCaptureList(CrackContext ctx) {
         tok := ctx.getToken();
-        if (tok.isRParen())
+        if (tok.isRBracket())
             return;
         else
             ctx.putBack(tok);
@@ -146,7 +146,7 @@ class Closure {
     }
 
     void parse(CrackContext ctx) {
-        parseTok(ctx, TOK_LPAREN);
+        parseTok(ctx, TOK_LBRACKET);
         parseCaptureList(ctx);
         parseParmList(ctx);
 
