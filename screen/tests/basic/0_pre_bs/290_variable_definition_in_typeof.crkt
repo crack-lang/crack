@@ -1,0 +1,8 @@
+%%TEST%%
+variable definition in typeof
+%%ARGS%%
+%%FILE%%
+typeof(a := 1);
+%%EXPECT%%
+ParseError: %SCRIPTNAME%:1:8: Cannot create a variable in thie context (in a typeof())
+%%STDIN%%

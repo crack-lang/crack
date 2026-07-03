@@ -490,6 +490,10 @@ VarDefPtr Context::emitVarDef(Context *defCtx, TypeDef *type,
     if (construct->voidType->matches(*type))
         error("Can not create a variable of type 'void'");
 
+    // Make sure this isn't an inert context
+    if (defCtx->scope == Context::inert)
+        error("Cannot create a variable in thie context (in a typeof())");
+
     VarDefPtr varDef;
 
     // if this is a constant, and the expression is a constant integer or
