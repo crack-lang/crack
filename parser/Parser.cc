@@ -849,6 +849,13 @@ TypeDefPtr Parser::parseTypeof() {
                  "Expected parenthesized expression after 'typeof' keyword."
                  );
 
+   // Create an inert subcontext for the typeof expression.
+   ContextPtr subCtx = context->createSubContext(Context::inert, 
+                                                 context->ns.get(),
+                                                 0,
+                                                 context->compileNS.get());
+   ContextStackFrame<Parser> cstack(*this, subCtx.get());
+
    TypeDefPtr result = parseExpression()->type;
 
    tok = getToken();

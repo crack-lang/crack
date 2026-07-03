@@ -107,7 +107,8 @@ class Context : public spug::RCBase {
             module,
             instance,
             local,
-            composite  // scope is just a composition of parent scopes
+            composite,  // scope is just a composition of parent scopes
+            inert  // scope that doesn't generate code (e.g. typeof())
         };
 
         ContextPtr parent;

@@ -225,6 +225,7 @@ ContextPtr Context::createSubContext(Scope newScope, Namespace *ns,
                 break;
             case composite:
             case instance:
+            case inert:
                 assert(false &&
                         "missing namespace when creating composite or instance "
                         "context"
@@ -841,8 +842,9 @@ ExprPtr Context::createVarRef(VarDef *varDef, bool errorIfUnreachable) {
 
     // verify that the variable is reachable
 
-    // functions and types don't have reachability issues
-    if (TypeDefPtr::cast(varDef) || FuncDefPtr::cast(varDef) ||
+    // inert scopes, functions and types don't have reachability issues
+    if (scope == inert ||
+        TypeDefPtr::cast(varDef) || FuncDefPtr::cast(varDef) ||
         OverloadDefPtr::cast(varDef)) {
 
         return builder.createVarRef(varDef);
@@ -1421,6 +1423,7 @@ void Context::dump(ostream &out, const std::string &prefix) const {
         case instance: out << "instance "; break;
         case local: out << "local "; break;
         case composite: out << "composite "; break;
+        case inert: out << "inert "; break;
         default: out << "UNKNOWN ";
     }
     ns->dump(out, prefix);
