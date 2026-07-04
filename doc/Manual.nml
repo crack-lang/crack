@@ -2959,6 +2959,27 @@ for example, deleting a destructor of a class derived from #Object# will not
 prevent the base class destructors from being called when the object is
 destroyed.
 
+Anonymous Classes
+'''''''''''''''''
+
+It is possible to create an unnamed, anonymous class by using an asterisk in
+place of the class name.  This is mainly useful in the context of macros (see
+\X(Closures), below), as it allows the instantiation of single objects without
+having to introduce a unique name:
+
+{{
+    a := (class * {
+        int a;
+        oper init(int a) : a = a {}
+        int oper call(int b) {
+            return a + b;
+        }
+    })(100);
+
+    # "result" is set to 150.
+    result := a(50);
+}}
+
 Generics
 --------
 
@@ -4487,6 +4508,108 @@ are expanded to the variable definition list and the constructor:
 }}
 
 This form allows inheritence and the definition of other methods.
+
+Informational Annotations
+'''''''''''''''''''''''''
+
+The #@override# and #@nullable# annotations can be used to provide additional
+information, however they _are not currently enforced by the language._
+
+#@override# is used to indicate that a method is an override of a method in a
+base class:
+
+{{
+    class A {
+        void f() {}
+    }
+
+    class B : A {
+        @override
+        void f() {}
+    }
+}}
+
+#@nullable# indicates that the following variable, parameter, or return value
+can be null:
+
+{{
+    @nullable Foobar maybeGetFoobar();  # Can return null.
+
+    void maybeHaveAFoobar(@nullable Foobar val);  # "val" can be null.
+
+    @nullable Foobar a = maybeGetFoobar();  # "a" can be null.
+}}
+
+Future versions of the language may enforce these, but will not do so without
+introducing some sort of "strict" semantics.
+
+Closures
+''''''''
+
+Closures are functions that access variables from the enclosing lexical
+context in which the function is defined.  While Crack allows you to create
+nested functions and even anonymous nested functions (see \X(Lambdas)),
+neither can access variables in an enclosing function scope.
+
+Crack "closures" are implemented with a macro and (similar to C++ lambda
+expressions) require you to identify the variables to be accessed within the
+body of the closure.  The general syntax is *@closure[* /captures/ *] (*
+/parameters/ *) :* /return-type/ *{* /body/ *}*.
+
+For example, to create a closure that captures variables #a# and #b# from an
+enclosing function:
+
+{{
+    import crack.functor Functor1;  # Needed for a @closure macro with 1 param.
+
+    @import crack.ann impl;  # Needed for the @closure macro.
+    @import crack.closures closure;
+
+    void enclosingFunction(int a, int b) {
+        func := @closure[a, b] (int c) : int { return a + b + c };
+        // func is now a Functor1 that can be called as func(value)
+    }
+}}
+
+It should be noted that variable captures essentially assign a new variable in
+the closure's state to the value of the variable in the enclosing scope.  So
+while these variables can be assigned in the closure, they will not affect the
+value of the variable in the enclosing scope:
+
+{{
+    void enclosingFunction() {
+        a := 100;
+        func := @closure[a] (int newVal) { a = newVal };
+        func(200);
+        cout `$a\n`;  # "a" is still 100.
+    }
+}}
+
+To change values in the enclosing context, you must use a #Box# (see \X(The
+Box Generic)):
+
+{{
+    import crack.lang Box;
+
+    void enclosingFunction() {
+        a := Box[int](100);
+        func := @closure[a] (int newVal) { a.val = newVal };
+        func(200);
+        cout `$a\n`;  # "a" is now 200.
+    }
+}}
+
+As visible in the examples above, the return type can be omitted if the lambda
+has a return type of "void" and doesn't return a value.
+
+In addition to simple variables, more complicated expressions can be assigned
+in a capture using the ":=" operator:
+
+{{
+    void enclosingFunction(int a) {
+        func := @closure[a, b := a + 1] (int c) : int { return a + b + c };
+    }
+}}
 
 Other standard annotations
 ''''''''''''''''''''''''''
