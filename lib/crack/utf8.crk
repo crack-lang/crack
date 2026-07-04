@@ -5,8 +5,7 @@ import crack.lang AppendBuffer, Buffer;
 class UTF8String = Buffer {
 }
 
-## Appends a UTF8 character to the buffer.  This is exposed mainly for
-## testing, don't import it as it's likely to move into a utf8 module.
+## Appends a UTF8 character to the buffer.
 void appendUTF8Char(AppendBuffer buf, int char) {
     if (char <= 0x7f) {
         buf.append(byte(char));
