@@ -1,0 +1,10 @@
+%%TEST%%
+unterminated macro expansion
+%%ARGS%%
+%%FILE%%
+@import crack.ann define;
+@define macro(val) {}
+@macro(unterminated
+%%EXPECT%%
+ParseError: %SCRIPTNAME%:4:1: End of file found in macro arguments
+%%STDIN%%

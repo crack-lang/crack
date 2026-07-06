@@ -651,6 +651,8 @@ Array[NodeList] parseArgs(CrackContext ctx, uint argCount) {
                 argTokList.pushHead(Tok(tok));
                 parseIString(ctx, argTokList);
                 continue;
+            } else if (tok.isEnd()) {
+                ctx.error(tok, 'End of file found in macro arguments'.buffer);
             }
 
             argTokList.pushHead(Tok(tok));
