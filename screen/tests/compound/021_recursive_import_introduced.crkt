@@ -1,0 +1,42 @@
+%%TEST%%
+rescursive import introduced after caching
+%%ARGS%%
+%%FILE%%
+# Verifies that the introduction of a recursive import to a cached file
+# produces a reasonable error and not a check failure.
+
+import systest test;
+import crack.io cout;
+
+test.mod('mod1', I"
+    import mod2 Foo;
+
+    class Bar {}
+    ");
+
+test.mod('mod2', I"
+    class Foo {}
+    ");
+
+test.main("
+    import mod1 Bar;
+    puts('ok'.buffer);
+    ");
+
+test.run();
+
+test.mod('mod2',  I"
+    import mod1 Bar;
+
+    class Foo {}
+    ");
+
+test.run();
+
+%%REXPECT%%
+out: ok
+terminated: success
+err: ParseError: <no-location>: Module mod2 recursively imported from mod1
+err:.
+terminated, rc = 2049
+%%STDIN%%

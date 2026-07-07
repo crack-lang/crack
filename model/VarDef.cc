@@ -350,6 +350,17 @@ namespace {
                     makeIterPair(curName, endName)
                    );
 
+        // If the module is not finished (and it's not the current module,
+        // which can safely resolve paths to itself) then this represents a
+        // recursive import.
+        if (!module->finished && module->getMaster() != context.ns) {
+            context.error(SPUG_FSTR("Module " << moduleName <<
+                                    " recursively imported from " <<
+                                    context.ns->getNamespaceName()
+                                    )
+                          );
+        }
+
         list<string>::iterator next = curName;
         ++next;
         NamespacePtr ns = module;

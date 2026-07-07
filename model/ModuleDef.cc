@@ -688,6 +688,8 @@ ModuleDefPtr ModuleDef::deserialize(Deserializer &deser,
             (*iter)->genericInfo->lazyImports = mod->lazyImports;
     }
 
+    mod->finished = true;
+
     if (Serializer::trace)
         cerr << ">>>> Finished deserializing module " << canonicalName << endl;
     return mod;
@@ -717,6 +719,7 @@ namespace {
                 name,
                 master.get()
             );
+            mod->finished = true;
             deser.context->construct->moduleCache[name] = mod;
             return mod;
         }
