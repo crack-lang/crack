@@ -1,0 +1,21 @@
+%%TEST%%
+Appendage creation within the body of the appendage
+%%ARGS%%
+%%FILE%%
+import crack.io cout;
+@import crack.ann assert;
+
+class A {}
+
+class X = A {
+    @static X f(A a) {
+        return X(a);
+    }
+}
+
+a := A();
+@assert(X.f(a) is a);
+cout `ok\n`;
+%%EXPECT%%
+ok
+%%STDIN%%

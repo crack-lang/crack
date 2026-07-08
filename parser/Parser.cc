@@ -3606,8 +3606,11 @@ TypeDefPtr Parser::parseClassDef() {
    else if (flags & TypeDef::finalClass)
       type->final = true;
 
-   if (isAppendage)
+   FuncDefPtr nopOperNew;
+   if (isAppendage) {
       type->appendage = true;
+      nopOperNew = type->createNopOperNewForward(*classContext);
+   }
 
    // add the "oper class" and "cast" methods
    FuncDefPtr throwingCast, defaultingCast;
@@ -3643,6 +3646,13 @@ TypeDefPtr Parser::parseClassDef() {
       type->createCast(*classContext, true, throwingCast.get());
       type->createCast(*classContext, false, defaultingCast.get());
    }
+
+   if (isAppendage)
+      type->createNopOperNew(*classContext, nopOperNew.get());
+
+   // Now that we've filled in any auto-generated methods, make sure all
+   // forward declarations have been defined.
+   classContext->checkForUnresolvedForwards();
 
    type->rectify(*classContext);
    BSTATS_GO(s2)
@@ -3795,9 +3805,6 @@ void Parser::parseClassBody() {
       TypeDefPtr tempType = type;
       parseTypeSpecializationAndDef(tempType);
    }
-
-   // make sure all forward declarations have been defined.
-   context->parent->checkForUnresolvedForwards();
 }
 
 VarDefPtr Parser::checkForExistingDef(const Token &tok, const string &name,

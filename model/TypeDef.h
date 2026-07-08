@@ -294,8 +294,16 @@ class TypeDef : public VarDef, public Namespace {
          */
         FuncDefPtr createOperInit(Context &classContext, const ArgVec &args);
 
-        /** Create a no-op oper new method (for appendages). */
-        void createNopOperNew(Context &classContext);
+        /** Create a no-op oper new forward definition (for appendages). */
+        FuncDefPtr createNopOperNewForward(Context &classContext);
+
+        /**
+         * Create a no-op oper new method (for appendages).
+         *
+         * "forward" should be the value returned from
+         * createNopOperNewForward().
+         */
+        void createNopOperNew(Context &classContext, FuncDef *forward);
 
         /**
          * Create the default initializer.

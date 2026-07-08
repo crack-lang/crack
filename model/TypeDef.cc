@@ -400,23 +400,35 @@ FuncDefPtr TypeDef::createOperInit(Context &classContext,
     return newFunc;
 }
 
-void TypeDef::createNopOperNew(Context &classContext) {
+FuncDefPtr TypeDef::createNopOperNewForward(Context &classContext) {
     ArgVec args(1);
+    args[0] = classContext.builder.createArgDef(getAnchorType(), "this");
+
+    FuncDefPtr func = classContext.builder.createFuncForward(classContext,
+                                                             FuncDef::forward,
+                                                             "oper new",
+                                                             this,
+                                                             args,
+                                                             0);
+
+    classContext.addDef(func.get());
+    return func;
+}
+
+void TypeDef::createNopOperNew(Context &classContext, FuncDef *forward) {
     ContextPtr funcCtx = classContext.createSubContext(Context::local);
     funcCtx->toplevel = true;
-    args[0] = classContext.builder.createArgDef(getAnchorType(), "this");
-    funcCtx->addDef(args[0].get());
+    funcCtx->addDef(forward->args[0].get());
     funcCtx->returnType = this;
 
     FuncDefPtr func = classContext.builder.emitBeginFunc(*funcCtx,
                                                          FuncDef::noFlags,
                                                          "oper new",
                                                          this,
-                                                         args,
-                                                         0
-                                                         );
+                                                         forward->args,
+                                                         forward);
 
-    VarRefPtr thisRef = classContext.builder.createVarRef(args[0].get());
+    VarRefPtr thisRef = classContext.builder.createVarRef(forward->args[0].get());
 
     FuncCall::ExprVec unsafeCastArgs(1);
     unsafeCastArgs[0] = thisRef;
@@ -429,7 +441,6 @@ void TypeDef::createNopOperNew(Context &classContext) {
 
     classContext.builder.emitReturn(*funcCtx, unsafeCastCall.get());
     classContext.builder.emitEndFunc(*funcCtx, func.get());
-    classContext.addDef(func.get());
 }
 
 FuncDefPtr TypeDef::createDefaultInit(Context &classContext) {
@@ -830,13 +841,9 @@ void TypeDef::rectify(Context &classContext) {
         }
     }
 
-    if (appendage) {
-        // Appendages get an "oper new" method that just returns its argument.
-        createNopOperNew(classContext);
-
-    // if there are no init functions specific to this class, create a
-    // default constructor and possibly wrap it in a new function.
-    } else {
+    if (!appendage) {
+        // if there are no init functions specific to this class, create a
+        // default constructor and possibly wrap it in a new function.
         if (!lookUp("oper init", false)) {
             FuncDefPtr initFunc = createDefaultInit(classContext);
             if (!abstract)
