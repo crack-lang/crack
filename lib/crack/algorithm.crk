@@ -10,6 +10,10 @@
 import crack.io cout;
 import crack.lang cmp;
 
+# we use poormac here because the standard macro mechanism depends on this
+# module.
+@import crack._poormac define;
+
 class QuickSortBase[SeqT, CmpFunc, Elem] {
 
     alias CmpFunc = CmpFunc;
@@ -97,11 +101,13 @@ class QuickSortBase[SeqT, CmpFunc, Elem] {
     }
 }
 
+@define _elem 0
+    typeof(SeqT.cast(null)[0])
+$$
+
 ## Base class version of quick-sort, can be applied to primitive arrays.
 class QuickSortPrim[SeqT] :
-    QuickSortBase[SeqT, function[int, typeof(SeqT(1)[0]), typeof(SeqT(1)[0])],
-                  typeof(SeqT(1)[0])
-                  ] {
+    QuickSortBase[SeqT, function[int, @_elem, @_elem], @_elem] {
 
     ## Sort the the array of the given size.
     @static void sort(SeqT seq, uintz count) {
@@ -121,7 +127,7 @@ class QuickSortPrim[SeqT] :
 ## This is separated out because we can't import crack.functor from here (it
 ## requires crack.ann -> crack.cont.array -> crack.algorithm)
 class QuickSortPrimF[SeqT, CmpFunc] :
-    QuickSortBase[SeqT, CmpFunc, typeof(SeqT(1)[0])] {
+    QuickSortBase[SeqT, CmpFunc, typeof(SeqT.cast(null)[0])] {
 
     ## Sort the array of the given size using the given comparison functor.
     @static void sort(SeqT A, uintz count, CmpFunc cmp) {
@@ -147,8 +153,7 @@ class QuickSort[SeqT] : QuickSortPrim[SeqT] {
 ##
 ## This is separated out because we can't import crack.functor from here (it
 ## requires crack.ann -> crack.cont.array -> crack.algorithm)
-class QuickSortF[SeqT, CmpFunc] :
-    QuickSortBase[SeqT, CmpFunc, typeof(SeqT(1)[0])] {
+class QuickSortF[SeqT, CmpFunc] : QuickSortBase[SeqT, CmpFunc, @_elem] {
 
     @static void sort(SeqT seq, CmpFunc cmp) {
         if (seq.count() > 1)
@@ -156,55 +161,86 @@ class QuickSortF[SeqT, CmpFunc] :
     }
 }
 
-## Insertion sort primitive.  Can be used on primitive arrays.
-class InsertionSortPrim[Elem] {
+class InsertionSortBase[SeqT, CmpFunc] {
+    alias CmpFunc = CmpFunc;
 
-    @static void _swap(Elem seq, uintz l, uintz r) {
-        temp := seq[l];
-        seq[l] = seq[r];
-        seq[r] = temp;
-    }
-
-    @static void _insertionSort(Elem seq, uintz count) {
+    @static void _insertionSort(SeqT seq, uintz count, CmpFunc cmp) {
         if (count > 1) {
             uintz j = 1;
             uintz i;
             while (j < count) {
                 key := seq[j];
-                i = j-1;
-                while (cmp (seq[i], key) > 0) {
-                    _swap(seq, i+1, i);
-                    if (i == 0)
+                i = j - 1;
+                while (cmp(seq[i], key) > 0) {
+                    seq[i + 1] = seq[i];
+                    if (i == 0) {
+                        --i;
                         break;
-                    i--;
+                    }
+                    --i;
                 }
-                seq[i+1] = key;
-                j++;
+                seq[i + 1] = key;
+                ++j;
             }
         }
     }
+}
+
+## Insertion sort primitive.  Can be used on primitive arrays.
+class InsertionSortPrim[SeqT] :
+    InsertionSortBase[SeqT, function[int, @_elem, @_elem]] {
 
     ## Sort an array of the given size.
-    @static void sort(Elem seq, uintz count){
-        _insertionSort(seq, count);
+    @static void sort(SeqT seq, uintz count){
+        _insertionSort(seq, count, cmp);
+    }
+
+    ## Sort an array of the given size with the given sort function.
+    @static void sort(SeqT seq, uintz count, CmpFunc func) {
+        _insertionSort(seq, count, func);
+    }
+}
+
+## Insertion sort primitive that accepts a comparison functor.  Can be used
+## on primitive arrays.
+class InsertionSortPrimF[SeqT, CmpFunc] : InsertionSortBase[SeqT, CmpFunc] {
+
+    ## Sort an array of the given size.
+    @static void sort(SeqT seq, uintz count, CmpFunc func) {
+        _insertionSort(seq, count, func);
     }
 }
 
 ## Insertion sort.  Requires [], []= and count().
 ## Usage: typeof(seq).sort(seq);
-class InsertionSort[SeqT] : InsertionSortPrim[SeqT] {
+class InsertionSort[SeqT] :
+    InsertionSortBase[SeqT, function[int, @_elem, @_elem]] {
 
     ## Sort the given array.
     @static void sort(SeqT seq) {
-        _insertionSort(seq, seq.count());
+        _insertionSort(seq, seq.count(), cmp);
+    }
+
+    ## Sort the given array.
+    @static void sort(SeqT seq, CmpFunc func) {
+        _insertionSort(seq, seq.count(), func);
     }
 }
 
+## Insertion sort that accepts a functor.  Requires [], []= and count().
+## Usage: typeof(seq).sort(seq, func);
+class InsertionSortF[SeqT, CmpFunc] : InsertionSortBase[SeqT, CmpFunc] {
 
-## Heap routines.
-class HeapPrim[Elem] {
+    ## Sort the given array.
+    @static void sort(SeqT seq, CmpFunc func) {
+        _insertionSort(seq, seq.count(), func);
+    }
+}
 
-    @static void _swap(Elem seq, uintz l, uintz r) {
+class HeapBase[SeqT, CmpFunc] {
+    alias CmpFunc = CmpFunc;
+
+    @static void _swap(SeqT seq, uintz l, uintz r) {
         --l; --r;
         temp := seq[l];
         seq[l] = seq[r];
@@ -213,12 +249,12 @@ class HeapPrim[Elem] {
 
     ## Returns true if 'seq' of size 'count' is already a max heap.  It is a
     ## max heap if all values at an index of half the size are greater than
-    ## values at the current index.
-    @static bool isMaxHeap(Elem seq, uintz count) {
+    ## or equal to the value at the current index.
+    @static bool isMaxHeap(SeqT seq, uintz count, CmpFunc func) {
         // for i := 1..count, assert seq[Parent(i)] >= seq[i]
         for (i := count; i > 1; --i) {
             parent := i >> 1;
-            if (seq[parent - 1] < seq[i - 1]) {
+            if (func(seq[parent - 1], seq[i - 1]) < 0) {
                 return false;
             }
         }
@@ -227,27 +263,43 @@ class HeapPrim[Elem] {
 
     ## Convert the sequence from index i of the specified size to a max heap.
     ## index i is 1 based, not 0 based
-    @static void maxHeapify(Elem seq, uintz i, uintz count) {
+    @static void maxHeapify(SeqT seq, uintz i, uintz count, CmpFunc func) {
         uintz l = i << 1;
         uintz r = l + 1;
         uintz largest;
-        if (l <= count && seq[l - 1] > seq[i - 1])
+        if (l <= count && func(seq[l - 1], seq[i - 1]) > 0)
             largest = l;
         else
             largest = i;
-        if (r <= count && seq[r - 1] > seq[largest - 1])
+        if (r <= count && func(seq[r - 1], seq[largest - 1]) > 0)
             largest = r;
         if (largest != i) {
             _swap(seq, i, largest);
-            maxHeapify(seq, largest, count);
+            maxHeapify(seq, largest, count, func);
         }
     }
 
     ## Convert a sequence of size 'count' to a max heap.
-    @static void buildMaxHeap(Elem seq, uintz count) {
+    @static void buildMaxHeap(SeqT seq, uintz count, CmpFunc func) {
         for (i := count >> 1; i > 0; --i) {
-            maxHeapify(seq, i, count);
+            maxHeapify(seq, i, count, func);
         }
+    }
+}
+
+## Heap routines, works on a primitive array.
+class HeapPrim[SeqT] : HeapBase[SeqT, function[int, @_elem, @_elem]] {
+    @static bool isMaxHeap(SeqT seq, uintz count) {
+        return isMaxHeap(seq, count, cmp);
+    }
+
+    @static void maxHeapify(SeqT seq, uintz i, uintz count) {
+        return maxHeapify(seq, i, count, cmp);
+    }
+
+    ## Convert a sequence of size 'count' to a max heap.
+    @static void buildMaxHeap(SeqT seq, uintz count) {
+        buildMaxHeap(seq, count, cmp);
     }
 }
 
@@ -265,32 +317,53 @@ class Heap[SeqT] : HeapPrim[SeqT] {
     }
 }
 
-## Heap sort implementation, safe for use with primitive arrays.
-class HeapSortPrim[Elem] : HeapPrim[Elem] {
-    @static void _heapSort(Elem seq, uintz count) {
+## Heap that can accept a functor.  Requires [], []= and count().
+class HeapF[SeqT, CmpFunc] : HeapBase[SeqT, CmpFunc] {
+
+    ## Convert the sequence to a max heap.
+    @static void buildMaxHeap(SeqT seq, CmpFunc func) {
+        buildMaxHeap(seq, seq.count(), func);
+    }
+
+    ## Returns true if the sequence is a max heap.
+    @static bool isMaxHeap(SeqT seq, CmpFunc func) {
+        return isMaxHeap(seq, seq.count(), func);
+    }
+}
+
+class HeapSortBase[SeqT, CmpFunc] : HeapBase[SeqT, CmpFunc] {
+    @static void _heapSort(SeqT seq, uintz count, CmpFunc func) {
         if (count > 1) {
             heapSize := count;
             for (i := count; i > 1; --i) {
                 _swap(seq, 1, i);
                 heapSize--;
-                maxHeapify(seq, 1, heapSize);
+                maxHeapify(seq, 1, heapSize, func);
             }
         }
     }
 
     ## Heap sort an array of the specified size.
-    @static void sort(Elem seq, uintz count) {
-        if (!isMaxHeap(seq, count))
-            buildMaxHeap(seq, count);
-        _heapSort(seq, count);
+    @static void sort(SeqT seq, uintz count, CmpFunc func) {
+        if (!isMaxHeap(seq, count, func))
+            buildMaxHeap(seq, count, func);
+        _heapSort(seq, count, func);
+    }
+}
+
+## Heap sort implementation, safe for use with primitive arrays.
+class HeapSortPrim[SeqT] : HeapSortBase[SeqT, function[int, @_elem, @_elem]] {
+    ## Heap sort an array of the specified size.
+    @static void sort(SeqT seq, uintz count) {
+        sort(seq, count, cmp);
     }
 }
 
 ## Heap sort implementation.
-class HeapSort[SeqT] : HeapSortPrim[SeqT] {
+class HeapSort[SeqT] : HeapSortBase[SeqT, function[int, @_elem, @_elem]] {
 
     ## Sort the array.
     @static void sort(SeqT seq) {
-        _heapSort(seq, seq.count());
+        sort(seq, seq.count(), cmp);
     }
 }

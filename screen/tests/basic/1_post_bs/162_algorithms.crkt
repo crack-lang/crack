@@ -1,0 +1,139 @@
+%%TEST%%
+algorithms
+%%ARGS%%
+%%FILE%%
+import crack.algorithm Heap, HeapBase, HeapF, HeapPrim, HeapSort,
+    HeapSortBase, HeapSortPrim, InsertionSort, InsertionSortF,
+    InsertionSortPrim, InsertionSortPrimF, QuickSort, QuickSortF,
+    QuickSortPrim, QuickSortPrimF;
+import crack.cont.array Array;
+import crack.functor Functor2;
+import crack.io cout;
+
+@import crack.ann assert;
+
+int ncmp(int a, int b) { return b - a }
+
+# QuickSortPrim
+
+alias A = Array[int];
+alias F = Functor2[int, int, int];
+A makeArray() { return A![2, 3, 1] }
+
+arr := makeArray();
+QuickSortPrim[A].sort(arr, 3);
+@assert(arr == A![1, 2, 3]);
+
+arr = makeArray();
+QuickSortPrim[A].sort(arr, 3, ncmp);
+@assert(arr == A![3, 2, 1]);
+
+# QuickSortPrimF
+
+arr = makeArray();
+QuickSortPrimF[A, F].sort(arr, 3, F.Wrap(ncmp));
+@assert(arr == A![3, 2, 1]);
+
+# QuickSort
+
+arr = makeArray();
+QuickSort[A].sort(arr);
+@assert(arr == A![1, 2, 3]);
+
+arr = makeArray();
+QuickSort[A].sort(arr, ncmp);
+@assert(arr == A![3, 2, 1]);
+
+# QuickSortF
+
+arr = makeArray();
+QuickSortF[A, F].sort(arr, F.Wrap(ncmp));
+@assert(arr == A![3, 2, 1]);
+
+# InsertionSortPrim
+
+arr = makeArray();
+InsertionSortPrim[A].sort(arr, 3);
+@assert(arr == A![1, 2, 3]);
+
+arr = makeArray();
+InsertionSortPrim[A].sort(arr, 3, ncmp);
+@assert(arr == A![3, 2, 1]);
+
+# InsertionSortPrimF
+
+arr = makeArray();
+InsertionSortPrimF[A, F].sort(arr, 3, F.Wrap(ncmp));
+@assert(arr == A![3, 2, 1]);
+
+# InsertionSort
+
+arr = makeArray();
+InsertionSort[A].sort(arr);
+@assert(arr == A![1, 2, 3]);
+
+arr = makeArray();
+InsertionSort[A].sort(arr, ncmp);
+@assert(arr == A![3, 2, 1]);
+
+# InsertionSortF
+
+arr = makeArray();
+InsertionSortF[A, F].sort(arr, F.Wrap(ncmp));
+@assert(arr == A![3, 2, 1]);
+
+# HeapBase
+
+arr = makeArray();
+@assert(!HeapBase[A, F].isMaxHeap(arr, arr.count(), F.Wrap(ncmp)));
+HeapBase[A, F].buildMaxHeap(arr, arr.count(), F.Wrap(ncmp));
+@assert(HeapBase[A, F].isMaxHeap(arr, arr.count(), F.Wrap(ncmp)));
+@assert(arr == A![1, 3, 2]);
+
+# HeapPrim
+
+arr = makeArray();
+@assert(!HeapPrim[A].isMaxHeap(arr, arr.count()));
+HeapPrim[A].buildMaxHeap(arr, arr.count());
+@assert(HeapPrim[A].isMaxHeap(arr, arr.count()));
+@assert(arr == A![3, 2, 1]);
+
+# Heap
+
+arr = makeArray();
+@assert(!Heap[A].isMaxHeap(arr));
+Heap[A].buildMaxHeap(arr);
+@assert(Heap[A].isMaxHeap(arr));
+@assert(arr == A![3, 2, 1]);
+
+# HeapF
+
+arr = makeArray();
+@assert(!HeapF[A, F].isMaxHeap(arr, F.Wrap(ncmp)));
+HeapF[A, F].buildMaxHeap(arr, F.Wrap(ncmp));
+@assert(HeapF[A, F].isMaxHeap(arr, F.Wrap(ncmp)));
+@assert(arr == A![1, 3, 2]);
+
+# HeapSortBase
+
+arr = makeArray();
+HeapSortBase[A, F].sort(arr, 3, F.Wrap(ncmp));
+@assert(arr == A![3, 2, 1]);
+
+# HeapSortPrim
+
+arr = makeArray();
+HeapSortPrim[A].sort(arr, 3);
+@assert(arr == A![1, 2, 3]);
+
+# HeapSort
+
+arr = makeArray();
+HeapSort[A].sort(arr);
+@assert(arr == A![1, 2, 3]);
+
+cout `ok\n`;
+
+%%EXPECT%%
+ok
+%%STDIN%%
