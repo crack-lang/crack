@@ -60,7 +60,7 @@ To run a script in the JIT, simply follow the standard "hashbang" practice
 of putting the crack binary as the program loader in the first line of your
 script, like so:
 
-{{
+\crack.code{{
     #!/usr/local/bin/crack
     import crack.io cout;
     cout `hello world!\n`;
@@ -110,7 +110,7 @@ Hello World
 
 Let's examine the crack "hello world" program again:
 
-{{
+\crack.code{{
     #!/usr/local/bin/crack
     import crack.io cout;
     cout `hello world!\n`;
@@ -142,7 +142,7 @@ Comments
 
 Crack permits the use of C, C++ and shell style comments:
 
-{{
+\crack.code{{
     /* C Style comment */
     // C++ style comment
     # shell style comment
@@ -151,7 +151,7 @@ Crack permits the use of C, C++ and shell style comments:
 Crack also supports Doxygen-style doc-comments for classes, functions, global
 and class-scoped variables:
 
-{{
+\crack.code{{
     /** C-style doc-comment */
     /// C++ style doc-comment
     ## shell-ish doc-comment
@@ -165,7 +165,7 @@ using the executor's model builder.  The output can then be processed by the
 The #module# keyword can be used to produce documentation for an entire
 module:
 
-{{
+\crack.code{{
     ## This documentation will be associated with the entire module.  Note
     ## that the "module" statement must be the first thing in the module.
     module;
@@ -190,7 +190,7 @@ Like most languages, Crack allows you to define variables. But unlike most
 other scripting languages, Crack is statically typed so you must specify
 (or imply) a type for all variables.
 
-{{
+\crack.code{{
     # define the variable i and initialize it to 100.
     int i = 100;
 }}
@@ -198,7 +198,7 @@ other scripting languages, Crack is statically typed so you must specify
 You can also define variables using the more terse ":=" operator, which derives
 the type from that of the value:
 
-{{
+\crack.code{{
     i := 100;           # equivalent to "int i = 100;"
     j := uint32(100);   # equivalent to "uint32 j = 100;"
 }}
@@ -214,7 +214,7 @@ The #const# keyword introduces a constant definition.  Constants have roughly
 the same syntax as variable definitions, but they must always have
 initializers:
 
-{{
+\crack.code{{
     const int A = 0, B = 1, C = 2;
     const X := 100;
 }}
@@ -228,14 +228,14 @@ Aggregate and primitive pointer constants are normal variables that cannot be
 modified by assignment.  This rule applies to the variables themselves, not
 the objects they reference.  For example, the following code is legal:
 
-{{
+\crack.code{{
     const array[int] VALS = {3};  # an array of three elements
     VALS[0] = 100;
 }}
 
 While we can modify #VALS[0]#, it would have been an error to do this:
 
-{{
+\crack.code{{
     VALS = array[int](10);  # ParseError!
 }}
 
@@ -348,7 +348,7 @@ Integer Constants
 
 Integer constants can be defined as an integer value in the code:
 
-{{
+\crack.code{{
     int i = 100;
     int j = -1;
 }}
@@ -360,7 +360,7 @@ range of values for that type (for example, "uint u = -1" would be illegal).
 Integer constants can be defined using hexadecimal, octal or binary notation
 as well as the default decimal notation.  Examples follow:
 
-{{
+\crack.code{{
     int x = 0x1AF;  # hex constant
     int o1 = 0117, o2 = 0o117; # both the same octal constant, c-style and
                                # normalized notation.
@@ -371,7 +371,7 @@ You can also specify integer constants as the byte values in strings by
 specifying a "b" (for byte) or "i" (for integer) prefix to a constant string
 (either single or double-quoted).  For example:
 
-{{
+\crack.code{{
     b := b'A';  # b is set to 65, the ASCII value of A
     int n = i'\001\0';  # i is set to 256
     int64 magic = i"SpugCrak";  # magic = 6012434588913262955
@@ -395,7 +395,7 @@ languages.  They consist of a decimal /mantissa/ and an optional /exponent/.
 
 Examples:
 
-{{
+\crack.code{{
     float f = 1.0;
     f = 3.1e+6;
     f = 1.2e-14;
@@ -419,7 +419,7 @@ Numeric types are slightly more complicated.
 First of all, you can always perform /explicit conversion/ between any two
 numeric types using type constructor notation (see \X(Constructors) below):
 
-{{
+\crack.code{{
     int32 i = {100};  # the '{100}' is equivalent to 'int32(100)'
     i = int32(200);
     byte b = {i};
@@ -443,7 +443,7 @@ convert to a PDNT.
 In general, if you care about precision you should use a UNT. Otherwise,
 PDNTs can be more convenient.
 
-{{
+\crack.code{{
     # implicit conversions
     byte b;
     int32 i32 = b;
@@ -481,7 +481,7 @@ other types, too, and allows us to do some interesting things.
 We can convert any pointer type or aggregate type to a #uintz# representing
 the address of the object:
 
-{{
+\crack.code{{
     byteptr b = getBytePtr();
     cout `address of b is $(uintz(b))\n`;
 
@@ -492,7 +492,7 @@ the address of the object:
 
 We can also convert any pointer type to a #byteptr# or #array#:
 
-{{
+\crack.code{{
     A a = {};
     byteptr b = byteptr(a);
     byteptr c = {a};  # alternate construction syntax works, too.
@@ -518,7 +518,7 @@ working with ASCII strings).
 String constants are sequences of bytes enclosed in single or double quotes
 (which are equivalent forms):
 
-{{
+\crack.code{{
     String s = "first string";
     t := 'second string';
 }}
@@ -555,7 +555,7 @@ backslash not be an escape character, but be passed through verbatim.  For
 these cases, we can define a raw string constant using an "r" prefix (similar
 to python):
 
-{{
+\crack.code{{
     val := r'test\nstring';
     cout `$val\n`;  # prints "test\nstring"
 }}
@@ -575,7 +575,7 @@ the definition of "indented strings."
 String constant folding is straighforward: adjacent string constants will be
 treated as a single string constant:
 
-{{
+\crack.code{{
     a := 'this is a multi-'
          'line string!';
 }}
@@ -585,7 +585,7 @@ In the example above, the value of #a# is "this is a multi-line string".
 All string constants in crack can span multiple lines, so we could have
 written then same example as:
 
-{{
+\crack.code{{
 
     a := 'this is a multi-\
     line string';
@@ -598,7 +598,7 @@ is a multi-\\nline string".
 The problem with this approach to wrapping is that it breaks indentation.  For
 example:
 
-{{
+\crack.code{{
     String usage() {
         return 'Usage:
     foomatic <arg> [options]
@@ -627,7 +627,7 @@ string.  Indented strings are handled as follows:
 
 For example, we could have implemented our usage function as follows:
 
-{{
+\crack.code{{
     String usage() {
         return I'Usage:
                  foomatic <arg> [options]
@@ -653,7 +653,7 @@ write a lot of tedious code to compose them.
 Crack supports this feature in the form of sequence constants.  For example,
 to define a low-level array of integers we could do this:
 
-{{
+\crack.code{{
     array[int] a = [1, 2, 3, 4];
 }}
 
@@ -665,7 +665,7 @@ preceding the list with the type followed by an exclamation point.
 For example, we could have used the define operator in conjunction with this
 notation to write the definition above as follows:
 
-{{
+\crack.code{{
     a := array[int]![1, 2, 3, 4];
 }}
 
@@ -683,7 +683,7 @@ Crack 1.6 supports four control structures: the "if\/else" statement,
 the "while" statement, the "for" statement and the "try\/catch" statement.
 "if" runs code blocks depending on whether a condition is true or false:
 
-{{
+\crack.code{{
     import crack.io cout;
     if (true)
         cout `true is true\n`;
@@ -696,7 +696,7 @@ The code above will always print out "true is true".
 If we wanted to do something a little more useful, we could have used it to
 check the command line argument:
 
-{{
+\crack.code{{
     import crack.sys argv;
     import crack.io cout;
 
@@ -727,7 +727,7 @@ if the first is true.
 
 The #if# statement need not be accompanied by an else:
 
-{{
+\crack.code{{
     if (argv.count() > 1 && argv[1] == 'true')
         cout `arg is true\n`;
     cout `this gets written no matter what the args are\n`;
@@ -736,7 +736,7 @@ The #if# statement need not be accompanied by an else:
 The code in an #if# or an #else# can either be a single statement, or a
 sequence of statements enclosed in curly braces:
 
-{{
+\crack.code{{
     if (argv.count() > 1 && argv[1] == 'true') {
         cout `arg is true\n`;
         cout `and so are you!\n`;
@@ -745,7 +745,7 @@ sequence of statements enclosed in curly braces:
 
 You can also chain if\/else statements:
 
-{{
+\crack.code{{
     argCount := argv.count();
     if (argCount > 2)
         cout `more than one arg\n`;
@@ -767,7 +767,7 @@ The #while# statement repeatedly executes the same code block while the
 condition is true.  For example, we could iterate over the list of arguments
 with the following code:
 
-{{
+\crack.code{{
     import crack.sys argv;
     import crack.io cout;
 
@@ -804,7 +804,7 @@ form at the beginning consists of three parts:
 
 So for example, the more concise way to express the loop above would be:
 
-{{
+\crack.code{{
     for (uint i; i < argv.count(); ++i)
         cout `argv $i: $(argv[i])\n`;
 }}
@@ -829,7 +829,7 @@ Likewise, an infinite loop could be written as:
 
 The for statement also supports a for-each style usage:
 
-{{
+\crack.code{{
     String argVal;
     for (argVal in argv)
         cout `arg is $argVal\n`;
@@ -840,7 +840,7 @@ succession.  There is also a "#:in#" variation on the "in" keyword that
 defines the variable for the scope of the loop, so we could have omitted the
 #argVal# definition and done this:
 
-{{
+\crack.code{{
     for (argVal :in argv)
         cout `arg is $argVal\n`;
 }}
@@ -857,7 +857,7 @@ accepts an iterator.
 
 For this use case, there is also a "for-on" variation of this statement:
 
-{{
+\crack.code{{
     for (iter :on argv) {
         argVal := iter.elem();
         cout `arg is $argVal\n`;
@@ -877,7 +877,7 @@ have to be scattered throughout the code.
 Crack exceptions are syntactically similar to C++ and Java exceptions.  They
 are implemented using the #try\/catch# and #throw# statements:
 
-{{
+\crack.code{{
     try {
         throw Exception('badness occurred');
     } catch (Exception ex) {
@@ -893,7 +893,7 @@ expression in the throw statement.
 Expression handling is most often used across function calls.  For example,
 lets say we have a function that creates file objects:
 
-{{
+\crack.code{{
     FileObj open(String filename) {
         if (!exists(filename))
             throw InvalidResourceError(filename);
@@ -927,7 +927,7 @@ Functions
 Functions let you encapsulate common functionality.  They are defined with a
 type name, an argument list, and a block of code, just like in C:
 
-{{
+\crack.code{{
     int factorial(int val) {
         if (val == 1)
             return 1;
@@ -942,7 +942,7 @@ the definition of that function.
 You can define a function that doesn't return a value by using the special
 "void" type:
 
-{{
+\crack.code{{
     void printInt(int i) {
         cout `$i\n`;
     }
@@ -956,7 +956,7 @@ Multiple functions can share the same name as long as their arguments differ:
 this feature is called /overloading/.  For example, rather than "#printInt#"
 above, we could have defined a #print# function for multiple types:
 
-{{
+\crack.code{{
     void print(int64 i) {
         cout `int $i\n`;
     }
@@ -994,7 +994,7 @@ have some additional special steps associated with their resolution, see
 We mentioned searching across namespaces: functions can be defined in most
 block contexts, including within other functions:
 
-{{
+\crack.code{{
     void outer() {
         void inner(int i) {
             cout `in inner\n`;
@@ -1013,7 +1013,7 @@ u)#.
 Note that it is currently an error to use variables defined in the outer
 function in the inner function:
 
-{{
+\crack.code{{
     void outer() { int a; int inner() { return a; } } # DOESN'T WORK
 }}
 
@@ -1033,13 +1033,13 @@ types of all of its arguments.
 
 For example, given the following function:
 
-{{
+\crack.code{{
     void f(int a) { cout `got $a\n`; }
 }}
 
 We can assign it to a variable and then call that variable:
 
-{{
+\crack.code{{
     function[void, int] g = f;
     f(100); # prints "got 100"
 }}
@@ -1051,7 +1051,7 @@ This feature can be particularly useful when you want to pass a function to
 another function.  For example, we could define a "map" operation to apply an
 arbitrary function to a low-level array of integers:
 
-{{
+\crack.code{{
     void map(array[int] data, uintz size, function[int, int] func) {
         for (uintz i = 0; i < size; ++i)
             data[i] = func(data[i]);
@@ -1075,7 +1075,7 @@ in order to use a symbol, the symbol must have already been defined.  This
 causes some problems.  For example, you can't just define a pair of recursive
 functions like this:
 
-{{
+\crack.code{{
     int f(int a, int b) {
         if (a + b > 100)
             return g(a, b);  # ERROR: g() is undefined
@@ -1093,7 +1093,7 @@ definition of #g()#.
 
 To get around this, Crack allows c-like forward declarations:
 
-{{
+\crack.code{{
     int g(int a, int b);  # declare g()
 
     int f(int a, int b) {
@@ -1119,7 +1119,7 @@ Lambdas are simply anonymous functions that can be used as constants.
 
 For example, if we want to sort an array by some field, we could write:
 
-{{
+\crack.code{{
     class Foo {
         String name;
         String data;
@@ -1135,7 +1135,7 @@ For example, if we want to sort an array by some field, we could write:
 
 Alternately, we could use a lambda and write:
 
-{{
+\crack.code{{
     vals.sort(lambda int(Foo a, Foo b) { return cmp(a.name, b.name) });
 }}
 
@@ -1165,7 +1165,7 @@ nested within them.
 
 The simplest form of interpolation consists of just a variable name:
 
-{{
+\crack.code{{
     import crack.io cout;
     x := 'test';
     cout `This is a $x\n`;  # prints "this is a test" to standard output.
@@ -1174,7 +1174,7 @@ The simplest form of interpolation consists of just a variable name:
 In order to expand the value of a general expression, a parenthesized
 expansion must be used:
 
-{{
+\crack.code{{
     a := 10;
     cout `$a * 20 = $(a * 20)\n`;  # prints "10 * 20 = 200"
 }}
@@ -1182,7 +1182,7 @@ expansion must be used:
 The 'I' prefix can also be used on the interpolation operator to allow you to
 format it according to the rules of an indented string (see \X(Strings) above):
 
-{{
+\crack.code{{
     cout I`four score
            and seven years ago
            our forefathers ...\n`;
@@ -1198,7 +1198,7 @@ Aliases
 Any definition in Crack can be aliased - that is, we can specify another name
 to refer to it.  This is done using the #alias# statement:
 
-{{
+\crack.code{{
     void myLongFuncName() {}
     class MyLongClassName {}
 
@@ -1216,7 +1216,7 @@ When an alias is defined for an overloaded function, it becomes an alias for
 all overloads of that function that exist in that context at the point where
 the alias is defined.  For example:
 
-{{
+\crack.code{{
     import crack.io cout;
 
     void f(int a) { cout `$a\n`; }
@@ -1294,7 +1294,7 @@ All integer and floating point types support the basic arithmetic operators.
 
 Unary plus and minus are also supported, so we can say:
 
-{{
+\crack.code{{
     x := 2;
     y := 10 + -x;  # y is 8
     z := 10 - +x;  # z is also 8
@@ -1307,7 +1307,7 @@ even if you perform some set of operations on it so that the result of the
 operation will preserve the adaptiveness of the original constants.  For
 example:
 
-{{
+\crack.code{{
     byte b = 4 + 5;
 }}
 
@@ -1344,7 +1344,7 @@ operations behave according to this rule.  What this ends up providing is the
 ability to fit the result of an operation on constants into an integer type
 large enough to accommodate the initial significant bits of the inputs:
 
-{{
+\crack.code{{
     byte b = ~0 ^ 5;  # b = 250
 }}
 
@@ -1365,7 +1365,7 @@ Like the C family of languages, crack supports the "ternary operator."  The
 ternary operator evaluates to one expression or another based on the results
 of a boolean expression:
 
-{{
+\crack.code{{
     a = b ? c : d;
 }}
 
@@ -1390,7 +1390,7 @@ with them, in the same way that objects can have properties and methods in
 languages like C++ and Python. These can be dereferenced using the dot
 operator ("#.#").  Examples are:
 
-{{
+\crack.code{{
     xval := a.x;  # Dereference attribute "x" in object "a".
     a.foo(1, 2, 3);  # Call method "foo" on object "a".
 }}
@@ -1398,7 +1398,7 @@ operator ("#.#").  Examples are:
 In fact, most of the operators are implemented as methods, even on primitive
 types, and can be expressed using the "#.oper# /op/" syntax:
 
-{{
+\crack.code{{
     result := 100.oper +(200);  # Equivalent to 100 + 200.
 }}
 
@@ -1418,14 +1418,14 @@ null.  The \X(Ternary Operator) lends itself to this sort of evaluation, for
 example if we wanted to check #a# before evaluating #a.x# and return null in
 either case, we could do:
 
-{{
+\crack.code{{
     xval := (a !is null) ? a.x : null;
 }}
 
 Unfortunately, this is rather verbose.  It also doesn't work for a sequence of
 dereferences, where we'd have to rely on intermediate variables:
 
-{{
+\crack.code{{
     # Safely get a.x.y:
     xval := (a !is null) ? a.x : null;
     yval := (xval !is null) xval.y : null;
@@ -1438,13 +1438,13 @@ is null, it evaluates to null of the type of the result.
 
 We could rewrite the first example above as:
 
-{{
+\crack.code{{
     xval := a?.x;
 }}
 
 And the second one as:
 
-{{
+\crack.code{{
     yval := a?.x?.y;
 }}
 
@@ -1456,7 +1456,7 @@ Likewise, the type of #yval# is the type of a.x.y.
 
 Safe navigation also works for method invocations:
 
-{{
+\crack.code{{
     foo?.bar(1, 2, 3)?.baz();
 }}
 
@@ -1486,7 +1486,7 @@ The #typeof()# Operator
 #typeof()# is a special function built-in to the compiler that produces the
 type of the expression in its argument.  For example:
 
-{{
+\crack.code{{
     int a;
     typeof(a) b = a;
 }}
@@ -1503,7 +1503,7 @@ runtime type.
 You can use #typeof()# as another way to avoid explicitly specifying types
 that you don't really care about.  For example:
 
-{{
+\crack.code{{
     typeof(getValue()) val = getValue();
     doSomething(val);
     doSomethingElse(val);
@@ -1514,7 +1514,7 @@ and \X(Generics) where type information might not be easily accessible.  We
 can use #typeof()# in an #alias# statement to provide names for types in these
 kinds of situations:
 
-{{
+\crack.code{{
     alias T = typeof(f());  # make T the return type of the function f().
 
     T getVal();
@@ -1529,7 +1529,7 @@ set of data variables with a set of special functions called "methods."  As a
 simple example of a class, consider the representation of an x, y graphics
 coordinate:
 
-{{
+\crack.code{{
     import crack.io cout, Formatter;
 
     class Coord {
@@ -1558,13 +1558,13 @@ done above.
 
 We can create an instance of #Coord# like so:
 
-{{
+\crack.code{{
     c := Coord(3, 4);
 }}
 
 Alternately, we can use a more C-like syntax:
 
-{{
+\crack.code{{
     Coord c = {3, 4};
 }}
 
@@ -1581,7 +1581,7 @@ Note that all variables of class types are references - they behave very
 much like pointers in C.  So if we were to initialize one variable from
 another, both variables would refer to the same object:
 
-{{
+\crack.code{{
     c := Coord(3, 4);
     d := c;
     c.y = 5; # d.y is now also 5
@@ -1590,7 +1590,7 @@ another, both variables would refer to the same object:
 This is different from the way that the primitive types behave.  Primitive
 types are always passed "by value."  So:
 
-{{
+\crack.code{{
     c := 100;
     d := c;
     c = c + 1; # c is now 101, d is still 100
@@ -1599,7 +1599,7 @@ types are always passed "by value."  So:
 We can tell if two variables are references to the same object using the
 special #is# operator:
 
-{{
+\crack.code{{
     c := Coord(1, 2);
     d := c;
     e := Coord(1, 2);
@@ -1622,7 +1622,7 @@ provided by #Object# is simply an identity check.
 There is a special constant, "#null#" which allows you to clear these kinds of
 variables so that they don't reference any object.
 
-{{
+\crack.code{{
     # initialize c to null, then set it conditionally
     Coord c = null;
     if (positive)
@@ -1633,7 +1633,7 @@ variables so that they don't reference any object.
 
 You can use the #is# operator on null values:
 
-{{
+\crack.code{{
     void drawImage(Coord pos, Image img, Coord size) {
         if (size is null)
             copyImage(pos, img);
@@ -1644,7 +1644,7 @@ You can use the #is# operator on null values:
 
 For classes derived from #Object#, #null# values are always treated as false:
 
-{{
+\crack.code{{
     Coord c = null;
     if (!c)
         cout `this will always be printed\n`;
@@ -1653,7 +1653,7 @@ For classes derived from #Object#, #null# values are always treated as false:
 Our #Coord# class also has a #formatTo()# method.  This controls how an
 Object is written using the back-tick operator.  For example:
 
-{{
+\crack.code{{
     cout `$(Coord(10, 20))\n`; # prints "Coord(10, 10)" to standard output.
 }}
 
@@ -1663,7 +1663,7 @@ qualification (you don't need a "self" or "this" variable, although this is
 possible, see below). As another example, we could define a method to give us
 the square of the distance from the origin as follows:
 
-{{
+\crack.code{{
     int distOrgSquared() {
         return x * x + y * y;
     }
@@ -1671,7 +1671,7 @@ the square of the distance from the origin as follows:
 
 We could then add this information to our #writeTo()# method:
 
-{{
+\crack.code{{
     void writeTo(Writer out) {
         Formatter(out) `Coord($x, $y) [dist squared = $(distOrgSquared())]`;
     }
@@ -1683,7 +1683,7 @@ traditional object-oriented parlance, this object is called "the receiver."
 
 We could have rewritten #distOrgSquared()# as follows:
 
-{{
+\crack.code{{
     int distOrgSquared() {
         return this.x * this.x + this.y * this.y;
     }
@@ -1699,7 +1699,7 @@ In addition to being compile-time entities, Classes are also variables that
 can be accessed at runtime.  They are of type #Class#.  So, for example, we
 can do this:
 
-{{
+\crack.code{{
     class Foo {}
     Class foo2 = Foo;
     if (foo.isSubclass(Object))
@@ -1714,7 +1714,7 @@ instance of the class.
 
 This means that we can assign them to variables:
 
-{{
+\crack.code{{
     class A {
         void f(int i) {
             ...
@@ -1732,7 +1732,7 @@ Dereferencing is accessing a method or instance variable from an object.
 Scoping is accessing a name from a nested scope.  For example, to dereference
 a method or instance variable:
 
-{{
+\crack.code{{
     class A {
         int i;
         void f() {}
@@ -1746,7 +1746,7 @@ a method or instance variable:
 But was can also use the period as a scoping operator to indicate "a
 definition within a namespace:"
 
-{{
+\crack.code{{
     function[void, A] g = A.f;
 
     class B {
@@ -1760,7 +1760,7 @@ This could produce ambiguities because, as we've said, classes are also
 instances.  For example, let's say we define a class with an "isSubclass()"
 method:
 
-{{
+\crack.code{{
     class A {
         @static bool isSubclass(Class c) { return false; }
     }
@@ -1782,7 +1782,7 @@ operator if there is no conflicting dereferencing usage.
 To call the explicitly defined #isSubclass()# method above, you would have to
 make use of the explicit scoping operator, the double-colon ("::"):
 
-{{
+\crack.code{{
     A::isSubclass(B);
 }}
 
@@ -1808,7 +1808,7 @@ base classes.
 
 In the example above, we defined two constructors:
 
-{{
+\crack.code{{
     oper init(int x0, int y0) : x = x0, y = y0 {}
     oper init() {}
 }}
@@ -1829,7 +1829,7 @@ when we deal with members that are themselves class instances.
 
 For example, let's say that we want to define a line segment:
 
-{{
+\crack.code{{
     class LineSegment {
 
         # two coordinates
@@ -1853,7 +1853,7 @@ In the first constructor, we're using the assignment syntax because we want to
 bind the objects passed in (#initC0# and #initC1#) to the c0 and c1 variables.
 If we had instead used construction syntax:
 
-{{
+\crack.code{{
     oper init(Coord initC0, Coord initC1) :
         c0(initC0),
         c1(initC1) {
@@ -1864,7 +1864,7 @@ the compiler would have tried to find a #Coord# constructor that accepts
 another #Coord# object as an argument.  Since there is no such constructor, we
 would have gotten an error.  We could have instead done this:
 
-{{
+\crack.code{{
     oper init(Coord initC0, Coord initC1) :
         c0(initC0.x, initC0.y),
         c1(initC1.x, initC1.y) {
@@ -1877,7 +1877,7 @@ and the assignment syntax we started with: with the assignment syntax, c0 and
 c1 become references to the objects that were passed into them.  If we did
 this:
 
-{{
+\crack.code{{
     Coord c0 = {10, 10}, c1 = {20, 20};
     ls := LineSegment(c0, c1);
     c0.x = 20;  # l.c0.x is now also 20.
@@ -1931,7 +1931,7 @@ class.  Crack supports inheritance with a syntax similar to that of C++.
 Let's say that we wanted a coordinate like in our last example, only we also
 wanted it to have a name.  We could create a new class for this:
 
-{{
+\crack.code{{
     class NamedCoord {
         int x, y;
         String name;
@@ -1942,7 +1942,7 @@ but then we'd have to write everything that we wanted to reuse over again in
 the new class.  And every time we fixed a bug in #Coord#, we'd have to fix the
 same bug in #NamedCoord#.  Inheritance provides a better way to reuse code:
 
-{{
+\crack.code{{
     class NamedCoord : Coord {
 
         String name;
@@ -1965,7 +1965,7 @@ instances of the derived class can be used in situations that call for an
 instance of the base class.  So if we had a function that accepted a #Coord#,
 we could pass it a #NamedCoord#:
 
-{{
+\crack.code{{
     void drawLine(Coord c0, Coord c1) { ... }
 
     NamedCoord c1 = {1, 2, 'c1'}, c2 = {3, 4, 'c2'};
@@ -1986,7 +1986,7 @@ Like member initializers, base classes are initialized in the order in which
 they are defined.  All base class initializers are run before any of the
 instance variable initializers for the class.  Consider the following example:
 
-{{
+\crack.code{{
 
     import crack.io cout;
 
@@ -2017,7 +2017,7 @@ This will print the following:
 Going back to our #NamedCoord# example, we also defined another #formatTo()#
 method:
 
-{{
+\crack.code{{
     void formatTo(Formatter out) {
         out `NamedCoord($x, $y)`;
     }
@@ -2032,7 +2032,7 @@ class functionality.  Crack lets you do this by qualifying the method with the
 class name.  For example, we could have instead overridden #formatTo()#
 like this:
 
-{{
+\crack.code{{
     void formatTo(Writer out) {
         out.format('Named');
         Coord.formatTo(out);
@@ -2073,7 +2073,7 @@ Crack gives special access protection to names that begin with an underscore:
 As an example, let's consider a #Polygon# class that includes a list of
 coordinates:
 
-{{
+\crack.code{{
     class Polygon {
         class Vertex {
             Coord coord;
@@ -2121,7 +2121,7 @@ not necessarily the name that it is defined as.  This is lets you create
 public aliases for private defintions (see \X(Aliases) below).  For example, in
 the following code:
 
-{{
+\crack.code{{
     int _private;  # is private to the module
     alias public = _private;  # But 'public' is public!
 }}
@@ -2140,7 +2140,7 @@ their own memory management strategies.
 You can implement the destructor for a class by defining an "#oper del#"
 method:
 
-{{
+\crack.code{{
     class Noisy {
         oper del() { cout `Noisy object deleted\n`; }
     }
@@ -2179,7 +2179,7 @@ There are times when you want to require a derived class to provide an
 implementation for a method.  For example, let's say we're implementing a
 drawing system and we want to have a #Shape# class with a draw method:
 
-{{
+\crack.code{{
     class Shape {
         void draw() {
             # "shape" doesn't know how to draw itself
@@ -2209,7 +2209,7 @@ Abstract methods are defined using the #@abstract# annotation.  They can only
 be used in a class that has also been defined as abstract.  We would write our
 #Shape# class like this:
 
-{{
+\crack.code{{
     @abstract class Shape {
         @abstract void draw();
     }
@@ -2252,7 +2252,7 @@ As a result, the function can be called without a receiver.
 
 For examples, let's return to our #Coord# class:
 
-{{
+\crack.code{{
     class Coord {
 
          # ... methods defined above omitted ...
@@ -2277,7 +2277,7 @@ Final Classes
 The @final annotation can also be applied to a class.  A final class may not
 be used as a base class for other classes:
 
-{{
+\crack.code{{
     @final class A {}
     class B : A {}  # ERROR: deriving from a final class.
 }}
@@ -2341,7 +2341,7 @@ just the easiest way to get something done.
 The #cast()# function accepts an object as an argument and returns the object
 cast to its type:
 
-{{
+\crack.code{{
     class A {}
     class B : A {}
     A a = B();
@@ -2361,7 +2361,7 @@ cast to the type, the default value is returned.
 Typically, this is used with a default value of #null#.  For example, a
 comparison function would typically be implemented as:
 
-{{
+\crack.code{{
     class A {
         String foo;
 
@@ -2379,7 +2379,7 @@ The #cast()# function is defined for all classes that derive from
 
 For classes not derived from #VTableBase#, you can use #unsafeCast()#:
 
-{{
+\crack.code{{
     import crack.lang FreeBase;
     class Rogue : FreeBase {}
 
@@ -2397,7 +2397,7 @@ the pointer offsetting necessary for conversion.
 For classes derived from #VTableBase#, you can verify that an object is
 an instance of a class by looking at the associated "class" attribute:
 
-{{
+\crack.code{{
     Foo obj;
     Coord c = null
     if (obj.class.isSubclass(Coord))
@@ -2410,7 +2410,7 @@ a virtual function.  The #class# attribute returns the object's class (recall
 that classes are also values that exist at runtime).  So we could also do
 something like this:
 
-{{
+\crack.code{{
     Coord c;
     if (c.class is Coord)
         cout `this will always get printed\n`;
@@ -2436,7 +2436,7 @@ The #crack.ann# module provides two special annotations: #@interface# and
 
 To use them, define an interface class:
 
-{{
+\crack.code{{
     @import crack.ann interface, implements;
 
     @interface Drawable {
@@ -2451,7 +2451,7 @@ draw() method that generates a runtime error if called.
 
 Now lets create a flavor of our LineSegment class that implements it:
 
-{{
+\crack.code{{
 
     class DrawableLineSegment : LineSegment @implements Drawable {
         void draw(Canvas canvas) {
@@ -2466,7 +2466,7 @@ We can now pass DrawableLineSegment to any function that accepts Drawable
 objects without having to worry about doing anything special to accommodate
 reference counting.  That is to say, we can do something like this:
 
-{{
+\crack.code{{
     void myFunction(Drawable x) {
         x.draw();
     }
@@ -2500,7 +2500,7 @@ Object, either indirectly or directly and they must do so explicitly. So,
 by using the #@impl# annotation, which also expands the ": Object" part,
 letting you write:
 
-{{
+\crack.code{{
     class A @impl IFace {
 }}
 
@@ -2518,7 +2518,7 @@ like:
 Likewise, redefining the name of an interface class from within an interface
 or its implementation is bad:
 
-{{
+\crack.code{{
     @interface A {
         void A() {}  # DON'T DO THIS.
     }
@@ -2718,7 +2718,7 @@ variable access syntax, allowing getters and setters to look no different from
 accessing and assigning an instance variable.  Crack provides this feature in
 the form of its #oper .#/attr/ and #oper .#/attr/#=# methods:
 
-{{
+\crack.code{{
     class A {
         ## Getter for "name"
         String oper .name() { ... }
@@ -2741,7 +2741,7 @@ implicit type conversion.
 It is an error to define both a member and a getter or setter for the member,
 for example:
 
-{{
+\crack.code{{
     class A {
         int name;
 
@@ -2766,7 +2766,7 @@ If a class defines the special #oper call# method, it is possible to call an
 instance of the class with the same syntax that you would use to call a
 function.  For example:
 
-{{
+\crack.code{{
 
     class Action {
         void oper call(int arg) { ... }
@@ -2790,7 +2790,7 @@ For example, let's say we have a #Scheduler# class that simply performs actions
 at a specified time.  We could use a functor returning void with no arguments
 to represent our actions:
 
-{{
+\crack.code{{
 
     import crack.functor Functor0;
 
@@ -2815,7 +2815,7 @@ to represent our actions:
 #Functor0# is a "functor with zero arguments."  If it were a two argument
 functor we would use #Functor2#:
 
-{{
+\crack.code{{
     class CompareX @impl Functor2[int, MyObj, MyObj] {
         int oper call(MyObj a, MyObj b) {
             return cmp(a.x, b.x);
@@ -2828,7 +2828,7 @@ Having to derive a class every time you want to do this can be tedious, so the
 a plain function with the same signature.  So we could have implemented our
 alarm like this:
 
-{{
+\crack.code{{
     import crack.functor Functor0;
 
     ...
@@ -2844,7 +2844,7 @@ alarm like this:
 Alternately, we could have added a convenience overload to Scheduler to do the
 conversion for us:
 
-{{
+\crack.code{{
 
     class Scheduler {
         void schedule(Time time, Functor0[void] func) { ... }
@@ -2877,7 +2877,7 @@ virtual functions are not considered in the method resolution order.
 
 For classes, "parent namespaces" are the base classes.  So if we have:
 
-{{
+\crack.code{{
     class Base {
         void func(B b) {}
         void func(A a) {}
@@ -2909,7 +2909,7 @@ Forward Declarations of Classes
 As with functions, some times we want to reference a class before it is
 defined.  We can forward declare a class in the same way as a function:
 
-{{
+\crack.code{{
 
     class A;
 
@@ -2936,7 +2936,7 @@ compiled representation of a class.  Crack has special function declaration
 syntax to support this.  By declaring a function followed by the "delete"
 identifier, you effectively hide the function within that context:
 
-{{
+\crack.code{{
     class A {
         void f() {}
     }
@@ -2967,7 +2967,7 @@ place of the class name.  This is mainly useful in the context of macros (see
 \X(Closures), below), as it allows the instantiation of single objects without
 having to introduce a unique name:
 
-{{
+\crack.code{{
     a := (class * {
         int a;
         oper init(int a) : a = a {}
@@ -2996,7 +2996,7 @@ primitive built-ins #array# and #function# do.
 You define a generic like any other class definition only with a parameter
 list:
 
-{{
+\crack.code{{
     class Pair[FirstType, SecondType] {
         FirstType first;
         SecondType second;
@@ -3013,7 +3013,7 @@ two variables, #first# and #second#, each of which can have their own type.
 
 To construct a #Pair# of an integer and a string:
 
-{{
+\crack.code{{
     p := Pair[int, String](100, 'string value');
 }}
 
@@ -3039,7 +3039,7 @@ until the generic is instantiated.
 Generic classes also support inheritance. Using the above example we can derive
 a class #PrimitivePair# from #Pair# as follows:
 
-{{
+\crack.code{{
     class PrimitivePair[FirstType, SecondType] : Pair[FirstType, SecondType] {
 
         oper init(FirstType f, SecondType s) : Pair(f, s) {}
@@ -3057,7 +3057,7 @@ Appendages allow you to add functionality to a class hierarchy without
 using inheritance.  As an example of why you would want to do this, let's go
 back to a stripped-down form of our #Coord# example:
 
-{{
+\crack.code{{
     class Coord {
         int x, y;
         oper init(int x, int y) : x = x, y = y {}
@@ -3076,7 +3076,7 @@ lose the ability to use those methods on #NamedCoord#.
 
 To deal with this, you'd have to instead create functions:
 
-{{
+\crack.code{{
     float distanceFromOrigin(Coord c) {
         return sqrt(float(c.x) + float(c.y));
     }
@@ -3098,7 +3098,7 @@ Appendages let you bundle functionality that is associated with a class
 external to the class and its hierarchy.  An appendage based solution would
 look like this:
 
-{{
+\crack.code{{
     class SpatialCoord = Coord {
         float distanceFromOrigin() {
             return sqrt(float(x) + float(y));
@@ -3117,7 +3117,7 @@ hierarchy that the appendage's methods manipulate.
 
 To use #SpatialCoord#, you just convert any kind of #Coord# object:
 
-{{
+\crack.code{{
     a := SpatialCoord(Coord(10, 20));
     b := SpatialCoord(NamedCoord(10, 20, 'my location'));
 
@@ -3129,7 +3129,7 @@ instance of SpatialCoord.  Rather, it converts the argument (which must be an
 instance of #Coord# or a derived class) to a SpatialCoord.  Doing this is
 equivalent to using #unsafeCast#:
 
-{{
+\crack.code{{
     a := SpatialCoord.unsafeCast(Coord(10, 20));
 }}
 
@@ -3142,7 +3142,7 @@ An appendage may also be derived from one or more other appendages, as long as
 they all have the same anchor class.  For example, we might use this feature
 to bundle together a set of appendages:
 
-{{
+\crack.code{{
     class DumpingCoord = Coord {
         void dump() {
             cerr `$(coord)\n`;
@@ -3163,7 +3163,7 @@ document.  The #import# statement is used to import symbols from modules, for
 example we've use it to import the global variable #cout# from the #crack.io#
 module:
 
-{{
+\crack.code{{
     import crack.io cout;
 }}
 
@@ -3183,7 +3183,7 @@ For example, let's say that we had two modules that both define classes names
 "Document."  We could use both types in the same module by importing them with
 aliases:
 
-{{
+\crack.code{{
     import acme.xml.dom DOMDocument = Document;
     import libre.word WPDocument = Document;
 }}
@@ -3240,7 +3240,7 @@ Second order imports are also disallowed in the case of overloaded functions
 where some of the overloads are implemented locally.  For example, if your
 module does this:
 
-{{
+\crack.code{{
     import mod func;  # 'func' is an overloaded function.
 
     void func() {}
@@ -3259,7 +3259,7 @@ consolidates a group of entities from a disparate collection of other modules.
 You can do this by explicitly marking the symbols as safe for import using the
 #@`export_symbols`# annotation:
 
-{{
+\crack.code{{
     import x a;
     import y b;
 
@@ -3274,7 +3274,7 @@ Note that aliases by themselves to not circumvent the second-order import
 rule.  To export symbols from another module you must use @`export_symbols`,
 and that goes for aliases for generic instantiatons, too:
 
-{{
+\crack.code{{
     import crack.cont.hashmap HashMap;
 
     class MyObj {}
@@ -3299,7 +3299,7 @@ Crack allows you to elide the package name (all but the last segment of the
 module name) to import sibling modules or their children.  For example, in
 module foo.bar:
 
-{{
+\crack.code{{
     # This is module foo.bar in "foo/bar.crk"
 
     import .baz A;     # Imports from foo.baz
@@ -3339,7 +3339,7 @@ scope of a project, it is much easier to simply define all of the imports in a
 common module and be done with them.  The auto-import annotation allows us to
 do this.  For example, we can define a "`my_imports`" module as such:
 
-{{
+\crack.code{{
     import crack.compiler CrackContext;
     @import crack.ann auto_imports;
     @auto_imports {
@@ -3350,7 +3350,7 @@ do this.  For example, we can define a "`my_imports`" module as such:
 
 And then use it from another module as follows:
 
-{{
+\crack.code{{
     @import my_imports @auto_import; @auto_import;
 
     cout `We can use cout without importing it!\n`;
@@ -3366,7 +3366,7 @@ block, there is no need to distinguish them).
 
 You can also use relative import notation to define auto-imports:
 
-{{
+\crack.code{{
     @auto_imports {
         .mod func, CONSTANT;
     }
@@ -3388,7 +3388,7 @@ import definition wins.  However, if the owner of an auto-import module
 introduces a new definition in another version of their code, they may end up
 overriding an earlier auto-import that the user was relying on:
 
-{{
+\crack.code{{
     # "foo" provides an auto-import for getFuncie.
     @import foo foo_auto_import = auto_import; @foo_auto_import;
     # "bar" also provides an auto-import for getFuncie, but didn't used to!
@@ -3435,14 +3435,14 @@ The Iteration Protocol
 
 The following #for#\/#in# statement:
 
-{{
+\crack.code{{
     for (x in container)
         cout `$x\n`;
 }}
 
 translates to roughly the following code:
 
-{{
+\crack.code{{
     for (tempIter := container.iter(); tempIter; tempIter.next()) {
         x = tempIter.elem();
         cout `$x\n`;
@@ -3470,7 +3470,7 @@ The Formatter Protocol
 As we've shown, the back-tick operator allows us to do formatted output of
 static data, variables and expression values:
 
-{{
+\crack.code{{
     int a;
     cout `a = $a, a + 1 = $(a + 1)\n`;
 }}
@@ -3478,7 +3478,7 @@ static data, variables and expression values:
 See \X(Interpolation Expressions) above for details on what this means.  The
 interpolation expression above is equivalent to the following code:
 
-{{
+\crack.code{{
     if (cout) {
         cout.enter();
         cout.format('a = ');
@@ -3504,7 +3504,7 @@ sequence is invoked at all).  If #out# is an object whose #enter()# method
 returns a non-void value, then #out \`this is $x\`# would be equivalent to the
 following code:
 
-{{
+\crack.code{{
     if (out) {
         temp := out.enter();
         temp.format('this is ');
@@ -3520,7 +3520,7 @@ boolean and #format()# methods for all of the values in the expression.  For
 example, we could create our own formatter that could be used in the
 expression above:
 
-{{
+\crack.code{{
     class SumOfInts {
         int total;
 
@@ -3546,7 +3546,7 @@ expression above:
 More often when doing this, you'll want to derive from #StandardFormatter#
 and extend its functionality:
 
-{{
+\crack.code{{
     import crack.io StandardFormatter;
 
     ## Formatter that encloses strings in quotes.
@@ -3588,7 +3588,7 @@ module.
 
 #StringFormatter# allows you to construct a string using a formatter:
 
-{{
+\crack.code{{
     import crack.io StringFormatter;
 
     f := StringFormatter();
@@ -3599,7 +3599,7 @@ module.
 It's often useful to be able to format a string in an expression.  For
 example, throwing an exception like this is unwieldy:
 
-{{
+\crack.code{{
     if (foo > MAX_FOO) {
         StringFormatter out = {};
         out `Value of foo out of bounds: $foo`;
@@ -3613,7 +3613,7 @@ creates a new string formatter for every interpolation expression and returns
 the created string from its "leave()" method.  So we could replace the code
 above with:
 
-{{
+\crack.code{{
     if (foo > MAX_FOO)
         throw AssertionError(FStr() `Value of foo out of bounds: $foo`);
 }}
@@ -3629,7 +3629,7 @@ One utility that exploits this feature is #crack.io.fmtutil.Indenter#.  As its
 name suggests, the #Indenter# class provides indented output that can be used
 on any #Formatter# object.  As an example:
 
-{{
+\crack.code{{
     class Foo {
         String name;
         Array[Foo] children;
@@ -3660,7 +3660,7 @@ format methods.  The following example illustrates the use of a stored
 attribute to switch formatting between a debug representation and the normal
 output form:
 
-{{
+\crack.code{{
     import crack.io cout, Formatter;
     import crack.io.fmtutil Indenter;
     import crack.fieldset FieldSet;
@@ -3738,13 +3738,13 @@ Defining a sequence constant translates to the construction of an object and
 the insertion of a set of elements into that object.  For example, the
 definition:
 
-{{
+\crack.code{{
     array[int] a = [1, 2, 3];
 }}
 
 Is equivalent to the following code:
 
-{{
+\crack.code{{
     array[int] a = array[int](3);
     a[0] = 1;
     a[1] = 2;
@@ -3753,14 +3753,14 @@ Is equivalent to the following code:
 
 Likewise, this code generates a linked list and iterates over it:
 
-{{
+\crack.code{{
     for (elem :in List!['foo', 'bar'])
         cout `got $elem\n`;
 }}
 
 is roughly equivalent to this:
 
-{{
+\crack.code{{
     List temp = {};
     temp.append('foo');
     temp.append('bar');
@@ -3864,7 +3864,7 @@ Crack allows you to directly import and call functions from shared libraries.
 A special variation of the #import# statement allows you to import symbols
 from a shared library:
 
-{{
+\crack.code{{
     # import malloc() and free()
     import "libc.so.6" free, malloc;
 }}
@@ -3872,14 +3872,14 @@ from a shared library:
 After doing this, it is necessary to provide declarations of the functions
 you've imported:
 
-{{
+\crack.code{{
     byteptr malloc(uint size);
     void free(byteptr val);
 }}
 
 You can then use them like any other function:
 
-{{
+\crack.code{{
     mem := malloc(100);
     free(mem);
 }}
@@ -3887,7 +3887,7 @@ You can then use them like any other function:
 Many C functions require special arguments like pointers to integers.  These
 can be passed using primitive arrays:
 
-{{
+\crack.code{{
 
     # import "free()"
     import "libc.so.6" free;
@@ -3910,7 +3910,7 @@ The #crack.exp.bindings# defines an #Opaque# class.  This can be used for
 structures returned from C functions that contain no user-serviceable parts.
 For example:
 
-{{
+\crack.code{{
     import crack.exp.bindings Opaque;
     import "libFoo.so" Foo_Create, Foo_Destroy;
     class Foo : Opaque {}
@@ -3927,7 +3927,7 @@ Sometimes C functions want to accept a function pointer to use as a callback.
 You can get this effect by defining a function and using a parameter type of
 #voidptr# for the callback parameter:
 
-{{
+\crack.code{{
     import "libFoo.so" Foo_SetCallback;
     void Foo_SetCallback(Foo obj, voidptr callback);
 
@@ -3963,7 +3963,7 @@ to do some very impressive things.
 As a simple example, lets say that we want to define a macro that expands to
 write a marker to standard output.  In module #myann# we could define:
 
-{{
+\crack.code{{
     import crack.compiler CrackContext;
 
     void writeMarker(CrackContext ctx) {
@@ -3977,7 +3977,7 @@ write a marker to standard output.  In module #myann# we could define:
 From another module, we can use the macro by doing a /compile-time import/ of
 it and invoking the annotation:
 
-{{
+\crack.code{{
     @import myann writeMarker;
 
     # equivalent to 'cout `marker\n`;'
@@ -4023,7 +4023,7 @@ Here's a more complicated example involving reading tokens.  In this example,
 we process a simple variable definition and generate a getter and a setter for
 it:
 
-{{
+\crack.code{{
     import crack.compiler CrackContext;
 
     void attr(CrackContext ctx) {
@@ -4088,7 +4088,7 @@ the "base state."  A return value of #`STATE_BASE`# indicates that we are not
 currently in the middle of parsing a definition or statement.  For example, in
 the following code:
 
-{{
+\crack.code{{
     int x;
     for (x = 0; x < 100; ++x)
         cout `$x\n`;
@@ -4108,7 +4108,7 @@ kind of syntactic construct.
 Here's an example of an annotation that verifies that it has been used in the
 base state of a class:
 
-{{
+\crack.code{{
     void checkBaseState(CrackContext ctx) {
         if (ctx.getScope() != SCOPE_CLASS ||
             ctx.getParseState() != STATE_BASE &&
@@ -4162,7 +4162,7 @@ an annotation is placed in a certain location in the code.  The following code
 creates a #funcMod# annotation that can only be called prior to a function
 definition:
 
-{{
+\crack.code{{
 
     Array[Callback] callbacks;
 
@@ -4205,7 +4205,7 @@ The parser contains a function flag register that can be used by an
 annotation to set flags on function definitions that follow it.  For example,
 we could implement the #@static# built-in annotation as follows:
 
-{{
+\crack.code{{
     import crack.compiler CrackContext, FUNCFLAG_STATIC;
 
     void static(CrackContext ctx) {
@@ -4242,7 +4242,7 @@ As an example, let's say that we have registered #beginClass()# and
 could add the message "in a class!" to the error message with the following
 code:
 
-{{
+\crack.code{{
     void beginClass(CrackContext ctx) {
         ctx.pushErrorContext('in a class!'.buffer);
     }
@@ -4256,7 +4256,7 @@ An annotation can register other annotations.  For example, if we wanted to
 create an annotation to define our #beginClass()# and #endClass()#
 annotations, we could do this:
 
-{{
+\crack.code{{
     void registerAnnotations(CrackContext ctx) {
         ctx.storeAnnotation('beginClass'.buffer, beginClass);
         ctx.storeAnnotation('beginClass'.buffer, endClass);
@@ -4273,7 +4273,7 @@ with user data.  For example, the following example is a very weak macro
 facility.  #@record# binds the next token to an identifier, when the
 identifier is used as an annotation it expands to its value:
 
-{{
+\crack.code{{
     import crack.compiler CrackContext, Token;
 
     void _playback(CrackContext ctx) {
@@ -4299,7 +4299,7 @@ identifier is used as an annotation it expands to its value:
 
 We could use it like this:
 
-{{
+\crack.code{{
     @record var 'some string';
     String x = @var;
 }}
@@ -4313,7 +4313,7 @@ a #Token#.
 We can access existing annotations with #CrackContext.getAnnotation()#.
 Annotation objects contain the following access methods:
 
-{{
+\crack.code{{
     voidptr getUserData();
     byteptr getName();
     voidptr getFunc();
@@ -4322,7 +4322,7 @@ Annotation objects contain the following access methods:
 We've demonstrated obtaining and injecting tokens with the #getToken()# and
 #putBack()# methods.  We can also create our own tokens:
 
-{{
+\crack.code{{
     import crack.compiler CrackContext, Token, TOK_STRING;
 
     # annotation to convert the next token to a string
@@ -4334,7 +4334,7 @@ We've demonstrated obtaining and injecting tokens with the #getToken()# and
 
 Usage would be as follows:
 
-{{
+\crack.code{{
     String x = @stringify test;
 }}
 
@@ -4369,7 +4369,7 @@ similar to C preprocessor macros with some improvements.
 
 To define a macro for use within a module, simply use the #@define# annotation:
 
-{{
+\crack.code{{
     @import crack.ann define;
 
     @define max(Type) {
@@ -4408,7 +4408,7 @@ dollar sign concatenates the argument with the adjacent tokens.
 For example, if we wanted to define a macro to produce command-line flags, we
 might do something like this:
 
-{{
+\crack.code{{
     @define flag(Type, name) {
         Type flag_$$name = Type$$Flag($name);
         flags.addFlag(flag_$$name);
@@ -4419,7 +4419,7 @@ might do something like this:
 
 This would generate the following code:
 
-{{
+\crack.code{{
     Type flag_port = intFlag('port');
     flags.addFlag(flag_port);
 }}
@@ -4427,7 +4427,7 @@ This would generate the following code:
 By default, macros are limited to the modules that they are defined in.  To
 make a macro available to other modules, you have to export it:
 
-{{
+\crack.code{{
     @import crack.ann define, export, exporter;
 
     # Indicates that the module will be exporting macros.
@@ -4441,7 +4441,7 @@ make a macro available to other modules, you have to export it:
 
 We can then import the macro as an annotation to another module:
 
-{{
+\crack.code{{
     @import mymodule myMacro;
 
     @myMacro(1, 2)
@@ -4453,7 +4453,7 @@ Assertions
 #crack.ann# also defines an #@assert# annotation that can be used to verify that
 a given expression is true:
 
-{{
+\crack.code{{
     @import crack.ann assert;
 
     @assert(2 + 2 == 4);
@@ -4469,7 +4469,7 @@ Structs
 very limited class with a constructor that allows you to initialize all of its
 member variables.  For example:
 
-{{
+\crack.code{{
     @import crack.ann struct;
 
     @struct Coord { int x; int y; }
@@ -4487,7 +4487,7 @@ Structs are very limited as of Crack 1.6.  In particular:
 variables").  #cvars# is followed by a block of variable definitions which
 are expanded to the variable definition list and the constructor:
 
-{{
+\crack.code{{
     @import crack.ann cvars;
 
     class Foo {
@@ -4518,7 +4518,7 @@ information, however they _are not currently enforced by the language._
 #@override# is used to indicate that a method is an override of a method in a
 base class:
 
-{{
+\crack.code{{
     class A {
         void f() {}
     }
@@ -4532,7 +4532,7 @@ base class:
 #@nullable# indicates that the following variable, parameter, or return value
 can be null:
 
-{{
+\crack.code{{
     @nullable Foobar maybeGetFoobar();  # Can return null.
 
     void maybeHaveAFoobar(@nullable Foobar val);  # "val" can be null.
@@ -4559,7 +4559,7 @@ body of the closure.  The general syntax is *@closure[* /captures/ *] (*
 For example, to create a closure that captures variables #a# and #b# from an
 enclosing function:
 
-{{
+\crack.code{{
     import crack.functor Functor1;  # Needed for a @closure macro with 1 param.
 
     @import crack.ann impl;  # Needed for the @closure macro.
@@ -4576,7 +4576,7 @@ the closure's state to the value of the variable in the enclosing scope.  So
 while these variables can be assigned in the closure, they will not affect the
 value of the variable in the enclosing scope:
 
-{{
+\crack.code{{
     void enclosingFunction() {
         a := 100;
         func := @closure[a] (int newVal) { a = newVal };
@@ -4588,7 +4588,7 @@ value of the variable in the enclosing scope:
 To change values in the enclosing context, you must use a #Box# (see \X(The
 Box Generic)):
 
-{{
+\crack.code{{
     import crack.lang Box;
 
     void enclosingFunction() {
@@ -4605,7 +4605,7 @@ has a return type of "void" and doesn't return a value.
 In addition to simple variables, more complicated expressions can be assigned
 in a capture using the ":=" operator:
 
-{{
+\crack.code{{
     void enclosingFunction(int a) {
         func := @closure[a, b := a + 1] (int c) : int { return a + b + c };
     }
@@ -4631,7 +4631,7 @@ code within the generic.  The only thing that is preserved are the imports.
 
 So this code would not work:
 
-{{
+\crack.code{{
     @import crack.ann define;
     @define func() { void f() {} }
 
@@ -4645,7 +4645,7 @@ not affect the instantiated generic code.  The only way to do so is to perform
 all mutations within the scope of the generic.  So, for example, we could have
 successfully written our last example like this:
 
-{{
+\crack.code{{
     @import crack.ann define;  # Imports are preserved.
 
     class A[T] {
@@ -4672,7 +4672,7 @@ expanded into a #CrackContext#, creating a sort of macro system for
 annotations.  For example, if we wanted to define a macro that wrote the
 current line number to standard error, we could do something like this:
 
-{{
+\crack.code{{
 
     import crack.ann deserializeNodeList;;
     @import crack.ann tokens;
@@ -4708,7 +4708,7 @@ curly braces, square brackets, or parentheses.  The only restriction is that
 if the symbol is nested within the sequence, it must include a matching
 terminator within the sequence.  So something like this is perfectly legal:
 
-{{
+\crack.code{{
     # The curly is unmatched, but the sequence is delimited by the square
     # brackets.
     @tokens [ while (true) { ].expand(ctx, null);
@@ -4718,7 +4718,7 @@ The #@tokens# annotation is great for constant sequences, but typically in
 code generation scenarios we want to parameterize our code blocks.  The
 #@xmac# token lets us do this:
 
-{{
+\crack.code{{
     import crack.ann deserializeXMac;
     @import crack.ann xmac;
 
@@ -4744,7 +4744,7 @@ If #@xmac# is followed immediately by an asterisk, it will expand its
 variables from your local context.  So we could have written the code above
 like this:
 
-{{
+\crack.code{{
     void exception(CrackContext ctx) {
         className := ctx.getToken();
 
@@ -4840,7 +4840,7 @@ simplifying it we have the #crack.extgen# module.  This defines a
 #@generateExtension# annotation that hijacks the compiler to generate a source
 file defining the extension.  Its usage is best illustrated by example:
 
-{{
+\crack.code{{
     @import crack.extgen generateExtension;
 
     # generate an extension that will be imported as 'foo.bar'
@@ -5014,7 +5014,7 @@ formal declaration of the encoding.  It must be followed by a string
 identifying the name of the encoding.  For example, to indicate that a script
 uses UTF-8 encoding, one might begin the script like this:
 
-{{
+\crack.code{{
     #!/usr/bin/env crack
     @encoding 'utf8'
 
@@ -5035,7 +5035,7 @@ and installed along with the crack runtime code, so it should always be
 available.  To use it, just specify the name of the module that you want to
 see the documentation for:
 
-{{
+\crack.code{{
     $ crackdoc crack.lang
 }}
 
@@ -5118,7 +5118,7 @@ null terminator).
 
 This allows us to safely do something like this:
 
-{{
+\crack.code{{
     import runtime strcpy;
 
     String userInput = getUserInput();
@@ -5135,7 +5135,7 @@ These are designed for use with IO operations.  The typical use case is to
 read into it and then convert it to a string, either by copying the underlying
 buffer or by passing ownership of it to the new string:
 
-{{
+\crack.code{{
     # create a 1K managed buffer.
     ManagedBuffer buf = {1024};
 
@@ -5151,7 +5151,7 @@ Note that #Reader# includes a utility method that does this more intelligently
 (it only transfers ownership if the amount read is at least 75% of the buffer
 size):
 
-{{
+\crack.code{{
     # 's' is a string.
     s := cin.read(1024);
 }}
@@ -5176,7 +5176,7 @@ the string.
 
 Examples:
 
-{{
+\crack.code{{
     data := 'sample string';
 
     # all of these assign the SubString 'str' to s
@@ -5192,7 +5192,7 @@ Examples:
 
 You can also create a substring explicitly:
 
-{{
+\crack.code{{
     import crack.lang SubString;
 
     s := SubString('this is a test', 10, 4);
@@ -5250,7 +5250,7 @@ can use them fairly similarly to the original types.
 
 Examples:
 
-{{
+\crack.code{{
     import crack.lang Box;
 
     i := Box[int](100);
@@ -5274,7 +5274,7 @@ All containers have a #count()# method that returns the number of elements in
 the container.  They also convert to boolean based on whether or not they are
 empty:
 
-{{
+\crack.code{{
     c := createContainer();
     if (c)
         cout `container has $(c.count()) elements\n`;
@@ -5291,7 +5291,7 @@ method which returns an #Iterator# object for the container.
 Iterators allow you to iterate over the set of objects in a container one at a
 time.  As an example, consider an array:
 
-{{
+\crack.code{{
     Array[ElemType] arr = createArray();
 
     for (i := arr.iter(); i; i.next())
@@ -5306,7 +5306,7 @@ returns the element associated with the iterator.
 Iterators conform to \X(The Iteration Protocol), and as such can be used more
 succinctly in a #for# loop:
 
-{{
+\crack.code{{
     for (elem :in arr)
         cout `got $elem\n`;
 }}
@@ -5322,7 +5322,7 @@ reference counts of the elements.
 
 To construct an array with the expected number of elements:
 
-{{
+\crack.code{{
     import crack.cont.array Array;
     Array[String] arr = {10};  # 10 element array of Strings
 }}
@@ -5339,7 +5339,7 @@ zero.
 
 To add an element to an array, use the #append()# method:
 
-{{
+\crack.code{{
     arr.append('first element');
     arr.append('second element');
     cout `count = $(arr.count())\n`;  # writes "2"
@@ -5351,13 +5351,13 @@ as big.
 
 To get an element in an array, use the bracket operator:
 
-{{
+\crack.code{{
     cout `elems: $(arr[0]), $(arr[1])\n`;
 }}
 
 You can also replace an existing element in an array using element assignment:
 
-{{
+\crack.code{{
     arr[1] = 'new second element';
 }}
 
@@ -5366,7 +5366,7 @@ result in a runtime error.
 
 Finally, like all containers, you can iterate over the elements of an array:
 
-{{
+\crack.code{{
     for (i :on arr)
         cout `elem: $(i.elem())\n`;
 }}
@@ -5375,7 +5375,7 @@ Array iterators expose an "index" field allowing you to obtain the index of
 the current element.  This is useful in cases where you want to mutate the
 array during iteration:
 
-{{
+\crack.code{{
     # Zero out all elements divisible by three.
     for (i :on arr) {
         if (!(i.elem() % 3))
@@ -5397,7 +5397,7 @@ them preferable to arrays in certain cases.
 
 The #List# interface looks very much like the #Array# interface:
 
-{{
+\crack.code{{
     import crack.cont.list List;
 
     List[String] l;
@@ -5414,7 +5414,7 @@ The #List# interface looks very much like the #Array# interface:
 Random access lookup, delete and insert are all available, although they are
 all O(n) operations:
 
-{{
+\crack.code{{
     cout `$(l[1])\n`;       # prints "second"
     l.delete(0);            # deletes 'first'
     l.insert(0, 'first');   # reinserts 'first'
@@ -5423,7 +5423,7 @@ all O(n) operations:
 You can also push a new element onto the front of the list (equivalent to
 #insert(0, ...)# but terser and slightly faster):
 
-{{
+\crack.code{{
     l.pushHead('zero');
 }}
 
@@ -5431,7 +5431,7 @@ You can also push a new element onto the front of the list (equivalent to
 
 Likewise, you can pop items off the head of the list:
 
-{{
+\crack.code{{
     elem := l.popHead();  # after the last operation, elem == 'zero'
 }}
 
@@ -5448,7 +5448,7 @@ additional pointer).  #DList# is part of the #crack.list# module.
 
 #DList# supports inserting and deleting the element referenced by an iterator:
 
-{{
+\crack.code{{
     # all sequence types can be initialized with a sequence constant.
     DList[String] dl = ['first', 'delete me', 'temp', 'before me'];
 
@@ -5471,7 +5471,7 @@ to the element after the deleted element.
 
 #DList# also supports a bi-directional iterator:
 
-{{
+\crack.code{{
     # get a bi-directional iterator - an argument of "true" causes
     # the iterator to be initialized to the end of the list.  "false" would
     # start it at the beginning.
@@ -5487,7 +5487,7 @@ You can use a bi-directional iterator everywhere you can use a normal iterator.
 In addition to the #popHead()# function, #DList# supports a #popTail()#
 function:
 
-{{
+\crack.code{{
     DList dl;
     dl.append('first');
     dl.append('second');
@@ -5505,7 +5505,7 @@ and provide O(log n) insertion and lookup with constant time rebalancing.
 
 To create red-black tree map:
 
-{{
+\crack.code{{
     import crack.cont.treemap TreeMap;
 
     # maps are defined with the types of the key and the value.
@@ -5514,7 +5514,7 @@ To create red-black tree map:
 
 To add elements:
 
-{{
+\crack.code{{
     map['first'] = '1';
     map['second'] = '2';
     map['third'] = '3';
@@ -5522,7 +5522,7 @@ To add elements:
 
 To access them:
 
-{{
+\crack.code{{
     cout `$(map['first'])\n`;  # writes "1"
 }}
 
@@ -5530,7 +5530,7 @@ Iteration is the same as for arrays, except that the elements are #KeyVal#
 objects.  As their name suggests, #KeyVal# objects have a #key# and #val#
 attribute:
 
-{{
+\crack.code{{
     for (kv :in map)
         cout `map[$(kv.key)] = $(kv.val)\n`;
 }}
@@ -5550,7 +5550,7 @@ undefined.
 Since the interface is the same as that of #TreeMap#, we won't go over it in
 detail except to provide an example of how it is constructed:
 
-{{
+\crack.code{{
     import crack.cont.hashmap HashMap;
 
     HashMap[String, int] map = {};
@@ -5564,7 +5564,7 @@ Algorithms (Sort Functions)
 The #crack.algorithm# module includes two sorting algorithms for arrays.
 For example:
 
-{{
+\crack.code{{
     import crack.cont.array Array;
     import crack.algorithm QuickSort, InsertionSort;
     Array[int] arr = getAnArray();
@@ -5580,7 +5580,7 @@ the type must define the comparison operators.
 
 You can use #QuickSort# with a primitive function comparator:
 
-{{
+\crack.code{{
 
     int myFooCmp(Foo a, Foo b) {
         ...
@@ -5591,7 +5591,7 @@ You can use #QuickSort# with a primitive function comparator:
 
 To compare using a Functor, use #QuickSortF# instead:
 
-{{
+\crack.code{{
     class MyFooCmp @impl Functor2[int, Foo, Foo] {
         ...
     }
@@ -5606,7 +5606,7 @@ The strutil Module
 external dependencies making them unsuitable for inclusion in the #String# or
 #Buffer# classes themselves.
 
-{{
+\crack.code{{
     import crack.strutil split, StringArray;
 
     # create a StringArray, which is a class derived from Array[String] only
@@ -5630,7 +5630,7 @@ Nevertheless, there are times when you care about encodings, and there's no
 encoding more ubiquitous than ascii.  Therefore, we include this kind of
 functionality in the #crack.ascii# module:
 
-{{
+\crack.code{{
     import crack.ascii radix, strip, toUpper, wsplit;
 
     # strip trailing and leading whitespace
@@ -5656,7 +5656,7 @@ mainly defines the #exit()# function and #argv# variable.
 The #exit()# function can be used to terminate the program at any point with
 the given exit code:
 
-{{
+\crack.code{{
     import crack.sys exit;
 
     # terminate with the normal code.
@@ -5666,7 +5666,7 @@ the given exit code:
 The #argv# variable is a #StringArray# instance that allows you to access the
 command line arguments:
 
-{{
+\crack.code{{
     import crack.sys argv;
 
     # write out all of the args except the program name (argv[0])
@@ -5679,7 +5679,7 @@ command line arguments:
 The #env# variable is a \X(HashMap) containing the environment variables.  It
 can also be used to change environment variables:
 
-{{
+\crack.code{{
     import crack.sys env;
     path := env['PATH'] + ':/opt/my/programs';
     env['PATH'] = path;
@@ -5712,7 +5712,7 @@ Field sets provide an elegant solution to this problem.
 arbitrary objects to be attached to it.  So for example, for our
 authentication data we could define an #AuthData# class and use it as follows:
 
-{{
+\crack.code{{
 
     import crack.fieldset FieldSet;
     @import crack.fieldset_ann fieldset_accessors;
@@ -5736,7 +5736,7 @@ authentication data we could define an #AuthData# class and use it as follows:
 
 Our application handler could then access it using the #get()# method:
 
-{{
+\crack.code{{
     void appHandler(Request req) {
         auth := AuthData.get(req);
 
@@ -5769,7 +5769,7 @@ interfaces.
 #Writer# has one salient method called #write()#.  This method writes a buffer
 to the underlying output object:
 
-{{
+\crack.code{{
     cout.write('some data');
 }}
 
@@ -5781,7 +5781,7 @@ write a constant string.  Classes implementing #Writer# must implement the
 #WriteBuffer# and a heavier form that reads a buffer of specified size
 and returns a string.
 
-{{
+\crack.code{{
     ManagedBuffer buf = {1024};  # ManagedBuffer is derived from WriteBuffer
     bytesRead = cin.read(buf);  # read up to 1024 bytes into 'buf'
 }}
@@ -5791,7 +5791,7 @@ the number of bytes read.
 
 We could have done something similar with the heavy-weight form:
 
-{{
+\crack.code{{
     String data = cin.read(1024);
 }}
 
@@ -5800,7 +5800,7 @@ a buffer and a #String# object.
 
 We could implement the most basic functionality of the #cat# command like this:
 
-{{
+\crack.code{{
     ManagedBuffer data = {4096};
     while (data.size = cin.read(data)) {
         cout.write(data);
@@ -5825,7 +5825,7 @@ includes the #Thread#, #Mutex#, #MutexLock#, #Condition# and #Queue# classes.
 To create a thread, derive from the #Thread# base class and implement the
 #run()# method:
 
-{{
+\crack.code{{
     import crack.threads Thread;
 
     class MyThread : Thread {
@@ -5840,7 +5840,7 @@ To create a thread, derive from the #Thread# base class and implement the
 We can then start use #start()# and #join()# to start the thread running in
 the background and wait for it to complete:
 
-{{
+\crack.code{{
     MyThread thread = {};
     thread.start();
 
@@ -5856,7 +5856,7 @@ They are used to implement the reference counting mechanism in #Object#, and
 can also be used to implement other forms of thread-safe counters and control
 mechanisms.  For example, here is a simple active thread counter:
 
-{{
+\crack.code{{
     atomic_int count;
 
     class MyThread : Thread {
@@ -5884,7 +5884,7 @@ available.
 
 The #Mutex# class provides the #lock()# and #unlock()# methods:
 
-{{
+\crack.code{{
     int value;
     Mutex valueMutex = {};
 
@@ -5896,7 +5896,7 @@ The #Mutex# class provides the #lock()# and #unlock()# methods:
 There is also a #MutexLock# class that manages locking and unlocking a mutex
 for the context it is defined:
 
-{{
+\crack.code{{
     void f() {
         # The mutex will be unlocked when this goes out of scope and is
         # deleted at the end of the function call.
@@ -5915,7 +5915,7 @@ Conditions allow you to send events between threads.  They must be used in
 conjuntion with a #Mutex#.  The mutex protects a shared resource, the
 condition notifies observers of changes in that resource:
 
-{{
+\crack.code{{
 
     # Create a condition associated with our value.
     Condition cond = {valueMutex};
@@ -5951,7 +5951,7 @@ queue.  It is also a generic.
 
 Here's how we could use #Queue# to implement a worker pool:
 
-{{
+\crack.code{{
     Queue[Functor0[void]] actions = {};
     class WorkerThread : Thread {
         void run() {
@@ -5978,7 +5978,7 @@ Line Readers
 The #crack.io.readers# module provides a #LineReader# class that lets you read
 from a writer a line at a time:
 
-{{
+\crack.code{{
     import crack.io.readers LineReader;
 
     reader := LineReader(cin);
@@ -6001,7 +6001,7 @@ correspond to entities in the filesystem, whether or not they currently exist.
 By way of an example, to check for the existance of a file and write it if it
 doesn't exist, we could do something like this:
 
-{{
+\crack.code{{
     import crack.fs makePath, Path;
     Path p = makePath('myfile.txt');
     if (!p.exists())
@@ -6014,7 +6014,7 @@ the current working directory.
 
 The more idiomatic way to do this would have been to use the "cwd" object:
 
-{{
+\crack.code{{
     import crack.fs cwd, Path;
 
     Path p = cwd/'myfile.txt';
@@ -6029,7 +6029,7 @@ a #Path# instance on the left side and a string on the right.
 The #cwd# object is a #Path# object representing the current directory.  It
 can also be used to set the current directory with a special #set()# method:
 
-{{
+\crack.code{{
     cwd.set('/home/weezer');
 }}
 
@@ -6069,7 +6069,7 @@ Regular Expressions
 Crack provides a regular expression library in the form of #crack.regex#.
 You use it by creating a #Regex# object:
 
-{{
+\crack.code{{
     import crack.io cin, cout;
     import crack.io.readers LineReader;
     import crack.regex Regex, Match;
@@ -6095,14 +6095,14 @@ text of the entire expression.
 
 To get the start and end position of the matched substring:
 
-{{
+\crack.code{{
     uint startPos = m.begin();
     uint endPos = m.end();
 }}
 
 Likewise, we can do this with subgroups:
 
-{{
+\crack.code{{
     uint start1 = m.begin(1);
     uint end1 = m.end(1);
 }}
@@ -6113,13 +6113,13 @@ group, so we start with group 1.
 We can also use named subgroups.  For example, we could have written our
 expression like this:
 
-{{
+\crack.code{{
     rx := Regex('(?P<var>\\w+)=(?P<val>.*)');
 }}
 
 And then the output statement would look like this:
 
-{{
+\crack.code{{
     cout `got $(m.group('var')) = $(m.group('val'))\n`;
 }}
 
@@ -6184,7 +6184,7 @@ The library provides:
 
 Below is a simple example:
 
-{{
+\crack.code{{
     import crack.math sqrt, pow, PI;
 
     float length(float x, float y) {
@@ -6201,6 +6201,8 @@ Networking
 ----------
 
 The #crack.net# module includes support for TCP\/IP socket level programming.
+In general, prefer the use of the high-level #crack.net.comm2# for
+asynchronous networking (see \X(Asynchronous Communication), below).
 
 A socket is a communication endpoint for TCP\/IP communications.  Sockets can
 either be connection channels, allowing you to send data to a matching socket
@@ -6208,7 +6210,7 @@ elsewhere on the network, or listeners which wait for new connections.
 
 We create a socket with the #makeSocket()# function:
 
-{{
+\crack.code{{
     import crack.net makeSocket, AF_INET, SOCK_STREAM;
 
     s := makeSocket(AF_INET, SOCK_STREAM, 0);
@@ -6219,7 +6221,7 @@ protocol.
 
 With a little more code, we can create a very basic server program:
 
-{{
+\crack.code{{
 
     import crack.net makeSocket, InetAddress, AF_INET, INADDR_ANY, SOCK_STREAM;
     import crack.exp.error err;
@@ -6260,7 +6262,7 @@ With a little more code, we can create a very basic server program:
 
 A client script might look like this:
 
-{{
+\crack.code{{
     import crack.sys exit, strerror;
     import crack.net InetAddress, makeSocket, AF_INET, SOCK_STREAM;
     import crack.lang ManagedBuffer;
@@ -6302,7 +6304,7 @@ about on them.  You can then wait for an event (or a timeout) using the
 #wait()# method.  Here is an example of a simple server program (it just echos
 back whatever it reads from a client) written using #Poller#:
 
-{{
+\crack.code{{
     import crack.net makeSocket, InetAddress, Poller, PollEvent,
         PollEventCallback, SocketApd, AF_INET, INADDR_ANY, POLLIN, POLLOUT,
         POLLERR, SOCK_STREAM;
@@ -6378,6 +6380,44 @@ back whatever it reads from a client) written using #Poller#:
         p.waitAndProcess(null);
 }}
 
+Asynchronous Communication
+--------------------------
+
+#crack.net.comm2# ("Comm2") provides a framework for asynchronous
+communication and event scheduling based on #crack.net.Poller#.
+
+In this framework, both sides of a communication endpoint exchange data
+through a #Connection# object, which contains #inBuf# and #outBuf# instance
+variables.  These are processed by handler classes derived from #UserHandler#
+in a background thread managed by an instance of #Comm#, which is typically
+created as a global singleton.
+
+On the client side, remote connections are normally treated as #CommProxy# or
+#SyncCommProxy# instances (depending on whether you wish to do synchronous or
+asynchronous communications) though you can also deal with #Connection#s
+directly.
+
+On the server side, new servers are registered with #Comm.startServer()#,
+which accepts a #ConnectionFactory# that produces a #Connection# object with
+the desired #UserHandler#.
+
+On both ends, protocols are implemented by the user code that writes data to
+#Connection# or #(Sync)CommProxy#, and the code that processes incoming data
+in the user class derived from #UserHandler#.
+
+#UserHandler# also provides a method for adding "responder objects" for a
+connection.  These are intended to be used to handle the complete response
+expected to be received from a request (or the error condition upon failure).
+These can be simple callback-style interfaces or (for synchronous
+style) you may choose to use the #WaiterFor# generic, which allows code
+waiting on a response to obtain a result object or an exception.
+
+The #Comm# class also provides a #scheduleEvent()# method that allows you to
+schedule the execution of arbitrary code at some future point in time.
+
+Complete examples of both server and client usage can be found in the
+#crack.net.comm2# module documentation.
+
 Serving HTTP
 ------------
 
@@ -6388,6 +6428,8 @@ commonly used in an HTTP server.  Functionality is broken out as follows:
     Core functionality, mainly the #Request# class.
 #crack.http.server#::
     Contains the #Server# class, which implements an HTTP server.
+#crack.http.comm2srv#::
+    Comm2 compatible HTTP server classes.
 #crack.http.util#::
     Utilities.  Includes different kinds of request dispatchers, tools for
     parsing URLs and for dealing with query parameters,
@@ -6413,7 +6455,7 @@ authentication. (Note that this code can be found in the source tree as
 "#`example/httpsrv.crk`#".)
 
 
-{{
+\crack.code{{
     import crack.http.auth AuthHandler, AuthInfoImpl, LoginHandler, StupidRNG,
         User;
     import crack.http.core HandlerFunc, Request;
@@ -6486,6 +6528,26 @@ safety, we can make no claim as to the security of these systems.  Use them
 at your discretion, and if you choose to use them in a public-facing service,
 be sure to put them behind some form of trustworthy reverse proxy.
 
+Comm2 HTTP Serving
+''''''''''''''''''
+
+The #crack.http.comm2srv# modules provide a Comm2 compatible method of serving
+HTTP, facilitating event scheduling and coexistence with other IO processing.
+
+Creation of an HTTP server is generally compatible with the section above, by
+way of example:
+
+\crack.code{{
+    disp := PathDispatcher();
+
+    # ... populate the dispatcher ...
+
+    # Start the server.
+    comm := Comm(Log(null, null, cerr, cerr, cerr, 'service'));
+    comm.start();
+    comm.startServer(addr, HTTPConnectionFactory(disp), true);
+}}
+
 Logging
 -------
 
@@ -6499,7 +6561,7 @@ In many cases, it is adequate to simply log to standard error.  The easiest
 way to do this is to simply import log-level formatters from the logger module
 and format to the default logger:
 
-{{
+\crack.code{{
     import crack.logger debug, error, fatal, info, setLogLevel, warn, DEBUG;
 
     setLogLevel(DEBUG);  # Log debug messages and above.
@@ -6523,7 +6585,7 @@ output.
 
 An example looks like this:
 
-{{
+\crack.code{{
     import crack.logger Logger, ERROR, DEBUG;
     import crack.io cerr;
 
@@ -6541,7 +6603,7 @@ The output will look something like this:
 The first argument of the constructor can be any #Formatter# object. Other
 convenient constructors are:
 
-{{
+\crack.code{{
     Logger(String filename, uint level);
     Logger(Writer w, uint level);
 }}
@@ -6549,7 +6611,7 @@ convenient constructors are:
 The #Logger# class defines convenience methods #fatal#, #error#, #warn#, #info#,
 #debug# to log messages with the eponymous severity levels:
 
-{{
+\crack.code{{
     logger.debug("This will not be logged");
     logger.error("This will be logged");
 }}
@@ -6561,7 +6623,7 @@ The #logger# module also provides a #LogFormatter# class that implements the
 #Formatter# protocol. Extending the example above to use a #LogFormatter#
 instead, we get:
 
-{{
+\crack.code{{
     import crack.logger LogFormatter;
 
     debug := LogFormatter(l, DEBUG);
@@ -6603,7 +6665,7 @@ The fields can be specified using the constructors
 delimited field specification
 #Logger(Formatter fmt, uint level, String fieldSpec)#, as follows:
 
-{{
+\crack.code{{
     l := Logger(cerr, FATAL, "datetime severity progname escapemsg");
 }}
 
@@ -6622,7 +6684,7 @@ Message fields
 Field representations are constructed by #MessageField# instances. To add a new
 type of message field, define a class as follows:
 
-{{
+\crack.code{{
     import crack.runtime usecs;
 
     MilliSecField : MessageField {
@@ -6636,7 +6698,7 @@ type of message field, define a class as follows:
 
 The field can be registered with the #Logger#, and the fields specified with:
 
-{{
+\crack.code{{
     logger.setNamedField("msecs", MilliSecField(logger.options));
     logger.setNamedFields("datetime msecs severity progname escapemsg");
 }}
@@ -6647,7 +6709,7 @@ Logger options
 The #Logger# class contains an #options# member of type #LoggerOptions#,
 with members, defined as:
 
-{{
+\crack.code{{
     class LoggerOptions {
         uint seq;            // Message sequence number
         String timeFormat;   // strftime date format
@@ -6685,7 +6747,7 @@ the following GTK objects:
 
 Here's a sample program:
 
-{{
+\crack.code{{
 
     import crack.exp.gtk App, Button, Entry, Handlers, HBox, Label, Toplevel,
         VBox;
@@ -6763,7 +6825,7 @@ be subject to change.
 
 A command is defined as a function with a special annotation:
 
-{{
+\crack.code{{
     import crack.cont.array Array;
     import crack.cont.treemap TreeMap;
     import crack.exp.cmd ArgInfo, ArgInfoBase, ArgParser, ArgVal,
@@ -6811,7 +6873,7 @@ hyphen is used for single character flag names ("short names"), the double
 hyphen is used for "long names."  For example, to have a flag associated with
 a logfile, we might do this:
 
-{{
+\crack.code{{
     @command int main(@flag('-l', '--logfile') String logfile) {
         ...
     }
@@ -6855,7 +6917,7 @@ Subcommands
 You can create "subcommands" by defining a command with a parent.  For
 example, to define the "get" and "put" subcommands, we can do this:
 
-{{
+\crack.code{{
     import crack.exp.cmd SubcommandArgInfo;
 
     @command int main(@flag('--global-flag') String globalFlag,
@@ -6898,7 +6960,7 @@ Optional Arguments
 
 Optional arguments are specified using a default value syntax.  For example:
 
-{{
+\crack.code{{
     @command int foo(String optional = 'value') {
         ...
     }
@@ -6919,7 +6981,7 @@ type (in truth, any container with default or element count constructor and an
 #append()# method which adds an element can be used, but it is necessary to
 define a converter tor the type, see \X(Defining Converters) below):
 
-{{
+\crack.code{{
     @command int main(@multi Array[String] words) {
         ...
     }
@@ -6930,7 +6992,7 @@ in 'words'.
 
 You can do the same thing with flags:
 
-{{
+\crack.code{{
     @command int main(@multi @flag('-f') Array[bool] vals) {
         ...
     }
@@ -6954,7 +7016,7 @@ Defining a converter is usually a simple matter of defining a function to
 convert from a string to the required type.  For example, let's say we want an
 argument that passes colors by name:
 
-{{
+\crack.code{{
     @struct Color {
         int red, green, blue;
     }
@@ -6974,7 +7036,7 @@ argument that passes colors by name:
 
 Now we create an array of converters to give to our command:
 
-{{
+\crack.code{{
     import crack.exp.cmd Converter;
 
     converters := Array[ConverterBase]![Converter[Color].Wrap(convertColor)];
@@ -6982,7 +7044,7 @@ Now we create an array of converters to give to our command:
 
 And finally, register it in the command annotation:
 
-{{
+\crack.code{{
     @command(converters = converters) int main(Color color) {
         ...
     }
@@ -6999,7 +7061,7 @@ Multiple argument types must have their own converters.  For this, use the
 #MultiArgConverterImpl# generic paramterized by the collection type and the
 element type.  To define converters for the Color type above:
 
-{{
+\crack.code{{
     import crack.exp.cmd Converter, MultiArgConverterImpl;
 
     converters := Array[ConverterBase]![
@@ -7019,7 +7081,7 @@ Documentation Generation
 The #@command# annotation does special handling of doc-comments, and you can
 use the #addHelpCommand()# function to add a special "help" subcommand:
 
-{{
+\crack.code{{
     import crack.exp.cmd.doc addHelpCommand;
 
     ## This is a command.
@@ -7044,7 +7106,7 @@ The #crack.cmdline# module also allows you to do options processing.  It
 is more work to use than #crack.exp.cmd#, but has the advantage of not
 currently being in experimental.
 
-{{
+\crack.code{{
     import crack.sys argv;
     import crack.exp.cmdline CmdOptions, CMD_BOOL;
 
@@ -7230,7 +7292,7 @@ From 0.2 to 0.3
     object created with the default constructor, they now initialize to null.
     So for example in this code:
 
-    {{
+    \crack.code{{
         class A {}
         A x;
     }}
@@ -7301,7 +7363,7 @@ The following rules apply to method and function names (we use the word
     "make/Noun/".  In situations where the noun is unambigously a noun, never
     a verb, the method may have an alias that is simply the noun.  Examples:
 
-    {{
+    \crack.code{{
         class Path {
             Writer makeWriter() ...
             Writer writer() ...
@@ -7313,7 +7375,7 @@ The following rules apply to method and function names (we use the word
     the corresponding attribute.  The most common case of these is attribute
     access, for example:
 
-    {{
+    \crack.code{{
         class Person {
             String getName() ...
             void setName(String name) ...

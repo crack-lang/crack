@@ -11,6 +11,39 @@
     <title>
         The Crack Programming Language Guide
     </title>
+    <style>
+      span.comment {
+          color: #060;
+      }
+
+      span.keyword {
+          color: #666;
+      }
+
+      span.ident {
+          color: #066;
+      }
+
+      span.symbol {
+          color: #660;
+      }
+
+      span.number {
+          color: #066;
+      }
+
+      span.string {
+          color: #606;
+      }
+
+      span.istring {
+          color: #606;
+      }
+
+      pre.crack {
+           background: #ddd;
+      }
+    </style>
   </head>
   <body>
     <h1>

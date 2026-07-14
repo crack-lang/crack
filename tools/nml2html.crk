@@ -10,7 +10,10 @@ import crack.io cerr;
 import crack.strutil StringArray;
 import crack.sys argv, exit;
 import crack.fs makePath;
+import crack.functor Functor4;
 import crack.cmdline CmdOptions, Option, CMD_STR;
+import crack.nml.block TextBlock;
+import crack.nml.crack addCrackFormatters, convertCrackCode, makeCrackBlock;
 import crack.nml.parse DocParser;
 import crack.nml.html HTMLFormatter;
 
@@ -36,8 +39,12 @@ if (outFilename && srcFiles.count() > 2) {
 bool gotFiles;
 for (arg :in srcFiles.subarray(1)) {
     src := makePath(arg);
-    parser := DocParser(src.makeFullReader(), arg);
+    parser := DocParser(src.makeFullReader(), arg,
+                        Functor4[TextBlock, String, int, String, bool].Wrap(
+                            makeCrackBlock
+                        ));
     doc := parser.parseDoc();
+    convertCrackCode(doc);
 
     // get the destination file name
     if (!outFilename)
@@ -47,6 +54,7 @@ for (arg :in srcFiles.subarray(1)) {
             outFilename = arg + '.html';
 
     formatter := HTMLFormatter(makePath(outFilename).writer());
+    addCrackFormatters(formatter);
     if (template) {
         template := makePath(template).makeFullReader();
         formatter.expandTemplate(template, doc);

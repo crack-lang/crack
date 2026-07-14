@@ -42,7 +42,7 @@ TextBlock makeCrackBlock(String sourceName, int lineNum, String blockType,
 }
 
 void formatCrackCode(HTMLFormatter formatter, TextBlock block) {
-    formatter.write('<PRE>', HTML_REFLOW);
+    formatter.write('<PRE class="crack">', HTML_REFLOW);
     for (word :in block.words) {
         if (s := String.cast(word, null)) {
             formatter.write(s, HTML_ESCAPE);
