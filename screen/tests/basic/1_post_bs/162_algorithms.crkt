@@ -2,6 +2,12 @@
 algorithms
 %%ARGS%%
 %%FILE%%
+# Note that these classes are also tested in basic/1_post_bs/063_x.crkt (the
+# original tests).  The tests below cover some issues discovered in the
+# InsertionSort algorithm and also verify the newer, functor-based
+# implementations.  They don't cover the application to builtin "array"
+# specializations, which are dealt with adequately by the older tests.
+
 import crack.algorithm Heap, HeapBase, HeapF, HeapPrim, HeapSort,
     HeapSortBase, HeapSortPrim, InsertionSort, InsertionSortF,
     InsertionSortPrim, InsertionSortPrimF, QuickSort, QuickSortF,
@@ -9,16 +15,22 @@ import crack.algorithm Heap, HeapBase, HeapF, HeapPrim, HeapSort,
 import crack.cont.array Array;
 import crack.functor Functor2;
 import crack.io cout;
+import crack.lang Box;
 
 @import crack.ann assert;
 
 int ncmp(int a, int b) { return b - a }
 
-# QuickSortPrim
+class B : Array[Box[int]] {
+    void append(int val) { append(Box[int](val)) }
+}
 
 alias A = Array[int];
 alias F = Functor2[int, int, int];
 A makeArray() { return A![2, 3, 1] }
+B makeBoxArray() { return B![2, 3, 1] }
+
+# QuickSortPrim
 
 arr := makeArray();
 QuickSortPrim[A].sort(arr, 3);
@@ -27,6 +39,10 @@ QuickSortPrim[A].sort(arr, 3);
 arr = makeArray();
 QuickSortPrim[A].sort(arr, 3, ncmp);
 @assert(arr == A![3, 2, 1]);
+
+ab := makeBoxArray();
+QuickSortPrim[B].sort(ab, 3);
+@assert(ab == B![1, 2, 3]);
 
 # QuickSortPrimF
 
@@ -60,6 +76,10 @@ arr = makeArray();
 InsertionSortPrim[A].sort(arr, 3, ncmp);
 @assert(arr == A![3, 2, 1]);
 
+ab = makeBoxArray();
+InsertionSortPrim[B].sort(ab, 3);
+@assert(ab == B![1, 2, 3]);
+
 # InsertionSortPrimF
 
 arr = makeArray();
@@ -75,6 +95,10 @@ InsertionSort[A].sort(arr);
 arr = makeArray();
 InsertionSort[A].sort(arr, ncmp);
 @assert(arr == A![3, 2, 1]);
+
+ab = makeBoxArray();
+InsertionSort[B].sort(ab);
+@assert(ab == B![1, 2, 3]);
 
 # InsertionSortF
 
@@ -97,6 +121,10 @@ arr = makeArray();
 HeapPrim[A].buildMaxHeap(arr, arr.count());
 @assert(HeapPrim[A].isMaxHeap(arr, arr.count()));
 @assert(arr == A![3, 2, 1]);
+
+ab = makeBoxArray();
+HeapPrim[B].buildMaxHeap(ab, ab.count());
+@assert(ab == B![3, 2, 1]);
 
 # Heap
 
@@ -126,11 +154,19 @@ arr = makeArray();
 HeapSortPrim[A].sort(arr, 3);
 @assert(arr == A![1, 2, 3]);
 
+ab = makeBoxArray();
+HeapSortPrim[B].sort(ab, 3);
+@assert(ab == B![1, 2, 3]);
+
 # HeapSort
 
 arr = makeArray();
 HeapSort[A].sort(arr);
 @assert(arr == A![1, 2, 3]);
+
+ab = makeBoxArray();
+HeapSort[B].sort(ab);
+@assert(ab == B![1, 2, 3]);
 
 cout `ok\n`;
 

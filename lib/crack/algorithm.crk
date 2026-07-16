@@ -8,24 +8,37 @@
 //
 
 import crack.io cout;
-import crack.lang cmp;
+import crack.lang cmp, FreeBase;
 
 # we use poormac here because the standard macro mechanism depends on this
 # module.
 @import crack._poormac define;
+
+# Support class for comparison.
+#
+# Classes that use default comparisons can't use the "cmp" method because all
+# of the generic algorithms that do comparison require a callable that
+# compares two 'Elem' instances, and while 'cmp(Object, Object)' is what we
+# want to use for any Object derivatives, it doesn't match a signature of
+# 'cmp(Elem, Elem)'.  The '_cmp" method in _CmpBase does match, though, and
+# safely converts to Object comparison.
+class _CmpBase[Elem] : FreeBase {
+    @static int _cmp(Elem a, Elem b) { return cmp(a, b) }
+}
 
 class QuickSortBase[SeqT, CmpFunc, Elem] {
 
     alias CmpFunc = CmpFunc;
     alias Elem = Elem;
 
-    @static
-    void _swap(SeqT A, uintz l, uintz r) {
+    @static void _swap(SeqT A, uintz l, uintz r) {
         temp := A[l];
         A[l] = A[r];
         A[r] = temp;
     }
 
+    # Superseded by _CmpBase, above, but not converting this class since it's
+    # a public function
     @static int defaultCmp(Elem a, Elem b) {
         return cmp(a, b);
     }
@@ -102,7 +115,7 @@ class QuickSortBase[SeqT, CmpFunc, Elem] {
 }
 
 @define _elem 0
-    typeof(SeqT.cast(null)[0])
+    typeof(SeqT.unsafeCast(null)[0])
 $$
 
 ## Base class version of quick-sort, can be applied to primitive arrays.
@@ -126,8 +139,7 @@ class QuickSortPrim[SeqT] :
 ##
 ## This is separated out because we can't import crack.functor from here (it
 ## requires crack.ann -> crack.cont.array -> crack.algorithm)
-class QuickSortPrimF[SeqT, CmpFunc] :
-    QuickSortBase[SeqT, CmpFunc, typeof(SeqT.cast(null)[0])] {
+class QuickSortPrimF[SeqT, CmpFunc] : QuickSortBase[SeqT, CmpFunc, @_elem] {
 
     ## Sort the array of the given size using the given comparison functor.
     @static void sort(SeqT A, uintz count, CmpFunc cmp) {
@@ -188,11 +200,12 @@ class InsertionSortBase[SeqT, CmpFunc] {
 
 ## Insertion sort primitive.  Can be used on primitive arrays.
 class InsertionSortPrim[SeqT] :
-    InsertionSortBase[SeqT, function[int, @_elem, @_elem]] {
+    InsertionSortBase[SeqT, function[int, @_elem, @_elem]],
+    _CmpBase[@_elem] {
 
     ## Sort an array of the given size.
     @static void sort(SeqT seq, uintz count){
-        _insertionSort(seq, count, cmp);
+        _insertionSort(seq, count, _cmp);
     }
 
     ## Sort an array of the given size with the given sort function.
@@ -214,11 +227,12 @@ class InsertionSortPrimF[SeqT, CmpFunc] : InsertionSortBase[SeqT, CmpFunc] {
 ## Insertion sort.  Requires [], []= and count().
 ## Usage: typeof(seq).sort(seq);
 class InsertionSort[SeqT] :
-    InsertionSortBase[SeqT, function[int, @_elem, @_elem]] {
+    InsertionSortBase[SeqT, function[int, @_elem, @_elem]],
+    _CmpBase[@_elem] {
 
     ## Sort the given array.
     @static void sort(SeqT seq) {
-        _insertionSort(seq, seq.count(), cmp);
+        _insertionSort(seq, seq.count(), _cmp);
     }
 
     ## Sort the given array.
@@ -288,18 +302,20 @@ class HeapBase[SeqT, CmpFunc] {
 }
 
 ## Heap routines, works on a primitive array.
-class HeapPrim[SeqT] : HeapBase[SeqT, function[int, @_elem, @_elem]] {
+class HeapPrim[SeqT] : HeapBase[SeqT, function[int, @_elem, @_elem]],
+                       _CmpBase[@_elem] {
+
     @static bool isMaxHeap(SeqT seq, uintz count) {
-        return isMaxHeap(seq, count, cmp);
+        return isMaxHeap(seq, count, _cmp);
     }
 
     @static void maxHeapify(SeqT seq, uintz i, uintz count) {
-        return maxHeapify(seq, i, count, cmp);
+        return maxHeapify(seq, i, count, _cmp);
     }
 
     ## Convert a sequence of size 'count' to a max heap.
     @static void buildMaxHeap(SeqT seq, uintz count) {
-        buildMaxHeap(seq, count, cmp);
+        buildMaxHeap(seq, count, _cmp);
     }
 }
 
@@ -352,18 +368,21 @@ class HeapSortBase[SeqT, CmpFunc] : HeapBase[SeqT, CmpFunc] {
 }
 
 ## Heap sort implementation, safe for use with primitive arrays.
-class HeapSortPrim[SeqT] : HeapSortBase[SeqT, function[int, @_elem, @_elem]] {
+class HeapSortPrim[SeqT] : HeapSortBase[SeqT, function[int, @_elem, @_elem]],
+                           _CmpBase[@_elem] {
     ## Heap sort an array of the specified size.
     @static void sort(SeqT seq, uintz count) {
-        sort(seq, count, cmp);
+        sort(seq, count, _cmp);
     }
 }
 
 ## Heap sort implementation.
-class HeapSort[SeqT] : HeapSortBase[SeqT, function[int, @_elem, @_elem]] {
+class HeapSort[SeqT] :
+    HeapSortBase[SeqT, function[int, @_elem, @_elem]],
+    _CmpBase[@_elem] {
 
     ## Sort the array.
     @static void sort(SeqT seq) {
-        sort(seq, seq.count(), cmp);
+        sort(seq, seq.count(), _cmp);
     }
 }
