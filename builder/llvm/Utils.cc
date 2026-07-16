@@ -19,6 +19,7 @@
 #include <llvm/IR/GlobalVariable.h>
 #include <spug/StringFmt.h>
 #include <spug/check.h>
+#include <model/GlobalNamespace.h>
 #include <model/NullConst.h>
 
 using namespace llvm;
@@ -40,7 +41,10 @@ void addArrayMethods(Context &context, TypeDef *arrayType,
                      ) {
     Construct *gd = context.construct;
 
-    // Add conversion to voidptr and to bool.
+    // Add unsafe cast, conversion to voidptr and to bool.
+    if (arrayType->type) {
+        context.addDef(new UnsafeCastDef(arrayType), arrayType->type.get());
+    }
     context.addDef(new VoidPtrOpDef(gd->voidptrType.get()),
                    arrayType
                    );
@@ -203,6 +207,23 @@ BTypeDefPtr createMetaClass(Context &context, const string &name,
     metaType->createBaseOffsets(context);
 
     return metaType;
+}
+
+ContextPtr createSyntheticClassContext(Context &context, BTypeDef *type) {
+    NamespacePtr builtin =
+        context.construct->builtinMod ?
+            static_cast<Namespace *>(context.construct->builtinMod.get()) :
+            static_cast<Namespace *>(new GlobalNamespace(0, ""));
+    ContextPtr builtInCtx = new Context(context.builder,
+                                        Context::module,
+                                        context.construct,
+                                        builtin.get(),
+                                        context.compileNS.get()
+                                        );
+    return new Context(context.builder,
+                       Context::module,
+                       builtInCtx.get(),
+                       type);
 }
 
 }} // namespace builder::mvll

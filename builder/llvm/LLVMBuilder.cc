@@ -3261,7 +3261,7 @@ ModuleDefPtr LLVMBuilder::registerPrimFuncs(model::Context &context) {
 
     // finally, mark the class as complete
     vtableBaseType->complete = true;
-    vtableBaseType->fixIncompletes(context);
+    vtableBaseType->fixIncompletes(*classCtx);
 
     // boolean not
     context.addDef(new MixedModeOpDef<BBitNotOpCall>(boolType, "oper !"));

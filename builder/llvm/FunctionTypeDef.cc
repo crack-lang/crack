@@ -86,8 +86,11 @@ TypeDefPtr FunctionTypeDef::getSpecialization(Context &context,
     // create the implementation (this can be called before the meta-class is
     // initialized, so check for it and defer if it is)
     if (context.construct->classType->complete) {
-        tempSpec->createClassImpl(context);
-        tempSpec->createEmptyOffsetsInitializer(context);
+        ContextPtr classCtx =
+            createSyntheticClassContext(context, tempSpec.get());
+        tempSpec->type = createMetaClass(*classCtx, tempSpec->name);
+        tempSpec->createClassImpl(*classCtx);
+        tempSpec->createEmptyOffsetsInitializer(*classCtx);
     } else {
         dynamic_cast<LLVMBuilder &>(context.builder).deferMetaClass
             .push_back(tempSpec);
@@ -108,14 +111,8 @@ TypeDefPtr FunctionTypeDef::getSpecialization(Context &context,
     );
 
     // Add an unsafeCast method so we can cast from a voidptr.
-    FuncDefPtr unsafeCast =
-        new GeneralOpDef<UnsafeCastCall>(tempSpec.get(), FuncDef::noFlags,
-                                         "unsafeCast",
-                                         1
-                                         );
-    unsafeCast->args[0] =
-        new ArgDef(context.construct->voidptrType.get(), "val");
-    context.addDef(unsafeCast.get(), tempSpec.get());
+    FuncDefPtr unsafeCast = new UnsafeCastDef(tempSpec.get());
+    context.addDef(unsafeCast.get(), tempSpec->type.get());
 
     // Give it a specialized "oper call" method, which wraps the
     // call to the function pointer

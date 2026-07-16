@@ -57,8 +57,11 @@ TypeDefPtr ArrayTypeDef::getSpecialization(Context &context,
     // create the implementation (this can be called before the meta-class is
     // initialized, so check for it and defer if it is)
     if (context.construct->classType->complete) {
-        tempSpec->createClassImpl(context);
-        tempSpec->createEmptyOffsetsInitializer(context);
+        ContextPtr classCtx =
+            createSyntheticClassContext(context, tempSpec.get());
+        tempSpec->type = createMetaClass(*classCtx, tempSpec->name);
+        tempSpec->createClassImpl(*classCtx);
+        tempSpec->createEmptyOffsetsInitializer(*classCtx);
     } else {
         dynamic_cast<LLVMBuilder &>(context.builder).deferMetaClass
             .push_back(tempSpec);

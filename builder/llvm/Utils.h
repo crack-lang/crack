@@ -41,6 +41,14 @@ llvm::Value *createInvoke(llvm::IRBuilder<> &builder, model::Context &context,
                           std::vector<llvm::Value *> &valueArgs
                           );
 
+/**
+ * Creates a nested context (.builtin.TypeName) for use in constructing
+ * specializations of the builtin generic classes (.builtin.array and
+ * .builtin.function).
+ */
+model::ContextPtr createSyntheticClassContext(model::Context &context,
+                                              BTypeDef *type);
+
 } // end namespace builder::vmll
 } // end namespace builder
 

@@ -5,9 +5,11 @@ metaclass instances are accessible
 import test.preutil streq;
 if ( !streq(typeof(int).name, 'int:meta') )
     puts('FAILED typeof int');
-if ( !streq(typeof(array[int]).name, 'array:meta') )
+if ( !streq(typeof(array[int]).name, 'array[.builtin.int]:meta') )
     puts('FAILED typeof array');
-if ( !streq(typeof(function[void, int]).name, "function:meta") )
+if ( !streq(typeof(function[void, int]).name,
+            "function[.builtin.void,.builtin.int]:meta")
+    )
     puts('FAILED typeof function');
 
 puts('ok');
