@@ -156,8 +156,7 @@ Value *BWeakClassVarDefImpl::getRep(Context &context, LLVMBuilder &builder) {
 ResultExprPtr BConstDefImpl::emitRef(Context &context, VarRef *var) {
     LLVMBuilder &b =
             dynamic_cast<LLVMBuilder &>(context.builder);
-    if (rep->getParent() != b.module)
-        rep = b.getModFunc(func);
+    rep = func->getFuncRep(b);
     b.lastValue = rep;
     return new BResultExpr((Expr*)var, b.lastValue);
 }
