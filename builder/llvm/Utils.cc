@@ -220,10 +220,7 @@ ContextPtr createSyntheticClassContext(Context &context, BTypeDef *type) {
                                         builtin.get(),
                                         context.compileNS.get()
                                         );
-    return new Context(context.builder,
-                       Context::module,
-                       builtInCtx.get(),
-                       type);
+    return builtInCtx->createSubContext(Context::instance, type);
 }
 
 }} // namespace builder::mvll
