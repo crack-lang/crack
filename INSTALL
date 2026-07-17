@@ -7,6 +7,13 @@ need LLVM 3.3 built with RTTI support.  If your distro provides a release of
 LLVM 3.3, you may be able to use it, but if you get errors about RTTI symbols
 you'll need to build it from source.
 
+If you have previously installed a version older than 1.7, you'll need to
+delete all of the cache files in $HOME/.crack/cache for the root account in
+order to successfully install.  All non-root users will also need to delete
+their cache files if they've used an earlier version.  In general, deleting
+the cache files is a good idea as doing so will resolve any incompatibilities
+between cache formats.
+
 Autoconf Install Instructions
 -----------------------------
 
@@ -26,8 +33,8 @@ cost).
 
 Build Crack:
 
-$ tar -xvzf crack-1.6.tar.gz
-$ cd crack-1.6
+$ tar -xvzf crack-1.7.tar.gz
+$ cd crack-1.7
 $ ./configure
 $ make
 $ make check  # optional
@@ -48,7 +55,7 @@ Quick Install:
 (if llvm and spug are in standard locations, and you wish to install in
  the default /usr/local)
 
-$ cd crack-1.6
+$ cd crack-1.7
 $ mkdir build; cd build
 $ cmake ..
 $ make

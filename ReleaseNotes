@@ -1,3 +1,18 @@
+1.7
+    -   Added anonymous classes.
+    -   Added a closure annotation.
+    -   Added a crack.net.comm2 compatible HTTP server
+    -   Fixed "uninitialized global" LLVM code generation error caused by
+        generic metaclass name collisions.
+    -   Added crack.regex2 module, using the PCRE 2 api.
+    -   Added a crack.utf8 module for dealing with UTF8 strings.
+    -   Fixed uncaught exception handling in AOT code.
+    -   Fixed foward declared appendages.
+    -   Fix problems with extremely long cache file names.
+    -   Added functor-friendly crack.algorithm generics.
+    -   Added syntax colorization for crack code in the manual.
+    -   Upgraded autotools macros and configuration.
+    -   Various bug fixes and enhacements.
 1.6
     -   Implemented the safe navigation operator ("?.").
     -   Added support for user-defined getters and setters (letting you use
