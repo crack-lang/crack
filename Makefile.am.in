@@ -347,13 +347,14 @@ extinc_HEADERS = \
     ext/util.h \
     ext/Var.h
 
-EXTRA_DIST = $(srcdir)/test/*.crk $(srcdir)/test/pkg/*.crk \
-    $(srcdir)/test/bad_extension.so $(srcdir)/test/screen \
-    $(srcdir)/test/test*.crt $(srcdir)/test/test*.key $(srcdir)/test/*.cc \
-    $(srcdir)/Credits $(srcdir)/tools/*.crk $(srcdir)/tools/fixlicense \
-    $(srcdir)/CMakeLists.txt $(srcdir)/opt/CMakeLists.txt \
-    $(srcdir)/sourceModules.txt $(srcdir)/runtimeModules.txt $(srcdir)/cmake \
-    $(srcdir)/COPYING $(srcdir)/doc/license $(srcdir)/screen/builders.crk \
+EXTRA_DIST = $(srcdir)/test/*.crk $(srcdir)/test/jit $(srcdir)/test/aot \
+    $(srcdir)/test/pkg/*.crk $(srcdir)/test/bad_extension.so \
+    $(srcdir)/test/screen $(srcdir)/test/test*.crt \
+    $(srcdir)/test/test*.key $(srcdir)/test/*.cc $(srcdir)/Credits \
+    $(srcdir)/tools/*.crk $(srcdir)/tools/fixlicense $(srcdir)/CMakeLists.txt \
+    $(srcdir)/opt/CMakeLists.txt $(srcdir)/sourceModules.txt \
+    $(srcdir)/runtimeModules.txt $(srcdir)/cmake $(srcdir)/COPYING \
+    $(srcdir)/doc/license $(srcdir)/screen/builders.crk \
     $(srcdir)/screen/config.crk $(srcdir)/screen/screen.crk \
     $(srcdir)/screen/stats.crk $(srcdir)/screen/testdata.crk \
     $(srcdir)/screen/planB $(srcdir)/screen/tests \
