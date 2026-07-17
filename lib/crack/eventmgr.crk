@@ -7,6 +7,8 @@ import crack.cont.treemap TreeMap;
 import crack.net Poller;
 import crack.time Time, TimeDelta, TimeValNanos;
 
+@import crack.ann implements, interface, override;
+
 alias EventCallback = Functor0[void];
 # Deprecated.  Use EventCallback.Wrap.
 alias EventCallbackFunc = Function0[void];
@@ -16,15 +18,24 @@ class EventManager;
 
 ## Class to break the reference cycle for EventManager.
 ##
-## This class predates the existence of RawPtr, and will likely be
-## discontinued in the next major version of the language.
+## This class predates the existence of RawPtr, which is now generally
+## preferred for back-references.
 @abstract class EventManagerBackRef : VTableBase {
     @abstract EventManager oper from EventManager();
 }
 
+## Interface for scheduling events.
+##
+## Prefer this over EventManager for functions that schedule events, as doing
+## so will allow them to work with other scheduler implementations (notable
+## crack.net.comm2.Comm).
+@interface Scheduler {
+    @abstract void scheduleEvent(Time time, EventCallback callback);
+}
+
 ## An EventManager manages a Poller and a schedule of events to be executed
 ## at a specific point in time.
-class EventManager : Object, EventManagerBackRef {
+class EventManager : Object, EventManagerBackRef @implements Scheduler {
 
     ## The associated poller.
     Poller poller = {};
@@ -41,7 +52,7 @@ class EventManager : Object, EventManagerBackRef {
 
     ## Schedule an event to be executed at the given time.  If the time is in
     ## the past, it will be executed on the next iteration.
-    void scheduleEvent(Time time, EventCallback callback) {
+    @override void scheduleEvent(Time time, EventCallback callback) {
         t := TimeValNanos(time).toNanos();
         if (events := __schedule.get(t))
             events.append(callback);

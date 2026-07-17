@@ -83,7 +83,8 @@
 ## with some synchronization mechanisms (this is part of what Comm buys you).
 
 import crack.cont.array Array;
-import crack.eventmgr EventCallback, EventManager, EventManagerBackRef;
+import crack.eventmgr EventCallback, EventManager, EventManagerBackRef,
+    Scheduler;
 import crack.fieldset HashMapFieldSet;
 import crack.functor Functor1;
 import crack.io cerr, Formatter, FStr, Writer;
@@ -98,7 +99,7 @@ import crack.runtime c_strerror;
 import crack.threads Condition, Event, Mutex, MutexLock, Thread, Queue2;
 import crack.time Time;
 
-@import crack.ann assert, impl, implements, interface;
+@import crack.ann assert, impl, implements, interface, override;
 
 uint defaultBlockSize = 4096;
 
@@ -834,18 +835,16 @@ class _PollerThread : Thread {
 
 ## Manages a poller in a background thread, providing a set of methods to
 ## control it and interact with its connections.
-@final class Comm {
+@final class Comm @impl Scheduler {
     _PollerThread __thread;
     Log __log;
-    EventManager sched;
+    EventManager __sched = {};
 
-    oper init(Log log) : __log = log, sched() {}
-
-    oper init(EventManager sched, Log log) : __log = log, sched = sched {}
+    oper init(Log log) : __log = log {}
 
     void start() {
         @assert(!__thread);
-        __thread = _PollerThread(sched, __log);
+        __thread = _PollerThread(__sched, __log);
         __thread.start();
     }
 
@@ -962,7 +961,7 @@ class _PollerThread : Thread {
     ## Schedule an event to be executed at the given time (or immediately, if
     ## the time is in the past).  The vevent will always be run from the
     ## event manager thread.
-    @final void scheduleEvent(Time time, EventCallback event) {
+    @override void scheduleEvent(Time time, EventCallback event) {
         __thread.control.sendMessage(_ScheduleEvent(time, event));
     }
 
