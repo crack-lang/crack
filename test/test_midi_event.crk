@@ -52,5 +52,76 @@ if (1) {
                       e.note == 7 && e.velocity == 0x7F); }
 }
 
+class T : Track {
+    oper init() : Track('track') {}
+    void append(int time) {
+        add(NoteOn(time, 0, 0, 0));
+    }
+}
+
+# Track.find() (by index)
+if (true) {
+    # finding with both even and odd numbers of events at middle, beginning
+    # and end
+    @assert(T![1, 2, 3, 4, 5].find(3) == 2);
+    @assert(T![1, 2, 3, 4, 5, 6].find(3) == 2);
+    @assert(T![1, 2, 3, 4, 5].find(5) == 4);
+    @assert(T![1, 2, 3, 4, 5, 6].find(6) == 5);
+    @assert(T![1, 2, 3, 4, 5].find(1) == 0);
+    @assert(T![1, 2, 3, 4, 5, 6].find(1) == 0);
+
+    # first of many at the same time
+    @assert(T![1, 3, 3, 3, 6].find(3) == 1);
+
+    # Not found.
+    @assert(T![1, 2, 4, 5].find(3) == 2);
+    @assert(T![1, 2, 3, 4].find(5) == 4);
+}
+
+# Track.delete()
+if (true) {
+    t := T![1, 2, 3];
+    t.delete(1);
+    @assert(t == T![1, 3]);
+}
+
+# Track.find(Event)
+if (true) {
+    t := T![1, 2, 3, 3, 4, 5];
+    @assert(t.find(t[3]) == 3);
+}
+
+# Track.remove()
+if (true) {
+    t := T![1, 2, 3, 3, 4, 5];
+    e := t[3];
+    # Set it to a value that won't match if this event object isn't removed
+    # (i.e. if we remove the wrong event at time 3).
+    NoteOn.cast(e).note = 25;
+    t.remove(e);
+    @assert(t == T![1, 2, 3, 4, 5]);
+}
+
+# Track.relocate()
+if (true) {
+    t := T![10, 20, 30, 40, 50];
+    e := t[2];
+    t.relocate(e, 15);
+    @assert(t == T![10, 15, 20, 40, 50]);
+    t.relocate(e, 45);
+    @assert(t == T![10, 20, 40, 45, 50]);
+
+    e = t[0];
+    t.relocate(e, 15);
+    @assert(t == T![15, 20, 40, 45, 50]);
+    t.relocate(e, 25);
+    @assert(t == T![20, 25, 40, 45, 50]);
+    e = t[4];
+    t.relocate(e, 47);
+    @assert(t == T![20, 25, 40, 45, 47]);
+    t.relocate(e, 42);
+    @assert(t == T![20, 25, 40, 42, 45]);
+}
+
 cerr `ok\n`;
 

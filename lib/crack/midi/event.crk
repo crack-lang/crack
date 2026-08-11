@@ -728,6 +728,78 @@ class Track {
         return __events[index];
     }
 
+    ## Helper function for find() (implements the binary search).
+    @final int __binsearch(uint time, int start, int end) {
+        if (end - start < 2)
+            return __events[start].time < time ? end : start;
+
+        mid := start + (end - start) / 2;
+        if (__events[mid].time < time)
+            # Search the upper range.
+            return __binsearch(time, mid, end);
+        else
+            return __binsearch(time, start, mid);
+    }
+
+    ## Finds the lowest index with time 'time'.  If there is no event with
+    ## time 'time' in the track, returns the index of the first event with
+    ## greater time or 'end' if all events are less than the time.
+    @final int find(uint time) {
+        return __binsearch(time, 0, __events.count());
+    }
+
+    ## Finds the index of 'event' in the track, returns -1 if not found.
+    @final int find(Event event) {
+        i := find(event.time);
+        if (i == __events.count())
+            return -1;
+
+        # The current event is the first at the target event's time, but not
+        # necessarily the same event.
+        while (i < __events.count() && (e := __events[i]).time == event.time) {
+            if (e is event)
+                return i;
+            ++i;
+        }
+        return -1;
+    }
+
+    ## Delete the event at the index.
+    @final void delete(int index) { __events.delete(index) }
+
+    ## Remove the specified event from the track, returns false if the event
+    ## was not found.
+    @final bool remove(Event event) {
+        index := find(event);
+        if (index == -1)
+            return false;
+        delete(index);
+        return true;
+    }
+
+    ## Change the time of 'event' to time, changing its location in the track
+    ## to preserve event order.
+    @final void relocate(Event event, uint time) {
+        # If the time isn't changing, just quit.
+        if (event.time == time)
+            return;
+
+        index := find(event);
+        if (index == -1)
+            throw AssertionError('The event is not in the track.');
+
+        event.time = time;
+
+        # Reposition if the new time is out of place with respect to
+        # neighboring events.
+        if ((index > 0 && time < __events[index - 1].time) ||
+            (index < __events.count() - 1 && time > __events[index + 1].time)
+            ) {
+            delete(index);
+            add(event)
+        }
+    }
+
     uint count() { return __events.count(); }
 
     TrackEventSource iter() { return TrackEventSource(__events, 0); }
