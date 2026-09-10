@@ -16,6 +16,29 @@ if (1) {
 }
 
 if (1) {
+    # write() oversized buffer
+    StringWriter writer = {};
+    MidiWriter mw = {writer};
+    mw.write('small');
+    @assert(writer.string() == '');  # Should not have flushed.
+    big := String(1024, b'x');
+    mw.write(big);
+    @assert(writer.string() == 'small' + big);
+}
+
+if (1) {
+    StringWriter writer = {};
+    MidiWriter mw = {writer};
+    big := String(1000, b'x');
+    mw.write(big);
+    @assert(writer.string() == '');  # Should not have flushed.
+    mw.write(big);
+    @assert(writer.string() == big);  # Should have flushed only existing.
+    mw.flush();
+    @assert(writer.string() == big + big);
+}
+
+if (1) {
     Array[int] vals = [0, 1, 0x80, 0x3f, 0x123456];
     for (val :in vals) {
         StringWriter writer = {};

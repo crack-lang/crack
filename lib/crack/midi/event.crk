@@ -57,7 +57,17 @@ class MidiWriter {
     }
 
     @final void write(Buffer buf) {
-        out.write(buf);
+        if (buf.size >= 1024) {
+            # buf is too long to fit in our local buffer.  Just flush and pass
+            # it directly through to the sink.
+            flush();
+            out.write(buf);
+            return;
+        } else if (buffer.size + buf.size > 1024) {
+            # buf is too long given the existing data in the buffer.
+            flush();
+        }
+        buffer.move(buffer.size, buf);
     }
 
     ## Writes the status byte but only if it is not already the current status.
